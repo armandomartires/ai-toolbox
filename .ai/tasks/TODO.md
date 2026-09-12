@@ -1,5 +1,6 @@
 # TODO
 
-- [ ] TASK-0001 — Port first skill (planned)
-- [ ] TASK-0002 — Port first MCP server (planned)
-- [ ] TASK-0003 — Client config snapshots (planned)
+- [x] TASK-0001 — Port and harmonize the project-migration skill (done)
+- [ ] TASK-0002 — Extend the skill frontmatter schema (planned)
+- [ ] TASK-0003 — Port first MCP server (planned)
+- [ ] TASK-0004 — Client config snapshots (planned)
