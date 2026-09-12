@@ -1,0 +1,13 @@
+[project]
+name = "template-mcp-server"
+version = "0.1.0"
+description = "One-line description of the server's tools"
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+template-mcp-server = "template_mcp_server.server:main"

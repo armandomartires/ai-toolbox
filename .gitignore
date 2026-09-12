@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+*.egg-info/
+.env
+node_modules/
+.DS_Store
+.ai/tasks/completed/archive/
