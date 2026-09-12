@@ -1,6 +1,11 @@
 ---
 name: template-skill
 description: One sentence describing what this skill does and when to use it. Be specific — this drives skill selection.
+# Optional — see docs/development/authoring-guide.md "Versioning":
+# license: MIT
+# metadata:
+#   author: your-name
+#   version: 1.0.0   # semver
 ---
 
 # Template Skill

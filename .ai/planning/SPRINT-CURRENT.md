@@ -13,5 +13,5 @@
 - Success criteria: tests/validate.sh green; registry lists all ported
   components; install.sh verified in Claude Code.
 - Risks: porting reveals structural mismatches — split tasks if needed.
-- Completed tasks: none. Blocked tasks: none.
-- Recommended next task: TASK-0001.
+- Completed tasks: TASK-0001, TASK-0002. Blocked tasks: none.
+- Recommended next task: TASK-0003.

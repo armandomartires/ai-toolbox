@@ -4,7 +4,7 @@ description: "Harmonize an existing repository with the .ai agent-governance fra
 license: MIT
 metadata:
   author: amartires
-  version: '1.0'
+  version: 1.0.0
 ---
 
 # Project migration to the .ai governance framework
