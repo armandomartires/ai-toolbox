@@ -84,24 +84,26 @@ Verified state before starting (read-only API probe, no writes):
    actually happened — pass or fail.
 
 ## Acceptance criteria
-- [ ] `.env.example` exists, lists every variable with meaning and
+- [x] `.env.example` exists, lists every variable with meaning and
       required/optional, and contains no values.
-- [ ] `.gitignore` still ignores `.env`; no `.env` is tracked.
-- [ ] `AGENTS.md` Prerequisites names the variables.
-- [ ] `validate.sh` fails if a manifest's required var is missing from
-      `.env.example`; passes as committed; stays offline and sub-second.
-- [ ] `validate.sh` does **not** check whether any variable is set.
-- [ ] No secret value appears in any tracked file or commit message.
-- [ ] `origin` configured; `master` pushed; remote URL contains no token.
-- [ ] CI outcome observed and the workflow's status comment updated to
-      match reality.
+- [x] `.gitignore` still ignores `.env` (`git check-ignore` confirms); no
+      `.env` is tracked; `.env.example` is *not* ignored.
+- [x] `AGENTS.md` Prerequisites names the variables.
+- [x] `validate.sh` fails if a manifest's required var is missing from
+      `.env.example`; passes as committed; 0.366 s, offline.
+- [x] `validate.sh` does **not** check whether any variable is set.
+- [x] No secret value appears in any tracked file or commit message.
+- [x] `origin` configured; `master` pushed; remote URL token-free.
+- [x] CI outcome observed (run #1, success) and the workflow's status
+      comment updated from UNVERIFIED to VERIFIED.
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh
-- [ ] `git remote -v` shows a token-free URL
-- [ ] CI run result recorded (pass *or* fail — a failure gets recorded, not
-      hidden)
+- [x] tests/validate.sh — OK
+- [x] scripts/sync-registry.sh — registry unchanged
+- [x] `git remote -v` token-free (grep for `@` returns 0); no
+      `credential.helper` persisted; no token in `.git/config`
+- [x] CI run #1 on ea5372e — **success**, all 7 steps green including
+      "Confirm the registry is up to date"
 
 ## Risks and rollback
 - **Risk: publishing internal information.** Mitigated by the pre-flight
@@ -125,7 +127,7 @@ enforced; a remote exists; CI's status claim matches observed reality
 instead of a guess.
 
 ## Status
-- Status: in_progress   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent + human (visibility decision)
 - Created: 2026-09-13
 - Updated: 2026-09-13
@@ -135,8 +137,61 @@ instead of a guess.
 - Date: 2026-09-13
 - Agent: opencode
 - Actions:
+  - Added `.env.example`; documented the variables in `AGENTS.md`
+    (Prerequisites), `README.md` (new Getting started), and
+    `docs/operations/runbook.md` (new Environment variables table).
+  - Added the manifest↔template cross-check to `validate.sh`. Wrote
+    ADR-0009.
+  - Created `armandomartires/ai-toolbox` **private** (human decision) via
+    the REST API; added `origin`; pushed `master`.
+  - Observed CI run #1, then changed the workflow's status comment from
+    UNVERIFIED to VERIFIED and updated `AGENTS.md`'s git rules to state a
+    remote now exists.
 - Observations:
+  - **The remote was never actually blocked.** `GITHUB_URL` and
+    `GITHUB_TOKEN` had been in the environment the whole time; the token
+    authenticated as `armandomartires` on the first probe. Three sprints of
+    "add a git remote" as a candidate item were really "nobody wrote down
+    that these variables are the interface". That is the finding worth
+    keeping: an item can look blocked when it is merely undocumented.
+  - Deliberately resisted the obvious-looking check. Asserting required
+    vars are *set* would have broken every fresh clone and the CI run that
+    has just been proven to work — CI has no `.env` and needs none. The
+    check tests documentation completeness instead (ADR-0009).
+  - Pre-flight secret scan before any outbound call: no `ghp_`,
+    `github_pat_`, `glpat-`, `AKIA`, or PEM headers, and no internal
+    hostnames in tracked content. `GITLAB_URL` points at an internal host
+    but that value lives only in the environment, never in the repo — and
+    GitLab was deliberately not wired as a second remote.
+  - GitHub created the repo with `default_branch: main` while this repo
+    uses `master`. Pushing `master` created it as a second branch; `main`
+    exists only as the repo's nominal default and holds nothing. Worth
+    knowing before anyone opens a PR against the wrong base. Not changed
+    here — renaming a default branch is a destructive-ish change needing
+    its own authorization.
+  - Token handling: a one-shot `GIT_ASKPASS` helper reading from the
+    environment. Verified afterwards that `git remote -v` is token-free, no
+    `credential.helper` was persisted, and `.git/config` contains no token.
+  - The askpass helper needed `chmod +x` — first attempt failed with
+    "cannot exec". Unrelated to the `core.filemode` trap from TASK-0014:
+    that file is in `/tmp` (ext4), not on the `/mnt/c` 9p mount, so the
+    executable bit works normally there.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` OK at 0.366 s, offline, with the whole environment
+    unset.
+  - Fails-when-reverted for the new check, four cases: `WORKSPACE_ROOT`
+    removed from the template → `UNDOCUMENTED ENV` naming the manifest and
+    the variable; the variable present *only in a comment* → still fails
+    (comments are not documentation for this purpose); `.env.example`
+    deleted → `MISSING .env.example`; restored → OK, byte-identical to the
+    original (`diff -q`).
+  - CI run #1 on ea5372e: success. All 7 steps green, including the
+    registry-staleness check — so the workflow's syntax and behaviour are
+    now confirmed rather than assumed.
+- Result: success. Environment requirements documented *and* enforced; the
+  remote exists and is private; CI's status claim now matches an observed
+  run. B-001's "CI exists" precondition is met as a side effect, though
+  B-001 itself remains unscoped.
+- Commit: see below (docs commit ea5372e; CI-label commit follows)
+- Push: `origin master` — pushed successfully, remote URL token-free.
+

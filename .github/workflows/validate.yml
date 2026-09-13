@@ -1,14 +1,16 @@
 # Mandatory validation in CI.
 #
-# STATUS: UNVERIFIED. This repository has no git remote configured
-# (ADR-0007: local git is mandatory, a remote is recommended), so this
-# workflow has never run. It is shipped ready rather than written later
-# from memory, but treat its syntax and behaviour as unconfirmed until a
-# remote exists and a run appears.
+# STATUS: VERIFIED. First ran 2026-09-13 on run #1 (commit ea5372e) and
+# passed every step, including the registry-staleness check. The remote was
+# added by TASK-0015 from environment-supplied credentials (ADR-0009); this
+# label was UNVERIFIED until a run actually existed, and was changed only
+# after observing one - not on the assumption that a green file is a green
+# build.
 #
 # The primary gate is the local pre-commit hook (.githooks/pre-commit,
-# activated by scripts/install.sh). This workflow is a redundant check for
-# the day a remote is added - not a replacement for the hook.
+# activated by scripts/install.sh). This workflow is a redundant second
+# check, not a replacement for the hook: the hook is what stops a bad
+# commit from being made, CI only reports one that already was.
 #
 # Deliberately NOT run here: tests/smoke-mcp.sh. It fetches upstream
 # packages over the network and reports SKIP as a distinct outcome from

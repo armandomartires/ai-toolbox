@@ -62,11 +62,18 @@ Details: `docs/development/`, runbook: `docs/operations/`.
 - One task = one commit; never include unrelated changes.
 - Never delete or overwrite human changes without authorization.
 - Every project has a local git repository. A remote (GitHub, GitLab) is
-  recommended but not mandatory (ADR-0007).
+  recommended but not mandatory (ADR-0007). **This repo now has one:**
+  `origin` → `armandomartires/ai-toolbox` (private), added by TASK-0015
+  from `GITHUB_URL`/`GITHUB_TOKEN` (ADR-0009).
 - At task end: validate, review diff, commit, record the commit hash in
   the task log. Push **if a remote is configured**, and record the push
   result; if there is none, record that instead of treating it as a
-  missing step.
+  missing step. Pushing needs `GITHUB_TOKEN` in the environment — never
+  put it in the remote URL or any tracked file; `git remote -v` must stay
+  token-free.
+- CI (`.github/workflows/validate.yml`) re-runs `validate.sh` and the
+  registry-staleness check on every push. It is a second opinion, not the
+  gate: the hook prevents a bad commit, CI only reports one already made.
 - `tests/validate.sh` runs automatically via `.githooks/pre-commit`
   (activated by `scripts/install.sh`). Bypass with
   `git commit --no-verify` for work-in-progress or when fixing the gate
