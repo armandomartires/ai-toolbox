@@ -1,11 +1,24 @@
 # Component Authoring Guide
 
 ## Skills
-- SKILL.md required, case-sensitive. Required frontmatter: `name`,
-  `description`. Optional frontmatter: `license`; `metadata.author`;
-  `metadata.version` (semver — see Versioning below). No README.md
-  inside skill folders.
-- Keep SKILL.md lean; push detail into `references/`.
+SKILL.md is required, case-sensitive. No README.md inside skill folders.
+`tests/validate.sh` enforces every frontmatter rule below, so the guide and
+the gate cannot drift apart (ADR-0008).
+
+| Rule | Detail |
+|------|--------|
+| Frontmatter delimiters | `---` on line 1, terminated by a closing `---`. |
+| `name` | Required, non-empty, and **must equal the directory name** — it determines the install path, so a mismatch deploys to somewhere no client looks. `_template*` directories are exempt from the equality rule only. |
+| `description` | Required, non-empty, **single line**. It renders into one registry table cell; a folded (`>`) or block (`|`) scalar breaks that row. |
+| `license` | Optional, but non-empty if present. A `license:` claim should be backed by a repo `LICENSE` file. |
+| `metadata.author` | Optional. |
+| `metadata.version` | Optional; semver when present (`MAJOR.MINOR.PATCH`, optional pre-release/build). See Versioning below. |
+
+- Keep SKILL.md lean; push detail into `references/`. This is a judgment
+  call, **not** a machine-checked limit — no line or byte budget for
+  SKILL.md is defined, and ADR-0008 records why one was deliberately not
+  invented. To add one, define it here first (in bytes, with a rationale),
+  then enforce it.
 - Scripts must be idempotent and safe to re-run.
 
 ## MCP servers

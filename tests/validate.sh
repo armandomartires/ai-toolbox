@@ -5,17 +5,110 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 fail=0
 
+command -v python3 >/dev/null 2>&1 || { echo "MISSING prerequisite: python3"; exit 1; }
+
+# Skills: the frontmatter rules docs/development/authoring-guide.md states
+# (TASK-0012, closing B-002). Parsed rather than grepped because "the
+# description is a single line" is not a grep-shaped question: an earlier
+# version only tested that `^name:` and `^description:` appeared somewhere,
+# which passed a skill whose name disagreed with its directory — the same
+# defect class that let templates leak into the registry three times.
+#
+# NOT checked: any SKILL.md length cap. B-002's title said "frontmatter +
+# line budget", but no budget is defined in the authoring guide, any ADR,
+# or AGENTS.md. Enforcing an invented number would make this gate the
+# author of a requirement rather than the enforcer of one — see ADR-0008.
 for f in skills/*/SKILL.md; do
   [ -f "$f" ] || continue
-  grep -q '^name:' "$f" || { echo "MISSING name: $f"; fail=1; }
-  grep -q '^description:' "$f" || { echo "MISSING description: $f"; fail=1; }
+  python3 - "$f" "$(basename "$(dirname "$f")")" <<'PY' || fail=1
+import re, sys
+
+path, dirname = sys.argv[1], sys.argv[2]
+with open(path, encoding="utf-8") as fh:
+    lines = fh.read().split("\n")
+
+bad = []
+
+# Frontmatter must be the first thing in the file and properly terminated;
+# a skill whose delimiters are wrong is one an agent loader will reject.
+if not lines or lines[0].strip() != "---":
+    bad.append("frontmatter must open with '---' on line 1")
+    fm = []
+else:
+    try:
+        end = next(i for i, l in enumerate(lines[1:], 1) if l.strip() == "---")
+        fm = lines[1:end]
+    except StopIteration:
+        bad.append("frontmatter is not terminated by a closing '---'")
+        fm = []
+
+
+def scalar(key):
+    """Value of a top-level key, plus how many lines it spans."""
+    for i, line in enumerate(fm):
+        m = re.match(r"^%s:(.*)$" % re.escape(key), line)
+        if not m:
+            continue
+        val = m.group(1).strip()
+        span = 1
+        for cont in fm[i + 1:]:
+            # A following line that is indented (and not a comment) is a
+            # YAML continuation of this value.
+            if cont.strip() and cont[0] in " \t" and not cont.strip().startswith("#"):
+                span += 1
+            else:
+                break
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+            val = val[1:-1]
+        return val, span
+    return None, 0
+
+
+name, _ = scalar("name")
+if name is None:
+    bad.append("missing required key: name")
+elif not name:
+    bad.append("key 'name' is empty")
+elif not dirname.startswith("_template") and name != dirname:
+    # Templates are named _template*, so the rule cannot apply to them —
+    # the same carve-out the MCP and loop checks already make.
+    bad.append("name '%s' does not match directory '%s'" % (name, dirname))
+
+desc, desc_span = scalar("description")
+if desc is None:
+    bad.append("missing required key: description")
+elif not desc:
+    bad.append("key 'description' is empty")
+elif desc_span > 1:
+    # The registry renders description into a single table cell; a folded
+    # or block scalar breaks that row.
+    bad.append("description spans %d lines — must be a single line" % desc_span)
+
+lic, _ = scalar("license")
+if lic is not None and not lic:
+    bad.append("key 'license' is present but empty")
+
+# metadata.version is optional (ADR-0003), but must be semver when given,
+# so the registry's version column can be compared and sorted.
+for line in fm:
+    m = re.match(r"^\s+version:(.*)$", line)
+    if not m:
+        continue
+    v = m.group(1).strip().strip("\"'")
+    if not re.match(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$", v):
+        bad.append("metadata.version '%s' is not semver (MAJOR.MINOR.PATCH)" % v)
+    break
+
+for msg in bad:
+    print("INVALID SKILL: %s: %s" % (path, msg))
+sys.exit(1 if bad else 0)
+PY
 done
 
 # MCP servers: exactly one shape marker per directory, and every external
 # manifest must parse, carry its required keys, and — if it exposes
 # destructive tools — carry a granted authorization pointing at a task
 # file that actually exists (AGENTS.md, Security and secrets).
-command -v python3 >/dev/null 2>&1 || { echo "MISSING prerequisite: python3"; exit 1; }
 
 for d in mcp-servers/*/; do
   d="${d%/}"

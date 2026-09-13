@@ -58,16 +58,31 @@ any agent or human can understand, trust, and deploy.
   because a criterion written at scaffold time met reality and lost. Check
   a phase's assumptions against the environment before committing to them.
 
-## Phase 4 — not yet defined
-No phase is currently in progress. Candidates carried forward:
-- B-002 skill linter (frontmatter + line budget) — "ready" for three
-  sprints; scope it properly or drop it.
-- Authored (Python) MCP server shape has never been exercised — only
-  `mcp-servers/_template/` uses it.
-- LM Studio UI verification of the ansible server (needs a human at the
-  GUI).
-- Add a git remote, which would activate the CI workflow — a
-  recommendation, not a requirement.
+## Phase 4 — Closing the open loops (in progress, opened 2026-09-13)
+- Objective: close every backlog item that is actually closeable, and for
+  the ones that are not, replace the perpetual "candidate" listing with
+  either a decision or a documented human-action procedure. The defect
+  being fixed is *process*, not code: B-002 sat `ready` for three sprints
+  and two items recycled through three consecutive candidate lists,
+  because nothing distinguished "not yet done" from "cannot be done by an
+  agent".
+- Exit criteria:
+  - Skill linting enforces the rules that are actually defined. *Scoped
+    to frontmatter only* — the originally-imagined "line budget" half had
+    no threshold defined anywhere in the repo, so enforcing one would
+    have meant inventing a requirement (TASK-0012, ADR-0008).
+  - A `LICENSE` file exists, backing the `license: MIT` that both shipped
+    skills already declare in frontmatter (TASK-0013).
+  - `install.sh` warns about the `core.filemode=false` hook trap at the
+    moment someone is most likely to hit it (TASK-0014).
+  - Required environment variables are documented and validated, and the
+    git remote is wired from them (TASK-0015, ADR-0009).
+  - Every remaining gap that needs a human has a written procedure in
+    `docs/operations/`, not a roadmap bullet (TASK-0016).
+- Deliberately **not** in scope: authoring a Python MCP server purely to
+  exercise that shape. `SPRINT-CURRENT.md` warned it "needs a real reason
+  … not a synthetic one"; see TASK-0016 and ADR-0010 for the standing
+  decision rather than a fourth candidate-list appearance.
 
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec
