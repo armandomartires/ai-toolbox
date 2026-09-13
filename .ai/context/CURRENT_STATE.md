@@ -8,10 +8,17 @@ implementation yet).
   S1–S4 are archived in `.ai/planning/sprints/`; checkpoints
   REVIEW-0003…REVIEW-0006. Phase 2's last partial criterion closed
   retroactively by TASK-0017.
-- **Phase 5 / sprint S5 is open: the session handover contract.** Planned
-  by `PLAN-0002`, decided by ADR-0012, four tasks TASK-0020…0023, none
-  started. **This session wrote planning artifacts only — no skill, no
-  template, and no script has been changed yet.**
+- **Phase 5 / sprint S5 complete** (`PLAN-0002`, ADR-0012,
+  TASK-0020…0023, checkpoint REVIEW-0007). The skill now states a session
+  boundary, a read order and a handover contract; both task templates
+  carry `## Inputs` and `## Outputs / handover`; `validate.sh` enforces
+  their presence. Skill at `3.1.0`.
+- **S5's headline benefit is untested.** All four tasks ran in one
+  session, so no `Inputs` table was ever read by a context that had not
+  written it. The contract is proven writable and proven to catch stale
+  declarations within a session; making a *cold* start cheap remains a
+  hypothesis (REVIEW-0007 finding 8). **The next task started after a real
+  session gap should record whether its `Inputs` table sufficed.**
 - **All three clients are now fully verified** for the ansible MCP server:
   Claude Code `✔ Connected`, OpenCode in live use, and LM Studio verified
   in its own UI (not merely at handshake level).
@@ -172,6 +179,22 @@ breaking changes cannot land silently.
    check. The pattern: **the governance layer polices components and
    nothing polices the governance layer.** That is the argument for S5, and
    also the caution against over-trusting the check S5 adds.
+   **Recurred immediately:** Phase 5's own roadmap header read "in
+   progress" after every criterion was met, fixed by REVIEW-0007. The
+   lesson needs a mechanism, not more prose.
+7. **A claim decays between being written and being acted on.** S5's four
+   tasks each found a false claim in their own inputs — a stale symlink
+   assertion, a false premise in ADR-0012, a four-way merge that would
+   have destroyed narrative, and an escape hatch in the new check. Three
+   had been written by the same agent one session earlier. Not
+   carelessness: **planning prose is a hypothesis about files, not a
+   description of them.** Open the file named in a declaration.
+8. **Knowing "a check that cannot fail is worse than no check" does not
+   prevent authoring one.** PLAN-0002 specified two deployment checks that
+   compare a symlink with its own target; they were written in the sprint
+   that cites this very lesson, by an agent that had just restated it.
+   The control is not knowing the rule — it is running the check against
+   a deliberately broken input before trusting it.
 
 ## Validations
 `tests/validate.sh` (mandatory, automatic via hook) · `scripts/sync-registry.sh`

@@ -106,7 +106,7 @@ any agent or human can understand, trust, and deploy.
   environment the entire time; nothing said so. Before carrying an item
   forward again, check whether it is actually blocked or just unwritten.
 
-## Phase 5 — Session handover contract (in progress, opened 2026-09-13)
+## Phase 5 — Session handover contract (complete, 2026-09-13)
 - Objective: make every task resumable in a brand-new session. The
   `project-workflow` skill's task template names what a task *does* but
   never what it consumes or hands on, so a task file cannot be picked up
@@ -132,10 +132,29 @@ any agent or human can understand, trust, and deploy.
   records of what happened; a brief written retroactively to look tidy is
   not compliance (ADR-0012 Decision 4). The `≥ 0020` boundary encodes
   this in the check itself.
-- What this phase is testing, beyond the artifacts: whether a
-  file-based handover actually makes a cold session cheap, or whether the
-  sections just get filled in. REVIEW-0007 should answer that from
-  TASK-0020…0023's own execution logs — the check cannot.
+- Outcome: all five exit criteria met and independently re-verified;
+  sprint S5 closed 2026-09-13, checkpoint REVIEW-0007. Commits
+  `c240f02`, `0f36d66`, `cdedb45`, `7106f9c`.
+- **What this phase set out to test, and could not.** The question was
+  whether file-based handover makes a cold session cheap. All four tasks
+  ran in **one** session, so every `Inputs` table was written and read by
+  the same context that produced it. The contract is proven writable, and
+  proven to catch stale declarations *within* a session — four times, see
+  below. It is **not** proven to make a cold start cheap. That remains a
+  hypothesis with supporting mechanism (REVIEW-0007, finding 8).
+- What the phase did prove, unplanned: **the convention caught a defect
+  in all four of its own tasks, and the check it built caught none of
+  them.** A stale symlink claim, a false premise in ADR-0012, a
+  four-section merge that would have destroyed 82 lines of narrative, and
+  an escape hatch in the new check itself (`.ai/tasks/completed/`). Each
+  found by opening the file named in a declaration rather than trusting
+  it. Three of the four claims had been written by the same agent one
+  session earlier — the defect is claim decay between writing and acting,
+  not carelessness.
+- Standing caution from this phase: the value delivered was the
+  verification discipline, not the enforcement. A future sprint that
+  keeps the gate and drops the read-order step keeps the part that found
+  nothing.
 
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec

@@ -3,9 +3,15 @@
 **Phase 5. Opened and completed 2026-09-13.** The first sprint since S1
 to start from a written plan rather than a backlog item: `PLAN-0002`.
 
-**All four tasks are done.** Awaiting `REVIEW-0007`, the S5 checkpoint.
-Commits: `c240f02` (T0020), `0f36d66` (T0021), `cdedb45` (T0022),
-`7106f9c` (T0023).
+**Sprint closed.** All four tasks done; checkpoint `REVIEW-0007`
+(**approve**, with one limitation on the record). Commits: `c240f02`
+(T0020), `0f36d66` (T0021), `cdedb45` (T0022), `7106f9c` (T0023).
+
+**The limitation, stated plainly:** all four tasks ran in a single
+session, so the cold-start benefit this sprint exists to deliver is
+**untested**. The next task picked up after a real gap should record
+whether its `Inputs` table was enough to begin without re-derivation.
+That observation is worth more than anything else S5 produced.
 
 ## What this sprint is for
 Give the `project-workflow` skill an explicit **handover contract**, so a
