@@ -15,15 +15,20 @@ Out of scope: application code, public services, secrets.
 ## Technology stack
 - Skills: Agent Skills spec (SKILL.md, YAML frontmatter `name`,
   `description`). Python/Bash scripts must be idempotent.
-- MCP servers: Python 3.10+, src layout, hatchling, FastMCP, strict
-  schemas, one tool per concern, tests required.
+- MCP servers: two shapes (ADR-0005). Servers this repo authors:
+  Python 3.10+, src layout, hatchling, FastMCP, strict schemas, one tool
+  per concern, tests required. Servers with a working upstream package
+  (npm, PyPI CLI, etc.) and no source to vendor: documented as a
+  `configs/*/README.md` wiring snippet plus a registry entry, not
+  vendored source.
 - Shell: Bash, POSIX-safe where possible. Repo developed on WSL.
 
 ## Commands
 - Install/deploy skills: `scripts/install.sh [link|copy]`
 - Regenerate index: `scripts/sync-registry.sh`
 - Validate: `tests/validate.sh`
-- Run a server: `cd mcp-servers/<name> && uv run <name>`
+- Run a Python server: `cd mcp-servers/<name> && uv run <name>`. External
+  servers: see their `configs/*/README.md` wiring snippet.
 
 ## Structure
 Component layer: `skills/`, `mcp-servers/`, `loops/`, `prompts/`,

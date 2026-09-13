@@ -17,8 +17,14 @@
   disclosure, 6 self-contained reference/ files added incl. real git and
   secrets policy, project-workflow bumped to 3.0.0; ai-toolbox itself
   gained `.ai-layout.json` declaring root:.ai/ entrypoint:AGENTS.md so
-  the skill's own worked example is accurate).
-- Incomplete: migration of remaining components (MCP server, loop);
+  the skill's own worked example is accurate); TASK-0004 (ADR-0005 —
+  MCP servers may be external/npm packages, not only authored Python —
+  found while scoping "port first MCP server": the only candidate with a
+  working connection in this environment, `@ansible/ansible-mcp-server`,
+  is npm, not Python; AGENTS.md/authoring-guide/GLOSSARY/PROJECT_MAP all
+  amended together so none contradicts the others).
+- Incomplete: actually porting the ansible server (TASK-0005, needs a
+  registry/install.sh extension for the external shape); loop component;
   client config snapshots.
 - In flight: `opencode-customization` (a separate repo) still has its own
   stale copy of project-workflow and an unresolved `S025_WorkflowHarmonization`
@@ -27,9 +33,15 @@
   untracked alongside the skills (pre-existing artifacts, not created by
   any task here) — left untouched, not in scope.
 - Blockers: none. Risks: symlink support on Windows checkouts (ADR-0002).
-- Expected branch: master. Latest relevant commits: TASK-0001–0003 (see
+- Expected branch: master. Latest relevant commits: TASK-0001–0004 (see
   `git log --oneline -5` for hashes).
-- Recommended next action: TASK-0004 (port first MCP server).
+- Recommended next action: TASK-0005 (port ansible via the external-MCP
+  shape ADR-0005 just established: configs/*/README.md wiring snippet +
+  registry entry, no vendored source; check whether proxmox/obsidian
+  have become functional before assuming ansible is still the only
+  option). Note: ansible's `ansible_navigator`/`ade_setup_environment`
+  tools are not purely read-only — TASK-0005 must address AGENTS.md's
+  destructive-capability authorization rule.
 - Known validations: tests/validate.sh, scripts/sync-registry.sh.
 - Validated in: WSL (development). Deployment targets: local agent
   clients (~/.claude/skills, OpenCode, LM Studio) via scripts/install.sh.
