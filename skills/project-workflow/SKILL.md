@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # project-workflow
@@ -31,8 +31,11 @@ scaffolding; a task brief; an ADR; an ad-hoc item; a checkpoint.
 
 ## Task briefs and ADRs
 
-`templates/tasks/0000_TEMPLATE.md` → `tasks/S###.T###_Name.md`: Goal+Plan
-before, Verification+Status after (incl. fails-when-reverted).
+`templates/tasks/0000_TEMPLATE.md` → `tasks/S###.T###_Name.md`:
+Goal+Inputs+Plan before, Verification+Outputs+Status after (incl.
+fails-when-reverted). `Inputs`/`Outputs` are the handover contract — a
+task must be startable cold; see
+`templates/reference/session-handover.md`.
 
 `templates/decisions/0000-TEMPLATE.md` → `decisions/NNNN-title.md`: calls
 expensive to reverse. Link the affected doc; don't restate it.

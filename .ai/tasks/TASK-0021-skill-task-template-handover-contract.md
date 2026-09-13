@@ -61,8 +61,15 @@ table with an *expected state* column does not.
 - TASK-0020 done: `session-handover.md` exists,
   `00.CONVENTIONS.md` under budget.
 - Working tree clean; `tests/validate.sh` passing.
-- `diff -rq` between repo and deployed skill clean **before** starting, so
-  any drift found afterwards is known to be this task's.
+- ~~`diff -rq` between repo and deployed skill clean **before** starting,
+  so any drift found afterwards is known to be this task's.~~
+  **Struck at execution time (2026-09-13).** TASK-0020's handover showed
+  this precondition is vacuous, and verifying it confirmed why: **both**
+  deployment targets are symlinks to the repo, so `diff -rq` compares a
+  path with itself and cannot fail. Replaced by the deployment-shape
+  check below. Kept struck rather than deleted — it was written in
+  PLAN-0002 on a false assumption, and the correction is the useful
+  record.
 
 ## Likely files
 - `skills/project-workflow/templates/tasks/0000_TEMPLATE.md`
@@ -95,27 +102,60 @@ table with an *expected state* column does not.
 9. Run `scripts/sync-registry.sh`; confirm **no diff**.
 
 ## Acceptance criteria
-- [ ] Template carries `## Inputs` and `## Outputs / handover`, both
+- [x] Template carries `## Inputs` and `## Outputs / handover`, both
       tabular, with an expected-state column.
-- [ ] `## Outputs / handover` includes the `**Next task starts here**:`
+- [x] `## Outputs / handover` includes the `**Next task starts here**:`
       line.
-- [ ] The head blockquote's before/after split accounts for both new
+- [x] The head blockquote's before/after split accounts for both new
       sections.
-- [ ] `metadata.version` is `3.1.0`.
-- [ ] `diff -rq` between repo and deployed skill is clean after
-      `install.sh`.
-- [ ] `docs/registry.md` shows no diff.
-- [ ] `tests/validate.sh` passes.
-- [ ] Section names checked against the other templates and found
+- [x] `metadata.version` is `3.1.0`.
+- [x] ~~`diff -rq` between repo and deployed skill is clean after
+      `install.sh`.~~ **Struck as unfailable** — both targets are
+      symlinks to the repo. Replaced by recording the deployment shape of
+      every client; see Mandatory validations.
+- [x] `docs/registry.md` shows no diff.
+- [x] `tests/validate.sh` passes.
+- [x] Section names checked against the other templates and found
       TASK-specific.
+- [x] **No section duplicates another's ownership** — added during
+      execution, after `Files touched` was found to overlap
+      `Outputs / handover`. See log.
 
 ## Mandatory validations
 - [ ] `tests/validate.sh`
 - [ ] `scripts/sync-registry.sh` — no diff expected; confirmed, not assumed
-- [ ] `scripts/install.sh` then `diff -rq skills/project-workflow
-      ~/.config/opencode/skills/project-workflow` — clean
-- [ ] Grep the deployed copy for `3.1.0` — proves the deployed
-      frontmatter actually changed, rather than trusting installer output
+- [x] **Deployment shape recorded for every client in `install.sh`'s
+      `CLIENTS` list** — `LinkType` and `readlink -f` per target, so the
+      record states what was actually verified. Both `claude-code`
+      (`~/.claude/skills`) and `opencode` (`~/.config/opencode/skills`)
+      are `SymbolicLink` → the repo path. `CLIENTS` holds exactly these
+      two; LM Studio is deliberately absent (ADR-0006).
+- [x] `scripts/install.sh` runs clean and is idempotent — ran twice,
+      second run reported the same four `(link)` deployments and changed
+      nothing.
+- [x] `tests/validate.sh` — OK, with the frontmatter semver check passing
+      on `3.1.0`.
+- [x] `scripts/sync-registry.sh` — **no diff**, confirmed via
+      `git diff --name-only docs/registry.md` returning empty.
+
+### Replaced, and why
+Two checks from PLAN-0002 are struck as **unfailable**, per TASK-0020's
+handover and confirmed by measurement this session:
+
+- ~~`diff -rq` repo vs. deployed → clean~~ — both `claude-code` and
+  `opencode` targets are `SymbolicLink`s whose `readlink -f` is the repo
+  path itself. The diff compares a directory with itself.
+- ~~Grep the deployed copy for `3.1.0`~~ — same reason: the "deployed
+  copy" *is* the repo file, so the grep passes the moment the repo is
+  edited, whether or not `install.sh` ever runs.
+
+**No `copy`-installed client exists on this machine** to check against —
+`install.sh` supports `copy` as a fallback for symlink-less checkouts,
+but neither client here uses it. So the honest finding is recorded rather
+than a substitute test invented: **repo↔deployed drift is structurally
+impossible in this environment**, and any future check claiming to detect
+it is checking nothing. This is a property of the install mode
+(ADR-0002 symlink-first), not of this task.
 
 ## Risks and rollback
 - **Risk: repo/deployed drift, again.** This is the exact defect
@@ -144,31 +184,111 @@ TASK-0022 — this repo adopts a finished shape, not one still moving.
 ## Outputs / handover
 | Artifact | End state |
 |---|---|
-| `skills/project-workflow/templates/tasks/0000_TEMPLATE.md` | Seven sections; carries the handover contract; head blockquote consistent with them. |
-| `skills/project-workflow/SKILL.md` | `metadata.version: "3.1.0"`. |
-| `~/.config/opencode/skills/project-workflow/` | Re-installed; byte-identical to the repo, verified by `diff -rq` **and** a version grep. |
+| `skills/project-workflow/templates/tasks/0000_TEMPLATE.md` | **Six** sections (not seven — `Files touched` merged into `Outputs / handover`), 68 lines. Head blockquote lists the before/after split for both new sections. |
+| `skills/project-workflow/SKILL.md` | `metadata.version: "3.1.0"`; lines 34-38 describe the new split and link `session-handover.md`. 2231 bytes. |
+| `.ai/decisions/0012-…md` | **Corrected in place** with a dated Correction paragraph: its claim that the skill's template "has no equivalent sections" was false. |
+| `~/.claude/skills/project-workflow`, `~/.config/opencode/skills/project-workflow` | Both `SymbolicLink` → the repo. Serving `3.1.0` and `session-handover.md`. Drift is structurally impossible; no `copy`-installed client exists here. |
 | `docs/registry.md` | Unchanged, confirmed by regenerating. |
+| `skills/project-workflow/templates/00.CONVENTIONS.md` | **Untouched**, still 3060/3072. |
 
-**Next task starts here**: the skill side is complete and canonical. The
-skill is now *ahead* of this repo's own `.ai/templates/TASK.md`, which
-still has the unmerged `Minimal context`/`Preconditions`/`Dependencies`/
-`Expected result` shape. TASK-0022 closes that gap as a deliberate
-adoption — the copy-never-symlink rule means it does not happen
-automatically, and this task must not pre-emptively do it.
+**Next task starts here**: the skill side is complete and canonical, and
+the headings are final — `## Inputs` and `## Outputs / handover`.
+TASK-0022 adopts them in `.ai/templates/TASK.md`, which still has the
+unmerged `Minimal context`/`Preconditions`/`Dependencies`/
+`Expected result` shape.
+
+Three things TASK-0022 must carry from here:
+
+1. **Read the finished template, not ADR-0012's prose, for the section
+   list.** The ADR was wrong once already about what sections exist; this
+   task corrected it but the lesson stands. TASK-0022's own plan already
+   says to read the file — do it.
+2. **`Files touched` merged into `Outputs / handover` on the skill
+   side.** This repo's `.ai/templates/TASK.md` has no `Files touched`
+   section, so there is nothing equivalent to merge — but check, rather
+   than trusting this sentence.
+3. **TASK-0022's step 2 anticipates that `Minimal context` may not fit a
+   three-column table** (TASK-0018 used it for a provenance *narrative*).
+   That concern is real and unresolved. The skill's `Inputs` table is
+   strictly artifact-shaped, so if narrative context is needed here, it
+   needs somewhere to live — likely prose retained beside the table.
+   Decide it explicitly and record the deviation.
 
 ## Status
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-13
 - Updated: 2026-09-13
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-13
+- Agent: opencode
 - Actions:
+  - Verified every declared input before starting, per the read order
+    TASK-0020 wrote: version `3.0.0`, `session-handover.md` present,
+    `00.CONVENTIONS.md` 3060 bytes, template 43 lines, tree clean at
+    `9a154be`. All as declared.
+  - Read `install.sh`'s `CLIENTS` list and checked **both** targets'
+    deployment shape before running any validation, then amended this
+    task's Preconditions and Mandatory validations to strike the two
+    unfailable checks — *before* performing them, so the record shows the
+    decision preceding the action rather than a rationalisation after a
+    convenient pass.
+  - Added `## Inputs` (after Goal) and `## Outputs / handover` (after
+    Verification), both tabular.
+  - **Merged `Files touched` into `Outputs / handover`** — see
+    Observations.
+  - Updated the head blockquote's before/after split, and `SKILL.md:34-35`
+    which still described the old "Goal+Plan before, Verification+Status
+    after" shape.
+  - Bumped `metadata.version` → `3.1.0`.
 - Observations:
+  - **ADR-0012 contained a false statement, and following it literally
+    created the defect it forbids.** The ADR said the two sections are
+    "added" to the skill's template because it "has no equivalent
+    sections". But `Files touched` is output-shaped: after adding
+    `Outputs / handover` the template had two owners for "what this task
+    changed" — the precise duplication the ADR's own Decision 1 prohibits.
+    Caught by reading the rendered 71-line template, not by any check.
+    Merged the two and **corrected ADR-0012 in place with a dated
+    Correction paragraph** rather than quietly editing it.
+  - The ADR's error is worth more than the fix: it asserted a fact about
+    a five-section file *without enumerating those five sections against
+    the rule it was stating*. Both TASK-0020 and TASK-0021 have now hit
+    the same class of defect — a confident claim about a small, readable
+    artifact that nobody actually read. That is twice in two tasks.
+  - Net section count went 5 → 6, not 5 → 7 as PLAN-0002 implied. The
+    plan-level acceptance criterion said "no net growth" only for *this
+    repo's* template (TASK-0022); the skill's grows by one. Worth stating
+    because the two numbers are easy to conflate when reviewing.
+  - **Both clients are symlinked, so this environment cannot exhibit
+    repo↔deployed drift at all.** `install.sh` supports `copy`, but
+    neither client uses it here. Rather than invent a substitute test, the
+    finding is recorded as a property of the install mode (ADR-0002).
+    The "deployed serves 3.1.0" check is a tautology and is labelled one.
+  - Re-checked `00.CONVENTIONS.md` per TASK-0020's headroom warning: this
+    task did not touch it, still 3060/3072.
+  - The registry was unaffected, as predicted — the `description` was
+    deliberately left alone, so the generated row is byte-identical.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` — OK (semver check passes on `3.1.0`).
+  - `scripts/sync-registry.sh` — no diff, confirmed by
+    `git diff --name-only`, not inferred.
+  - `scripts/install.sh link` run twice — idempotent; four `(link)`
+    deployments both times.
+  - Deployment shape, both clients: `LinkType = SymbolicLink`,
+    `readlink -f` = the repo path, identical to
+    `readlink -f skills/project-workflow`.
+  - `session-handover.md` reachable through both client paths.
+  - Section names checked against `reviews/0000_TEMPLATE.md` and
+    `decisions/0000-TEMPLATE.md`: neither would host `Inputs`/`Outputs`
+    naturally (they use "State of the project", "Context",
+    "Consequences"), confirming the names are TASK-specific and will not
+    leak.
+- Result: success. The skill's task template now carries the handover
+  contract in 6 sections rather than 7, because executing the task
+  exposed a false premise in the ADR that planned it. Version `3.1.0`
+  live in both clients.
+- Commit: see below
+- Push: to `origin master`

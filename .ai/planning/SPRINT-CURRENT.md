@@ -30,8 +30,8 @@ repo's job.
 |------|-----------|--------|------|
 | ADR-0012 | — | **accepted** | Handover is a contract; resumability is the invariant; what validation may claim |
 | TASK-0020 | ADR-0012 | **done** | Skill: `reference/session-handover.md`; `00.CONVENTIONS.md` 3087→3060 bytes |
-| TASK-0021 | TASK-0020 | planned | Skill: template `Inputs`/`Outputs`; version → `3.1.0`. **Two of its planned checks cannot fail — see TASK-0020's handover before starting** |
-| TASK-0022 | TASK-0021 | planned | This repo: merge four sections into the two contract sections |
+| TASK-0021 | TASK-0020 | **done** | Skill: template `Inputs`/`Outputs` (6 sections, not 7); version `3.1.0`; two unfailable checks struck |
+| TASK-0022 | TASK-0021 | planned | This repo: merge into the two contract sections. **Read the finished template, not ADR-0012's prose — the ADR was wrong once** |
 | TASK-0023 | TASK-0022 | planned | `validate.sh`: omission check, `≥ 0020` boundary |
 
 Order matters. The skill is canonical (ADR-0004), so its shape settles
@@ -68,19 +68,35 @@ reader. A budget whose number is ambiguous cannot be checked. Now stated
 as the exact `≤3072 bytes`. **12 bytes of headroom remain** — any later
 task touching that file must re-measure.
 
-## Live finding from TASK-0020 — read before TASK-0021
-**The OpenCode skill deployment is a symlink** (ADR-0002,
-`install.sh link`): `~/.config/opencode/skills/project-workflow` and the
-repo path canonicalize to the same directory. Therefore two checks
-TASK-0021 inherited from PLAN-0002 **cannot fail**: `diff -rq` between a
-symlink and its target, and grepping the "deployed" copy for the new
-version. Both were written last session on the assumption of a real copy.
+## Resolved: the unfailable deployment checks (TASK-0020 → TASK-0021)
+**Both** skill deployments are symlinks (ADR-0002, `install.sh link`):
+`~/.claude/skills/…` and `~/.config/opencode/skills/…` both
+`readlink -f` to the repo path. So `diff -rq` against "the deployed copy"
+compares a directory with itself, and grepping it for a new version reads
+the repo file. Both checks came from PLAN-0002 and cannot fail.
 
-TASK-0021 must replace them with a check against a `copy`-installed
-client, or record honestly that repo-vs-deployed drift is structurally
-impossible on this machine. Full detail in TASK-0020's
-`Outputs / handover`. This is lesson 1 recurring inside the sprint that
-cites it.
+**Resolution (TASK-0021): recorded, not substituted.** No
+`copy`-installed client exists on this machine, so rather than invent a
+test, the finding stands as a property of the install mode:
+**repo↔deployed drift is structurally impossible in this environment**,
+and any future check claiming to detect it is checking nothing. The
+checks were struck *before* being run, so the record shows the decision
+preceding the convenient pass.
+
+## The recurring defect in this sprint — two for two
+Both executed tasks hit the same class: **a confident claim about a
+small, readable artifact that nobody actually read.**
+
+- TASK-0020: the handover note asserted the deployed copy was stale. It
+  was a symlink. Caught by verifying before committing.
+- TASK-0021: **ADR-0012 stated the skill's task template "has no
+  equivalent sections"** to `Inputs`/`Outputs`. `Files touched` is
+  output-shaped, so following the ADR literally created the exact
+  duplication it forbids. Caught by reading the rendered template; the
+  sections were merged and the ADR corrected in place with a dated note.
+
+The pattern to watch in TASK-0022/0023: the plan is a hypothesis about
+files, not a description of them. Open the file.
 
 ## Standing constraints
 Unchanged from S4, and two bind this sprint directly:

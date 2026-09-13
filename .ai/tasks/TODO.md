@@ -37,8 +37,10 @@ decisions in ADR-0012. Run in order — each depends on the one above.
       `00.CONVENTIONS.md` to its byte budget (done — 3087→3060; found
       the budget target was ambiguous, and that TASK-0021 has two checks
       that cannot fail)
-- [ ] TASK-0021 — Skill: task-template `Inputs`/`Outputs`; version
-      `3.1.0`; re-sync the deployed copy (planned)
+- [x] TASK-0021 — Skill: task-template `Inputs`/`Outputs`; version
+      `3.1.0` (done — merged `Files touched` into `Outputs`, correcting
+      a false claim in ADR-0012; both clients are symlinks so two
+      planned checks were struck as unfailable)
 - [ ] TASK-0022 — This repo: merge four sections into the two contract
       sections in `.ai/templates/TASK.md` (planned)
 - [ ] TASK-0023 — `validate.sh`: handover-omission check with the

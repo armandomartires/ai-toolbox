@@ -72,14 +72,24 @@ facts a paragraph lets an author omit:
   modifies, its expected end state, and a single
   `**Next task starts here**:` line.
 
-In the skill's template these are **added** (it has no equivalent
-sections). In this repo's `.ai/templates/TASK.md` they are a
-**rename-and-merge**, not an addition: `Minimal context`, `Preconditions`
-and `Dependencies` collapse into `## Inputs`, and `Expected result`
-becomes `## Outputs / handover`. Adding two new sections alongside four
-that already carry the same information would put one fact in two places
-— violating the governing one-owner rule inside the very artifact that
-states it. Net section count here does not grow.
+In the skill's template, `## Inputs` is **added** and
+`## Outputs / handover` **absorbs the existing `Files touched`**. In this
+repo's `.ai/templates/TASK.md` both are a **rename-and-merge**:
+`Minimal context`, `Preconditions` and `Dependencies` collapse into
+`## Inputs`, and `Expected result` becomes `## Outputs / handover`.
+Adding new sections alongside ones that already carry the same
+information would put one fact in two places — violating the governing
+one-owner rule inside the very artifact that states it. Net section count
+grows by one in the skill's template and not at all in this repo's.
+
+**Correction (2026-09-13, during TASK-0021).** This paragraph originally
+read "In the skill's template these are **added** (it has no equivalent
+sections)." That was wrong: `Files touched` is output-shaped, so adding
+`Outputs / handover` beside it created exactly the duplication this
+decision forbids. Caught while reading the rendered template, not by any
+check. Corrected rather than silently rewritten, because the error is
+instructive — the ADR asserted a fact about a five-section file without
+enumerating those five sections against the rule it was stating.
 
 ### 2. Resumability is the mandatory invariant; session rotation is a heuristic
 **Mandatory:** every task must be startable cold, in a brand-new session,
