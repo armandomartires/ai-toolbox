@@ -41,8 +41,10 @@ decisions in ADR-0012. Run in order — each depends on the one above.
       `3.1.0` (done — merged `Files touched` into `Outputs`, correcting
       a false claim in ADR-0012; both clients are symlinks so two
       planned checks were struck as unfailable)
-- [ ] TASK-0022 — This repo: merge four sections into the two contract
-      sections in `.ai/templates/TASK.md` (planned)
+- [x] TASK-0022 — This repo: merge into the two contract sections in
+      `.ai/templates/TASK.md` (done — **three** sections merged, not
+      four: measuring showed `Minimal context` carries narrative up to 82
+      lines that a table would destroy. 16→15 sections)
 - [ ] TASK-0023 — `validate.sh`: handover-omission check with the
       `≥ 0020` boundary (planned)
 

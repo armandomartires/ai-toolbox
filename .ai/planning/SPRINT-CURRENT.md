@@ -31,8 +31,8 @@ repo's job.
 | ADR-0012 | — | **accepted** | Handover is a contract; resumability is the invariant; what validation may claim |
 | TASK-0020 | ADR-0012 | **done** | Skill: `reference/session-handover.md`; `00.CONVENTIONS.md` 3087→3060 bytes |
 | TASK-0021 | TASK-0020 | **done** | Skill: template `Inputs`/`Outputs` (6 sections, not 7); version `3.1.0`; two unfailable checks struck |
-| TASK-0022 | TASK-0021 | planned | This repo: merge into the two contract sections. **Read the finished template, not ADR-0012's prose — the ADR was wrong once** |
-| TASK-0023 | TASK-0022 | planned | `validate.sh`: omission check, `≥ 0020` boundary |
+| TASK-0022 | TASK-0021 | **done** | This repo: 3 sections merged (not 4) → 16→15. `Minimal context` retained as narrative |
+| TASK-0023 | TASK-0022 | planned | `validate.sh`: omission check, `≥ 0020` boundary. **Content presence only — a format check would reject the four files that prove the contract** |
 
 Order matters. The skill is canonical (ADR-0004), so its shape settles
 first (0020, 0021) and this repo adopts a finished contract (0022) before
@@ -83,8 +83,8 @@ and any future check claiming to detect it is checking nothing. The
 checks were struck *before* being run, so the record shows the decision
 preceding the convenient pass.
 
-## The recurring defect in this sprint — two for two
-Both executed tasks hit the same class: **a confident claim about a
+## The recurring defect in this sprint — three for three
+Every executed task has hit the same class: **a confident claim about a
 small, readable artifact that nobody actually read.**
 
 - TASK-0020: the handover note asserted the deployed copy was stale. It
@@ -92,11 +92,19 @@ small, readable artifact that nobody actually read.**
 - TASK-0021: **ADR-0012 stated the skill's task template "has no
   equivalent sections"** to `Inputs`/`Outputs`. `Files touched` is
   output-shaped, so following the ADR literally created the exact
-  duplication it forbids. Caught by reading the rendered template; the
-  sections were merged and the ADR corrected in place with a dated note.
+  duplication it forbids. Sections merged; ADR corrected in place.
+- TASK-0022: PLAN-0002 specified a **four**-section merge. Measuring the
+  23 real task files showed `Minimal context` carries narrative averaging
+  ~25 lines and reaching 82 — root-cause analysis, sub-headings, its own
+  tables. Merged three; kept it. Also found `Likely files` in the same
+  ownership grey zone `Files touched` had occupied.
 
-The pattern to watch in TASK-0022/0023: the plan is a hypothesis about
-files, not a description of them. Open the file.
+**The plan is a hypothesis about files, not a description of them.**
+Three for three is no longer a run of bad luck — it is the working
+assumption for TASK-0023 and for REVIEW-0007. Note that the convention's
+own step ("verify the declared state; don't assume it") is what caught
+all three, which is the sprint's only real evidence so far that the
+contract does anything.
 
 ## Standing constraints
 Unchanged from S4, and two bind this sprint directly:

@@ -92,27 +92,33 @@ This adoption is deliberate, with its own commit.
 6. Run `tests/validate.sh`.
 
 ## Acceptance criteria
-- [ ] `.ai/templates/TASK.md` carries `## Inputs` and
-      `## Outputs / handover`, named identically to the skill's template.
-- [ ] **No net growth in section count** — the merge is real, not
-      cosmetic.
-- [ ] No fact is owned by two sections. Verified by reading the finished
-      template top to bottom, not inferred from the diff.
-- [ ] The narrative role `Minimal context` served is either preserved or
-      its loss is explicitly justified in the log.
-- [ ] TASK-0001…0019 unmodified — `git status` shows no change under
-      `.ai/tasks/` other than this task's own file.
-- [ ] `AGENTS.md` either needs no change (verified by grep) or is updated
-      in the same commit.
-- [ ] `tests/validate.sh` passes.
+- [x] `.ai/templates/TASK.md` carries `## Inputs` and
+      `## Outputs / handover`, named identically to the skill's template
+      — verified by exact string comparison, both present on both sides.
+- [x] **No net growth in section count** — 16 → **15**. The merge is real:
+      `Preconditions` + `Dependencies` + `Expected result` (3) became
+      `Inputs` + `Outputs / handover` (2).
+- [x] No fact is owned by two sections. Read top to bottom; the one
+      genuine adjacency (`Likely files` vs `Outputs / handover`) is
+      demarcated in the template itself — see log.
+- [x] The narrative role `Minimal context` served is **preserved** —
+      `Minimal context` survives as prose. The planned four-way merge was
+      **not** performed; deviation recorded below.
+- [x] TASK-0001…0019 unmodified — `git status --porcelain .ai/tasks/`
+      empty apart from this sprint's own files.
+- [x] `AGENTS.md` needs no change — grep for all four old section names
+      returned nothing, so it stays out of scope as planned.
+- [x] `tests/validate.sh` passes.
 
 ## Mandatory validations
-- [ ] `tests/validate.sh`
-- [ ] `git status --short .ai/tasks/` — proves no historical task file was
-      touched
-- [ ] `diff` of section headings, this template vs. the skill's — names
-      match
-- [ ] `scripts/sync-registry.sh` — no component changed, so no diff
+- [x] `tests/validate.sh` — OK
+- [x] `git status --porcelain .ai/tasks/` filtered to exclude `TASK-002x`
+      — **empty**, proving no historical task file was touched
+- [x] Exact-name comparison of headings against the skill's template —
+      `## Inputs` and `## Outputs / handover` match on both sides; the
+      repo template is otherwise a superset, as expected
+- [x] `scripts/sync-registry.sh` — **no diff**, confirmed via
+      `git diff --name-only docs/registry.md`
 
 ## Risks and rollback
 - **Risk: the merge destroys what `Minimal context` was for.** The single
@@ -142,30 +148,100 @@ TASK-0023 — the check must be written against the final headings.
 ## Outputs / handover
 | Artifact | End state |
 |---|---|
-| `.ai/templates/TASK.md` | Restructured; `## Inputs` + `## Outputs / handover`; no net section growth; names matching the skill's template exactly. |
-| `AGENTS.md` | Unchanged if it does not name the old sections; updated in this commit if it does. |
-| `.ai/tasks/TASK-0001…0019` | **Untouched**, verified by `git status`. |
+| `.ai/templates/TASK.md` | 15 sections (was 16). Carries `## Inputs` and `## Outputs / handover`, byte-identical names to the skill's template. `Minimal context` **retained** as narrative prose; `Likely files` retained with a forecast-vs-record boundary comment. |
+| `AGENTS.md` | **Unchanged** — grep confirmed it names none of the old sections. |
+| `.ai/tasks/TASK-0001…0019` | **Untouched**, proven by filtered `git status --porcelain`. |
+| `docs/registry.md` | Unchanged (no component touched). |
 
-**Next task starts here**: the headings are now final and identical on
-both sides. TASK-0023 writes the `validate.sh` check against these exact
-strings — it must read them from the finished template rather than from
-ADR-0012's prose, in case step 2 of this task's plan altered which
-sections merged. If this task deviated from its plan, that deviation is
-recorded in the log below and TASK-0023 must read it before starting.
+**Next task starts here**: the headings are final and identical on both
+sides — `## Inputs` and `## Outputs / handover`, exactly those strings
+including the spaces around the slash.
+
+Three things TASK-0023 must absorb before writing the check:
+
+1. **This task deviated: `Minimal context` was NOT merged into `Inputs`.**
+   The template therefore has 15 sections, not the 14 a strict four-way
+   merge would have produced. The check must not assume `Minimal context`
+   is gone, and must not require it either — it is optional narrative.
+2. **Read the heading strings from `.ai/templates/TASK.md` itself**, not
+   from this file, ADR-0012, or PLAN-0002. Three consecutive tasks have
+   now found the planning prose disagreeing with the artifact.
+3. **The `≥ 0020` boundary needs care with this sprint's own files.**
+   TASK-0020, 0021, 0022 and 0023 all already carry both sections (they
+   were written to the contract before it existed), so they should pass.
+   But they predate the template, so if the check demands an exact table
+   shape rather than non-empty content, they may not. **Content presence
+   only**, as ADR-0012 Decision 3 and this task's Not-included section
+   both require — a format check would reject the four files that prove
+   the contract works.
 
 ## Status
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-13
 - Updated: 2026-09-13
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-13
+- Agent: opencode
 - Actions:
+  - Verified inputs: skill at `3.1.0`, tree clean at `68b7648`. Read the
+    **finished** skill template for the section list rather than
+    ADR-0012's prose, per this task's own handover note 1.
+  - Grepped `AGENTS.md` for all four old section names — **no
+    occurrences**, so it stayed out of scope exactly as the plan's step 1
+    allowed for.
+  - Measured how `Minimal context` is actually used across all 23 task
+    files before merging anything (plan step 2).
+  - Merged `Preconditions` + `Dependencies` + `Expected result` → `Inputs`
+    + `Outputs / handover`. **Left `Minimal context` intact** — deviation,
+    see below.
+  - Added an HTML-comment boundary to `Likely files` distinguishing
+    forecast from record.
 - Observations:
+  - **DEVIATION from the plan: `Minimal context` was not merged.** The
+    plan proposed collapsing four sections into `Inputs`; only three were.
+    Measuring settled it — `Minimal context` averages ~25 lines across
+    the 23 task files and reaches **82** (TASK-0017), **56**
+    (TASK-0019), **53** (TASK-0018). TASK-0019's contains a root-cause
+    sub-heading, its own verification table, and the analysis of *why* a
+    false claim survived three restatements. None of that is
+    artifact-shaped; a three-column table would have destroyed it. The
+    plan's step 2 anticipated exactly this and authorised the amendment,
+    so this is a planned-for deviation rather than a surprise.
+  - `Preconditions` and `Dependencies`, by contrast, **are** genuinely
+    artifact/state-shaped — "working tree clean at `9404060`",
+    "TASK-0011 (single emit path)". They map onto the table's three
+    columns without loss. The distinction that matters is *artifact state*
+    vs *narrative*, not "input-ish" vs "output-ish"; the plan's framing
+    was one level too coarse.
+  - Net section count still **shrank**, 16 → 15, so the criterion holds
+    even with `Minimal context` retained. Three sections became two.
+  - **`Likely files` is the near-duplicate this task had to resolve**, and
+    it is the same defect class TASK-0021 hit with `Files touched`. It is
+    forward-looking ("*likely*"), so it does not own what changed — but
+    nothing in the template said so, and the skill's `Outputs / handover`
+    explicitly absorbed its equivalent. Rather than delete a section that
+    earns its place at planning time, both are now labelled: `Likely
+    files` is a forecast, `Outputs / handover` is the record, and a
+    disagreement between them at the end is itself a finding. **Third
+    consecutive task where reading the rendered file caught an ownership
+    overlap the plan did not predict.**
+  - `PLAN.md` uses "Context consulted" and `REVIEW.md` has no `##`
+    sections at all, so `Inputs`/`Outputs` remain TASK-specific and will
+    not leak into the other templates.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` — OK.
+  - Section count 16 → 15, counted from `git show HEAD:` versus the
+    working file, not estimated.
+  - Exact-string comparison of both contract headings against the skill's
+    template — identical.
+  - `git status --porcelain .ai/tasks/` excluding `TASK-002x` — empty.
+    TASK-0001…0019 provably untouched.
+  - `scripts/sync-registry.sh` — no diff (no component changed).
+- Result: success, with one recorded deviation. The contract is adopted;
+  `Minimal context` survives because measurement showed the merge would
+  have cost more than it bought.
+- Commit: see below
+- Push: to `origin master`
