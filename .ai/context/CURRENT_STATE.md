@@ -50,9 +50,17 @@
   loop structure incl. mandatory exit conditions; the loops registry
   template leak — third instance of that defect — fixed, so no template
   appears in any registry table).
-- Current sprint: **S2 Multi-client hardening** (`SPRINT-CURRENT.md`). S1
-  archived to `.ai/planning/sprints/SPRINT-S1-foundation.md`.
-- Incomplete: TASK-0009 (MCP smoke-test harness) — the only open task.
+  TASK-0009 (`tests/smoke-mcp.sh` — manifest-driven MCP smoke test: real
+  `initialize` handshake, bounded timeout, PASS/FAIL/SKIP as three
+  distinct outcomes; deliberately *not* part of `validate.sh`, which
+  stays hermetic at ~330 ms with no network calls).
+- Current sprint: **S3 Automation — scope not yet confirmed**
+  (`SPRINT-CURRENT.md` lists candidates and open questions). S1 and S2
+  archived under `.ai/planning/sprints/`; checkpoints REVIEW-0003 and
+  REVIEW-0004.
+- Phases 1 and 2 are complete. Phase 3 has a blocker to resolve before
+  scoping: **no git remote is configured**, so "wire validate.sh into CI"
+  presupposes something that does not exist yet.
 - In flight: `opencode-customization` (a separate repo) still has its own
   stale copy of project-workflow and an unresolved `S025_WorkflowHarmonization`
   sprint referencing it — that repo's own follow-up, not this repo's, per
@@ -62,12 +70,12 @@
 - Blockers: none. Risks: symlink support on Windows checkouts (ADR-0002).
 - Expected branch: master. Latest relevant commits: TASK-0001–0004 (see
   `git log --oneline -5` for hashes).
-- Recommended next action: TASK-0009 (MCP smoke-test harness), the only
-  open task in sprint S2. Its brief deliberately leaves one decision open:
-  whether the network-dependent smoke test runs inside
-  `tests/validate.sh` (currently fast, offline, hermetic, and the
-  mandatory gate) or beside it — the brief recommends beside, keeping
-  PASS/FAIL/SKIP distinct so a skip never reads as a pass.
+- Recommended next action: confirm the scope of sprint S3 with the human
+  before writing briefs. `SPRINT-CURRENT.md` lists four candidates
+  (wire validate.sh into pre-commit/CI; B-007 de-duplicate the registry
+  generator; decide CI's handling of the network-dependent smoke test;
+  B-002 skill linter) and two open questions (is there to be a git remote;
+  is a pre-commit hook acceptable on a `/mnt/c` tree from WSL).
 - Standing decisions added this session (ADR-0006): LM Studio is an
   **MCP-only client**, excluded from skill criteria — Phase 2's exit
   criterion is now split per capability rather than claiming "all

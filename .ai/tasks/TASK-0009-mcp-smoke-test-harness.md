@@ -226,5 +226,10 @@ launchable.
   - `bash tests/validate.sh` → OK, 326 ms, no network calls, file
     unmodified by this task.
 - Result: success.
-- Commit: see below.
+- Commit: `9336f5b` "Add MCP server smoke-test harness with PASS/FAIL/SKIP
+  outcomes" on `master`.
 - Push: no remote configured — nothing to push.
+- Note: closed by following `loops/release-check/loop.md` — its second
+  real use. Step 4 ("verify the effect, not the exit code") is what
+  prompted the direct `bash -n` syntax check and the fixture-removal
+  listing rather than trusting a clean `git status` alone.
