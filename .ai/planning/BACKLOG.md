@@ -5,12 +5,15 @@
 | B-001 | Subagent-run registry validation | low | medium | Phase 3 | low | **done** | TASK-0018 — closed as **superseded**, not implemented (ADR-0011); scoping it found two real registry defects, both fixed |
 | B-002 | Skill Linter (frontmatter ~~+ line budget~~) | medium | high | Phase 1 | low | **done** | TASK-0012 — frontmatter only; line budget dropped per ADR-0008 |
 | B-003 | MCP server smoke test harness | medium | high | Phase 1 | medium | **done** | TASK-0009 — `tests/smoke-mcp.sh` |
+| B-004 | Repo LICENSE file (backs skill `license:` claims) | low | medium | none | low | **done** | TASK-0013 — MIT chosen by human; ADR-0003's known gap closed |
 | B-005 | Re-scope Phase 2 exit criterion (LM Studio has no Agent Skills target) | high | medium | none | low | **done** | resolved by ADR-0006 |
 | B-006 | ~~Port~~ **Author** a loop component | medium | medium | none | low | **done** | TASK-0008; verb corrected — nothing existed to port (ADR-0006) |
 | B-007 | De-duplicate sync-registry.sh per-section loops (or assert no `_template*` row) | medium | medium | none | low | **done** | TASK-0011 — did both |
+| B-008 | Unify `.ai/decisions/` file naming (`ADR-NNNN-*` vs `NNNN-*`) | low | low | none | low | open | now — it is a rename plus a link sweep, blocked by nothing |
 
-**The backlog is empty — every item above is closed.** New work needs a new
-item with its own justification.
+**B-001…B-007 are all closed.** B-008 is the only open item, and unlike the
+scaffold boilerplate that filled this table for four sprints, it was found
+by reading real files.
 
 Notes:
 - B-001 was scaffold boilerplate from the initial commit (`e72b78c`), never
@@ -48,4 +51,19 @@ Notes:
   because its *verb* was the defect: it said "port", and a search found no
   first-party loop artifact existed anywhere to port. Recording the
   correction is the point.
-| B-004 | Repo LICENSE file (backs skill `license:` claims) | low | medium | none | low | **done** | TASK-0013 — MIT chosen by human; ADR-0003's known gap closed |
+- **B-004's row had fallen outside the table**, stranded below these notes
+  since TASK-0013 appended it instead of inserting it. Moved back into the
+  table by S5's planning session. Worth recording because of what it says
+  about the registry-integrity work: `validate.sh` checks the *generated*
+  `docs/registry.md` for column-count and pipe defects (TASK-0018), and
+  nothing checks the hand-maintained tables in `.ai/`. The defect class
+  this repo already fixed downstream was live upstream the whole time.
+- B-008 is a naming inconsistency in `.ai/decisions/`: ADR-0001 through
+  ADR-0007 use an `ADR-` prefix, ADR-0008 through ADR-0012 do not. Both
+  resolve for a human reader, so nothing is broken — but any future
+  tooling that globs decisions has to know both forms, and the split
+  point is arbitrary rather than meaningful. Low value, genuinely
+  unblocked, and explicitly **out of scope for S5** (see
+  `SPRINT-CURRENT.md`): it was found while reading for PLAN-0002 and has
+  nothing to do with handover. Fixing it mid-sprint would bundle an
+  unrelated rename into a contract change.

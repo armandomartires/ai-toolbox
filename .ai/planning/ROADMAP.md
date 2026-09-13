@@ -69,7 +69,7 @@ any agent or human can understand, trust, and deploy.
   because a criterion written at scaffold time met reality and lost. Check
   a phase's assumptions against the environment before committing to them.
 
-## Phase 4 — Closing the open loops (in progress, opened 2026-09-13)
+## Phase 4 — Closing the open loops (complete, 2026-09-13)
 - Objective: close every backlog item that is actually closeable, and for
   the ones that are not, replace the perpetual "candidate" listing with
   either a decision or a documented human-action procedure. The defect
@@ -95,17 +95,61 @@ any agent or human can understand, trust, and deploy.
   … not a synthetic one"; see TASK-0016 and ADR-0010 for the standing
   decision rather than a fourth candidate-list appearance.
 - Outcome: all five exit criteria met; sprint S4 closed 2026-09-13,
-  checkpoint REVIEW-0006. The backlog now holds no `ready` item — B-001 is
-  the only one left open, unblocked but unscoped.
+  checkpoint REVIEW-0006. B-001, the last open item, was closed
+  post-sprint by TASK-0018 as *superseded* (ADR-0011) — emptying the
+  backlog for the first time. The header above read "in progress" until
+  S5's planning session corrected it; every criterion had been met and
+  the status line simply lagged.
 - Pattern this phase was created to fix: an item can sit in a candidate
   list for sprints looking blocked when it is merely **undocumented**. The
   git remote was the clearest case — the credentials had been in the
   environment the entire time; nothing said so. Before carrying an item
   forward again, check whether it is actually blocked or just unwritten.
 
+## Phase 5 — Session handover contract (in progress, opened 2026-09-13)
+- Objective: make every task resumable in a brand-new session. The
+  `project-workflow` skill's task template names what a task *does* but
+  never what it consumes or hands on, so a task file cannot be picked up
+  cold — while the skill simultaneously presumes multi-session work in
+  three separate places without ever stating a session boundary.
+- Planned by `PLAN-0002`; decisions in ADR-0012. Sprint S5, tasks
+  TASK-0020…0023.
+- Exit criteria:
+  - The skill states a session boundary rule and a cold-start read order
+    — neither of which it states anywhere today (TASK-0020).
+  - `00.CONVENTIONS.md` is back **under** its own declared ≲3 KB budget,
+    measured. It is 3087 bytes today, and nobody had checked (TASK-0020).
+  - The skill's task template names both what a task consumes and what
+    the next task inherits; `metadata.version` → `3.1.0` with the
+    deployed copy re-synced and verified (TASK-0021).
+  - This repo's `.ai/templates/TASK.md` carries the same contract with
+    **no net growth in section count** — a merge of four existing
+    sections, not an addition of two more (TASK-0022).
+  - `validate.sh` detects a deleted or empty handover section, is proven
+    to fail for the right reason, and is honest in its own source about
+    what it does not prove (TASK-0023).
+- Deliberately **not** in scope: retrofitting TASK-0001…0019. They are
+  records of what happened; a brief written retroactively to look tidy is
+  not compliance (ADR-0012 Decision 4). The `≥ 0020` boundary encodes
+  this in the check itself.
+- What this phase is testing, beyond the artifacts: whether a
+  file-based handover actually makes a cold session cheap, or whether the
+  sections just get filled in. REVIEW-0007 should answer that from
+  TASK-0020…0023's own execution logs — the check cannot.
+
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec
   evolution. Mitigations: configs/ snapshots, ADR-0002, spec templates.
+- **A convention can grow the thing it exists to bound.** Phase 5 adds a
+  reference file and template sections to a convention whose entry point
+  is already over its own budget. New content goes to the load-on-demand
+  tier, and the existing overage is paid rather than inherited —
+  `reference/size-budgets.md:35-38` forbids raising a cap to fit what is
+  already there.
+- **A presence check can be read as a correctness check.** The likeliest
+  failure of Phase 5 is social: a green gate taken to mean the handovers
+  are good, when it only means no section is empty. Stated in the check's
+  own source comment, where a reader will actually hit it.
 - Client capability gaps are not repo defects and must not be recorded as
   such (ADR-0006). Check what a client actually supports before writing a
   criterion that assumes it.

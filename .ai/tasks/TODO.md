@@ -28,6 +28,19 @@
       `WORKSPACE_ROOT` placeholder trap; close Phase 2's last criterion (done)
 - [x] TASK-0018 — Close B-001 as superseded (ADR-0011); fix the registry
       quote leak and add three registry-integrity checks (done)
+- [x] TASK-0019 — Retract the false default-branch mismatch claim (done)
+
+## Sprint S5 — Session handover contract (open)
+Planned by `.ai/planning/plans/PLAN-0002-session-handover-contract.md`;
+decisions in ADR-0012. Run in order — each depends on the one above.
+- [ ] TASK-0020 — Skill: `reference/session-handover.md`; restore
+      `00.CONVENTIONS.md` to its byte budget (planned)
+- [ ] TASK-0021 — Skill: task-template `Inputs`/`Outputs`; version
+      `3.1.0`; re-sync the deployed copy (planned)
+- [ ] TASK-0022 — This repo: merge four sections into the two contract
+      sections in `.ai/templates/TASK.md` (planned)
+- [ ] TASK-0023 — `validate.sh`: handover-omission check with the
+      `≥ 0020` boundary (planned)
 
 Notes:
 - "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)
@@ -40,5 +53,13 @@ Notes:
   agent writes the procedure, human executes, agent records the evidence.
   The check passed **and** found a defect (placeholder `WORKSPACE_ROOT`),
   which is the argument for running verifications rather than assuming them.
-- Every task above is `done`. Nothing is in flight. Open items and who can
-  act on each are listed in `.ai/planning/SPRINT-CURRENT.md`.
+- **TASK-0019 was missing from this list entirely** until S5's planning
+  session added it. It was done, recorded in `SPRINT-CURRENT.md` and in
+  `.ai/tasks/`, and simply never checked off here — a small instance of
+  exactly the omission class S5 exists to catch, found by reading this
+  file rather than by any check.
+- S5 is the first sprint since S1 planned from a written plan
+  (`PLAN-0002`) rather than a backlog item. Its ordering is a dependency
+  chain, not a preference: the skill is canonical (ADR-0004), so its
+  shape settles before this repo adopts it, and nothing is enforced
+  until the shape stops moving.

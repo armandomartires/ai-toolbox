@@ -1,23 +1,45 @@
 # Current State
 
-Last updated 2026-09-13, after TASK-0018 (post-S4).
+Last updated 2026-09-13, after opening sprint S5 (planning only — no
+implementation yet).
 
 ## Where the project is
 - **Phases 1–4 complete, with no outstanding criteria in any of them.**
   S1–S4 are archived in `.ai/planning/sprints/`; checkpoints
   REVIEW-0003…REVIEW-0006. Phase 2's last partial criterion closed
   retroactively by TASK-0017.
+- **Phase 5 / sprint S5 is open: the session handover contract.** Planned
+  by `PLAN-0002`, decided by ADR-0012, four tasks TASK-0020…0023, none
+  started. **This session wrote planning artifacts only — no skill, no
+  template, and no script has been changed yet.**
 - **All three clients are now fully verified** for the ansible MCP server:
   Claude Code `✔ Connected`, OpenCode in live use, and LM Studio verified
   in its own UI (not merely at handshake level).
-- **Nothing is in flight, the backlog is empty, and no open item remains.**
-  B-001…B-007 are all closed (B-001 last, by TASK-0018/ADR-0011). The
+- B-001…B-007 are all closed (B-001 last, by TASK-0018/ADR-0011). The
   supposed `main`/`master` default-branch mismatch was **retracted as false**
-  by TASK-0019 — it never existed. Confirm scope with the human before
-  starting anything.
+  by TASK-0019 — it never existed. One new backlog item, **B-008**
+  (`.ai/decisions/` dual naming), found by reading rather than by a check.
 - Three live components: the `project-migration` and `project-workflow`
   skills (deployed to Claude Code and OpenCode), and the `ansible` external
   MCP server. One loop: `loops/release-check`.
+
+## What S5 is fixing, and why it is not obvious
+The `project-workflow` skill's task template has Goal, Plan, Files
+touched, Verification, Status notes. **Nothing names what a task consumes
+and nothing names what the next task picks up**, so a task file cannot be
+picked up cold in a fresh session. Meanwhile the skill presumes
+multi-session work in three places — `00.CONVENTIONS.md:6`,
+`reference/size-budgets.md:6`, and the byte budgets themselves, which
+exist *because* files are re-read cold — without ever stating a session
+boundary or a read order. The presumption is load-bearing and unwritten.
+
+This repo is **ahead of the skill it owns**: `.ai/templates/TASK.md`
+already carries `Minimal context`/`Preconditions`/`Dependencies`/
+`Expected result`, and `.ai/sessions/` has been a working narrative
+bridge for eleven sessions. None of it propagated back, which
+`reference/skill-maintenance.md:23-26` requires and ADR-0004 makes this
+repo's job. The skill is not behind through neglect of the skill — it is
+behind because nobody checked the repo's own practice against it.
 
 ## Infrastructure now in place
 - **Remote:** `origin` → `armandomartires/ai-toolbox`, **private**, wired by
@@ -47,6 +69,20 @@ section's own header) · every manifest-required env var appearing in
 `.env.example`.
 
 ## Known gaps — recorded, not hidden
+- **`skills/project-workflow/templates/00.CONVENTIONS.md` is 3087 bytes
+  against its own declared ≲3 KB (3072) cap.** Fifteen bytes over, and
+  nobody had measured it — the budget was stated in the file's header and
+  never checked. Found while reading for PLAN-0002. TASK-0020 pays it by
+  moving content to `reference/`, because
+  `reference/size-budgets.md:35-38` forbids raising a cap to fit what is
+  already there.
+- **Hand-maintained tables in `.ai/` are unchecked.** `validate.sh`
+  verifies column counts and pipe escaping in the *generated*
+  `docs/registry.md` (TASK-0018), while B-004's row in
+  `.ai/planning/BACKLOG.md` had sat *outside* its own table since
+  TASK-0013 appended instead of inserted. Fixed by S5's planning session.
+  The defect class was fixed downstream and live upstream the whole time.
+  Not proposed as a new check — noted so the asymmetry is known.
 - **The authored (Python) MCP shape has never run.** Only
   `mcp-servers/_template/` uses it and `smoke-mcp.sh` covers external
   manifests only. Deferred **by decision** with a reopen trigger — ADR-0010.
@@ -75,7 +111,10 @@ linting is frontmatter-only, no invented line budget · ADR-0009
 configuration is environment-supplied and validation checks documentation
 completeness, never runtime presence · ADR-0010 Python MCP shape deferred ·
 ADR-0011 registry validation is deterministic and hermetic, never
-subagent-driven — a subagent cannot gate a commit.
+subagent-driven — a subagent cannot gate a commit · ADR-0012 task handover
+is an explicit contract, **resumability** is the mandatory invariant while
+one-task-one-session is only the default, and the handover check detects
+omission rather than correctness.
 
 Also settled: ansible's destructive tools are human-authorized (2026-09-13)
 to ship enabled, disclosed in the manifest and every wiring snippet, and
@@ -117,6 +156,15 @@ breaking changes cannot land silently.
 5. **A test that clones for isolation may isolate itself from the change it
    verifies** (TASK-0014's first harness reported clean against the old
    script).
+6. **A budget nobody measures is not a budget.** `00.CONVENTIONS.md`
+   declared ≲3 KB in its own header and sat 15 bytes over it; Phase 4's
+   roadmap header read "in progress" after every criterion was met;
+   TASK-0019 was done but never ticked in `TODO.md`; B-004's table row had
+   fallen out of its table. Four independent instances, all found by
+   *reading* the governance files during S5 planning rather than by any
+   check. The pattern: **the governance layer polices components and
+   nothing polices the governance layer.** That is the argument for S5, and
+   also the caution against over-trusting the check S5 adds.
 
 ## Validations
 `tests/validate.sh` (mandatory, automatic via hook) · `scripts/sync-registry.sh`
