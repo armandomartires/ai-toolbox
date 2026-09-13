@@ -97,5 +97,16 @@ sys.exit(1 if bad else 0)
 PY
 done
 
+# Every client scripts/install.sh can deploy to must have a wiring
+# snapshot, so a new client cannot be added to the script without one.
+# The client list is read from install.sh itself to keep them in sync.
+for client in $(sed -n '/^CLIENTS="$/,/^"$/p' scripts/install.sh \
+                | grep -oE '^[a-z0-9_-]+\|' | tr -d '|'); do
+  [ -f "configs/$client/README.md" ] || {
+    echo "MISSING wiring snapshot: configs/$client/README.md (client '$client' is in scripts/install.sh)"
+    fail=1
+  }
+done
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail

@@ -2,8 +2,9 @@
 
 - Current objective: populate the component layer with existing skills,
   MCP servers, and loops.
-- Status: three live components. project-migration and project-workflow
-  skills both fixed, registered, and versioned (TASK-0001–0003); the
+- Status: sprint S1 complete. Three live components: project-migration and
+  project-workflow skills, both fixed, registered, versioned, and now
+  deployed to Claude Code *and* OpenCode (TASK-0001–0003, TASK-0006); the
   `ansible` MCP server ported as the first external-shape component and
   verified `✔ Connected` in a clean Claude Code install (TASK-0007).
   Skill frontmatter schema (license/metadata) accepted (ADR-0003);
@@ -37,10 +38,14 @@
   registry as a real component); TASK-0007 (ansible ported: manifest,
   three client wiring snippets, authorization recorded, pinned to
   upstream 26.6.0).
-- Incomplete: loop component; client config snapshots (TASK-0006).
-  Pre-existing and out of scope so far: the registry's Skills table
-  still lists `template-skill`, because the skills loop in
-  sync-registry.sh has no template skip (the MCP loop now does).
+  TASK-0006 (multi-client deployment: `install.sh` now serves Claude Code
+  *and* OpenCode via a `--client` selector and a name-scoped overwrite
+  policy, closing a real drift bug — OpenCode was running a hand-placed
+  `project-workflow` 2.1.0 while the repo shipped 3.0.0; all three client
+  READMEs rewritten as full skills+MCP snapshots; the skills-loop template
+  leak fixed so no template appears in the registry; `validate.sh` now
+  enforces that every client in `install.sh` has a wiring snapshot).
+- Incomplete: loop component. Sprint S1 has no open tasks.
 - In flight: `opencode-customization` (a separate repo) still has its own
   stale copy of project-workflow and an unresolved `S025_WorkflowHarmonization`
   sprint referencing it — that repo's own follow-up, not this repo's, per
@@ -50,12 +55,15 @@
 - Blockers: none. Risks: symlink support on Windows checkouts (ADR-0002).
 - Expected branch: master. Latest relevant commits: TASK-0001–0004 (see
   `git log --oneline -5` for hashes).
-- Recommended next action: TASK-0006 (client config snapshots), the last
-  open task in sprint S1. It should generalize the per-client structure
-  that TASK-0007 filled in for one server; the ansible rows in
-  `configs/*/README.md` are the worked example. Two known gaps it could
-  close: LM Studio's snippet is unverified (not installed in WSL), and
-  the registry's Skills table still lists the template.
+- Recommended next action: sprint S1 is complete — open a Phase 2 sprint
+  or write a sprint-end review (`.ai/reviews/`). Two items should be
+  resolved when Phase 2 is scoped: (a) the Phase 2 exit criterion "one
+  skill and one MCP server working in all clients" is unmeetable as
+  written, because LM Studio has no Agent Skills target at all — re-scope
+  the criterion or exclude LM Studio from it; (b) LM Studio's ansible
+  wiring is verified at the config and MCP-handshake level but not in the
+  app's own UI, which needs the GUI launched interactively. Backlog B-003
+  (MCP smoke-test harness) is now unblocked: a server exists to test.
 - Standing decisions not to re-litigate: external MCP metadata lives in
   `mcp-servers/<name>/server.json`, with shape *derived* from which
   marker file is present rather than self-declared (ADR-0005

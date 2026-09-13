@@ -1,22 +1,86 @@
 #!/usr/bin/env bash
-# Deploy skills and print MCP registration commands.
+# Deploy skills to agent clients and print MCP registration commands.
+#
+# Usage: install.sh [link|copy] [--client claude-code|opencode|all]
+#
+# link (default) symlinks skills into each client's skills dir, per
+# ADR-0002's symlink-first preference; copy is the fallback for checkouts
+# where symlinks are unavailable.
+#
+# Overwrite policy (TASK-0006): a client target is replaced only when this
+# repo owns a skill of that name, and replacing a pre-existing non-symlink
+# directory is always announced. Skills the repo does not own are never
+# touched. Clients whose config dir is absent are skipped, not created.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-MODE="${1:-link}"   # link | copy
-TARGET="${HOME}/.claude/skills"
-SKILLS=(skills/*)
 
-mkdir -p "$TARGET"
-for d in "${SKILLS[@]}"; do
-  name=$(basename "$d")
-  [ "$name" = "_template" ] && continue
-  [ -f "$d/SKILL.md" ] || continue
-  case "$MODE" in
-    link)  ln -sfn "$(pwd)/$d" "$TARGET/$name" ;;
-    copy)  rm -rf "$TARGET/$name"; cp -r "$d" "$TARGET/$name" ;;
+MODE="link"
+WANT_CLIENT="all"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    link|copy) MODE="$1" ;;
+    --client)  shift; WANT_CLIENT="${1:-all}" ;;
+    --client=*) WANT_CLIENT="${1#*=}" ;;
+    -h|--help)
+      sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
-  echo "skill deployed: $name ($MODE)"
+  shift
 done
+
+# Clients this script can deploy skills to. tests/validate.sh reads these
+# names from here and requires configs/<name>/README.md for each, so the
+# names must match the configs/ directory names exactly.
+# name|skills target dir|parent dir that must already exist
+CLIENTS="
+claude-code|${HOME}/.claude/skills|${HOME}/.claude
+opencode|${HOME}/.config/opencode/skills|${HOME}/.config/opencode
+"
+# LM Studio is intentionally absent: its hub/skills directory is not an
+# Agent Skills target. It is configured for MCP only - see
+# configs/lm-studio/README.md.
+
+deployed_any=0
+while IFS='|' read -r client target parent; do
+  [ -n "$client" ] || continue
+  case "$WANT_CLIENT" in
+    all) ;;
+    "$client") ;;
+    *) continue ;;
+  esac
+  if [ ! -d "$parent" ]; then
+    echo "client skipped: $client (not installed: $parent absent)"
+    continue
+  fi
+  deployed_any=1
+  mkdir -p "$target"
+  for d in skills/*; do
+    name=$(basename "$d")
+    case "$name" in _template*) continue ;; esac
+    [ -f "$d/SKILL.md" ] || continue
+    dest="$target/$name"
+    # A pre-existing real directory must be removed before linking:
+    # `ln -sfn` against a real directory silently creates the link *inside*
+    # it, leaving the stale skill in place and reporting success.
+    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+      echo "  NOTICE: replacing pre-existing directory $dest (repo owns skill '$name')"
+      rm -rf "$dest"
+    fi
+    case "$MODE" in
+      link) ln -sfn "$(pwd)/$d" "$dest" ;;
+      copy) rm -rf "$dest"; cp -r "$d" "$dest" ;;
+    esac
+    echo "skill deployed: $name -> $client ($MODE)"
+  done
+done <<EOF
+$CLIENTS
+EOF
+
+if [ "$deployed_any" -eq 0 ]; then
+  echo "no matching client for --client '$WANT_CLIENT'" >&2
+  exit 2
+fi
 
 echo
 echo "Register MCP servers (adjust commands per client):"

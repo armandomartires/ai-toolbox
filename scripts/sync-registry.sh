@@ -13,6 +13,9 @@ REG=docs/registry.md
   for f in skills/*/SKILL.md; do
     [ -f "$f" ] || continue
     d=$(dirname "$f")
+    # Templates are not deployable components; keep them out of the index
+    # (same rule as the MCP loop below).
+    case "$(basename "$d")" in _template*) continue ;; esac
     name=$(awk '/^name:/{sub(/^name: */,"");print;exit}' "$f")
     desc=$(awk '/^description:/{sub(/^description: */,"");print;exit}' "$f")
     echo "| ${name:-?} | ${desc:-} | $d |"

@@ -24,13 +24,18 @@
   assumed every server would be Python; the first real candidate
   (ansible) wasn't. Then the remainder split again into 0005 (build the
   external-server mechanism) and 0007 (use it) — see PLAN-0001.
-- Completed tasks: TASK-0001, TASK-0002, TASK-0003, TASK-0004,
-  TASK-0005, TASK-0007. Blocked tasks: none.
-- Recommended next task: TASK-0006 (client config snapshots) — now the
-  only open task in this sprint. PLAN-0001 is fully executed.
-- Sprint success criteria status: `tests/validate.sh` green (and now
-  covers MCP shape/manifest integrity, not just skills); registry lists
-  every ported component (2 skills + 1 external MCP server); install.sh
-  verified in Claude Code — the ansible wiring reached `✔ Connected`
-  from a clean start, which also satisfies the Phase 1 roadmap milestone
-  "first component installed and used in a real session".
+- Completed tasks: TASK-0001 through TASK-0007 (all). Blocked tasks: none.
+- **Sprint S1 is complete.** No open tasks remain.
+- Sprint success criteria status: `tests/validate.sh` green (now covers
+  skill frontmatter, MCP shape/manifest integrity, and client/wiring-doc
+  pairing); registry lists every ported component and no templates
+  (2 skills + 1 external MCP server); install.sh verified in Claude Code
+  *and* OpenCode, with the ansible wiring reaching `✔ Connected` from a
+  clean start — satisfying the Phase 1 milestone "first component
+  installed and used in a real session".
+- Carried forward to Phase 2, not silently dropped: LM Studio has no
+  Agent Skills target, so "one skill working in all clients" (the Phase 2
+  exit criterion) cannot be met for it as written — the criterion needs
+  re-scoping or LM Studio needs excluding from it. Its ansible MCP wiring
+  is verified at the config and handshake level, but unverified in the
+  app's own UI (needs the GUI launched interactively).
