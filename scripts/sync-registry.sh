@@ -19,14 +19,26 @@ REG=docs/registry.md
   done
   echo
   echo "## MCP Servers"
-  echo "| Name | Description | Path |"
-  echo "|------|-------------|------|"
-  for f in mcp-servers/*/pyproject.toml; do
-    [ -f "$f" ] || continue
-    d=$(dirname "$f")
-    name=$(grep '^name = ' "$f" | head -1 | sed 's/name = //;s/"//g')
-    desc=$(grep '^description = ' "$f" | head -1 | sed 's/description = //;s/"//g')
-    echo "| ${name:-?} | ${desc:-} | $d |"
+  echo "| Name | Shape | Description | Path |"
+  echo "|------|-------|-------------|------|"
+  # Two shapes (ADR-0005): authored Python packages carry pyproject.toml,
+  # external upstream packages carry server.json. Shape is derived from
+  # which file is present, never self-declared. Sorted for a stable diff.
+  for d in $(printf '%s\n' mcp-servers/*/ | sed 's:/$::' | sort); do
+    case "$(basename "$d")" in _template*) continue ;; esac
+    if [ -f "$d/pyproject.toml" ]; then
+      f="$d/pyproject.toml"
+      name=$(grep '^name = ' "$f" | head -1 | sed 's/name = //;s/"//g')
+      desc=$(grep '^description = ' "$f" | head -1 | sed 's/description = //;s/"//g')
+      echo "| ${name:-?} | python | ${desc:-} | $d |"
+    elif [ -f "$d/server.json" ]; then
+      read -r name desc < <(python3 -c '
+import json, sys
+m = json.load(open(sys.argv[1]))
+print(m.get("name", "?"), m.get("description", "").replace("\n", " "))
+' "$d/server.json")
+      echo "| ${name:-?} | external | ${desc:-} | $d |"
+    fi
   done
   echo
   echo "## Loops"

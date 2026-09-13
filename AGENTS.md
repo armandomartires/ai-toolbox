@@ -15,20 +15,26 @@ Out of scope: application code, public services, secrets.
 ## Technology stack
 - Skills: Agent Skills spec (SKILL.md, YAML frontmatter `name`,
   `description`). Python/Bash scripts must be idempotent.
-- MCP servers: two shapes (ADR-0005). Servers this repo authors:
-  Python 3.10+, src layout, hatchling, FastMCP, strict schemas, one tool
-  per concern, tests required. Servers with a working upstream package
-  (npm, PyPI CLI, etc.) and no source to vendor: documented as a
-  `configs/*/README.md` wiring snippet plus a registry entry, not
-  vendored source.
+- MCP servers: two shapes (ADR-0005), derived from which marker file the
+  server directory holds — exactly one is required. Servers this repo
+  authors (`pyproject.toml`): Python 3.10+, src layout, hatchling,
+  FastMCP, strict schemas, one tool per concern, tests required. Servers
+  with a working upstream package (npm, PyPI CLI, etc.) and no source to
+  vendor (`server.json`): described by that manifest plus a
+  `configs/*/README.md` wiring snippet per client and a registry entry,
+  not vendored source. Manifest schema:
+  `docs/development/authoring-guide.md`.
 - Shell: Bash, POSIX-safe where possible. Repo developed on WSL.
 
 ## Commands
+- Prerequisites: Bash and `python3` (the scripts below parse
+  `server.json` manifests with it; do not grep JSON).
 - Install/deploy skills: `scripts/install.sh [link|copy]`
 - Regenerate index: `scripts/sync-registry.sh`
 - Validate: `tests/validate.sh`
 - Run a Python server: `cd mcp-servers/<name> && uv run <name>`. External
-  servers: see their `configs/*/README.md` wiring snippet.
+  servers: `scripts/install.sh` prints the launch command from the
+  manifest; per-client wiring is in `configs/*/README.md`.
 
 ## Structure
 Component layer: `skills/`, `mcp-servers/`, `loops/`, `prompts/`,

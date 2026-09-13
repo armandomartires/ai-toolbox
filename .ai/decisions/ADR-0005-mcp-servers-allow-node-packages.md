@@ -1,7 +1,32 @@
 # ADR-0005 — MCP servers may be Node/npm packages, not only Python/FastMCP
 
 ## Status
-Accepted (2026-09-13)
+Accepted (2026-09-13). Clarified 2026-09-13 — see "Clarification" below.
+
+## Clarification (2026-09-13, TASK-0005)
+This ADR's Decision section says an external server is "documented as a
+`configs/*/README.md` wiring snippet ... and a `docs/registry.md` entry",
+while `.ai/context/PROJECT_MAP.md` said the registry is generated "from
+... external MCP server manifests". Both cannot be the source of truth:
+`scripts/sync-registry.sh` cannot reliably generate a table row from
+prose, and the same server would otherwise be described three times
+(once per client README).
+
+Pinned: the machine-readable source of truth is
+**`mcp-servers/<name>/server.json`** — a manifest, not vendored source,
+so the "no source vendored" rule is unaffected. `configs/*/README.md`
+holds only the per-client translation of that manifest. The schema is
+documented normatively in `docs/development/authoring-guide.md`.
+
+Also pinned: a server's shape is **derived from which file is present**
+(`pyproject.toml` → `python`, `server.json` → `external`), not
+self-declared in the manifest. A self-declared `shape` field could
+contradict the directory's actual contents; a derived one cannot.
+`tests/validate.sh` enforces that exactly one marker exists per server
+directory.
+
+The Decision below stands unchanged; only this implementation detail was
+under-specified. Rationale: `.ai/planning/plans/PLAN-0001-port-ansible-mcp-server.md`.
 
 ## Context
 `AGENTS.md`'s Technology stack section states: "MCP servers: Python 3.10+,
@@ -33,14 +58,15 @@ ourselves in Python) that the first real candidate already contradicts.
   itself.
 - **A Node/npm-launched server reference** — for servers that ship as a
   complete upstream package (npm, PyPI CLI, or similar) with no source to
-  vendor. This is documented as a `configs/*/README.md` wiring snippet
-  (the launch command, required environment variables, and any
-  destructive-capability flags) and a `docs/registry.md` entry, **not** a
-  vendored copy of the upstream package's source.
+  vendor. This is documented as a `server.json` manifest (the launch
+  command, required environment variables, and any destructive-capability
+  flags — see Clarification above), a `configs/*/README.md` wiring
+  snippet per client, and a `docs/registry.md` entry, **not** a vendored
+  copy of the upstream package's source.
 
 A component's registry entry states which shape it is (`python` or
 `external`) so `scripts/sync-registry.sh` and a human reader both know
-whether to expect a `pyproject.toml` or a config-only wiring doc.
+whether to expect a `pyproject.toml` or a manifest plus wiring doc.
 
 **One tool per concern, strict schemas, tests required** still apply
 where this repo controls the code (the Python/FastMCP shape). They do not

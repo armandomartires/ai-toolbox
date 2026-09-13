@@ -238,17 +238,73 @@ exercise against a proven mechanism, and the security rule that governs
 it is enforced by a script rather than by hoping a reader remembers it.
 
 ## Status
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-13
 - Updated: 2026-09-13
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
+- Date: 2026-09-13
+- Agent: opencode (anthropic/claude-opus-5)
+- Actions: paper-checked the draft schema against proxmox
+  (`uvx proxmox-mcp-server`, PyPI 1.4.1, Apache-2.0, python>=3.11, has a
+  `router` extra) and obsidian (`npx -y mcp-obsidian-cli`, npm 2.1.0,
+  MIT) before fixing it; documented the schema normatively in the
+  authoring guide; added `mcp-servers/_template-external/server.json`;
+  extended `sync-registry.sh` (both shapes, Shape column, sorted output),
+  `install.sh` (manifest-sourced launch line, env vars, preconditions,
+  destructive warning), and `tests/validate.sh` (shape exclusivity +
+  manifest parse + required keys + name/dir match +
+  destructive⇒authorization); amended ADR-0005 with a Clarification;
+  added the `python3` prerequisite to AGENTS.md; realigned PROJECT_MAP.
+- Observations / deviations from plan:
+  1. **Dropped the planned `shape` field from the manifest.** The plan's
+     draft had `"shape": "external"`, but a self-declared shape can
+     contradict the directory's actual contents. Shape is now *derived*
+     from which marker file exists, which cannot drift. ADR-0005's
+     Clarification records this.
+  2. **Added `preconditions` to the schema.** The paper check justified
+     it: proxmox needs the `[router]` extra for `TOOL_ROUTING`, obsidian
+     needs its desktop app running. Two of three candidates need it, so
+     it is a real field, not an ansible-only one. Conversely nothing
+     ansible-specific survived into the template.
+  3. **Found and fixed a latent template-leak bug.** Both scripts skipped
+     templates via an exact match on `mcp-servers/_template`, which
+     `_template-external` would not have matched — the new template would
+     have been published as a real component. Both now use a
+     `_template*` glob. The old registry was in fact already listing
+     `template-mcp-server` as a real MCP server; regenerating removed it.
+  4. **Templates are still schema-validated** (only exempted from the
+     name-matches-directory rule), so template drift is caught rather
+     than ignored.
+  5. Pre-existing, out of scope: the Skills table still lists
+     `template-skill`, because the skills loop has no template skip. Not
+     touched here — it is not this task's file. Candidate for the backlog.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → `validate.sh: OK`.
+  - `bash scripts/sync-registry.sh` → diff is the new Shape column plus
+    removal of the leaked `template-mcp-server` row; no template rows.
+  - `bash scripts/install.sh link` → clean; lists no template.
+  - Grep for stale Python-only MCP claims across `AGENTS.md`, `docs/`,
+    `.ai/context/` → none.
+  - **Fails-when-broken proof** — every check observed failing for the
+    expected reason, then fixtures removed (`git status` clean):
+    - both markers → `AMBIGUOUS SHAPE: ... has both pyproject.toml and server.json`
+    - neither marker → `NO SHAPE: ... has neither pyproject.toml nor server.json`
+    - truncated JSON → `INVALID JSON: ... Expecting property name enclosed in double quotes: line 1 column 30`
+    - missing keys → 9 `INVALID MANIFEST ... missing required key` lines
+      (description, runtime, environment, capabilities, upstream.package,
+      upstream.version, upstream.license, launch.command, launch.transport)
+    - name mismatch → `name 'wrong-name' does not match directory 'fixture-name'`
+    - destructive, no `authorization` block → `authorization.granted is not true`
+    - destructive, `granted: false` → same
+    - destructive, `granted: true`, missing task file →
+      `authorization.task points at a nonexistent file: .ai/tasks/TASK-9999-nope.md`
+    - destructive, empty `destructive_tools` → `destructive_tools is empty`
+    - destructive, missing `by` → `authorization.by is required when destructive`
+    - fully valid destructive manifest → **passes** (confirming the gate
+      is not simply failing unconditionally, which a negative-only proof
+      would not have shown)
+- Result: success.
+- Commit: see below.
+- Push: no remote configured — nothing to push.

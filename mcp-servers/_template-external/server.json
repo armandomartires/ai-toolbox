@@ -1,0 +1,32 @@
+{
+  "name": "template-external-server",
+  "description": "One-line description of the server's tools",
+  "upstream": {
+    "registry": "npm",
+    "package": "@scope/package-name",
+    "version": "0.0.0",
+    "license": "MIT",
+    "homepage": "https://example.invalid/upstream"
+  },
+  "launch": {
+    "command": ["npx", "-y", "@scope/package-name", "--stdio"],
+    "transport": "stdio"
+  },
+  "runtime": {
+    "declared": "node>=20.0",
+    "tested": "node v22.23.2"
+  },
+  "environment": {
+    "EXAMPLE_VAR": {
+      "required": true,
+      "description": "What this variable controls. Names and meanings only - never a secret value."
+    }
+  },
+  "preconditions": [
+    "Optional: anything that must be true beyond environment variables (a running desktop app, an installed package extra). Remove this key if there are none."
+  ],
+  "capabilities": {
+    "destructive": false,
+    "destructive_tools": []
+  }
+}
