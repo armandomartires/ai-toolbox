@@ -22,7 +22,7 @@ open item is now labelled with who can act on it.
 |------|------|-------|
 | ~~LM Studio UI verification~~ | **CLOSED 2026-09-13** by TASK-0017 — passed, and found the `WORKSPACE_ROOT` placeholder defect while doing so | `configs/lm-studio/README.md` |
 | Authored (Python) MCP shape never exercised | **decided** — deferred with a reopen trigger. Not a candidate. | ADR-0010 |
-| B-001 subagent-run registry validation | **unblocked but unscoped.** Re-examine value first: CI already does the staleness check, so it may be closeable as redundant. | `BACKLOG.md` |
+| ~~B-001 subagent-run registry validation~~ | **CLOSED 2026-09-13** by TASK-0018 as *superseded*, not implemented (ADR-0011). Scoping it found and fixed two real registry defects. | ADR-0011 |
 | Default branch mismatch (`main` on GitHub vs `master` local) | **needs authorization** — renaming a default branch is destructive-ish | REVIEW-0006 follow-up 3 |
 | ~~`WORKSPACE_ROOT` placeholder in the live `mcp.json`~~ | **CLOSED** — human corrected it to a real Ansible project directory; re-verified to exist | `configs/lm-studio/README.md` |
 
@@ -30,12 +30,14 @@ TASK-0017 is evidence for the reframing above: the LM Studio item survived
 three sprints as a candidate bullet and was closed within a day of becoming
 a written procedure. The blocker was the *form of the record*, not the work.
 
-The backlog holds **no `ready` item**. B-001 is the only one open.
+**The backlog is now empty** — every item B-001…B-007 is closed. New work
+needs a new item with its own justification, not a revived old one.
 
 ## If you are scoping Phase 5
 
-Nothing is in flight. Confirm scope with the human before starting — none of
-the above is urgent, and two of the four are not agent work at all.
+Nothing is in flight, and **nothing above is pending agent work.** Of the
+five items, three are closed, one is a standing decision (ADR-0010), and one
+needs the human's authorization. Confirm scope before starting anything.
 
 ## Standing constraints
 - Local git is mandatory; a remote is recommended (ADR-0007). One now

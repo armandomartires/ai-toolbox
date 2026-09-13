@@ -1,6 +1,6 @@
 # Current State
 
-Last updated 2026-09-13, after TASK-0017 (post-S4).
+Last updated 2026-09-13, after TASK-0018 (post-S4).
 
 ## Where the project is
 - **Phases 1–4 complete, with no outstanding criteria in any of them.**
@@ -10,9 +10,11 @@ Last updated 2026-09-13, after TASK-0017 (post-S4).
 - **All three clients are now fully verified** for the ansible MCP server:
   Claude Code `✔ Connected`, OpenCode in live use, and LM Studio verified
   in its own UI (not merely at handshake level).
-- **Nothing is in flight.** Confirm scope with the human before starting
-  anything. Open items, each labelled with who can act on it, are in
-  `.ai/planning/SPRINT-CURRENT.md` — the backlog holds no `ready` item.
+- **Nothing is in flight, and the backlog is empty** — B-001…B-007 are all
+  closed (B-001 last, by TASK-0018/ADR-0011). Confirm scope with the human
+  before starting anything. The one remaining open item, the GitHub
+  `main`/`master` default-branch mismatch, needs human authorization; see
+  `.ai/planning/SPRINT-CURRENT.md`.
 - Three live components: the `project-migration` and `project-workflow`
   skills (deployed to Claude Code and OpenCode), and the `ansible` external
   MCP server. One loop: `loops/release-check`.
@@ -39,8 +41,10 @@ single-line description, non-empty license, semver version) · MCP shape and
 manifest integrity incl. destructive-capability authorization · loop
 structure incl. mandatory exit conditions · every `install.sh` client having
 a `configs/*/README.md` · the pre-commit hook's git-recorded mode · no
-`_template` row in the registry · every manifest-required env var appearing
-in `.env.example`.
+`_template` row in the registry · registry content integrity (no leaked
+YAML quotes, no unescaped `|` in a cell, column count matching each
+section's own header) · every manifest-required env var appearing in
+`.env.example`.
 
 ## Known gaps — recorded, not hidden
 - **The authored (Python) MCP shape has never run.** Only
@@ -65,7 +69,9 @@ is MCP-only, and loops are authored not ported · ADR-0007 local git
 mandatory / remote recommended, automation is hook-first · ADR-0008 skill
 linting is frontmatter-only, no invented line budget · ADR-0009
 configuration is environment-supplied and validation checks documentation
-completeness, never runtime presence · ADR-0010 Python MCP shape deferred.
+completeness, never runtime presence · ADR-0010 Python MCP shape deferred ·
+ADR-0011 registry validation is deterministic and hermetic, never
+subagent-driven — a subagent cannot gate a commit.
 
 Also settled: ansible's destructive tools are human-authorized (2026-09-13)
 to ship enabled, disclosed in the manifest and every wiring snippet, and
@@ -94,7 +100,11 @@ breaking changes cannot land silently.
    in the MCP handshake touches the filesystem.
 2. **An item can look blocked when it is merely undocumented.** S4 found two
    (the remote, and B-002's mis-titled scope). Check which before carrying
-   anything forward again.
+   anything forward again. Corollary from TASK-0018: **an item's age is not
+   an argument for implementing it.** B-001 and B-002 were both scaffold
+   boilerplate; one held a real requirement, one did not. Scope each on its
+   merits — but *do* scope it, because scoping B-001 found two defects even
+   though the item itself was closed as superseded.
 3. **The obvious check is often the wrong one.** "Is the env var set" and
    `grep -q '^name:'` both looked reasonable and both would have been
    useless or harmful.

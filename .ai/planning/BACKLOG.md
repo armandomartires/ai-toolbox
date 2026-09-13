@@ -2,14 +2,28 @@
 
 | ID | Title | Priority | Value | Dependencies | Risk | Status | Ready when |
 |----|-------|----------|-------|--------------|------|--------|-----------|
-| B-001 | Subagent-run registry validation | low | medium | Phase 3 | low | idea | CI exists — remote added by TASK-0015, so the condition is now met; still unscoped |
+| B-001 | Subagent-run registry validation | low | medium | Phase 3 | low | **done** | TASK-0018 — closed as **superseded**, not implemented (ADR-0011); scoping it found two real registry defects, both fixed |
 | B-002 | Skill Linter (frontmatter ~~+ line budget~~) | medium | high | Phase 1 | low | **done** | TASK-0012 — frontmatter only; line budget dropped per ADR-0008 |
 | B-003 | MCP server smoke test harness | medium | high | Phase 1 | medium | **done** | TASK-0009 — `tests/smoke-mcp.sh` |
 | B-005 | Re-scope Phase 2 exit criterion (LM Studio has no Agent Skills target) | high | medium | none | low | **done** | resolved by ADR-0006 |
 | B-006 | ~~Port~~ **Author** a loop component | medium | medium | none | low | **done** | TASK-0008; verb corrected — nothing existed to port (ADR-0006) |
 | B-007 | De-duplicate sync-registry.sh per-section loops (or assert no `_template*` row) | medium | medium | none | low | **done** | TASK-0011 — did both |
 
+**The backlog is empty — every item above is closed.** New work needs a new
+item with its own justification.
+
 Notes:
+- B-001 was scaffold boilerplate from the initial commit (`e72b78c`), never
+  scoped or justified by an observed failure. By the time its `CI exists`
+  condition was met, its *mechanism* had been overtaken: registry validation
+  is deterministic and hermetic in `validate.sh`, run by the pre-commit hook
+  and CI. A subagent would have been slower, nondeterministic, and unable to
+  gate a commit — a weaker check presented as done. Closed as superseded
+  (ADR-0011). **Two real defects came out of scoping it anyway**, which is
+  the argument for scoping an item before either building or dropping it.
+- Read alongside B-002: both sat for sprints as boilerplate. One turned out
+  to contain a real requirement once split from an unspecified one; the other
+  did not. **An item's age is not an argument for implementing it.**
 - B-002's title was the defect, like B-006's verb before it. It bundled a
   fully-specified requirement (frontmatter rules, written down in
   `docs/development/authoring-guide.md` and unenforced) with an entirely

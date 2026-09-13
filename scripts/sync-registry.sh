@@ -18,23 +18,43 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 REG=docs/registry.md
 
+# Strip one matching pair of surrounding quotes from a YAML scalar.
+#
+# TASK-0018: without this, a quoted `description: "..."` reached the
+# registry with its quotes intact, while an unquoted one did not — so the
+# defect was visible only in the two components that quote their
+# frontmatter and invisible in the rest. ADR-0008's skill linter accepts
+# both forms deliberately, which is correct: the *generator* normalizes,
+# the schema does not dictate style.
+#
+# Only a matching leading/trailing pair is removed, so a description that
+# merely contains a quote is untouched.
+unquote() {
+  local s="$1"
+  case "$s" in
+    '"'*'"') [ ${#s} -ge 2 ] && s="${s:1:${#s}-2}" ;;
+    "'"*"'") [ ${#s} -ge 2 ] && s="${s:1:${#s}-2}" ;;
+  esac
+  printf '%s' "$s"
+}
+
 # Print "name<TAB>description" for one component directory, or nothing if
 # the directory does not hold that kind of component.
 #   $1 = kind (skill|mcp|loop), $2 = component directory
 extract() {
   local kind="$1" d="$2" f
   case "$kind" in
-    skill)
-      f="$d/SKILL.md"; [ -f "$f" ] || return 1
+    skill|loop)
+      # Both kinds carry YAML frontmatter with the same two keys; they
+      # differ only in filename.
+      case "$kind" in
+        skill) f="$d/SKILL.md" ;;
+        loop)  f="$d/loop.md" ;;
+      esac
+      [ -f "$f" ] || return 1
       printf '%s\t%s\n' \
-        "$(awk '/^name:/{sub(/^name: */,"");print;exit}' "$f")" \
-        "$(awk '/^description:/{sub(/^description: */,"");print;exit}' "$f")"
-      ;;
-    loop)
-      f="$d/loop.md"; [ -f "$f" ] || return 1
-      printf '%s\t%s\n' \
-        "$(awk '/^name:/{sub(/^name: */,"");print;exit}' "$f")" \
-        "$(awk '/^description:/{sub(/^description: */,"");print;exit}' "$f")"
+        "$(unquote "$(awk '/^name:/{sub(/^name: */,"");print;exit}' "$f")")" \
+        "$(unquote "$(awk '/^description:/{sub(/^description: */,"");print;exit}' "$f")")"
       ;;
     mcp)
       # Two shapes (ADR-0005): authored Python packages carry

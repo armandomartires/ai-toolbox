@@ -26,6 +26,8 @@
 ## Post-S4 (no sprint open)
 - [x] TASK-0017 — Record the LM Studio UI verification (PASS); fix the
       `WORKSPACE_ROOT` placeholder trap; close Phase 2's last criterion (done)
+- [x] TASK-0018 — Close B-001 as superseded (ADR-0011); fix the registry
+      quote leak and add three registry-integrity checks (done)
 
 Notes:
 - "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)

@@ -307,6 +307,66 @@ if [ -f docs/registry.md ]; then
         ;;
     esac
   done < <(grep '^| ' docs/registry.md | grep -v '^| Name ' | grep -v '^|---')
+
+  # Registry content integrity (TASK-0018, closing B-001). Three defect
+  # classes, all of which reach a generated file silently rather than
+  # erroring:
+  #   1. Leaked YAML quotes — was visible in exactly the two components
+  #      that quote their frontmatter, invisible in the rest, and so
+  #      survived four sprints.
+  #   2. A `|` inside a cell — injects columns and breaks the table with
+  #      no error. Reachable today: project-migration's body text already
+  #      contains pipes; one edit into its description would do it.
+  #   3. Wrong column count — the shape of a half-applied format change.
+  # Expected column count is derived from each section's own header row,
+  # not hardcoded, so adding a column to a section does not require
+  # editing this check.
+  python3 - docs/registry.md <<'PY' || fail=1
+import sys
+
+path = sys.argv[1]
+bad = []
+expected = None
+section = None
+
+for n, raw in enumerate(open(path, encoding="utf-8"), 1):
+    line = raw.rstrip("\n")
+    if line.startswith("## "):
+        section, expected = line[3:], None
+        continue
+    if not line.startswith("|"):
+        continue
+    if set(line) <= set("|- "):        # separator row
+        continue
+
+    cells = line.split("|")
+    if line.startswith("| Name "):     # header defines the contract
+        expected = len(cells)
+        continue
+
+    if expected is not None and len(cells) != expected:
+        # Direction matters for the diagnosis: too many cells is almost
+        # always an unescaped pipe in a description, too few is a
+        # half-applied format change. A hint pointing the wrong way costs
+        # the reader more than no hint.
+        why = ("an unescaped '|' in a description?" if len(cells) > expected
+               else "a missing cell, or a format change applied to the "
+                    "header but not the rows?")
+        bad.append("line %d (%s): %d columns, header declares %d — %s"
+                   % (n, section, len(cells), expected, why))
+        continue
+
+    for cell in cells[1:-1]:
+        v = cell.strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+            bad.append("line %d (%s): cell is still quoted (%s…) — "
+                       "sync-registry.sh should have stripped it"
+                       % (n, section, v[:28]))
+
+for msg in bad:
+    print("REGISTRY INTEGRITY: %s" % msg)
+sys.exit(1 if bad else 0)
+PY
 fi
 
 [ $fail -eq 0 ] && echo "validate.sh: OK"
