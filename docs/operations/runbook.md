@@ -15,6 +15,9 @@
   symlink support (ADR-0002).
 - Validate: `bash tests/validate.sh`.
 - Regenerate index after component changes: `bash scripts/sync-registry.sh`.
+- Smoke-test MCP servers: `bash tests/smoke-mcp.sh` (all) or
+  `--server <name>` (one); `--timeout <seconds>` to adjust the per-server
+  bound (default 90).
 - Add an MCP server to a client: see configs/<client>/README.md.
 - Roll back: `git revert` the component's commit, re-run install.sh.
 
@@ -30,6 +33,36 @@ of that name, and announces replacing any pre-existing real directory.
 Skills the repo does not own (e.g. `agent-tiers` under OpenCode) are never
 touched. Every client in `install.sh`'s list must have a
 `configs/<client>/README.md`; `tests/validate.sh` enforces the pairing.
+
+## Verifying an MCP server
+`tests/validate.sh` checks manifests **statically** — required keys, valid
+JSON, name/directory match, destructive capabilities carrying a granted
+authorization. It never launches anything.
+
+`tests/smoke-mcp.sh` checks a server **dynamically**: it launches
+`launch.command` from the manifest, sends a JSON-RPC `initialize` request
+over stdio, and asserts the reply carries `protocolVersion` and a non-empty
+`serverInfo.name`, which it prints as evidence.
+
+Deliberately separate, because the two have different properties:
+
+| | validate.sh | smoke-mcp.sh |
+|---|---|---|
+| Network | never | required (launchers fetch upstream) |
+| Runtime | ~0.3s | tens of seconds per server |
+| Mandatory gate | yes (Definition of done) | no — run when server wiring changes |
+
+Reading the outcomes:
+- **PASS** — started and spoke MCP correctly.
+- **FAIL** — started but did not speak MCP correctly. A real defect;
+  exit code 1.
+- **SKIP** — could not attempt (launcher absent, unsupported transport,
+  required env unset). **Not a pass**; exit code stays 0, and the summary
+  says so explicitly. Do not read a run of all-SKIP as success.
+
+Only `initialize` is ever sent. Tools are never invoked — ansible's surface
+includes playbook execution and OS package installation, and a smoke test
+must never be the thing that runs a playbook.
 
 ## Human approval required for
 - Destructive tool capabilities in MCP servers.

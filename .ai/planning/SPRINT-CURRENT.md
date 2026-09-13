@@ -12,7 +12,7 @@
 | Task | Title | Depends on | Status |
 |------|-------|-----------|--------|
 | TASK-0008 | Author the first loop component (`release-check`) | ADR-0006 | **done** |
-| TASK-0009 | MCP server smoke-test harness (backlog B-003) | TASK-0007 | planned |
+| TASK-0009 | MCP server smoke-test harness (backlog B-003) | TASK-0007 | **done** |
 
 Recommended order: 0008 → 0009. No hard dependency between them; 0008 is
 first because it is smaller and because the loop it authors describes the
@@ -64,11 +64,20 @@ validate/commit cycle that 0009 then adds a step to.
 - CI/pre-commit integration (Phase 3).
 
 ## Status
-- Completed tasks: TASK-0008. Blocked tasks: none.
-- Recommended next task: TASK-0009 (the last task in this sprint).
-- Criteria progress: `loops/` now holds a real component and
-  `tests/validate.sh` enforces loop structure (TASK-0008). Still open: a
-  repeatable MCP startup check to replace TASK-0006's by-hand handshake.
+- Completed tasks: TASK-0008, TASK-0009. Blocked tasks: none.
+- **Sprint S2 is complete.** No open tasks remain.
+- Criteria status: `loops/` holds a real component and `tests/validate.sh`
+  enforces loop structure (TASK-0008) — met. A repeatable command verifies
+  MCP servers actually start and speak the protocol, replacing TASK-0006's
+  by-hand handshake (TASK-0009, `tests/smoke-mcp.sh`) — met. Every new
+  check was observed failing for its own reason before being trusted — met
+  (6 loop fixtures, 7 smoke fixtures). Registry regenerated with no
+  template rows — met.
+- Phase 2 exit criteria (as restated by ADR-0006): all met except the LM
+  Studio UI verification, which is a recorded known gap rather than a task
+  (needs the GUI launched interactively). Phase 2 can close; Phase 3
+  (CI/pre-commit automation) is next, and `tests/smoke-mcp.sh` was
+  deliberately built to be CI-callable without being CI-wired.
 - Noted at TASK-0008: the template-leak defect recurred a **third** time,
   in the loops registry loop (after the MCP loop in TASK-0005 and the
   skills loop in TASK-0006). All three are now fixed and the registry

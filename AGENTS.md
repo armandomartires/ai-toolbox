@@ -33,7 +33,12 @@ code, public services, secrets.
   `server.json` manifests with it; do not grep JSON).
 - Install/deploy skills: `scripts/install.sh [link|copy]`
 - Regenerate index: `scripts/sync-registry.sh`
-- Validate: `tests/validate.sh`
+- Validate: `tests/validate.sh` — the mandatory gate. Fast, offline,
+  hermetic; keep it that way.
+- Smoke-test MCP servers: `tests/smoke-mcp.sh [--server <name>]`. Needs
+  the network (launchers fetch upstream), so it is deliberately *not* part
+  of `tests/validate.sh`. Reports PASS / FAIL / SKIP as three distinct
+  outcomes; a SKIP is not a pass.
 - Run a Python server: `cd mcp-servers/<name> && uv run <name>`. External
   servers: `scripts/install.sh` prints the launch command from the
   manifest; per-client wiring is in `configs/*/README.md`.

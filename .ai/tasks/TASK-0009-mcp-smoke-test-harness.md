@@ -155,17 +155,76 @@ the manifest's `launch.command` gains a check that it is actually
 launchable.
 
 ## Status
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-13
 - Updated: 2026-09-13
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
+- Date: 2026-09-13
+- Agent: opencode (anthropic/claude-opus-5)
+- Actions: wrote `tests/smoke-mcp.sh`, generalizing TASK-0006's one-off
+  handshake into a manifest-driven harness with `--server`, `--timeout`,
+  and `--help`; documented it in `AGENTS.md` Commands and the runbook
+  (including a table contrasting it with `validate.sh` and a section on
+  reading PASS/FAIL/SKIP); closed backlog B-003.
+- **Design decision (the one the brief left open): separate script, and
+  `validate.sh` untouched.** Reasoning: `validate.sh` is the mandatory
+  gate in the Definition of done, runs at the end of every task, and is
+  currently 326 ms with zero network calls. The smoke test needs the
+  network (`npx -y` fetches upstream) and takes tens of seconds. Folding
+  it in would make every task's validation slow and flaky for reasons
+  unrelated to the repo's correctness — an offline laptop would fail the
+  gate. Verified after the fact that `git diff tests/validate.sh` is
+  empty, its runtime is unchanged, and it contains no network invocations.
 - Observations:
+  1. **Everything is read from the manifest** — launch command, transport,
+     required env — so nothing about ansible is hard-coded. This is what
+     makes the harness a check on `launch.command` rather than a
+     restatement of it.
+  2. **SKIP is a first-class outcome, not a soft pass.** A missing
+     launcher, an unsupported transport, or an unresolvable required env
+     var yields SKIP with exit 0, but the summary prints "note: SKIP is
+     not a pass - the check did not run." Collapsing SKIP into PASS is the
+     obvious way a harness like this becomes theatre.
+  3. **Required-env handling needed a judgement call.** Ansible's only
+     required var is `WORKSPACE_ROOT`. Rather than SKIP (unhelpful — the
+     server would never be tested) or invent a value silently, the harness
+     supplies the repo root for workspace/root/dir-shaped names and prints
+     a note saying so; anything else it cannot infer is reported and
+     skipped. The note is visible in the output, so the substitution is
+     never hidden.
+  4. **Banner tolerance.** The reply scan walks stdout lines for the first
+     JSON object with `id: 1`, so a server that prints a banner before its
+     JSON-RPC reply still passes. Asserting on "first line of stdout"
+     would have been brittle.
+  5. Templates are skipped (`_template*`), pre-empting the leak that had
+     to be fixed three separate times in `sync-registry.sh`.
+  6. Only `initialize` is sent — never a tool call. Ansible's surface
+     includes playbook execution and OS package installs; a smoke test
+     must never be the thing that runs a playbook.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/smoke-mcp.sh` → `PASS ansible: serverInfo.name=ansible-mcp-server
+    version=0.1.0 protocol=2024-11-05 capabilities=resources, tools`, exit 0.
+  - `--server ansible` → same PASS. `--server bogus` → `unknown server`,
+    exit 2. `--help` → usage.
+  - **Fails-when-broken proof**, seven fixtures, each observed failing (or
+    passing/skipping) for its own distinct reason, then removed:
+    1. command exits immediately → `FAIL ... no stdout (exit 0)`
+    2. process hangs → `FAIL ... no reply within 5s (server hung or never
+       spoke)` — bounded by the timeout, did not hang the run
+    3. non-JSON stdout → `FAIL ... no JSON-RPC reply with id=1 on stdout;
+       got: not json at all` (parse error handled, no crash)
+    4. JSON-RPC error reply → `FAIL ... server returned an error:
+       {"code": -32601, "message": "nope"}`
+    5. result without `serverInfo` → `FAIL ... result missing 'serverInfo'`
+    6. well-formed result → **PASS** (`serverInfo.name=fake-server`),
+       proving the harness is not failing unconditionally
+    7. launcher absent → **SKIP** with exit 0, proving SKIP and FAIL are
+       genuinely distinct rather than both being "not a pass"
+  - Post-cleanup: real ansible server still PASS; `git status` clean.
+  - `bash tests/validate.sh` → OK, 326 ms, no network calls, file
+    unmodified by this task.
+- Result: success.
+- Commit: see below.
+- Push: no remote configured — nothing to push.
