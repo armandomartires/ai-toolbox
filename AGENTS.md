@@ -53,8 +53,16 @@ Details: `docs/development/`, runbook: `docs/operations/`.
 - Before changes: check `git status`, branch, remote, uncommitted changes.
 - One task = one commit; never include unrelated changes.
 - Never delete or overwrite human changes without authorization.
-- At task end: validate, review diff, commit, push to GitHub, record the
-  commit hash and push result in the task log.
+- Every project has a local git repository. A remote (GitHub, GitLab) is
+  recommended but not mandatory (ADR-0007).
+- At task end: validate, review diff, commit, record the commit hash in
+  the task log. Push **if a remote is configured**, and record the push
+  result; if there is none, record that instead of treating it as a
+  missing step.
+- `tests/validate.sh` runs automatically via `.githooks/pre-commit`
+  (activated by `scripts/install.sh`). Bypass with
+  `git commit --no-verify` for work-in-progress or when fixing the gate
+  itself — never to dodge a real failure.
 - Never force-push without explicit authorization.
 - Simple checks (status, diff analysis, test runs) may be delegated to a
   subagent; the main agent still verifies results.

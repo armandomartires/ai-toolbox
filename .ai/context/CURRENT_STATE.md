@@ -54,13 +54,14 @@
   `initialize` handshake, bounded timeout, PASS/FAIL/SKIP as three
   distinct outcomes; deliberately *not* part of `validate.sh`, which
   stays hermetic at ~330 ms with no network calls).
-- Current sprint: **S3 Automation — scope not yet confirmed**
-  (`SPRINT-CURRENT.md` lists candidates and open questions). S1 and S2
-  archived under `.ai/planning/sprints/`; checkpoints REVIEW-0003 and
-  REVIEW-0004.
-- Phases 1 and 2 are complete. Phase 3 has a blocker to resolve before
-  scoping: **no git remote is configured**, so "wire validate.sh into CI"
-  presupposes something that does not exist yet.
+- Current sprint: **none active.** S1, S2 and S3 are all closed and
+  archived under `.ai/planning/sprints/`; checkpoints REVIEW-0003,
+  REVIEW-0004, REVIEW-0005.
+- **Phases 1, 2 and 3 are all complete.** No phase is currently defined —
+  `ROADMAP.md` has a "Phase 4 — not yet defined" section listing
+  candidates. Phase 3's original criterion presupposed CI and therefore a
+  remote; ADR-0007 restated it as "validate.sh runs automatically before
+  every commit", which is met by the pre-commit hook.
 - In flight: `opencode-customization` (a separate repo) still has its own
   stale copy of project-workflow and an unresolved `S025_WorkflowHarmonization`
   sprint referencing it — that repo's own follow-up, not this repo's, per
@@ -70,12 +71,14 @@
 - Blockers: none. Risks: symlink support on Windows checkouts (ADR-0002).
 - Expected branch: master. Latest relevant commits: TASK-0001–0004 (see
   `git log --oneline -5` for hashes).
-- Recommended next action: confirm the scope of sprint S3 with the human
-  before writing briefs. `SPRINT-CURRENT.md` lists four candidates
-  (wire validate.sh into pre-commit/CI; B-007 de-duplicate the registry
-  generator; decide CI's handling of the network-dependent smoke test;
-  B-002 skill linter) and two open questions (is there to be a git remote;
-  is a pre-commit hook acceptable on a `/mnt/c` tree from WSL).
+- Recommended next action: **nothing is in flight; confirm scope with the
+  human before starting anything.** `SPRINT-CURRENT.md` lists five
+  candidates, none urgent: decide B-002's fate (skill linter, "ready" for
+  three sprints without being scoped — brief it or drop it); exercise the
+  authored Python MCP shape, which has never run; make `install.sh` warn
+  on the `core.filemode=false` hook-mode trap; add a git remote (a
+  recommendation, which would also verify the inert CI workflow); LM
+  Studio UI verification (needs a human at the GUI).
 - Standing decisions added this session (ADR-0006): LM Studio is an
   **MCP-only client**, excluded from skill criteria — Phase 2's exit
   criterion is now split per capability rather than claiming "all
@@ -87,8 +90,26 @@
   at config + MCP-handshake level but not in the app's own UI (needs the
   GUI launched interactively). The registry generator duplicates its
   per-section loop three times, which is why the same template-leak
-  defect had to be fixed three times — worth a refactor if a fourth
-  section is added.
+  defect had to be fixed three times — **resolved by TASK-0011**: one
+  emit path, one template skip, plus an independent `validate.sh` check
+  rejecting any registry row whose path matches `_template`.
+- Standing decisions added by ADR-0007: **local git is mandatory, a remote
+  is recommended, not required** (human rule) — so `AGENTS.md`'s push step
+  is now conditional on a remote existing rather than a rule every task
+  records as inapplicable. Automation is **hook-first**: `validate.sh` runs
+  via the tracked `.githooks/pre-commit`, activated by `install.sh` through
+  `core.hooksPath`, bypassable with documented `--no-verify`. CI ships as an
+  inert, explicitly unverified workflow because no remote exists to run it.
+- **`validate.sh` is now load-bearing on every commit.** Its hermeticity
+  (offline, no network, ~275 ms) is a requirement, not a nicety.
+  `tests/smoke-mcp.sh` must never be added to the hook — it needs the
+  network and reports SKIP as distinct from PASS.
+- Platform gotcha, discovered the hard way: `core.filemode=false` on this
+  `/mnt/c` checkout, and the 9p mount reports every file `rwxrwxrwx` while
+  ignoring `chmod -x`. So `chmod +x` never reaches git's index and `[ -x ]`
+  can never fail. Hook executability must be set with
+  `git update-index --chmod=+x` and checked against the mode **git
+  records** — which is what `validate.sh` now does.
 - Standing decisions not to re-litigate: external MCP metadata lives in
   `mcp-servers/<name>/server.json`, with shape *derived* from which
   marker file is present rather than self-declared (ADR-0005
@@ -105,6 +126,8 @@
   machine runs node v22.23.2 — npm warns `EBADENGINE` and the server
   works, because `engines` is advisory unless `engine-strict` is set. If
   that ever changes, ansible launches break with no repo-side change.
-- Known validations: tests/validate.sh, scripts/sync-registry.sh.
+- Known validations: `tests/validate.sh` (mandatory gate, now automatic via
+  the pre-commit hook), `scripts/sync-registry.sh`, `tests/smoke-mcp.sh`
+  (network-dependent, run manually when server wiring changes).
 - Validated in: WSL (development). Deployment targets: local agent
   clients (~/.claude/skills, OpenCode, LM Studio) via scripts/install.sh.

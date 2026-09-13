@@ -143,9 +143,20 @@ done
 if [ ! -f .githooks/pre-commit ]; then
   echo "MISSING hook: .githooks/pre-commit (ADR-0007 requires the tracked pre-commit gate)"
   fail=1
-elif [ ! -x .githooks/pre-commit ]; then
-  echo "NOT EXECUTABLE: .githooks/pre-commit (git records the mode; try 'git update-index --chmod=+x .githooks/pre-commit')"
-  fail=1
+else
+  # Check the mode git RECORDS, not the filesystem bit. This repo is
+  # developed on a WSL /mnt/c 9p mount where every file reports
+  # rwxrwxrwx and `chmod -x` is silently ignored, so `[ -x ]` can never
+  # fail and would be a check that cannot detect its own failure case.
+  # Git's index is the portable truth: a hook committed as 100644 is
+  # silently ignored by git on a machine that does honour the bit.
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    mode=$(git ls-files -s .githooks/pre-commit 2>/dev/null | awk '{print $1}')
+    if [ -n "$mode" ] && [ "$mode" != "100755" ]; then
+      echo "HOOK NOT EXECUTABLE IN GIT: .githooks/pre-commit recorded as $mode, needs 100755 — run 'git update-index --chmod=+x .githooks/pre-commit'"
+      fail=1
+    fi
+  fi
 fi
 
 # No registry row may point at a template. scripts/sync-registry.sh skips

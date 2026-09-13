@@ -12,5 +12,12 @@
 - [x] TASK-0008 — Author the first loop component (release-check) (done)
 - [x] TASK-0009 — MCP server smoke-test harness (done)
 
-"Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)
-by `.ai/planning/plans/PLAN-0001-port-ansible-mcp-server.md`.
+## Sprint S3 — Automation
+- [x] TASK-0011 — De-duplicate the registry generator; reject template rows (done)
+- [x] TASK-0010 — Pre-commit hook running validate.sh; inert CI workflow (done)
+
+Notes:
+- "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)
+  by `.ai/planning/plans/PLAN-0001-port-ansible-mcp-server.md`.
+- S3 ran 0011 before 0010 despite the numbering, so the new commit gate
+  would guard an already-corrected generator.

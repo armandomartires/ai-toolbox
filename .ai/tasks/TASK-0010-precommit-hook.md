@@ -157,17 +157,82 @@ gate that runs itself, with an honest, documented escape hatch — and a CI
 workflow ready for the day a remote is added.
 
 ## Status
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-13
 - Updated: 2026-09-13
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
+- Date: 2026-09-13
+- Agent: opencode (anthropic/claude-opus-5)
+- Actions: wrote `.githooks/pre-commit`; wired `core.hooksPath` activation
+  into `scripts/install.sh` (idempotent, announces only real changes);
+  added hook presence/mode checks to `tests/validate.sh`; wrote the inert
+  `.github/workflows/validate.yml`; amended `AGENTS.md` (conditional push,
+  hook + bypass) and the runbook.
+- **Three defects found, two of them in my own new code.** All three were
+  found by the fails-when-broken proof, not by the happy path:
+  1. **`chmod +x` does not reach git's index here.** `core.filemode` is
+     `false` on this `/mnt/c` checkout, so the hook was staged as mode
+     `100644`. Git silently ignores a non-executable hook, so the gate
+     would have been dead on arrival for anyone who cloned it onto a
+     filesystem that honours the bit. Fixed with
+     `git update-index --chmod=+x`; the recorded mode is now `100755`.
+  2. **My first `validate.sh` hook check was unfalsifiable.** I guarded it
+     with `[ -d .githooks ]` intending leniency; the effect was that
+     *deleting the hook directory made the check pass*. A check that
+     cannot detect the thing it exists to detect is worse than none. Now
+     unconditional.
+  3. **My first check also tested the wrong property.** It used `[ -x ]`,
+     but on this 9p mount every file reports `rwxrwxrwx` and `chmod -x`
+     is silently ignored — so `[ -x ]` can never fail here, and the check
+     was both untestable and useless on the platform it runs on. It now
+     inspects the mode **git records**, which is the portable truth and
+     the thing that actually disables a hook.
+- **The first proof run was itself broken, and that mattered.** It began
+  with `git stash -u`, which stashed the then-untracked hook, silently
+  disarming every subsequent case — the commit that should have been
+  refused sailed through, which looked like a hook failure but was a test
+  failure. Rewritten to require a clean tree and to run after the hook is
+  committed, so there is nothing to stash and nothing to disarm. Recorded
+  because "the test was wrong" is the most tempting thing to quietly fix
+  and move on from.
 - Observations:
+  - Tracked `.githooks/` over `.git/hooks/` because `.git/` is not
+    version-controlled: a hook there is unreviewable, unversioned, and
+    absent on a fresh clone — the drift class TASK-0006 already had to fix
+    once for OpenCode's hand-placed skill.
+  - `validate.sh` deliberately does **not** require `core.hooksPath` to be
+    set. A fresh clone has not run `install.sh` yet, and failing there
+    would block the first commit someone makes.
+  - Rollback needs two steps, now documented: `git revert` does not
+    deactivate the hook, because `core.hooksPath` lives in `.git/config`.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → OK; still offline; 266–283 ms.
+  - `git config --get core.hooksPath` → `.githooks`;
+    `git ls-files -s .githooks/pre-commit` → `100755`.
+  - **Fails-when-broken proof** (second, corrected run, on a scratch
+    branch from a clean tree):
+    1. hook removed → `MISSING hook: .githooks/pre-commit (ADR-0007
+       requires the tracked pre-commit gate)`, exit 1;
+    2. git mode flipped to `100644` → `HOOK NOT EXECUTABLE IN GIT: ...
+       recorded as 100644, needs 100755`, exit 1 (proven separately, since
+       the filesystem bit cannot be changed on this mount);
+    3. staged tree failing validation → `git commit` exit **1**, hook
+       printed `MISSING description: skills/hook-proof-bad/SKILL.md` plus
+       the refusal and bypass hint, and **HEAD did not move**;
+    4. same tree with `--no-verify` → commit exit 0, HEAD moved;
+    5. corrected tree → normal commit exit 0 with `validate.sh: OK` in the
+       output, i.e. it passed *through* the hook rather than around it.
+    Scratch branch deleted; HEAD back at base; tree clean; no junk commit
+    on `master`.
+  - `bash scripts/install.sh link` twice → hook message on the first run
+    only (idempotent).
+  - **Dogfood:** this task's own commit was gated by the hook —
+    `validate.sh: OK` appears in the commit output.
+- Result: success.
+- Commit: `8c8c010` "Add tracked pre-commit hook running validate.sh;
+  inert CI workflow"; the two check fixes found by the proof landed in
+  `153cbe1` "Close sprint S3 and Phase 3; fix hook validation checks".
+- Push: no remote configured — nothing to push, which ADR-0007 now makes
+  an expected outcome rather than an incomplete step.

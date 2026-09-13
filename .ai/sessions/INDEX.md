@@ -11,3 +11,4 @@
 | SESSION-20260913-1800 | 2026-09-13 | opencode | Scope and execute TASK-0006: multi-client skill deployment + config snapshots; close sprint S1 | TASK-0006, REVIEW-0003 | Done; S1 complete, OpenCode drift 2.1.0→3.0.0 fixed |
 | SESSION-20260913-2000 | 2026-09-13 | opencode | Open sprint S2; ADR-0006 (LM Studio MCP-only, loops authored not ported); author release-check loop | ADR-0006, TASK-0008, TASK-0009 | 0008 done; no loop existed to port |
 | SESSION-20260913-2200 | 2026-09-13 | opencode | MCP smoke-test harness; close sprint S2 and Phase 2 | TASK-0009, REVIEW-0004 | Done; S2 + Phase 2 complete, S3 left unscoped pending human |
+| SESSION-20260913-2330 | 2026-09-13 | opencode | Sprint S3: ADR-0007 (local git mandatory, remote recommended), registry de-dup, pre-commit hook | ADR-0007, TASK-0011, TASK-0010, REVIEW-0005 | Done; Phase 3 complete, 3 defects caught |

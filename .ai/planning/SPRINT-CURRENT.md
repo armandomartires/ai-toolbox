@@ -1,75 +1,34 @@
-# Sprint — S3 Automation
+# No active sprint
 
-- Objective: make `tests/validate.sh` run automatically before every
-  commit, and remove the structural cause of the template-leak defect that
-  had to be fixed three times — so the newly-automated gate is protecting
-  a generator that cannot silently regress in the same way again.
-- Phase: 3 — Automation (`ROADMAP.md`).
-- Previous sprint: `.ai/planning/sprints/SPRINT-S2-multiclient-hardening.md`;
-  checkpoint `.ai/reviews/REVIEW-0004-sprint-s2-multiclient-hardening.md`.
+Phases 1, 2 and 3 are complete. No sprint is in progress and no phase is
+currently defined — see `ROADMAP.md` under "Phase 4 — not yet defined".
 
-## Decisions taken before task work (ADR-0007)
-- **Local git is mandatory; a remote is recommended, not required.** Human
-  rule, 2026-09-13. This repo has no remote and never has.
-- Phase 3's exit criterion is therefore restated from "wired into CI or
-  pre-commit" to **"`tests/validate.sh` runs automatically before every
-  commit"** — a criterion that can actually be met here. CI ships as an
-  inert workflow file, documented as unverified until a remote exists.
-- Measured, not assumed: `validate.sh` costs ~330 ms against `git status`'s
-  ~640 ms on this `/mnt/c` 9p tree. The performance objection to a hook
-  does not survive measurement.
+Closed sprints are archived in `.ai/planning/sprints/`:
 
-## Included tasks
-| Task | Title | Depends on | Status |
-|------|-------|-----------|--------|
-| TASK-0011 | De-duplicate the registry generator; assert no template rows (B-007) | none | planned |
-| TASK-0010 | Pre-commit hook running validate.sh; optional CI workflow | ADR-0007 | planned |
+| Sprint | Phase | Tasks | Checkpoint |
+|--------|-------|-------|-----------|
+| S1 Foundation | 1 | TASK-0001…0007 | REVIEW-0003 |
+| S2 Multi-client hardening | 2 | TASK-0008, TASK-0009 | REVIEW-0004 |
+| S3 Automation | 3 | TASK-0011, TASK-0010 | REVIEW-0005 |
 
-**Order: 0011 → 0010**, deliberately inverted from their numbering.
-TASK-0011 changes `sync-registry.sh` and adds a `validate.sh` check;
-TASK-0010 then makes `validate.sh` gate every commit. Doing 0011 first means
-the hook is switched on *after* the generator defect is closed, so the
-first thing the hook ever guards is already correct. Reversed, the hook
-would be introduced while a known defect class is still open.
+## Candidates for the next sprint
+From REVIEW-0005's follow-ups and the roadmap. **Scope needs human
+confirmation before briefs are written** — `AGENTS.md`'s ambiguity policy
+applies, and none of these is urgent.
 
-## Success criteria
-- `scripts/sync-registry.sh` has one iteration path per component *kind*,
-  not three near-copies of the same loop — a rule added once applies
-  everywhere.
-- `tests/validate.sh` fails if any registry row points at a `_template*`
-  path, so the leak cannot recur silently even if the generator regresses.
-- A tracked `.githooks/pre-commit` runs `validate.sh` and blocks a commit
-  that fails it; `scripts/install.sh` activates it via `core.hooksPath`.
-- The bypass (`git commit --no-verify`) is documented, not hidden.
-- `validate.sh` remains hermetic: offline, no network, well under a second.
-  `tests/smoke-mcp.sh` is never added to the hook.
-- Every new check observed failing for its own reason before being trusted.
+| Candidate | Note |
+|-----------|------|
+| Decide B-002's fate (skill linter) | "ready" for three sprints without being scoped. Either brief it or drop it; leaving it perpetually ready misrepresents intent. |
+| Exercise the authored (Python) MCP server shape | Only `mcp-servers/_template/` uses it; `smoke-mcp.sh` handles external manifests only. Half the MCP convention has never run. Needs a real reason to author a Python server, not a synthetic one. |
+| `install.sh` warns on `core.filemode=false` + wrong hook mode | `validate.sh` catches it, but the person most likely to hit it clones fresh onto Windows and runs `install.sh` first. |
+| Add a git remote | A recommendation, not a requirement (ADR-0007). Would activate the inert CI workflow and let its unverified label be removed — or reveal it is wrong. |
+| LM Studio UI verification | Needs a human with the GUI open. Not agent work. |
 
-## Risks
-- **The hook blocks legitimate work.** Mitigated by `--no-verify` being
-  documented rather than pretended away, per ADR-0007.
-- **`install.sh` now modifies repo config** (`core.hooksPath`), widening
-  its role beyond client directories. Acceptable — it is already the
-  post-clone entry point — but it must stay idempotent and must announce
-  what it changed.
-- **Refactoring the generator could change registry output.** The registry
-  is generated, so a diff is the detector: regenerate and confirm the
-  output is byte-identical apart from intended changes. A refactor that
-  alters output silently is a failed refactor.
-- **Scope creep into B-002 (skill linter).** Explicitly out of this sprint.
-
-## Out of scope
-- **B-002 skill linter** — deferred again, consciously. It overlaps
-  `validate.sh`'s existing frontmatter checks and needs its own scoping;
-  it has been "ready" for two sprints and should either be scoped properly
-  or dropped, not bolted onto a sprint about automation.
-- **Adding a git remote.** A recommendation, not this sprint's work, and
-  not the agent's call to make.
-- **LM Studio UI verification** — unchanged known gap; needs a human with
-  the GUI open.
-- **Authored (Python) MCP server shape** — still has no instance; not
-  built for speculatively (ADR-0005 precedent).
-
-## Status
-- Completed tasks: none yet. Blocked tasks: none.
-- Recommended next task: TASK-0011.
+## Standing constraints for whoever scopes next
+- Local git is mandatory; a remote is recommended (ADR-0007).
+- `tests/validate.sh` is now a commit gate. Its hermeticity — offline, no
+  network, sub-second — is load-bearing, not a nicety. Never add
+  `tests/smoke-mcp.sh` to the hook.
+- ADR-0005, ADR-0006 and ADR-0007 all exist because a criterion written at
+  scaffold time met reality and lost. Check assumptions against the
+  environment before writing criteria.

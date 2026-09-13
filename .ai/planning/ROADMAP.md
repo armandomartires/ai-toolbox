@@ -37,18 +37,37 @@ any agent or human can understand, trust, and deploy.
   interactively) — a client-side manual step, not repo work. See
   REVIEW-0004.
 
-## Phase 3 — Automation (current)
-- Objectives: CI checks (frontmatter validation, server smoke tests);
-  registry automation in task flow.
-- Exit criteria: tests/validate.sh wired into CI or pre-commit.
-- **Blocker to resolve first: there is no git remote configured.** Every
-  task through S2 recorded "nothing to push". "CI" presupposes a remote,
-  so either one is added or Phase 3's automation means a local pre-commit
-  hook. Decide before scoping the sprint — see `SPRINT-CURRENT.md`.
-- Note when writing this phase's criteria: both ADR-0005 and ADR-0006
-  exist because a criterion written at scaffold time met reality and lost.
-  Check Phase 3's assumptions against the environment before committing
-  to them.
+## Phase 3 — Automation (complete, 2026-09-13)
+- Objectives: automated validation in the commit flow; registry staleness
+  detection.
+- Exit criterion, restated by ADR-0007 from the original "wired into CI or
+  pre-commit": **`tests/validate.sh` runs automatically before every
+  commit.** *Met* — `.githooks/pre-commit`, activated by
+  `scripts/install.sh` (TASK-0010).
+- Why restated: the original presumed CI, and therefore a remote. This
+  repo has none, and the human rule is that local git is mandatory while a
+  remote is only recommended (ADR-0007). A CI-only gate would have run
+  nowhere while satisfying the criterion's wording.
+- Also delivered: `scripts/sync-registry.sh` de-duplicated and a
+  registry-staleness check added, closing a defect that had recurred three
+  times (TASK-0011).
+- CI ships as `.github/workflows/validate.yml`, **inert and unverified** —
+  no remote exists to run it. Labelled as such rather than presented as
+  working.
+- Pattern worth remembering: ADR-0005, ADR-0006 and ADR-0007 all exist
+  because a criterion written at scaffold time met reality and lost. Check
+  a phase's assumptions against the environment before committing to them.
+
+## Phase 4 — not yet defined
+No phase is currently in progress. Candidates carried forward:
+- B-002 skill linter (frontmatter + line budget) — "ready" for three
+  sprints; scope it properly or drop it.
+- Authored (Python) MCP server shape has never been exercised — only
+  `mcp-servers/_template/` uses it.
+- LM Studio UI verification of the ansible server (needs a human at the
+  GUI).
+- Add a git remote, which would activate the CI workflow — a
+  recommendation, not a requirement.
 
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec

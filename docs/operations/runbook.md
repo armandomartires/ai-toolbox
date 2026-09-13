@@ -21,6 +21,29 @@
 - Add an MCP server to a client: see configs/<client>/README.md.
 - Roll back: `git revert` the component's commit, re-run install.sh.
 
+## Pre-commit gate
+`scripts/install.sh` activates the tracked hook with
+`git config core.hooksPath .githooks`. From then on `tests/validate.sh`
+runs before every commit and blocks a failing one.
+
+- Bypass: `git commit --no-verify` — legitimate for work-in-progress, a
+  scratch branch, or fixing the gate itself. Not for dodging a real
+  failure.
+- Hooks are tracked in `.githooks/`, not `.git/hooks/`, so they are
+  version-controlled and survive a fresh clone. `.git/` is not.
+- The hook runs **only** `validate.sh` (offline, sub-second).
+  `tests/smoke-mcp.sh` must never be added: it fetches upstream packages
+  and would make every commit slow and offline-hostile.
+- **Removing the hook takes two steps.** `git revert` of the commit that
+  added it does not deactivate it, because `core.hooksPath` lives in
+  `.git/config`, which is not version-controlled. Also run
+  `git config --unset core.hooksPath`.
+- On a WSL `/mnt/c` checkout, `core.filemode` is `false` and files report
+  `rwxrwxrwx` regardless, so `chmod +x` never reaches git's index. Set the
+  executable bit git actually records with
+  `git update-index --chmod=+x .githooks/pre-commit`; `validate.sh` checks
+  that recorded mode, not the filesystem bit.
+
 ## Skill deployment targets
 | Client | Skills target | Deployed by install.sh |
 |--------|---------------|------------------------|
