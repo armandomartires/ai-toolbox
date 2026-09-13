@@ -213,6 +213,34 @@ exists.
 keep the server wired, restore your backup — and say so in the record, so
 the next reader knows the file's state.
 
+## Authenticating a push
+
+The remote URL is token-free and must stay that way, so the credential is
+supplied per-command. **Use basic auth, not bearer:**
+
+```
+b64 = base64("<github-username>:$GITHUB_TOKEN")
+git -c http.extraheader="AUTHORIZATION: basic <b64>" push origin master
+```
+
+`AUTHORIZATION: bearer $GITHUB_TOKEN` fails against
+`github.com/<owner>/<repo>.git` with `remote: invalid credentials`, even
+with a token that is valid — `GET /user` returns 200 with the same token
+via bearer. GitHub's git-over-HTTPS endpoint wants basic auth with the
+token as the password; the bearer form is accepted by the REST API only.
+Discovered 2026-09-13 while pushing S5's planning commit, after a failed
+push that looked like an expired token and was not.
+
+**Always confirm the push landed by comparing hashes**, never by exit
+code (`reference/git-workflow.md`; AGENTS.md's Git rules):
+
+```
+git rev-parse HEAD
+git ls-remote origin master
+```
+
+Then check `git remote -v` is still token-free.
+
 ## Verifying remote branch state
 
 `tests/validate.sh` is hermetic and never queries a remote (ADR-0007,
