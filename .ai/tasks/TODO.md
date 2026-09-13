@@ -45,8 +45,12 @@ decisions in ADR-0012. Run in order — each depends on the one above.
       `.ai/templates/TASK.md` (done — **three** sections merged, not
       four: measuring showed `Minimal context` carries narrative up to 82
       lines that a table would destroy. 16→15 sections)
-- [ ] TASK-0023 — `validate.sh`: handover-omission check with the
-      `≥ 0020` boundary (planned)
+- [x] TASK-0023 — `validate.sh`: handover-omission check with the
+      `≥ 0020` boundary (done — 7 proof cases; they exposed that
+      `.ai/tasks/completed/` could hide a brief from the check, fixed
+      before shipping)
+
+**Sprint S5 complete.** Next: `REVIEW-0007` (S5 checkpoint).
 
 Notes:
 - "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)

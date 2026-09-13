@@ -1,7 +1,11 @@
 # Sprint S5 — Session handover contract
 
-**Phase 5. Opened 2026-09-13.** The first sprint since S1 to start from a
-written plan rather than a backlog item: `PLAN-0002`.
+**Phase 5. Opened and completed 2026-09-13.** The first sprint since S1
+to start from a written plan rather than a backlog item: `PLAN-0002`.
+
+**All four tasks are done.** Awaiting `REVIEW-0007`, the S5 checkpoint.
+Commits: `c240f02` (T0020), `0f36d66` (T0021), `cdedb45` (T0022), and
+T0023 below.
 
 ## What this sprint is for
 Give the `project-workflow` skill an explicit **handover contract**, so a
@@ -32,7 +36,7 @@ repo's job.
 | TASK-0020 | ADR-0012 | **done** | Skill: `reference/session-handover.md`; `00.CONVENTIONS.md` 3087→3060 bytes |
 | TASK-0021 | TASK-0020 | **done** | Skill: template `Inputs`/`Outputs` (6 sections, not 7); version `3.1.0`; two unfailable checks struck |
 | TASK-0022 | TASK-0021 | **done** | This repo: 3 sections merged (not 4) → 16→15. `Minimal context` retained as narrative |
-| TASK-0023 | TASK-0022 | planned | `validate.sh`: omission check, `≥ 0020` boundary. **Content presence only — a format check would reject the four files that prove the contract** |
+| TASK-0023 | TASK-0022 | **done** | `validate.sh`: omission check, `≥ 0020` boundary, recursive. 7 proof cases |
 
 Order matters. The skill is canonical (ADR-0004), so its shape settles
 first (0020, 0021) and this repo adopts a finished contract (0022) before
@@ -83,8 +87,8 @@ and any future check claiming to detect it is checking nothing. The
 checks were struck *before* being run, so the record shows the decision
 preceding the convenient pass.
 
-## The recurring defect in this sprint — three for three
-Every executed task has hit the same class: **a confident claim about a
+## The recurring defect in this sprint — four for four
+Every executed task hit the same class: **a confident claim about a
 small, readable artifact that nobody actually read.**
 
 - TASK-0020: the handover note asserted the deployed copy was stale. It
@@ -99,12 +103,22 @@ small, readable artifact that nobody actually read.**
   tables. Merged three; kept it. Also found `Likely files` in the same
   ownership grey zone `Files touched` had occupied.
 
+- TASK-0023: **its own check** silently exempted `.ai/tasks/completed/`
+  — a directory `.ai/README.md` documents as a destination for task
+  files. A brief could have evaded the gate by being archived. Found by
+  the fails-when-reverted proofs, fixed with a recursive walk before
+  shipping.
+
 **The plan is a hypothesis about files, not a description of them.**
-Three for three is no longer a run of bad luck — it is the working
-assumption for TASK-0023 and for REVIEW-0007. Note that the convention's
-own step ("verify the declared state; don't assume it") is what caught
-all three, which is the sprint's only real evidence so far that the
-contract does anything.
+Four for four is not a run of bad luck; it is the working assumption for
+REVIEW-0007.
+
+The sharper finding for the checkpoint: **the convention's own step
+("verify the declared state; don't assume it") caught all four, and the
+check that now exists caught none of them.** The value S5 delivered was
+the verification discipline. The check is worth having — it prevents a
+regression class that is otherwise silent — but it must not be mistaken
+for what did the work.
 
 ## Standing constraints
 Unchanged from S4, and two bind this sprint directly:

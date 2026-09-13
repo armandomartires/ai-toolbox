@@ -369,5 +369,106 @@ sys.exit(1 if bad else 0)
 PY
 fi
 
+# Handover sections in the task template and in task briefs (TASK-0023,
+# ADR-0012). This is the first check that reads .ai/ — the gate has until
+# now policed components only, so a governance-only edit can now fail a
+# commit. That is deliberate: a deleted handover section is silent, and
+# silence is the regression worth catching.
+#
+# WHAT THIS PROVES: the headings exist and something non-placeholder is
+# written under them.
+#
+# WHAT THIS DOES NOT PROVE: that the declared inputs are the real inputs,
+# or that the declared end state matches the tree. That is not
+# mechanically decidable, and a green result here must never be read as
+# "the handovers are good" — only as "no section is missing or empty".
+# Per ADR-0009 (validation checks documentation completeness, never
+# runtime state) and the standing lesson that a check which cannot fail
+# is worse than no check, because it is still trusted.
+#
+# Content presence only, never table shape: the four briefs that prove
+# the contract works (TASK-0020…0023) were written before the template
+# existed, and a format check would reject them.
+if [ -f .ai/templates/TASK.md ]; then
+  python3 - <<'PY' || fail=1
+import os, re, sys
+
+# Task briefs numbered below this predate the convention (ADR-0012
+# Decision 4). They are records of what happened, not instances of the
+# current template; rewriting them to satisfy a rule invented afterwards
+# would fabricate compliance. A numeric boundary rather than an allowlist:
+# an allowlist needs an edit per new task and rots the first time someone
+# forgets.
+FIRST_CONTRACT_TASK = 20
+
+REQUIRED = ["## Inputs", "## Outputs / handover"]
+bad = []
+
+
+def body_after(text, heading):
+    """Lines under `heading` up to the next `## `, minus placeholder noise."""
+    lines = text.split("\n")
+    try:
+        start = lines.index(heading)
+    except ValueError:
+        return None                      # heading absent entirely
+    out = []
+    for line in lines[start + 1:]:
+        if line.startswith("## "):
+            break
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("<!--") or s.startswith("-->") or s.startswith(">"):
+            continue                     # template guidance, not content
+        if set(s) <= set("|- "):
+            continue                     # empty table separator
+        out.append(s)
+    return out
+
+
+def check(path, label):
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    for heading in REQUIRED:
+        body = body_after(text, heading)
+        if body is None:
+            bad.append("%s: missing '%s'" % (label, heading))
+        elif not body:
+            bad.append("%s: '%s' is present but empty" % (label, heading))
+
+
+# 1. The template itself must keep carrying both headings.
+check(".ai/templates/TASK.md", "templates/TASK.md")
+
+# 2. Task briefs at or past the boundary must have filled them in.
+#
+# Walks recursively: `.ai/README.md` documents `.ai/tasks/completed/` as a
+# destination for task files, and a flat listdir() let a brief escape the
+# check simply by being archived. Verified by fixture — a TASK-0099 with no
+# handover sections passed while one level down.
+for dirpath, _dirnames, filenames in os.walk(".ai/tasks"):
+    for name in sorted(filenames):
+        if not name.endswith(".md") or name == "TODO.md":
+            continue
+        m = re.match(r"^TASK-(\d{4})-", name)
+        rel = os.path.relpath(os.path.join(dirpath, name), ".ai/tasks")
+        if not m:
+            # Reported, never skipped: a silently skipped file is an
+            # unchecked file, and a renaming scheme could otherwise
+            # disable this check without anyone noticing.
+            bad.append("%s: filename does not match TASK-####-*.md, so it "
+                       "cannot be checked — rename it or update this check"
+                       % rel)
+            continue
+        if int(m.group(1)) >= FIRST_CONTRACT_TASK:
+            check(os.path.join(dirpath, name), rel)
+
+for msg in bad:
+    print("HANDOVER: %s" % msg)
+sys.exit(1 if bad else 0)
+PY
+fi
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail

@@ -66,7 +66,14 @@ a `configs/*/README.md` · the pre-commit hook's git-recorded mode · no
 `_template` row in the registry · registry content integrity (no leaked
 YAML quotes, no unescaped `|` in a cell, column count matching each
 section's own header) · every manifest-required env var appearing in
-`.env.example`.
+`.env.example` · **handover sections** — `.ai/templates/TASK.md` carries
+`## Inputs` and `## Outputs / handover`, and every task brief numbered
+≥ 0020 (walked recursively, including `completed/`) has both, non-empty.
+
+**What the handover check does not prove:** that declared inputs are the
+real inputs, or that a declared end state matches the tree. It detects
+omission, not correctness. A green gate means no section is missing or
+empty — nothing more (ADR-0012 Decision 3; ADR-0009).
 
 ## Known gaps — recorded, not hidden
 - **`skills/project-workflow/templates/00.CONVENTIONS.md` is 3087 bytes
