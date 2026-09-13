@@ -151,5 +151,5 @@ fix that actually works on a `core.filemode=false` checkout.
   - `tests/validate.sh` OK.
 - Result: success. The trap is now surfaced by the first script a new
   contributor runs, with the fix that actually works on this mount.
-- Commit: see below
+- Commit: 05b6e59
 - Push: deferred to TASK-0015, which wires the remote

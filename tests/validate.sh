@@ -252,6 +252,45 @@ else
   fi
 fi
 
+# Every environment variable a manifest marks `required` must be documented
+# in .env.example (TASK-0015, ADR-0009), so a new MCP server cannot
+# introduce a requirement a contributor has no way to discover.
+#
+# This checks DOCUMENTATION COMPLETENESS, deliberately not whether any
+# variable is SET. Checking presence would tie this hermetic gate to one
+# machine's environment and fail on every fresh clone and CI run — a gate
+# that cannot pass on a clean checkout stops being run.
+if [ -f .env.example ]; then
+  for d in mcp-servers/*/; do
+    d="${d%/}"
+    case "$(basename "$d")" in _template*) continue ;; esac
+    [ -f "$d/server.json" ] || continue
+    python3 - "$d/server.json" .env.example <<'PY' || fail=1
+import json, re, sys
+
+manifest, template = sys.argv[1], sys.argv[2]
+with open(manifest) as fh:
+    m = json.load(fh)
+with open(template, encoding="utf-8") as fh:
+    body = fh.read()
+
+# Match an assignment at line start so a variable named only inside a
+# comment does not count as documented.
+documented = set(re.findall(r"(?m)^([A-Z_][A-Z0-9_]*)=", body))
+
+missing = [k for k, v in sorted(m.get("environment", {}).items())
+           if isinstance(v, dict) and v.get("required") and k not in documented]
+for k in missing:
+    print("UNDOCUMENTED ENV: %s requires '%s' but .env.example does not list it"
+          % (manifest, k))
+sys.exit(1 if missing else 0)
+PY
+  done
+else
+  echo "MISSING .env.example (TASK-0015: environment requirements must be documented)"
+  fail=1
+fi
+
 # No registry row may point at a template. scripts/sync-registry.sh skips
 # templates in one place, but this check is independent of it on purpose:
 # the same leak was fixed three times (TASK-0005/0006/0008) before the

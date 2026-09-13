@@ -10,6 +10,21 @@ agent loops, prompts, agent roles, and client configurations.
 - Index: `docs/registry.md` (generated, never hand-edit)
 - Deploy: `scripts/install.sh`; validate: `tests/validate.sh`
 
+## Getting started
+
+Prerequisites are Bash and `python3` — nothing else is needed to develop or
+validate. Optional environment variables (a git remote token, the ansible
+MCP server's workspace path) are documented in `.env.example`; copy it to
+`.env`, which is gitignored and must never be committed. `tests/validate.sh`
+passes with none of them set.
+
+```
+bash scripts/install.sh link   # deploy skills + activate the commit hook
+bash tests/validate.sh         # the mandatory gate
+```
+
+See `docs/operations/runbook.md` for the full variable table.
+
 Read `AGENTS.md` before doing any work in this repository.
 
 ## Licensing

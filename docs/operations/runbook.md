@@ -6,6 +6,32 @@
   local agent clients (`~/.claude/skills`, OpenCode, LM Studio config)
   and lab machines, via `scripts/install.sh`.
 
+## Environment variables
+`.env.example` is the committed template. Copy it to `.env` (gitignored) or
+export the variables from your shell profile — nothing in the repo loads
+`.env` automatically.
+
+| Variable | Needed for | Required? |
+|----------|-----------|-----------|
+| `GITHUB_URL` | pushing to the remote | only to push |
+| `GITHUB_TOKEN` | creating/pushing to the remote (`repo` scope) | only to push |
+| `GITLAB_URL` / `GITLAB_TOKEN` | a GitLab mirror; unused by any script today | no |
+| `WORKSPACE_ROOT` | the ansible MCP server (`mcp-servers/ansible/server.json`) | to run that server |
+
+Rules that are enforced, not merely advised:
+
+- **`.env.example` carries names and meanings, never values.** Same rule as
+  a manifest's `environment` block (ADR-0009).
+- **`tests/validate.sh` asserts every `required` variable in any
+  `server.json` appears in `.env.example`**, so a new server cannot add a
+  requirement nobody can discover. It checks *documentation*, not whether a
+  variable is set — a presence check would fail on every fresh clone and in
+  CI, and a gate that cannot pass on a clean checkout stops being run.
+- **Nothing here is needed to validate or develop locally.** `validate.sh`
+  passes with the whole file empty.
+- **Never put a token in a remote URL.** `git remote -v` must stay
+  token-free; authenticate the push instead.
+
 ## Procedures
 - Run locally: clone on WSL; `bash scripts/install.sh link` (deploys
   skills to every installed client; clients whose config dir is absent are

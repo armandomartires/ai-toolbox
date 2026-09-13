@@ -31,6 +31,14 @@ code, public services, secrets.
 ## Commands
 - Prerequisites: Bash and `python3` (the scripts below parse
   `server.json` manifests with it; do not grep JSON).
+- Environment: copy `.env.example` to `.env` (gitignored — **never commit
+  it**) or export the variables from your shell. All of it is optional for
+  local work; `tests/validate.sh` is hermetic and passes with nothing set.
+  Needed only for specific operations: `GITHUB_URL` + `GITHUB_TOKEN` to
+  push to the remote (ADR-0007, ADR-0009); `WORKSPACE_ROOT` for the
+  ansible MCP server. `.env.example` documents names and meanings only,
+  never values; `validate.sh` enforces that every `required` variable in
+  any `server.json` appears there.
 - Install/deploy skills: `scripts/install.sh [link|copy]`
 - Regenerate index: `scripts/sync-registry.sh`
 - Validate: `tests/validate.sh` — the mandatory gate. Fast, offline,
