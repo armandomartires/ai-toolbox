@@ -29,8 +29,8 @@ repo's job.
 | Task | Depends on | Status | What |
 |------|-----------|--------|------|
 | ADR-0012 | — | **accepted** | Handover is a contract; resumability is the invariant; what validation may claim |
-| TASK-0020 | ADR-0012 | planned | Skill: `reference/session-handover.md`; restore `00.CONVENTIONS.md` to its byte budget |
-| TASK-0021 | TASK-0020 | planned | Skill: template `Inputs`/`Outputs`; version → `3.1.0`; re-sync deployed copy |
+| TASK-0020 | ADR-0012 | **done** | Skill: `reference/session-handover.md`; `00.CONVENTIONS.md` 3087→3060 bytes |
+| TASK-0021 | TASK-0020 | planned | Skill: template `Inputs`/`Outputs`; version → `3.1.0`. **Two of its planned checks cannot fail — see TASK-0020's handover before starting** |
 | TASK-0022 | TASK-0021 | planned | This repo: merge four sections into the two contract sections |
 | TASK-0023 | TASK-0022 | planned | `validate.sh`: omission check, `≥ 0020` boundary |
 
@@ -58,11 +58,29 @@ All three were human decisions this session. ADR-0012 records the
 evidence for each.
 
 ## Known debt this sprint pays rather than inherits
-`skills/project-workflow/templates/00.CONVENTIONS.md` is **3087 bytes
-against its own declared ≲3 KB cap** — over before this sprint adds a
-row. `reference/size-budgets.md:35-38` forbids raising a cap to fit what
-already exists, so TASK-0020 moves content out. Found while reading for
-PLAN-0002; nobody had measured it.
+~~`00.CONVENTIONS.md` is 3087 bytes against its own ≲3 KB cap.~~
+**Paid by TASK-0020: 3087 → 3060 bytes**, by moving a provenance sentence
+already owned by `skill-maintenance.md`, not by raising the cap.
+
+TASK-0020 also found *why* it had gone unnoticed for four sprints: the
+target read "**≲3 KB**", which is either 3000 or 3072 depending on the
+reader. A budget whose number is ambiguous cannot be checked. Now stated
+as the exact `≤3072 bytes`. **12 bytes of headroom remain** — any later
+task touching that file must re-measure.
+
+## Live finding from TASK-0020 — read before TASK-0021
+**The OpenCode skill deployment is a symlink** (ADR-0002,
+`install.sh link`): `~/.config/opencode/skills/project-workflow` and the
+repo path canonicalize to the same directory. Therefore two checks
+TASK-0021 inherited from PLAN-0002 **cannot fail**: `diff -rq` between a
+symlink and its target, and grepping the "deployed" copy for the new
+version. Both were written last session on the assumption of a real copy.
+
+TASK-0021 must replace them with a check against a `copy`-installed
+client, or record honestly that repo-vs-deployed drift is structurally
+impossible on this machine. Full detail in TASK-0020's
+`Outputs / handover`. This is lesson 1 recurring inside the sprint that
+cites it.
 
 ## Standing constraints
 Unchanged from S4, and two bind this sprint directly:

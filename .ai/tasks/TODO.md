@@ -33,8 +33,10 @@
 ## Sprint S5 — Session handover contract (open)
 Planned by `.ai/planning/plans/PLAN-0002-session-handover-contract.md`;
 decisions in ADR-0012. Run in order — each depends on the one above.
-- [ ] TASK-0020 — Skill: `reference/session-handover.md`; restore
-      `00.CONVENTIONS.md` to its byte budget (planned)
+- [x] TASK-0020 — Skill: `reference/session-handover.md`; restore
+      `00.CONVENTIONS.md` to its byte budget (done — 3087→3060; found
+      the budget target was ambiguous, and that TASK-0021 has two checks
+      that cannot fail)
 - [ ] TASK-0021 — Skill: task-template `Inputs`/`Outputs`; version
       `3.1.0`; re-sync the deployed copy (planned)
 - [ ] TASK-0022 — This repo: merge four sections into the two contract
