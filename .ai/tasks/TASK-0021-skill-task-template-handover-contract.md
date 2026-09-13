@@ -290,5 +290,6 @@ Three things TASK-0022 must carry from here:
   contract in 6 sections rather than 7, because executing the task
   exposed a false premise in the ADR that planned it. Version `3.1.0`
   live in both clients.
-- Commit: see below
-- Push: to `origin master`
+- Commit: `0f36d66`
+- Push: `origin master`, confirmed — local and
+  `git ls-remote origin master` both `0f36d66`.
