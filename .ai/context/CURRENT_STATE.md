@@ -45,7 +45,14 @@
   READMEs rewritten as full skills+MCP snapshots; the skills-loop template
   leak fixed so no template appears in the registry; `validate.sh` now
   enforces that every client in `install.sh` has a wiring snapshot).
-- Incomplete: loop component. Sprint S1 has no open tasks.
+  TASK-0008 (first loop component authored — `loops/release-check/`, the
+  repo's own validate → review → commit cycle; `validate.sh` now enforces
+  loop structure incl. mandatory exit conditions; the loops registry
+  template leak — third instance of that defect — fixed, so no template
+  appears in any registry table).
+- Current sprint: **S2 Multi-client hardening** (`SPRINT-CURRENT.md`). S1
+  archived to `.ai/planning/sprints/SPRINT-S1-foundation.md`.
+- Incomplete: TASK-0009 (MCP smoke-test harness) — the only open task.
 - In flight: `opencode-customization` (a separate repo) still has its own
   stale copy of project-workflow and an unresolved `S025_WorkflowHarmonization`
   sprint referencing it — that repo's own follow-up, not this repo's, per
@@ -55,15 +62,25 @@
 - Blockers: none. Risks: symlink support on Windows checkouts (ADR-0002).
 - Expected branch: master. Latest relevant commits: TASK-0001–0004 (see
   `git log --oneline -5` for hashes).
-- Recommended next action: sprint S1 is complete — open a Phase 2 sprint
-  or write a sprint-end review (`.ai/reviews/`). Two items should be
-  resolved when Phase 2 is scoped: (a) the Phase 2 exit criterion "one
-  skill and one MCP server working in all clients" is unmeetable as
-  written, because LM Studio has no Agent Skills target at all — re-scope
-  the criterion or exclude LM Studio from it; (b) LM Studio's ansible
-  wiring is verified at the config and MCP-handshake level but not in the
-  app's own UI, which needs the GUI launched interactively. Backlog B-003
-  (MCP smoke-test harness) is now unblocked: a server exists to test.
+- Recommended next action: TASK-0009 (MCP smoke-test harness), the only
+  open task in sprint S2. Its brief deliberately leaves one decision open:
+  whether the network-dependent smoke test runs inside
+  `tests/validate.sh` (currently fast, offline, hermetic, and the
+  mandatory gate) or beside it — the brief recommends beside, keeping
+  PASS/FAIL/SKIP distinct so a skip never reads as a pass.
+- Standing decisions added this session (ADR-0006): LM Studio is an
+  **MCP-only client**, excluded from skill criteria — Phase 2's exit
+  criterion is now split per capability rather than claiming "all
+  clients"; and loops are **authored here, not ported** — a filesystem-wide
+  search found no first-party loop artifact existed to port, and the
+  near-candidates were either vendor-bundled third-party content or
+  canonically owned by another repo.
+- Known gaps, recorded not hidden: LM Studio's ansible server is verified
+  at config + MCP-handshake level but not in the app's own UI (needs the
+  GUI launched interactively). The registry generator duplicates its
+  per-section loop three times, which is why the same template-leak
+  defect had to be fixed three times — worth a refactor if a fourth
+  section is added.
 - Standing decisions not to re-litigate: external MCP metadata lives in
   `mcp-servers/<name>/server.json`, with shape *derived* from which
   marker file is present rather than self-declared (ADR-0005

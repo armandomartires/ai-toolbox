@@ -9,3 +9,4 @@
 | SESSION-20260913-1400 | 2026-09-13 | opencode | Plan the ansible MCP port; resolved manifest-location ambiguity and authorized destructive tools | PLAN-0001, TASK-0005, TASK-0007 | Planned; execution deferred |
 | SESSION-20260913-1600 | 2026-09-13 | opencode | Execute PLAN-0001: external MCP manifest shape + executable authorization gate, then port ansible | TASK-0005, TASK-0007 | Both done; verified Connected in clean Claude Code |
 | SESSION-20260913-1800 | 2026-09-13 | opencode | Scope and execute TASK-0006: multi-client skill deployment + config snapshots; close sprint S1 | TASK-0006, REVIEW-0003 | Done; S1 complete, OpenCode drift 2.1.0→3.0.0 fixed |
+| SESSION-20260913-2000 | 2026-09-13 | opencode | Open sprint S2; ADR-0006 (LM Studio MCP-only, loops authored not ported); author release-check loop | ADR-0006, TASK-0008, TASK-0009 | 0008 done; no loop existed to port |

@@ -220,5 +220,6 @@ workflow it describes was used to ship itself.
     surfaced the template-loop leak, and step 6 is what caught it before
     the commit — the loop found a real defect on its first use.
 - Result: success.
-- Commit: see below.
+- Commit: `f25665d` "Author the release-check loop; open sprint S2
+  (ADR-0006)" on `master`.
 - Push: no remote configured — nothing to push.
