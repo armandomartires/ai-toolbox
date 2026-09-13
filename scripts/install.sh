@@ -53,6 +53,26 @@ if [ -d .githooks ] && git rev-parse --git-dir >/dev/null 2>&1; then
     git config core.hooksPath .githooks
     echo "git hooks activated: core.hooksPath=.githooks (was ${current:-unset})"
   fi
+
+  # Warn if the hook's mode *as git records it* is not executable
+  # (TASK-0014). tests/validate.sh fails on this authoritatively; the
+  # warning exists here because this is the first script a fresh clone
+  # runs, and on a core.filemode=false checkout the problem is invisible
+  # locally — the hook runs fine here while being silently ignored by any
+  # machine that honours the executable bit. Advisory only: never exits
+  # non-zero (skill deployment is unrelated) and never mutates the index.
+  hook_mode=$(git ls-files -s .githooks/pre-commit 2>/dev/null | awk '{print $1}')
+  if [ -n "$hook_mode" ] && [ "$hook_mode" != "100755" ]; then
+    echo "  WARNING: .githooks/pre-commit is recorded in git as $hook_mode, not 100755."
+    echo "           The commit gate will be silently skipped on any machine that"
+    echo "           honours the executable bit. Fix with:"
+    echo "             git update-index --chmod=+x .githooks/pre-commit"
+    if [ "$(git config --get core.filemode || true)" = "false" ]; then
+      echo "           NOTE: core.filemode=false on this checkout, so 'chmod +x' alone"
+      echo "           will NOT fix this — git ignores the filesystem bit here. Use the"
+      echo "           git update-index command above. See docs/operations/runbook.md."
+    fi
+  fi
 fi
 
 deployed_any=0

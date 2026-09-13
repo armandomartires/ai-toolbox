@@ -124,6 +124,6 @@ recorded gap is marked resolved rather than left contradicting reality.
   - No skill file was modified — confirmed by the commit's file list.
 - Result: success. B-004 closed; ADR-0003's three-sprint-old known gap now
   reads as resolved instead of contradicting the repo's contents.
-- Commit: see below
+- Commit: 741f698
 - Push: deferred to TASK-0015, which wires the remote
 
