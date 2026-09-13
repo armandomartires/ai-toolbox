@@ -1,45 +1,75 @@
-# Sprint — S3 Automation (not yet scoped)
+# Sprint — S3 Automation
 
-> **Status: awaiting human confirmation of scope.** No task briefs are
-> written yet, deliberately. `AGENTS.md`'s ambiguity policy says not to
-> invent requirements — the candidate list below comes from
-> REVIEW-0004's follow-ups and the roadmap's Phase 3, but which of them
-> belong in one sprint is a decision, not a deduction.
-
+- Objective: make `tests/validate.sh` run automatically before every
+  commit, and remove the structural cause of the template-leak defect that
+  had to be fixed three times — so the newly-automated gate is protecting
+  a generator that cannot silently regress in the same way again.
 - Phase: 3 — Automation (`ROADMAP.md`).
-- Phase 3 objectives as written: CI checks (frontmatter validation,
-  server smoke tests); registry automation in task flow.
-- Phase 3 exit criterion as written: `tests/validate.sh` wired into CI
-  or pre-commit.
 - Previous sprint: `.ai/planning/sprints/SPRINT-S2-multiclient-hardening.md`;
   checkpoint `.ai/reviews/REVIEW-0004-sprint-s2-multiclient-hardening.md`.
 
-## Candidate scope (from REVIEW-0004's follow-ups)
+## Decisions taken before task work (ADR-0007)
+- **Local git is mandatory; a remote is recommended, not required.** Human
+  rule, 2026-09-13. This repo has no remote and never has.
+- Phase 3's exit criterion is therefore restated from "wired into CI or
+  pre-commit" to **"`tests/validate.sh` runs automatically before every
+  commit"** — a criterion that can actually be met here. CI ships as an
+  inert workflow file, documented as unverified until a remote exists.
+- Measured, not assumed: `validate.sh` costs ~330 ms against `git status`'s
+  ~640 ms on this `/mnt/c` 9p tree. The performance objection to a hook
+  does not survive measurement.
 
-| # | Candidate | Why now | Size |
-|---|-----------|---------|------|
-| 1 | Wire `tests/validate.sh` into pre-commit and/or CI | Phase 3's stated exit criterion; the gate exists and is hermetic, so wiring it is mechanical | small |
-| 2 | B-007: de-duplicate `sync-registry.sh`'s per-section loops, or assert no registry row points at a `_template*` path | The same template-leak defect was fixed three times; the duplication is the cause | small |
-| 3 | Decide CI's treatment of `tests/smoke-mcp.sh` | It is CI-callable but network-dependent; a CI job must handle SKIP correctly rather than reading it as pass | small |
-| 4 | B-002: skill linter (frontmatter + line budget) | "ready" for two sprints; either scope it or drop it honestly | medium |
+## Included tasks
+| Task | Title | Depends on | Status |
+|------|-------|-----------|--------|
+| TASK-0011 | De-duplicate the registry generator; assert no template rows (B-007) | none | planned |
+| TASK-0010 | Pre-commit hook running validate.sh; optional CI workflow | ADR-0007 | planned |
 
-## Known gaps that are *not* candidates
-- **LM Studio UI verification** of the ansible server — needs a human with
-  the GUI open. Not a task until someone can do it.
-- **The authored (Python) MCP server shape has never run.** Only
-  `mcp-servers/_template/` uses it, and `smoke-mcp.sh` handles external
-  manifests only. Building for a shape with no instance is what ADR-0005's
-  paper-check deliberately avoided; noted, not scheduled.
+**Order: 0011 → 0010**, deliberately inverted from their numbering.
+TASK-0011 changes `sync-registry.sh` and adds a `validate.sh` check;
+TASK-0010 then makes `validate.sh` gate every commit. Doing 0011 first means
+the hook is switched on *after* the generator defect is closed, so the
+first thing the hook ever guards is already correct. Reversed, the hook
+would be introduced while a known defect class is still open.
 
-## Open questions for the human
-1. Does CI mean GitHub Actions? **There is still no git remote
-   configured** — every task so far has recorded "nothing to push". A CI
-   sprint presupposes a remote, so that comes first or CI means a local
-   pre-commit hook instead.
-2. Is a pre-commit hook acceptable given the repo is developed in WSL
-   against a `/mnt/c` working tree? Hook performance there is worth
-   measuring before committing to one.
+## Success criteria
+- `scripts/sync-registry.sh` has one iteration path per component *kind*,
+  not three near-copies of the same loop — a rule added once applies
+  everywhere.
+- `tests/validate.sh` fails if any registry row points at a `_template*`
+  path, so the leak cannot recur silently even if the generator regresses.
+- A tracked `.githooks/pre-commit` runs `validate.sh` and blocks a commit
+  that fails it; `scripts/install.sh` activates it via `core.hooksPath`.
+- The bypass (`git commit --no-verify`) is documented, not hidden.
+- `validate.sh` remains hermetic: offline, no network, well under a second.
+  `tests/smoke-mcp.sh` is never added to the hook.
+- Every new check observed failing for its own reason before being trusted.
+
+## Risks
+- **The hook blocks legitimate work.** Mitigated by `--no-verify` being
+  documented rather than pretended away, per ADR-0007.
+- **`install.sh` now modifies repo config** (`core.hooksPath`), widening
+  its role beyond client directories. Acceptable — it is already the
+  post-clone entry point — but it must stay idempotent and must announce
+  what it changed.
+- **Refactoring the generator could change registry output.** The registry
+  is generated, so a diff is the detector: regenerate and confirm the
+  output is byte-identical apart from intended changes. A refactor that
+  alters output silently is a failed refactor.
+- **Scope creep into B-002 (skill linter).** Explicitly out of this sprint.
+
+## Out of scope
+- **B-002 skill linter** — deferred again, consciously. It overlaps
+  `validate.sh`'s existing frontmatter checks and needs its own scoping;
+  it has been "ready" for two sprints and should either be scoped properly
+  or dropped, not bolted onto a sprint about automation.
+- **Adding a git remote.** A recommendation, not this sprint's work, and
+  not the agent's call to make.
+- **LM Studio UI verification** — unchanged known gap; needs a human with
+  the GUI open.
+- **Authored (Python) MCP server shape** — still has no instance; not
+  built for speculatively (ADR-0005 precedent).
 
 ## Status
-- Completed tasks: none. Blocked tasks: none — scope not yet set.
-- Recommended next action: confirm scope, then write task briefs.
+- Completed tasks: none yet. Blocked tasks: none.
+- Recommended next task: TASK-0011.

@@ -130,5 +130,23 @@ for client in $(sed -n '/^CLIENTS="$/,/^"$/p' scripts/install.sh \
   }
 done
 
+# No registry row may point at a template. scripts/sync-registry.sh skips
+# templates in one place, but this check is independent of it on purpose:
+# the same leak was fixed three times (TASK-0005/0006/0008) before the
+# generator was de-duplicated, so a regression must fail a check rather
+# than reach a commit. Matches the PATH column only — a description may
+# legitimately contain the word "template".
+if [ -f docs/registry.md ]; then
+  while IFS= read -r row; do
+    path=$(printf '%s\n' "$row" | awk -F'|' '{gsub(/^ +| +$/,"",$(NF-1)); print $(NF-1)}')
+    case "$path" in
+      *_template*)
+        echo "TEMPLATE IN REGISTRY: docs/registry.md lists '$path' — templates are not deployable components (run scripts/sync-registry.sh)"
+        fail=1
+        ;;
+    esac
+  done < <(grep '^| ' docs/registry.md | grep -v '^| Name ' | grep -v '^|---')
+fi
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
