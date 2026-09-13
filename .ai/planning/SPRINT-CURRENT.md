@@ -1,47 +1,52 @@
-# Sprint S4 — Closing the open loops
+# No active sprint
 
-Phase 4. Opened 2026-09-13. **Active.**
+Phases 1–4 are complete. No sprint is in progress and no phase is currently
+defined.
 
-Goal: close every backlog item that can be closed, and convert the ones
-that cannot into either a recorded decision or a written human-action
-procedure. Scope confirmed with the human before briefs were written, per
-`AGENTS.md`'s ambiguity policy.
+Closed sprints are archived in `.ai/planning/sprints/`:
 
-## Tasks
+| Sprint | Phase | Tasks | Checkpoint |
+|--------|-------|-------|-----------|
+| S1 Foundation | 1 | TASK-0001…0007 | REVIEW-0003 |
+| S2 Multi-client hardening | 2 | TASK-0008, TASK-0009 | REVIEW-0004 |
+| S3 Automation | 3 | TASK-0011, TASK-0010 | REVIEW-0005 |
+| S4 Closing the open loops | 4 | TASK-0012…0016 | REVIEW-0006 |
 
-| Task | Subject | Backlog | Status |
-|------|---------|---------|--------|
-| TASK-0012 | Skill linter — frontmatter rules only | B-002 | planned |
-| TASK-0013 | MIT LICENSE backing the skills' `license:` claims | B-004 | planned |
-| TASK-0014 | `install.sh` warns on the `core.filemode=false` hook trap | — | planned |
-| TASK-0015 | Required env vars documented + validated; git remote wired | B-001 | planned |
-| TASK-0016 | Human-action runbooks; Python-shape decision | — | planned |
+## Open items — and what each one actually is
 
-## Scope decisions taken at sprint open
+S4 deliberately ended the practice of listing everything as a "candidate",
+which had let two uncompletable items recycle through three sprints. Each
+open item is now labelled with who can act on it.
 
-These were ambiguous and went to the human rather than being invented:
+| Item | Kind | Where |
+|------|------|-------|
+| LM Studio UI verification of the ansible server | **human action**, procedure written | `docs/operations/runbook.md` |
+| Authored (Python) MCP shape never exercised | **decided** — deferred with a reopen trigger. Not a candidate. | ADR-0010 |
+| B-001 subagent-run registry validation | **unblocked but unscoped.** Re-examine value first: CI already does the staleness check, so it may be closeable as redundant. | `BACKLOG.md` |
+| Default branch mismatch (`main` on GitHub vs `master` local) | **needs authorization** — renaming a default branch is destructive-ish | REVIEW-0006 follow-up 3 |
 
-- **B-002 is frontmatter-only.** The "line budget" half of its title had
-  no threshold anywhere in the repo — `docs/development/authoring-guide.md`
-  defines required/optional keys but no maximum length. Enforcing a number
-  would have meant inventing a requirement. Recorded in ADR-0008.
-- **MIT**, matching what `skills/project-migration/SKILL.md` and
-  `skills/project-workflow/SKILL.md` already claim. The repo asserting a
-  license in frontmatter with no `LICENSE` file was the actual defect.
-- **The remote comes from environment variables**, which already exist on
-  this machine (`GITHUB_URL`, `GITHUB_TOKEN`). The gap was that nothing
-  told a new contributor they were required. ADR-0009.
-- **The Python MCP shape stays unexercised, by decision.** ADR-0010
-  records why a synthetic server is worse than an honest gap.
+The backlog holds **no `ready` item**. B-001 is the only one open.
 
-## Standing constraints (carried from S3)
+## If you are scoping Phase 5
 
-- Local git is mandatory; a remote is recommended (ADR-0007). S4 adds one,
-  which does not promote it to mandatory.
+Nothing is in flight. Confirm scope with the human before starting — none of
+the above is urgent, and two of the four are not agent work at all.
+
+## Standing constraints
+- Local git is mandatory; a remote is recommended (ADR-0007). One now
+  exists (private) but that does not promote it to mandatory.
+- Credentials come from the environment; `.env.example` documents names and
+  meanings only, never values (ADR-0009). Never put a token in a remote URL
+  or a tracked file.
 - `tests/validate.sh` is a commit gate. Its hermeticity — offline, no
-  network, sub-second — is load-bearing. Never add `tests/smoke-mcp.sh`
-  to the hook, and never add a check that reads the network or an env var
-  that only exists on one machine.
-- ADR-0005 through ADR-0007 all exist because a criterion written at
-  scaffold time met reality and lost. Check assumptions against the
-  environment before writing criteria.
+  network, sub-second — is load-bearing. Never add `tests/smoke-mcp.sh` to
+  the hook, and never add a check that requires an environment variable to
+  be set: it would fail on every fresh clone and in CI.
+- CI is a second opinion, not the gate. The hook prevents a bad commit; CI
+  only reports one already made.
+- **Check whether an item is blocked or merely unwritten.** ADR-0005 through
+  ADR-0010 exist because a criterion written at scaffold time met reality
+  and lost. S4 found two items that looked blocked and were only
+  undocumented.
+- A check that cannot fail is worse than no check, because it is still
+  trusted. Prove every new check fails for the right reason.

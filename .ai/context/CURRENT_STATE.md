@@ -1,133 +1,110 @@
 # Current State
 
-- Current objective: populate the component layer with existing skills,
-  MCP servers, and loops.
-- Status: sprint S1 complete. Three live components: project-migration and
-  project-workflow skills, both fixed, registered, versioned, and now
-  deployed to Claude Code *and* OpenCode (TASK-0001–0003, TASK-0006); the
-  `ansible` MCP server ported as the first external-shape component and
-  verified `✔ Connected` in a clean Claude Code install (TASK-0007).
-  Skill frontmatter schema (license/metadata) accepted (ADR-0003);
-  external MCP manifest shape accepted (ADR-0005 + its Clarification).
-- Completed: harmonized structure, install/registry/validate scripts;
-  TASK-0001 (project-migration script-path fix, masked-commit-failure
-  fix, ADR-0002-compliant CLAUDE.md fallback, AGENTS.md idempotence fix,
-  duplicate scaffold scripts removed, registry regenerated); TASK-0002
-  (skill frontmatter schema extended in template + authoring guide,
-  ADR-0003 accepted, project-migration version normalized to 1.0.0);
-  TASK-0003 (project-workflow skill harmonized — version-integrity defect
-  fixed via ADR-0004 declaring ai-toolbox canonical over its prior source
-  repo, SKILL.md/00.CONVENTIONS.md shrunk to lean indexes via progressive
-  disclosure, 6 self-contained reference/ files added incl. real git and
-  secrets policy, project-workflow bumped to 3.0.0; ai-toolbox itself
-  gained `.ai-layout.json` declaring root:.ai/ entrypoint:AGENTS.md so
-  the skill's own worked example is accurate); TASK-0004 (ADR-0005 —
-  MCP servers may be external/npm packages, not only authored Python —
-  found while scoping "port first MCP server": the only candidate with a
-  working connection in this environment, `@ansible/ansible-mcp-server`,
-  is npm, not Python; AGENTS.md/authoring-guide/GLOSSARY/PROJECT_MAP all
-  amended together so none contradicts the others).
-- Completed since: TASK-0005 (external-server mechanism —
-  `mcp-servers/<name>/server.json` schema documented normatively,
-  `_template-external/`, two-shape discovery in sync-registry/install,
-  and `validate.sh` MCP checks that make `AGENTS.md`'s destructive-
-  capability rule executable: `capabilities.destructive: true` now
-  *requires* `authorization.granted: true` plus an existing
-  `authorization.task` file. Also fixed a latent template-leak bug — the
-  old `_template` exact-match skip let `template-mcp-server` sit in the
-  registry as a real component); TASK-0007 (ansible ported: manifest,
-  three client wiring snippets, authorization recorded, pinned to
-  upstream 26.6.0).
-  TASK-0006 (multi-client deployment: `install.sh` now serves Claude Code
-  *and* OpenCode via a `--client` selector and a name-scoped overwrite
-  policy, closing a real drift bug — OpenCode was running a hand-placed
-  `project-workflow` 2.1.0 while the repo shipped 3.0.0; all three client
-  READMEs rewritten as full skills+MCP snapshots; the skills-loop template
-  leak fixed so no template appears in the registry; `validate.sh` now
-  enforces that every client in `install.sh` has a wiring snapshot).
-  TASK-0008 (first loop component authored — `loops/release-check/`, the
-  repo's own validate → review → commit cycle; `validate.sh` now enforces
-  loop structure incl. mandatory exit conditions; the loops registry
-  template leak — third instance of that defect — fixed, so no template
-  appears in any registry table).
-  TASK-0009 (`tests/smoke-mcp.sh` — manifest-driven MCP smoke test: real
-  `initialize` handshake, bounded timeout, PASS/FAIL/SKIP as three
-  distinct outcomes; deliberately *not* part of `validate.sh`, which
-  stays hermetic at ~330 ms with no network calls).
-- Current sprint: **none active.** S1, S2 and S3 are all closed and
-  archived under `.ai/planning/sprints/`; checkpoints REVIEW-0003,
-  REVIEW-0004, REVIEW-0005.
-- **Phases 1, 2 and 3 are all complete.** No phase is currently defined —
-  `ROADMAP.md` has a "Phase 4 — not yet defined" section listing
-  candidates. Phase 3's original criterion presupposed CI and therefore a
-  remote; ADR-0007 restated it as "validate.sh runs automatically before
-  every commit", which is met by the pre-commit hook.
-- In flight: `opencode-customization` (a separate repo) still has its own
-  stale copy of project-workflow and an unresolved `S025_WorkflowHarmonization`
-  sprint referencing it — that repo's own follow-up, not this repo's, per
-  ADR-0004. `skills/project-migration.zip`/`project-workflow.zip` sit
-  untracked alongside the skills (pre-existing artifacts, not created by
-  any task here) — left untouched, not in scope.
-- Blockers: none. Risks: symlink support on Windows checkouts (ADR-0002).
-- Expected branch: master. Latest relevant commits: TASK-0001–0004 (see
-  `git log --oneline -5` for hashes).
-- Recommended next action: **nothing is in flight; confirm scope with the
-  human before starting anything.** `SPRINT-CURRENT.md` lists five
-  candidates, none urgent: decide B-002's fate (skill linter, "ready" for
-  three sprints without being scoped — brief it or drop it); exercise the
-  authored Python MCP shape, which has never run; make `install.sh` warn
-  on the `core.filemode=false` hook-mode trap; add a git remote (a
-  recommendation, which would also verify the inert CI workflow); LM
-  Studio UI verification (needs a human at the GUI).
-- Standing decisions added this session (ADR-0006): LM Studio is an
-  **MCP-only client**, excluded from skill criteria — Phase 2's exit
-  criterion is now split per capability rather than claiming "all
-  clients"; and loops are **authored here, not ported** — a filesystem-wide
-  search found no first-party loop artifact existed to port, and the
-  near-candidates were either vendor-bundled third-party content or
-  canonically owned by another repo.
-- Known gaps, recorded not hidden: LM Studio's ansible server is verified
-  at config + MCP-handshake level but not in the app's own UI (needs the
-  GUI launched interactively). The registry generator duplicates its
-  per-section loop three times, which is why the same template-leak
-  defect had to be fixed three times — **resolved by TASK-0011**: one
-  emit path, one template skip, plus an independent `validate.sh` check
-  rejecting any registry row whose path matches `_template`.
-- Standing decisions added by ADR-0007: **local git is mandatory, a remote
-  is recommended, not required** (human rule) — so `AGENTS.md`'s push step
-  is now conditional on a remote existing rather than a rule every task
-  records as inapplicable. Automation is **hook-first**: `validate.sh` runs
-  via the tracked `.githooks/pre-commit`, activated by `install.sh` through
-  `core.hooksPath`, bypassable with documented `--no-verify`. CI ships as an
-  inert, explicitly unverified workflow because no remote exists to run it.
-- **`validate.sh` is now load-bearing on every commit.** Its hermeticity
-  (offline, no network, ~275 ms) is a requirement, not a nicety.
-  `tests/smoke-mcp.sh` must never be added to the hook — it needs the
-  network and reports SKIP as distinct from PASS.
-- Platform gotcha, discovered the hard way: `core.filemode=false` on this
-  `/mnt/c` checkout, and the 9p mount reports every file `rwxrwxrwx` while
-  ignoring `chmod -x`. So `chmod +x` never reaches git's index and `[ -x ]`
-  can never fail. Hook executability must be set with
-  `git update-index --chmod=+x` and checked against the mode **git
-  records** — which is what `validate.sh` now does.
-- Standing decisions not to re-litigate: external MCP metadata lives in
-  `mcp-servers/<name>/server.json`, with shape *derived* from which
-  marker file is present rather than self-declared (ADR-0005
-  Clarification); ansible's destructive tools
-  (`ansible_navigator`, `ade_setup_environment`,
-  `define_and_build_execution_env`, `ansible_lint --fix`,
-  `create_ansible_projects`) are human-authorized as of 2026-09-13 to
-  ship enabled, mitigated by disclosure in the manifest and every wiring
-  snippet, and enforced by `validate.sh`; the ansible launch command is
-  version-pinned so upstream breaking changes cannot land silently.
-- Environment notes (re-verified 2026-09-13): ansible connects, 10 tools;
-  proxmox still lacks `numpy` for its router; obsidian's desktop app
-  still isn't running. Upstream ansible declares `node>=24.0` while this
-  machine runs node v22.23.2 — npm warns `EBADENGINE` and the server
-  works, because `engines` is advisory unless `engine-strict` is set. If
-  that ever changes, ansible launches break with no repo-side change.
-- Known validations: `tests/validate.sh` (mandatory gate, now automatic via
-  the pre-commit hook), `scripts/sync-registry.sh`, `tests/smoke-mcp.sh`
-  (network-dependent, run manually when server wiring changes).
-- Validated in: WSL (development). Deployment targets: local agent
-  clients (~/.claude/skills, OpenCode, LM Studio) via scripts/install.sh.
+Last updated 2026-09-13, end of sprint S4.
+
+## Where the project is
+- **Phases 1–4 complete. No sprint active, no phase defined.** S1–S4 are
+  archived in `.ai/planning/sprints/`; checkpoints REVIEW-0003…REVIEW-0006.
+- **Nothing is in flight.** Confirm scope with the human before starting
+  anything. Open items, each labelled with who can act on it, are in
+  `.ai/planning/SPRINT-CURRENT.md` — the backlog holds no `ready` item.
+- Three live components: the `project-migration` and `project-workflow`
+  skills (deployed to Claude Code and OpenCode), and the `ansible` external
+  MCP server. One loop: `loops/release-check`.
+
+## Infrastructure now in place
+- **Remote:** `origin` → `armandomartires/ai-toolbox`, **private**, wired by
+  TASK-0015 from `GITHUB_URL`/`GITHUB_TOKEN`. Remote URL is token-free and
+  must stay that way.
+- **CI:** `.github/workflows/validate.yml` is **verified** — run #1 passed
+  all 7 steps. It re-runs `validate.sh` and the registry-staleness check.
+  A second opinion, not the gate.
+- **Commit gate:** `tests/validate.sh` via `.githooks/pre-commit`. Offline,
+  hermetic, ~0.37 s, and passes with the entire environment unset. All three
+  properties are load-bearing.
+- **Environment:** `.env.example` documents every variable (names and
+  meanings only, never values). Copy to `.env` (gitignored). Nothing is
+  needed for local development or validation.
+- **Licensing:** MIT `LICENSE` at the repo root, backing both skills'
+  `license: MIT` frontmatter.
+
+## What `validate.sh` enforces
+Skill frontmatter (parsed, not grepped: delimiters, name/directory equality,
+single-line description, non-empty license, semver version) · MCP shape and
+manifest integrity incl. destructive-capability authorization · loop
+structure incl. mandatory exit conditions · every `install.sh` client having
+a `configs/*/README.md` · the pre-commit hook's git-recorded mode · no
+`_template` row in the registry · every manifest-required env var appearing
+in `.env.example`.
+
+## Known gaps — recorded, not hidden
+- **LM Studio UI verification of the ansible server.** Verified at config +
+  MCP-handshake level, *not* in the app's own UI. Needs a human at the GUI;
+  step-by-step procedure in `docs/operations/runbook.md`. Closing it would
+  move Phase 2's second exit criterion from *partly met* to met. Note the
+  live `mcp.json` was restored empty after testing, so the entry must be
+  added first.
+- **The authored (Python) MCP shape has never run.** Only
+  `mcp-servers/_template/` uses it and `smoke-mcp.sh` covers external
+  manifests only. Deferred **by decision** with a reopen trigger — ADR-0010.
+  Treat `mcp-servers/_template/` as unverified scaffolding. Do not re-add
+  this to a candidate list.
+- **Default branch mismatch.** GitHub created the repo with `main`; this repo
+  uses `master`. `main` is empty, so a PR against the default base would
+  target nothing. Renaming needs explicit authorization.
+- `opencode-customization` (a separate repo) has a stale project-workflow
+  copy and an unresolved `S025_WorkflowHarmonization` sprint — that repo's
+  follow-up, not this one's, per ADR-0004.
+- `skills/*.zip` sit untracked: pre-existing artifacts, deliberately
+  untouched.
+
+## Standing decisions not to re-litigate
+ADR-0002 symlink-first · ADR-0003 skill frontmatter schema · ADR-0004
+ai-toolbox is canonical for project-workflow · ADR-0005 (+Clarification) two
+MCP shapes, *derived* from which marker file is present · ADR-0006 LM Studio
+is MCP-only, and loops are authored not ported · ADR-0007 local git
+mandatory / remote recommended, automation is hook-first · ADR-0008 skill
+linting is frontmatter-only, no invented line budget · ADR-0009
+configuration is environment-supplied and validation checks documentation
+completeness, never runtime presence · ADR-0010 Python MCP shape deferred.
+
+Also settled: ansible's destructive tools are human-authorized (2026-09-13)
+to ship enabled, disclosed in the manifest and every wiring snippet, and
+enforced by `validate.sh`; its launch command is version-pinned so upstream
+breaking changes cannot land silently.
+
+## Environment notes (re-verified 2026-09-13)
+- ansible MCP connects, 10 tools. proxmox still lacks `numpy` for its
+  router; obsidian's desktop app still isn't running.
+- Upstream ansible declares `node>=24.0` while this machine runs node
+  v22.23.2 — npm warns `EBADENGINE` and it works, because `engines` is
+  advisory unless `engine-strict` is set. If that changes, ansible launches
+  break with no repo-side change.
+- **`core.filemode=false` on this `/mnt/c` checkout**, and the 9p mount
+  reports every file `rwxrwxrwx` while ignoring `chmod -x`. So `chmod +x`
+  never reaches git's index and `[ -x ]` can never fail. Use
+  `git update-index --chmod=+x`; `install.sh` warns and `validate.sh` fails
+  on the mode git *records*. Full explanation in the runbook.
+
+## Lessons that keep recurring
+1. **A check that cannot fail is worse than no check, because it is still
+   trusted.** Prove every new check fails for the right reason.
+2. **An item can look blocked when it is merely undocumented.** S4 found two
+   (the remote, and B-002's mis-titled scope). Check which before carrying
+   anything forward again.
+3. **The obvious check is often the wrong one.** "Is the env var set" and
+   `grep -q '^name:'` both looked reasonable and both would have been
+   useless or harmful.
+4. **A criterion written at scaffold time may meet reality and lose.**
+   ADR-0005 through ADR-0010 all exist for that reason.
+5. **A test that clones for isolation may isolate itself from the change it
+   verifies** (TASK-0014's first harness reported clean against the old
+   script).
+
+## Validations
+`tests/validate.sh` (mandatory, automatic via hook) · `scripts/sync-registry.sh`
+· `tests/smoke-mcp.sh` (network-dependent, manual, PASS/FAIL/SKIP as three
+distinct outcomes — a SKIP is not a pass) · CI on every push.
+
+Validated in WSL (development). Deployment targets: local agent clients via
+`scripts/install.sh`.

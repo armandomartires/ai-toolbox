@@ -12,3 +12,4 @@
 | SESSION-20260913-2000 | 2026-09-13 | opencode | Open sprint S2; ADR-0006 (LM Studio MCP-only, loops authored not ported); author release-check loop | ADR-0006, TASK-0008, TASK-0009 | 0008 done; no loop existed to port |
 | SESSION-20260913-2200 | 2026-09-13 | opencode | MCP smoke-test harness; close sprint S2 and Phase 2 | TASK-0009, REVIEW-0004 | Done; S2 + Phase 2 complete, S3 left unscoped pending human |
 | SESSION-20260913-2330 | 2026-09-13 | opencode | Sprint S3: ADR-0007 (local git mandatory, remote recommended), registry de-dup, pre-commit hook | ADR-0007, TASK-0011, TASK-0010, REVIEW-0005 | Done; Phase 3 complete, 3 defects caught |
+| SESSION-20260914-0100 | 2026-09-13 | opencode | Sprint S4: close every closeable item; skill linter, LICENSE, env-var docs + remote + CI verified, human-action runbook | ADR-0008/0009/0010, TASK-0012…0016, REVIEW-0006 | Done; Phase 4 complete. 2 items were undocumented, not blocked |
