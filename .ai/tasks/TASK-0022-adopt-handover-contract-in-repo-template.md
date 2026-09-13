@@ -243,5 +243,6 @@ Three things TASK-0023 must absorb before writing the check:
 - Result: success, with one recorded deviation. The contract is adopted;
   `Minimal context` survives because measurement showed the merge would
   have cost more than it bought.
-- Commit: see below
-- Push: to `origin master`
+- Commit: `cdedb45`
+- Push: `origin master`, confirmed — local and
+  `git ls-remote origin master` both `cdedb45`.
