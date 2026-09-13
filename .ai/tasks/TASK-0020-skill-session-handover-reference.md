@@ -277,5 +277,7 @@ Two notes TASK-0021 should carry, from what this task hit:
   TASK-0021's plan** (recorded in the handover for TASK-0021 to replace —
   not fixed here, because rewriting the next task's Mandatory validations
   from inside this one would bundle two units of work in one commit).
-- Commit: see below
-- Push: to `origin master`
+- Commit: `c240f02`
+- Push: `origin master`, confirmed — local and
+  `git ls-remote origin master` both `c240f02`. The push used basic auth
+  per the runbook's new "Authenticating a push" section; bearer fails.
