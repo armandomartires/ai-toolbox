@@ -130,6 +130,24 @@ for client in $(sed -n '/^CLIENTS="$/,/^"$/p' scripts/install.sh \
   }
 done
 
+# The tracked pre-commit hook must exist and be executable (ADR-0007).
+# Unconditional: an earlier version guarded this with `[ -d .githooks ]`,
+# which meant deleting the hook directory made the check silently pass —
+# the check could not detect the very thing it exists to detect. A missing
+# hook is a failure, not an absence of opinion.
+#
+# Deliberately NOT asserting core.hooksPath is set: a fresh clone has not
+# run scripts/install.sh yet, and failing validation there would block the
+# first commit someone makes. Presence and runnability are the repo's
+# business; activation is install.sh's.
+if [ ! -f .githooks/pre-commit ]; then
+  echo "MISSING hook: .githooks/pre-commit (ADR-0007 requires the tracked pre-commit gate)"
+  fail=1
+elif [ ! -x .githooks/pre-commit ]; then
+  echo "NOT EXECUTABLE: .githooks/pre-commit (git records the mode; try 'git update-index --chmod=+x .githooks/pre-commit')"
+  fail=1
+fi
+
 # No registry row may point at a template. scripts/sync-registry.sh skips
 # templates in one place, but this check is independent of it on purpose:
 # the same leak was fixed three times (TASK-0005/0006/0008) before the

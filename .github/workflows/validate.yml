@@ -1,0 +1,51 @@
+# Mandatory validation in CI.
+#
+# STATUS: UNVERIFIED. This repository has no git remote configured
+# (ADR-0007: local git is mandatory, a remote is recommended), so this
+# workflow has never run. It is shipped ready rather than written later
+# from memory, but treat its syntax and behaviour as unconfirmed until a
+# remote exists and a run appears.
+#
+# The primary gate is the local pre-commit hook (.githooks/pre-commit,
+# activated by scripts/install.sh). This workflow is a redundant check for
+# the day a remote is added - not a replacement for the hook.
+#
+# Deliberately NOT run here: tests/smoke-mcp.sh. It fetches upstream
+# packages over the network and reports SKIP as a distinct outcome from
+# PASS; a CI job that treated SKIP as success would report green while
+# verifying nothing. If it is ever added, it needs explicit SKIP handling.
+name: validate
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # validate.sh parses server.json manifests with python3 and must
+      # stay offline and hermetic (AGENTS.md, Commands).
+      - name: Check prerequisites
+        run: |
+          bash --version | head -1
+          python3 --version
+
+      - name: Run mandatory validation
+        run: bash tests/validate.sh
+
+      # The registry is generated. If regenerating it produces a diff, the
+      # committed copy is stale - the same check the release-check loop
+      # performs by hand at step 3.
+      - name: Confirm the registry is up to date
+        run: |
+          bash scripts/sync-registry.sh
+          if ! git diff --quiet docs/registry.md; then
+            echo "::error::docs/registry.md is stale - run scripts/sync-registry.sh and commit the result"
+            git --no-pager diff docs/registry.md
+            exit 1
+          fi

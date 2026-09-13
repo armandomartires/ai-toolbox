@@ -41,6 +41,20 @@ opencode|${HOME}/.config/opencode/skills|${HOME}/.config/opencode
 # Agent Skills target. It is configured for MCP only - see
 # configs/lm-studio/README.md.
 
+# Activate the tracked pre-commit hook (ADR-0007). Hooks live in
+# .githooks/ rather than .git/hooks/ so they are version-controlled and
+# survive a fresh clone; core.hooksPath is the one-line activation.
+# Idempotent: only reports when it actually changes something.
+if [ -d .githooks ] && git rev-parse --git-dir >/dev/null 2>&1; then
+  current=$(git config --get core.hooksPath || true)
+  if [ "$current" = ".githooks" ]; then
+    : # already active, stay quiet
+  else
+    git config core.hooksPath .githooks
+    echo "git hooks activated: core.hooksPath=.githooks (was ${current:-unset})"
+  fi
+fi
+
 deployed_any=0
 while IFS='|' read -r client target parent; do
   [ -n "$client" ] || continue

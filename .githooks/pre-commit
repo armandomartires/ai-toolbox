@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Pre-commit gate: run the mandatory validation before every commit.
+#
+# Tracked in .githooks/ rather than .git/hooks/ so it is version-controlled
+# and reviewable, and travels with a fresh clone. Activate with:
+#   git config core.hooksPath .githooks     (scripts/install.sh does this)
+#
+# Only tests/validate.sh runs here. It is hermetic — offline, no network,
+# well under a second (ADR-0007). tests/smoke-mcp.sh must NEVER be added:
+# it fetches upstream packages and takes tens of seconds, which would make
+# every commit slow and fail on an offline machine.
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+
+if [ ! -f tests/validate.sh ]; then
+  echo "pre-commit: tests/validate.sh not found - skipping (nothing to gate)"
+  exit 0
+fi
+
+if bash tests/validate.sh; then
+  exit 0
+fi
+
+cat >&2 <<'MSG'
+
+pre-commit: validation FAILED - commit refused.
+
+Fix the problems listed above, then commit again. If a component changed,
+`bash scripts/sync-registry.sh` may be what is needed.
+
+To commit anyway (work in progress, a scratch branch, or when fixing the
+gate itself):
+
+    git commit --no-verify
+
+MSG
+exit 1
