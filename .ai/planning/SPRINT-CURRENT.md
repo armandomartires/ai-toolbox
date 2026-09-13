@@ -4,8 +4,8 @@
 to start from a written plan rather than a backlog item: `PLAN-0002`.
 
 **All four tasks are done.** Awaiting `REVIEW-0007`, the S5 checkpoint.
-Commits: `c240f02` (T0020), `0f36d66` (T0021), `cdedb45` (T0022), and
-T0023 below.
+Commits: `c240f02` (T0020), `0f36d66` (T0021), `cdedb45` (T0022),
+`7106f9c` (T0023).
 
 ## What this sprint is for
 Give the `project-workflow` skill an explicit **handover contract**, so a

@@ -281,5 +281,9 @@ cannot supply it — a human or a fresh session reading the files can.
 - Result: success. The handover contract is now enforced as omission
   detection, honestly labelled. The proofs found one real defect in the
   check itself (the `completed/` escape hatch) before it could ship.
-- Commit: see below
-- Push: to `origin master`
+- Commit: `7106f9c`
+- Push: `origin master`, confirmed — local and
+  `git ls-remote origin master` both `7106f9c`. Note the commit itself was
+  gated by the new check via `.githooks/pre-commit`: the check ran against
+  the tree containing it and passed, so it is live rather than merely
+  written.
