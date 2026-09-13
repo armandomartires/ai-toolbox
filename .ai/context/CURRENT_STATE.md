@@ -23,9 +23,12 @@
   working connection in this environment, `@ansible/ansible-mcp-server`,
   is npm, not Python; AGENTS.md/authoring-guide/GLOSSARY/PROJECT_MAP all
   amended together so none contradicts the others).
-- Incomplete: actually porting the ansible server (TASK-0005, needs a
-  registry/install.sh extension for the external shape); loop component;
-  client config snapshots.
+- Incomplete: actually porting the ansible server — now planned as
+  PLAN-0001 and split into TASK-0005 (build the external-server
+  mechanism: `server.json` manifest schema, sync-registry/install
+  discovery, validate.sh checks incl. an executable destructive-
+  capability gate) and TASK-0007 (port ansible using it); loop
+  component; client config snapshots (TASK-0006).
 - In flight: `opencode-customization` (a separate repo) still has its own
   stale copy of project-workflow and an unresolved `S025_WorkflowHarmonization`
   sprint referencing it — that repo's own follow-up, not this repo's, per
@@ -35,13 +38,17 @@
 - Blockers: none. Risks: symlink support on Windows checkouts (ADR-0002).
 - Expected branch: master. Latest relevant commits: TASK-0001–0004 (see
   `git log --oneline -5` for hashes).
-- Recommended next action: TASK-0005 (port ansible via the external-MCP
-  shape ADR-0005 just established: configs/*/README.md wiring snippet +
-  registry entry, no vendored source; check whether proxmox/obsidian
-  have become functional before assuming ansible is still the only
-  option). Note: ansible's `ansible_navigator`/`ade_setup_environment`
-  tools are not purely read-only — TASK-0005 must address AGENTS.md's
-  destructive-capability authorization rule.
+- Recommended next action: TASK-0005, then TASK-0007. Both are specified
+  in `.ai/planning/plans/PLAN-0001-port-ansible-mcp-server.md`, which
+  also resolves two ambiguities so they are not re-litigated: external
+  metadata lives in `mcp-servers/<name>/server.json` (not in
+  `configs/*/README.md` prose, which ADR-0005's original wording implied
+  but a generator cannot parse), and ansible's destructive tool surface
+  (`ansible_navigator`, `ade_setup_environment`,
+  `define_and_build_execution_env`) is human-authorized as of 2026-09-13
+  to ship enabled, with disclosure in the manifest and every wiring
+  snippet. Re-verified at plan time: ansible connects; proxmox still
+  lacks `numpy`; obsidian's app still isn't running.
 - Known validations: tests/validate.sh, scripts/sync-registry.sh.
 - Validated in: WSL (development). Deployment targets: local agent
   clients (~/.claude/skills, OpenCode, LM Studio) via scripts/install.sh.
