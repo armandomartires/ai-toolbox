@@ -24,18 +24,29 @@ any agent or human can understand, trust, and deploy.
   has no Agent Skills target):
   - One skill deployed and working in **every client that supports
     skills** — Claude Code and OpenCode. *Met* (TASK-0006).
-  - One MCP server wired and verified in **all three** clients. *Partly
-    met*: Claude Code `✔ Connected`; OpenCode in live use; LM Studio
-    verified at config + MCP-handshake level, not yet in its own UI.
+  - One MCP server wired and verified in **all three** clients. ***Met*** —
+    completed retroactively 2026-09-13 by TASK-0017: Claude Code
+    `✔ Connected`; OpenCode in live use; LM Studio now verified in its own
+    UI (server active in chat, tools enumerated by a loaded model), not
+    merely at config + handshake level.
   - `configs/<client>/README.md` complete for every client. *Met*.
   - At least one loop component exists and is exercisable. *Met*
     (`loops/release-check`, TASK-0008).
   - MCP server startup verified by a repeatable check, not manual steps.
     *Met* (`tests/smoke-mcp.sh`, TASK-0009).
-- Closed with one known gap, recorded not counted: LM Studio's ansible
-  server is unverified in the app's own UI (needs the GUI launched
+- Closed 2026-09-13 with one known gap, recorded not counted: LM Studio's
+  ansible server was unverified in the app's own UI (needs the GUI launched
   interactively) — a client-side manual step, not repo work. See
   REVIEW-0004.
+- **That gap is now closed (TASK-0017), so Phase 2 has no outstanding
+  criteria.** It took a written procedure (TASK-0016) before the human could
+  act on it — the gap survived three sprints as a candidate-list bullet and
+  was closed within a day of becoming a documented procedure. The lesson is
+  about the form of the record, not the difficulty of the work.
+- The verification also *found* something, which is the argument for doing
+  it rather than assuming it: `WORKSPACE_ROOT` was still the unreplaced
+  placeholder, and the server connected and enumerated all its tools anyway.
+  A green connection is not a validated configuration.
 
 ## Phase 3 — Automation (complete, 2026-09-13)
 - Objectives: automated validation in the commit flow; registry staleness

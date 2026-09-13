@@ -20,10 +20,15 @@ open item is now labelled with who can act on it.
 
 | Item | Kind | Where |
 |------|------|-------|
-| LM Studio UI verification of the ansible server | **human action**, procedure written | `docs/operations/runbook.md` |
+| ~~LM Studio UI verification~~ | **CLOSED 2026-09-13** by TASK-0017 — passed, and found the `WORKSPACE_ROOT` placeholder defect while doing so | `configs/lm-studio/README.md` |
 | Authored (Python) MCP shape never exercised | **decided** — deferred with a reopen trigger. Not a candidate. | ADR-0010 |
 | B-001 subagent-run registry validation | **unblocked but unscoped.** Re-examine value first: CI already does the staleness check, so it may be closeable as redundant. | `BACKLOG.md` |
 | Default branch mismatch (`main` on GitHub vs `master` local) | **needs authorization** — renaming a default branch is destructive-ish | REVIEW-0006 follow-up 3 |
+| ~~`WORKSPACE_ROOT` placeholder in the live `mcp.json`~~ | **CLOSED** — human corrected it to a real Ansible project directory; re-verified to exist | `configs/lm-studio/README.md` |
+
+TASK-0017 is evidence for the reframing above: the LM Studio item survived
+three sprints as a candidate bullet and was closed within a day of becoming
+a written procedure. The blocker was the *form of the record*, not the work.
 
 The backlog holds **no `ready` item**. B-001 is the only one open.
 

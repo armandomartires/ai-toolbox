@@ -148,11 +148,9 @@ server's tools in its own interface**, because that needs the desktop GUI
 running. This procedure exists so that gap is closeable on demand rather
 than rediscovered each sprint (TASK-0016).
 
-Current state: `mcp-servers/ansible` is verified at config + handshake
-level only — see `configs/lm-studio/README.md`. The live
-`~/.lmstudio/mcp.json` contains `{"mcpServers": {}}`; TASK-0006 restored it
-byte-for-byte after testing, so **the entry must be added before anything
-can appear in the UI.**
+Status: **`mcp-servers/ansible` has now passed this procedure**
+(2026-09-13, TASK-0017). It is kept as the reference procedure for the next
+server, and because it caught a real defect — see step 7.
 
 **1. Add the server entry.** LM Studio is installed Windows-side, so from
 WSL the file is at `/mnt/c/Users/<user>/.lmstudio/mcp.json` (in the app:
@@ -160,19 +158,31 @@ Program ▸ Install ▸ Edit `mcp.json`). Back it up first, then paste the
 `ansible` block from `configs/lm-studio/README.md` — copy it from there
 rather than retyping, so the pinned version stays correct.
 
-Set `WORKSPACE_ROOT` to an **absolute** path of a real project directory.
-This is the server's blast radius: it executes playbooks and installs
-packages. Never `$HOME`, never `/`.
+**2. Replace `WORKSPACE_ROOT` before starting the app.** A separate step
+because skipping it is not hypothetical: the first run of this procedure
+left the placeholder in place and the server connected and enumerated every
+tool regardless. **Nothing in the connection validates this value** — the
+handshake and tool listing never touch the filesystem.
 
-**2. Restart LM Studio.** It reads `mcp.json` at startup; an edit made
+Use an **absolute** path to a real project directory. This is the server's
+blast radius: it executes playbooks (`ansible_navigator`), installs OS
+packages (`ade_setup_environment`), and rewrites files in place
+(`ansible_lint --fix`). Never `$HOME`, never `/`. Verify the path exists
+before continuing:
+
+```
+ls -d /your/chosen/workspace     # must succeed
+```
+
+**3. Restart LM Studio.** It reads `mcp.json` at startup; an edit made
 while running may not be picked up.
 
-**3. Check the tool list.** Open a chat with any loaded model and look at
-its tools/integrations panel. A **pass** is `ansible` present *and*
-expandable to show named tools (`ansible_lint`, `ansible_navigator`, and
-so on — 10 were seen on this machine via the handshake).
+**4. Check the tool list.** Open a chat with any loaded model and look at
+its tools/integrations panel, or simply ask the model what tools the server
+provides. A **pass** is the server present *and* its named tools
+enumerated.
 
-**4. Interpret what you see.** These are genuinely different outcomes:
+**5. Interpret what you see.** These are genuinely different outcomes:
 
 | Observation | Meaning |
 |---|---|
@@ -181,20 +191,27 @@ so on — 10 were seen on this machine via the handshake).
 | Server absent | Config not read, or JSON invalid. Validate the file parses. |
 | Error/red indicator | Launch failed — usually `npx` not on the app's PATH. A desktop app does not inherit your shell's PATH. |
 
-**5. Record the result — pass or fail.** Update the `Verified` row in
-`configs/lm-studio/README.md` and the "Not verified" note at the end of its
+Expect the tool **count** to differ by one from the repo's figure if the
+server exposes a meta-tool: ansible exposes 10, of which
+`list_available_tools` enumerates the other 9, so a model asked to list
+"available tools" reasonably reports 9. Reconcile before assuming drift.
+
+**6. Record the result — pass or fail.** Update the `Verified` row in
+`configs/lm-studio/README.md` and the verification note at the end of its
 ansible section. A failure is a legitimate, useful outcome: it would mean
 this repo's LM Studio wiring is wrong, which is worth knowing. Do not
 overwrite the existing handshake-level evidence; add to it.
 
-**6. Restore `mcp.json` if this was only a test.** If you do not intend to
+**7. Re-check `WORKSPACE_ROOT` after a pass.** Not redundant with step 2 —
+this is the step the first run of this procedure needed and did not have.
+A pass proves the server *connects*; it proves nothing about the value,
+because a nonexistent `WORKSPACE_ROOT` produces an identical-looking pass.
+Confirm the path in the live `mcp.json` is the one you intended and that it
+exists.
+
+**8. Restore `mcp.json` if this was only a test.** If you do not intend to
 keep the server wired, restore your backup — and say so in the record, so
 the next reader knows the file's state.
-
-Note on scope: a pass here would also let Phase 2's second exit criterion
-("one MCP server wired and verified in all three clients") close fully; it
-is currently recorded as *partly met*. That wording should only change once
-this procedure has actually been run.
 
 ## Human approval required for
 - Destructive tool capabilities in MCP servers.

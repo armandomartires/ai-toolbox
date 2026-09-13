@@ -1,10 +1,15 @@
 # Current State
 
-Last updated 2026-09-13, end of sprint S4.
+Last updated 2026-09-13, after TASK-0017 (post-S4).
 
 ## Where the project is
-- **Phases 1–4 complete. No sprint active, no phase defined.** S1–S4 are
-  archived in `.ai/planning/sprints/`; checkpoints REVIEW-0003…REVIEW-0006.
+- **Phases 1–4 complete, with no outstanding criteria in any of them.**
+  S1–S4 are archived in `.ai/planning/sprints/`; checkpoints
+  REVIEW-0003…REVIEW-0006. Phase 2's last partial criterion closed
+  retroactively by TASK-0017.
+- **All three clients are now fully verified** for the ansible MCP server:
+  Claude Code `✔ Connected`, OpenCode in live use, and LM Studio verified
+  in its own UI (not merely at handshake level).
 - **Nothing is in flight.** Confirm scope with the human before starting
   anything. Open items, each labelled with who can act on it, are in
   `.ai/planning/SPRINT-CURRENT.md` — the backlog holds no `ready` item.
@@ -38,12 +43,6 @@ a `configs/*/README.md` · the pre-commit hook's git-recorded mode · no
 in `.env.example`.
 
 ## Known gaps — recorded, not hidden
-- **LM Studio UI verification of the ansible server.** Verified at config +
-  MCP-handshake level, *not* in the app's own UI. Needs a human at the GUI;
-  step-by-step procedure in `docs/operations/runbook.md`. Closing it would
-  move Phase 2's second exit criterion from *partly met* to met. Note the
-  live `mcp.json` was restored empty after testing, so the entry must be
-  added first.
 - **The authored (Python) MCP shape has never run.** Only
   `mcp-servers/_template/` uses it and `smoke-mcp.sh` covers external
   manifests only. Deferred **by decision** with a reopen trigger — ADR-0010.
@@ -88,7 +87,11 @@ breaking changes cannot land silently.
 
 ## Lessons that keep recurring
 1. **A check that cannot fail is worse than no check, because it is still
-   trusted.** Prove every new check fails for the right reason.
+   trusted.** Prove every new check fails for the right reason. Corollary
+   from TASK-0017: **a green connection is not a validated configuration.**
+   The ansible server connected and enumerated all 10 tools with
+   `WORKSPACE_ROOT` set to a nonexistent placeholder path, because nothing
+   in the MCP handshake touches the filesystem.
 2. **An item can look blocked when it is merely undocumented.** S4 found two
    (the remote, and B-002's mis-titled scope). Check which before carrying
    anything forward again.

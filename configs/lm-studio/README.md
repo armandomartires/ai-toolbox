@@ -9,7 +9,7 @@ Sources of truth live elsewhere and win any disagreement:
 | Skills target | **none — not supported** (see below) |
 | Skills deployment | n/a; LM Studio is not a target of `scripts/install.sh` |
 | MCP config | `~/.lmstudio/mcp.json` (Program ▸ Install ▸ Edit `mcp.json`) |
-| Verified | 2026-09-13 — ansible MCP config accepted and handshake confirmed |
+| Verified | 2026-09-13 — **fully verified**: config accepted, MCP handshake confirmed, and the server active in LM Studio's own UI with its tools enumerated in chat (TASK-0017) |
 
 ## Skills — not deployed
 
@@ -48,11 +48,20 @@ Windows-side; WSL has no `~/.lmstudio`).
     "ansible": {
       "command": "npx",
       "args": ["-y", "@ansible/ansible-mcp-server@26.6.0", "--stdio"],
-      "env": { "WORKSPACE_ROOT": "/absolute/path/to/your/project" }
+      "env": { "WORKSPACE_ROOT": "REPLACE_ME_absolute_path_to_your_project" }
     }
   }
 }
 ```
+
+> **Replace `WORKSPACE_ROOT` before starting LM Studio.** The sentinel above
+> is deliberately not a plausible path, because the previous placeholder
+> (`/absolute/path/to/your/project`) was pasted verbatim and survived a full
+> verification undetected — see the note below. **A successful connection
+> does not validate this value:** the MCP handshake and tool enumeration
+> never touch the filesystem, so the server reports healthy while its blast
+> radius points nowhere. The mistake surfaces only when a destructive tool
+> runs.
 
 Notes:
 - Version **pinned** to `26.6.0` — see the rationale in
@@ -71,11 +80,57 @@ Notes:
   Separately, the exact `command` + `args` + `env` above were run directly
   and completed a real MCP `initialize` handshake, returning
   `serverInfo: {"name": "ansible-mcp-server"}` with `tools` and
-  `resources` capabilities. **Not** verified: the server appearing in
-  LM Studio's own UI tool list, which needs the GUI launched
-  interactively.
-- To close that last gap, follow "Verifying an MCP server in LM Studio's UI
-  (human procedure)" in `docs/operations/runbook.md`, then update the
-  `Verified` row above and this note with what you observed — including if
-  it fails. Note that the live `mcp.json` was restored empty after testing,
-  so the entry above must be added before anything can appear in the UI.
+  `resources` capabilities.
+- **UI verification: PASS (2026-09-13, TASK-0017).** The previously-recorded
+  gap — the server appearing in LM Studio's own UI tool list — is closed.
+  The server activates and shows under the message in LM Studio chat, and a
+  loaded model (`qwen3.8 27b`) enumerated its tools on request. This
+  completes the three-client verification; Phase 2's second exit criterion
+  moved from *partly met* to met.
+
+### Tool count: 10 exposed, 9 functional
+
+Recorded because the two numbers look like drift and are not. The repo has
+said "10 tools" since TASK-0007; a model asked to list them may report **9**.
+Both are correct: `list_available_tools` is a meta-tool that enumerates the
+other nine, so a model listing "the tools available" reasonably omits it.
+
+The nine functional tools: `zen_of_ansible`,
+`ansible_content_best_practices`, `ansible_lint`, `create_ansible_projects`,
+`define_and_build_execution_env`, `ansible_navigator`,
+`ade_environment_info`, `ade_setup_environment`, `adt_check_env`.
+Plus `list_available_tools` = 10.
+
+Do not "correct" either figure to match the other. Confirmed twice
+independently during TASK-0017: by a direct `list_available_tools` query, and
+by the model itself on re-review. Note that the model's *first* answer was
+incomplete and confidently worded — when a count matters, ask the server, not
+the model.
+
+### Defect found during this verification — since fixed
+
+The live `mcp.json` had `WORKSPACE_ROOT` set to the literal placeholder
+`/absolute/path/to/your/project` — a path that did not exist — and
+**everything still worked**: the server started, connected, and listed all
+its tools.
+
+Corrected the same day to a real Ansible project directory (verified to
+exist, containing `ansible.cfg`, `inventory/`, `requirements.yml`). The value
+is a Windows-style path with a drive letter, which is correct — LM Studio is
+a Windows app. A WSL-side check must translate `C:/…` to `/mnt/c/…` and test
+for existence; a naive POSIX `isabs()` call reports `False` on a drive-letter
+path and would wrongly flag a valid value.
+
+The lesson worth keeping:
+
+- Connection success is **not** evidence that `WORKSPACE_ROOT` is valid.
+  Nothing in the handshake or tool enumeration touches the filesystem.
+- `WORKSPACE_ROOT` is the blast radius for `ansible_navigator`,
+  `ade_setup_environment`, and `ansible_lint --fix`. An invalid value fails
+  at the moment a destructive tool runs, which is the worst time to find out.
+- The guidance above was already correct ("use an absolute path", "never
+  `$HOME` or `/`") and was still pasted past. Prose was not the fix; the
+  placeholder is now an implausible sentinel so an unedited paste is
+  obvious.
+- Verifying a *value* is a separate act from verifying a *connection*. Step 7
+  of the runbook procedure exists because of this finding.
