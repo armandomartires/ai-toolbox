@@ -1,41 +1,77 @@
-# Sprint — S1 Foundation
+# Sprint — S2 Multi-client hardening
 
-- Objective: migrate existing skills, MCP servers, and loops into the
-  component layer with full validation.
-- Time reference: first two weeks after scaffold.
-- Included tasks: TASK-0001 (port and harmonize the project-migration
-  skill), TASK-0002 (extend the skill frontmatter schema), TASK-0003
-  (harmonize the project-workflow skill), TASK-0004 (allow external
-  Node/npm MCP servers, ADR-0005), TASK-0005 (external MCP server shape:
-  manifest, scripts, validation), TASK-0007 (port the ansible MCP
-  server), TASK-0006 (client config snapshots).
-- Recommended order: 0001 → 0002 → 0003 → 0004 → 0005 → 0007 → 0006.
-  0004 → 0005 → 0007 is a hard dependency chain: 0005 needs the amended
-  rule, 0007 needs the manifest shape and the validation that gates its
-  destructive-capability authorization.
-- Dependencies: none between 0001–0003. TASK-0001 and TASK-0002 both
-  touch skills/project-migration/SKILL.md — 0002 owns line 7 (version),
-  0001 owns lines 12 and 37 (script paths). TASK-0003 follows ADR-0004,
-  a cross-repo canonicalization decision independent of 0001/0002.
-- Success criteria: tests/validate.sh green; registry lists all ported
-  components; install.sh verified in Claude Code.
-- Risks: porting reveals structural mismatches — split tasks if needed.
-  Realized twice now: TASK-0004 exists because "port first MCP server"
-  assumed every server would be Python; the first real candidate
-  (ansible) wasn't. Then the remainder split again into 0005 (build the
-  external-server mechanism) and 0007 (use it) — see PLAN-0001.
-- Completed tasks: TASK-0001 through TASK-0007 (all). Blocked tasks: none.
-- **Sprint S1 is complete.** No open tasks remain.
-- Sprint success criteria status: `tests/validate.sh` green (now covers
-  skill frontmatter, MCP shape/manifest integrity, and client/wiring-doc
-  pairing); registry lists every ported component and no templates
-  (2 skills + 1 external MCP server); install.sh verified in Claude Code
-  *and* OpenCode, with the ansible wiring reaching `✔ Connected` from a
-  clean start — satisfying the Phase 1 milestone "first component
-  installed and used in a real session".
-- Carried forward to Phase 2, not silently dropped: LM Studio has no
-  Agent Skills target, so "one skill working in all clients" (the Phase 2
-  exit criterion) cannot be met for it as written — the criterion needs
-  re-scoping or LM Studio needs excluding from it. Its ansible MCP wiring
-  is verified at the config and handshake level, but unverified in the
-  app's own UI (needs the GUI launched interactively).
+- Objective: close Phase 2 by exercising the two component shapes that
+  exist only as scaffolding (loops) or only as manual steps (MCP server
+  startup verification), and by resolving the two roadmap claims S1 found
+  to be unsatisfiable.
+- Time reference: follows S1, closed 2026-09-13.
+- Previous sprint: `.ai/planning/sprints/SPRINT-S1-foundation.md`;
+  checkpoint `.ai/reviews/REVIEW-0003-sprint-s1-foundation.md`.
+
+## Included tasks
+| Task | Title | Depends on | Status |
+|------|-------|-----------|--------|
+| TASK-0008 | Author the first loop component (`release-check`) | ADR-0006 | **done** |
+| TASK-0009 | MCP server smoke-test harness (backlog B-003) | TASK-0007 | planned |
+
+Recommended order: 0008 → 0009. No hard dependency between them; 0008 is
+first because it is smaller and because the loop it authors describes the
+validate/commit cycle that 0009 then adds a step to.
+
+## Already resolved this sprint (before task work)
+- **ADR-0006** settles both items S1 carried forward:
+  - Phase 2's exit criterion, previously unmeetable ("one skill and one
+    MCP server working in all clients" — LM Studio has no Agent Skills
+    target), restated per capability in `ROADMAP.md`.
+  - `AGENTS.md`'s portability sentence scoped per capability to match.
+  - Backlog B-005 closed by that ADR; B-006 re-verbed from "port a loop"
+    to "author a loop" after investigation found no first-party loop
+    artifact existed to port.
+
+## Success criteria
+- `loops/` holds at least one real, non-template component, listed in the
+  registry, and `tests/validate.sh` checks loop structure as it does
+  skills and MCP manifests.
+- A repeatable command verifies that an MCP server actually starts and
+  speaks the protocol — replacing the by-hand `initialize` handshake used
+  in TASK-0006.
+- Every new check is observed failing for its own expected reason before
+  being trusted (the S1 lesson: a script reporting success is not
+  evidence the effect happened).
+- `tests/validate.sh` green; registry regenerated; no templates listed as
+  real components.
+
+## Risks
+- **Loop content duplicating `AGENTS.md`.** The first loop describes this
+  repo's own validate/commit cycle, which `AGENTS.md` owns normatively.
+  Mitigation: the loop states sequence and exit conditions and *links* for
+  the rules — the one-owner rule applies to loops too (ADR-0006).
+- **Smoke test needing network and a real package.** `npx -y` fetches
+  upstream, so the harness is not hermetic and will fail offline.
+  Mitigation: keep it out of `validate.sh`'s default path, or make it skip
+  cleanly when offline rather than reporting a false failure. Decide in
+  TASK-0009 and state the reasoning.
+- **Scope creep into Phase 3.** CI wiring is Phase 3's objective, not
+  this sprint's. A harness that runs locally is in scope; wiring it into
+  CI or a pre-commit hook is not.
+
+## Out of scope
+- LM Studio UI verification of the ansible server (needs the GUI launched
+  interactively; recorded as a known gap, not a task).
+- Porting `bmad-workflow.md` from `opencode-customization`, or vendoring
+  third-party loop skills — both rejected in ADR-0006, and neither
+  foreclosed for later.
+- CI/pre-commit integration (Phase 3).
+
+## Status
+- Completed tasks: TASK-0008. Blocked tasks: none.
+- Recommended next task: TASK-0009 (the last task in this sprint).
+- Criteria progress: `loops/` now holds a real component and
+  `tests/validate.sh` enforces loop structure (TASK-0008). Still open: a
+  repeatable MCP startup check to replace TASK-0006's by-hand handshake.
+- Noted at TASK-0008: the template-leak defect recurred a **third** time,
+  in the loops registry loop (after the MCP loop in TASK-0005 and the
+  skills loop in TASK-0006). All three are now fixed and the registry
+  contains no template rows. Three instances of one defect in one
+  codebase suggests the generator's per-section duplication is itself the
+  problem — worth a refactor if a fourth section is ever added.

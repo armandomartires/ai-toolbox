@@ -97,6 +97,28 @@ sys.exit(1 if bad else 0)
 PY
 done
 
+# Loops: frontmatter name/description, name matches directory, and the
+# three structural sections. A loop without exit conditions is an
+# unbounded instruction, which is the failure mode worth catching.
+for f in loops/*/loop.md; do
+  [ -f "$f" ] || continue
+  d=$(dirname "$f")
+  base=$(basename "$d")
+  name=$(awk '/^name:/{sub(/^name: */,"");print;exit}' "$f")
+  [ -n "$name" ] || { echo "MISSING name: $f"; fail=1; }
+  grep -q '^description:' "$f" || { echo "MISSING description: $f"; fail=1; }
+  case "$base" in
+    _template*) ;;   # templates are named _template*, so cannot match
+    *) [ -z "$name" ] || [ "$name" = "$base" ] || {
+         echo "NAME MISMATCH: $f declares '$name' but directory is '$base'"
+         fail=1; } ;;
+  esac
+  for section in Trigger Steps "Exit conditions"; do
+    grep -q "^## ${section}\$" "$f" || {
+      echo "MISSING SECTION '## ${section}': $f"; fail=1; }
+  done
+done
+
 # Every client scripts/install.sh can deploy to must have a wiring
 # snapshot, so a new client cannot be added to the script without one.
 # The client list is read from install.sh itself to keep them in sync.

@@ -54,7 +54,28 @@ form of `AGENTS.md`'s rule that destructive capabilities need explicit
 human authorization in the task file.
 
 ## Loops
-- loop.md with frontmatter, trigger, steps, and explicit exit conditions.
+A loop is a repeatable multi-step agent workflow. `loop.md` is required;
+copy from `loops/_template/`. `tests/validate.sh` enforces every element
+below.
+
+| Element | Rule |
+|---------|------|
+| Frontmatter `name` | Required. Must match the directory name. |
+| Frontmatter `description` | Required. One line — drives the registry and loop selection. |
+| `## Trigger` | Required. What starts the loop, and what it is *not* for. |
+| `## Steps` | Required. Numbered, each stating its expected output, so a step can be judged done or not done. |
+| `## Exit conditions` | Required. Both the success path *and* the failure paths, each failure carrying a retry bound or an escalation. |
+
+Exit conditions are the point. A loop without them is an unbounded
+instruction — the shape that has an agent retrying the same failing action
+indefinitely. State a bound ("3 attempts, then escalate") and name the
+cases that must escalate *without* retrying, such as anything destructive
+or a discovered secret.
+
+Loops state sequence and exit conditions; they **link** to the rules they
+enforce rather than restating them. A loop that copies `AGENTS.md`'s rules
+creates a second owner of those rules, which will drift. See
+`loops/release-check/loop.md` for the worked example.
 
 ## Versioning
 - Semver per component. Skills: `metadata.version` in SKILL.md

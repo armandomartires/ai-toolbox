@@ -3,8 +3,10 @@
 ## Objective and scope
 Collect, develop, validate, and deploy AI customization tools (skills,
 MCP servers, loops, prompts, agent roles). Every component must be
-self-contained and portable across Claude Code, OpenCode, and LM Studio.
-Out of scope: application code, public services, secrets.
+self-contained and portable across every client that supports its
+capability: skills to Claude Code and OpenCode; MCP servers to those two
+and LM Studio, which is MCP-only (ADR-0006). Out of scope: application
+code, public services, secrets.
 
 ## Security and secrets
 - Never commit secrets, tokens, passwords, private keys, or `.env` files.

@@ -50,6 +50,7 @@ print(m.get("name", "?"), m.get("description", "").replace("\n", " "))
   for f in loops/*/loop.md; do
     [ -f "$f" ] || continue
     d=$(dirname "$f")
+    case "$(basename "$d")" in _template*) continue ;; esac
     name=$(awk '/^name:/{sub(/^name: */,"");print;exit}' "$f")
     desc=$(awk '/^description:/{sub(/^description: */,"");print;exit}' "$f")
     echo "| ${name:-?} | ${desc:-} | $d |"

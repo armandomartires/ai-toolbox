@@ -8,5 +8,9 @@
 - [x] TASK-0007 — Port the ansible MCP server (done)
 - [x] TASK-0006 — Client config snapshots and multi-client skill deployment (done)
 
+## Sprint S2 — Multi-client hardening
+- [x] TASK-0008 — Author the first loop component (release-check) (done)
+- [ ] TASK-0009 — MCP server smoke-test harness (planned)
+
 "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)
 by `.ai/planning/plans/PLAN-0001-port-ansible-mcp-server.md`.
