@@ -10,10 +10,17 @@
 | B-006 | ~~Port~~ **Author** a loop component | medium | medium | none | low | **done** | TASK-0008; verb corrected — nothing existed to port (ADR-0006) |
 | B-007 | De-duplicate sync-registry.sh per-section loops (or assert no `_template*` row) | medium | medium | none | low | **done** | TASK-0011 — did both |
 | B-008 | Unify `.ai/decisions/` file naming (`ADR-NNNN-*` vs `NNNN-*`) | low | low | none | low | **done** | TASK-0024 — 7 files renamed to `NNNN-*`; found `.ai/README.md` was prescribing the *old* scheme |
-| B-009 | `project-migration` scaffolds `ADR-NNNN-*.md`, diverging from `project-workflow`'s `NNNN-*` | low | low | none | low | open | needs a decision first: are the two skills meant to agree? See TASK-0024 |
+| B-009 | `project-migration` scaffolds `ADR-NNNN-*.md`, diverging from `project-workflow`'s `NNNN-*` | low | low | none | low | **done** | TASK-0025 — closed as **decided, not implemented** (ADR-0013). Its premise was false: the skills scaffold two different frameworks, not one spelled two ways |
 
-**B-001…B-008 are all closed.** B-009 is the only open item — raised by
-closing B-008, and blocked on a decision rather than on effort.
+**The backlog is empty — B-001…B-009 are all closed.** New work needs a
+new item with its own justification.
+
+Three of the nine were closed by **scoping rather than building**: B-001
+(superseded, ADR-0011), B-002 (split, ADR-0008), B-009 (false premise,
+ADR-0013). In each case the item's *title* encoded an assumption that did
+not survive contact with the files. That is now the expected outcome for
+any item written before it was scoped — read the artifacts before
+estimating the work.
 
 Notes:
 - B-001 was scaffold boilerplate from the initial commit (`e72b78c`), never
@@ -85,3 +92,20 @@ Notes:
   with `project-workflow`, so "make them agree" is a decision about
   whether the two skills share one convention — not a rename. It needs
   that decision (an ADR) before it needs code.
+
+  **Closed by TASK-0025 / ADR-0013 as decided, not implemented.** The
+  investigation found there is *no shared convention to diverge from*:
+  the two skills scaffold two different frameworks, differing in nine
+  ways, of which the ADR filename is the smallest. `project-workflow`
+  uses `00.CONVENTIONS.md`/`20.PLAN.md`/`30.ROADMAP.md`/`reference/` with
+  `S###.T###` tasks; `project-migration` uses
+  `context/`/`planning/`/`sessions/`/`templates/` with `TASK-####`. **This
+  repo runs the latter** (ADR-0001, and `.ai-layout.json` declaring
+  `entrypoint: AGENTS.md` rather than `00.CONVENTIONS.md`).
+
+  So the literal fix would have aligned 1 of 9 differences and produced a
+  scaffold belonging to *neither* framework — worse than a clean
+  divergence, since it destroys the signal that these are separate
+  systems while fixing nothing. Resolved with one documentation line in
+  each `SKILL.md` naming the other skill, so the item cannot be re-raised
+  by the next person who greps for `ADR-`.

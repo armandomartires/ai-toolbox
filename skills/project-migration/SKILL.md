@@ -4,12 +4,14 @@ description: "Harmonize an existing repository with the .ai agent-governance fra
 license: MIT
 metadata:
   author: amartires
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Project migration to the .ai governance framework
 
-Retrofit a live repository so a human, a planning model, and a weaker executor model can all resume work from files instead of conversation history. The additive scaffold in this skill's own `scripts/ai-project-scaffold.sh` is the canonical structure — never hand-create the file layout, and never propose a big-bang reorganization. Invoke the script from the skill's own directory, never from a path relative to the target repo: `bash "<skill dir>/scripts/ai-project-scaffold.sh" …`. The script is not marked executable in every checkout, so always run it via `bash`, not by direct execution.
+Retrofit a live repository so a human, a planning model, and a weaker executor model can all resume work from files instead of conversation history.
+
+**Not `project-workflow`.** These scaffold two different frameworks, deliberately (ADR-0013 in `ai-toolbox`). This one: `.ai/context/`, `.ai/planning/`, `.ai/sessions/`, `.ai/templates/`, `TASK-####-*.md`, `ADR-NNNN-*.md`, entry point `AGENTS.md` — for migrating an existing repo. The other: `00.CONVENTIONS.md` + `20.PLAN.md`/`30.ROADMAP.md`/`35.AD_HOC_TASKS.md` + `reference/`, `S###.T###` tasks, `NNNN-title.md` ADRs — for maintaining the planning convention in a project that already has one. Pick one per project; do not mix them, and do not "align" the ADR filenames. The additive scaffold in this skill's own `scripts/ai-project-scaffold.sh` is the canonical structure — never hand-create the file layout, and never propose a big-bang reorganization. Invoke the script from the skill's own directory, never from a path relative to the target repo: `bash "<skill dir>/scripts/ai-project-scaffold.sh" …`. The script is not marked executable in every checkout, so always run it via `bash`, not by direct execution.
 
 ## Hard rules
 

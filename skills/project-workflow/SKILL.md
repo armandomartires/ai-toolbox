@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "3.1.0"
+  version: "3.2.0"
 ---
 
 # project-workflow
@@ -12,6 +12,13 @@ metadata:
 Scaffolds `.ai/`, maintains its plan/develop/test/validate convention
 (full text: `templates/00.CONVENTIONS.md`, copied verbatim). Use for:
 scaffolding; a task brief; an ADR; an ad-hoc item; a checkpoint.
+
+**Not `project-migration`.** That skill retrofits a *live* repo onto a
+**different** framework (`context/`, `planning/`, `sessions/`,
+`templates/`, `TASK-####`, `ADR-NNNN-*.md`). This one owns the
+`00.CONVENTIONS.md` + `20/30/35` + `reference/` layout with
+`S###.T###` tasks and `NNNN-title.md` ADRs. Deliberately divergent —
+ADR-0013; don't "align" them.
 
 > **`.ai/` = why/next. `AGENTS.md`+`docs/` = what is. Git = what
 > changed.** One owner per fact — link, never copy.

@@ -28,13 +28,21 @@ implementation yet).
   TASK-0024, closing B-008), matching the `project-workflow` convention
   this repo publishes. The *identifier* remains `ADR-NNNN` in every H1 and
   throughout prose — only filenames changed.
-- **One open item: B-009.** `project-migration`'s scaffold emits
-  `ADR-NNNN-*.md`, so every project it scaffolds starts on the scheme this
-  repo just left. Blocked on a **decision** (do the two skills share a
-  convention?), not on effort — write the ADR before the rename.
-- Three live components: the `project-migration` and `project-workflow`
-  skills (deployed to Claude Code and OpenCode), and the `ansible` external
-  MCP server. One loop: `loops/release-check`.
+- **The backlog is empty. B-001…B-009 are all closed**, and nothing is in
+  flight. B-009 closed by TASK-0025/ADR-0013 as *decided, not
+  implemented*: its premise — that the two skills share a convention —
+  was false.
+- **The two skills scaffold two different frameworks, deliberately**
+  (ADR-0013). `project-migration`: `context/`, `planning/`, `sessions/`,
+  `templates/`, `TASK-####`, `ADR-NNNN-*.md`, entry `AGENTS.md` — **this
+  repo runs it** (ADR-0001, `.ai-layout.json`). `project-workflow`:
+  `00.CONVENTIONS.md` + `20/30/35` + `reference/`, `S###.T###`,
+  `NNNN-title.md`. Nine structural differences. Each `SKILL.md` now names
+  the other; do not "align" them.
+- Three live components: the `project-migration` (`1.1.0`) and
+  `project-workflow` (`3.2.0`) skills (deployed to Claude Code and
+  OpenCode), and the `ansible` external MCP server. One loop:
+  `loops/release-check`.
 
 ## What S5 is fixing, and why it is not obvious
 The `project-workflow` skill's task template has Goal, Plan, Files
@@ -168,6 +176,13 @@ breaking changes cannot land silently.
    boilerplate; one held a real requirement, one did not. Scope each on its
    merits — but *do* scope it, because scoping B-001 found two defects even
    though the item itself was closed as superseded.
+   **Now three for nine** (B-001 superseded, B-002 split, B-009 false
+   premise): a backlog item's *title* encodes an assumption, and roughly a
+   third of them do not survive contact with the files. B-009 is the
+   sharpest case — it was written one task earlier, by this agent, from a
+   single grep hit, and proposed changing the scaffold that produced the
+   very structure the repo runs. **Read the artifacts before estimating
+   the work.**
 3. **The obvious check is often the wrong one.** "Is the env var set" and
    `grep -q '^name:'` both looked reasonable and both would have been
    useless or harmful.

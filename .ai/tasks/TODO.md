@@ -56,7 +56,13 @@ decisions in ADR-0012. Run in order — each depends on the one above.
 - [x] TASK-0024 — Unify `.ai/decisions/` filenames on `NNNN-*`; close
       B-008 (done — 7 renames, and found `.ai/README.md` was prescribing
       the superseded scheme, which would have regenerated the
-      inconsistency at ADR-0013. Raised B-009)
+      inconsistency at the next ADR. Raised B-009)
+- [x] TASK-0025 — Close B-009 as **decided, not implemented** (ADR-0013):
+      the two skills scaffold two different frameworks, differing nine
+      ways; its premise of a shared convention was false (done)
+
+**The backlog is empty — B-001…B-009 all closed.** Nothing is in flight,
+no sprint is open. Confirm scope with the human before starting anything.
 
 Notes:
 - "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)
