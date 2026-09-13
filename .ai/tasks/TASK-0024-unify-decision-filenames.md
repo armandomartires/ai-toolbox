@@ -232,5 +232,9 @@ logged rather than absorbed.
   - All 12 H1 titles re-read: unchanged, all `# ADR-NNNN — …`.
 - Result: success, with scope honestly extended by one file
   (`.ai/README.md`) and one new item logged (B-009). B-008 closed.
-- Commit: see below
-- Push: to `origin master`
+- Commit: `151fc9e`
+- Push: `origin master`, confirmed — local and
+  `git ls-remote origin master` both `151fc9e`.
+- Post-commit confirmation: `git log --follow .ai/decisions/0001-repo-structure.md`
+  traces back through the rename to `e72b78c`, the original scaffold
+  commit. History survives, as the staged rename detection predicted.
