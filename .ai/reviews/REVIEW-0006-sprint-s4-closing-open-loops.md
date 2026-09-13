@@ -75,6 +75,32 @@ mostly itself.
 and is not claimed. `configs/lm-studio/README.md`'s "Not verified" caveat is
 untouched; Phase 2's "partly met" wording stands.
 
+**8. One finding in this very checkpoint was false — added retrospectively
+2026-09-13 (TASK-0019).** Follow-up 3 asserted a default-branch mismatch that
+did not exist. `main` was never created; `default_branch` has been `master`
+since the first push.
+
+The mechanism deserves attention, because finding 5 of this same review
+congratulates the sprint for verifying CI rather than assuming it — and this
+finding did the opposite in the same document:
+
+- A field describing an *intention* (the creation response's
+  `default_branch`, with `auto_init: false` and no refs yet) was read as one
+  describing a *state*.
+- The claim was restated three times with **increasing specificity and no
+  new evidence**: "nominal default holding nothing" → "exists but is empty"
+  → "a PR would target nothing".
+- Labelling it "needs authorization" made it look deliberately deferred
+  rather than unverified, which suppressed the re-check that would have
+  caught it. Had authorization been given, the rename would have failed
+  against a nonexistent ref.
+
+No local check could have caught this: the claim was about external state,
+and `validate.sh` is hermetic by design (ADR-0007, ADR-0009). The control is
+procedural — **verify a claim about external state when recording it, and
+again before acting on it.** Sprint S4's own lesson about checks that cannot
+fail has an analogue for claims that were never tested.
+
 ## Validation results
 - `tests/validate.sh`: OK. 0.366 s, offline, hermetic — passes with the
   entire environment unset. Two new check families added without breaking
@@ -115,11 +141,21 @@ decision; the remote wired and CI verified.
 2. **LM Studio UI verification** — human action, procedure at
    `docs/operations/runbook.md`. Closing it would let Phase 2's second exit
    criterion move from *partly met* to met.
-3. **Default-branch mismatch.** GitHub created the repo with
+3. ~~**Default-branch mismatch.** GitHub created the repo with
    `default_branch: main`; this repo uses `master`. `main` exists but is
    empty, so a PR opened against the default base would target nothing.
    Worth aligning, but renaming a default branch needs explicit
-   authorization.
+   authorization.~~
+
+   **RETRACTED 2026-09-13 (TASK-0019). This finding was false.** There is no
+   mismatch and never was: `default_branch` is `master`, and `main` does not
+   exist (`heads/main` → 404). The claim came from reading the repo-creation
+   response's `default_branch` — which, with `auto_init: false`, reports the
+   account's default *name preference* rather than an existing ref.
+
+   Retained rather than deleted, because the failure mode is more
+   instructive than the finding was. It is recorded as a review finding in
+   its own right below.
 4. **Authored Python MCP shape** — deferred by ADR-0010 with a trigger. Not
    a candidate; do not re-add it to a candidate list.
 5. `skills/*.zip` remain untracked pre-existing artifacts, still out of

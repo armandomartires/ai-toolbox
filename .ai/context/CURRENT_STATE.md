@@ -10,11 +10,11 @@ Last updated 2026-09-13, after TASK-0018 (post-S4).
 - **All three clients are now fully verified** for the ansible MCP server:
   Claude Code `✔ Connected`, OpenCode in live use, and LM Studio verified
   in its own UI (not merely at handshake level).
-- **Nothing is in flight, and the backlog is empty** — B-001…B-007 are all
-  closed (B-001 last, by TASK-0018/ADR-0011). Confirm scope with the human
-  before starting anything. The one remaining open item, the GitHub
-  `main`/`master` default-branch mismatch, needs human authorization; see
-  `.ai/planning/SPRINT-CURRENT.md`.
+- **Nothing is in flight, the backlog is empty, and no open item remains.**
+  B-001…B-007 are all closed (B-001 last, by TASK-0018/ADR-0011). The
+  supposed `main`/`master` default-branch mismatch was **retracted as false**
+  by TASK-0019 — it never existed. Confirm scope with the human before
+  starting anything.
 - Three live components: the `project-migration` and `project-workflow`
   skills (deployed to Claude Code and OpenCode), and the `ansible` external
   MCP server. One loop: `loops/release-check`.
@@ -52,9 +52,13 @@ section's own header) · every manifest-required env var appearing in
   manifests only. Deferred **by decision** with a reopen trigger — ADR-0010.
   Treat `mcp-servers/_template/` as unverified scaffolding. Do not re-add
   this to a candidate list.
-- **Default branch mismatch.** GitHub created the repo with `main`; this repo
-  uses `master`. `main` is empty, so a PR against the default base would
-  target nothing. Renaming needs explicit authorization.
+- ~~**Default branch mismatch.**~~ **Not a gap — retracted as false**
+  (TASK-0019, 2026-09-13). `default_branch` is `master` and `main` never
+  existed. The claim came from reading a repo-creation response field that,
+  with `auto_init: false`, reports the account's default branch *name
+  preference* rather than an existing ref. Kept visible because the error
+  pattern matters more than the non-gap: **a claim about external state
+  restated three times without re-verification, each time more specific.**
 - `opencode-customization` (a separate repo) has a stale project-workflow
   copy and an unresolved `S025_WorkflowHarmonization` sprint — that repo's
   follow-up, not this one's, per ADR-0004.

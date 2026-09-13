@@ -163,12 +163,24 @@ instead of a guess.
     hostnames in tracked content. `GITLAB_URL` points at an internal host
     but that value lives only in the environment, never in the repo — and
     GitLab was deliberately not wired as a second remote.
-  - GitHub created the repo with `default_branch: main` while this repo
+  - ~~GitHub created the repo with `default_branch: main` while this repo
     uses `master`. Pushing `master` created it as a second branch; `main`
     exists only as the repo's nominal default and holds nothing. Worth
     knowing before anyone opens a PR against the wrong base. Not changed
     here — renaming a default branch is a destructive-ish change needing
-    its own authorization.
+    its own authorization.~~
+  - **RETRACTED 2026-09-13 by TASK-0019 — this was false.** `main` never
+    existed. Verified: `GET /repos/:repo` reports
+    `default_branch: master`; `GET .../git/ref/heads/main` returns 404;
+    `git ls-remote --symref origin HEAD` resolves to
+    `refs/heads/master`; the remote has exactly one branch.
+    The error: the creation response's `default_branch` field was read as a
+    statement of fact. With `auto_init: false` the repo had no commits and
+    no refs, so GitHub returned its *account-level default branch name
+    preference* (`main`) as a placeholder. Pushing `master` then made it the
+    default automatically, because the first branch pushed to an empty repo
+    becomes its default. There was never a second branch and never anything
+    to align.
   - Token handling: a one-shot `GIT_ASKPASS` helper reading from the
     environment. Verified afterwards that `git remote -v` is token-free, no
     `credential.helper` was persisted, and `.git/config` contains no token.

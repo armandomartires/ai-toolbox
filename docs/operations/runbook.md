@@ -213,6 +213,33 @@ exists.
 keep the server wired, restore your backup — and say so in the record, so
 the next reader knows the file's state.
 
+## Verifying remote branch state
+
+`tests/validate.sh` is hermetic and never queries a remote (ADR-0007,
+ADR-0009), so no local gate can confirm a claim about GitHub's state. Check
+it directly:
+
+```
+git ls-remote --symref origin HEAD    # which branch the remote's HEAD points at
+git ls-remote --heads origin          # every branch that actually exists
+git branch -vv                        # local branches and what they track
+```
+
+Current state (verified 2026-09-13): one branch, `master`, and
+`default_branch` is `master`. There is no `main`.
+
+**The `auto_init: false` trap.** When creating a repo via the API without
+`auto_init`, the response's `default_branch` field reports the *account's
+default branch name preference* — typically `main` — even though no ref
+exists yet. It describes an intention, not a state. The first branch you
+push to an empty repo becomes the default automatically.
+
+TASK-0019 exists because that field was read as fact, producing a
+"default-branch mismatch" follow-up for a branch that never existed. If a
+rename had been attempted, it would have failed against a nonexistent ref.
+When a claim concerns state outside this repo, run one of the commands above
+before recording it — and again before acting on it.
+
 ## Human approval required for
 - Destructive tool capabilities in MCP servers.
 - Deleting or rewriting components (see AGENTS.md).
