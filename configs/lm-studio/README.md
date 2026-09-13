@@ -74,3 +74,8 @@ Notes:
   `resources` capabilities. **Not** verified: the server appearing in
   LM Studio's own UI tool list, which needs the GUI launched
   interactively.
+- To close that last gap, follow "Verifying an MCP server in LM Studio's UI
+  (human procedure)" in `docs/operations/runbook.md`, then update the
+  `Verified` row above and this note with what you observed — including if
+  it fails. Note that the live `mcp.json` was restored empty after testing,
+  so the entry above must be added before anything can appear in the UI.

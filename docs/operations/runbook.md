@@ -140,6 +140,64 @@ Only `initialize` is ever sent. Tools are never invoked — ansible's surface
 includes playbook execution and OS package installation, and a smoke test
 must never be the thing that runs a playbook.
 
+## Verifying an MCP server in LM Studio's UI (human procedure)
+
+The one verification step no script can perform. `tests/smoke-mcp.sh`
+proves a server *speaks MCP*; it cannot prove LM Studio **lists the
+server's tools in its own interface**, because that needs the desktop GUI
+running. This procedure exists so that gap is closeable on demand rather
+than rediscovered each sprint (TASK-0016).
+
+Current state: `mcp-servers/ansible` is verified at config + handshake
+level only — see `configs/lm-studio/README.md`. The live
+`~/.lmstudio/mcp.json` contains `{"mcpServers": {}}`; TASK-0006 restored it
+byte-for-byte after testing, so **the entry must be added before anything
+can appear in the UI.**
+
+**1. Add the server entry.** LM Studio is installed Windows-side, so from
+WSL the file is at `/mnt/c/Users/<user>/.lmstudio/mcp.json` (in the app:
+Program ▸ Install ▸ Edit `mcp.json`). Back it up first, then paste the
+`ansible` block from `configs/lm-studio/README.md` — copy it from there
+rather than retyping, so the pinned version stays correct.
+
+Set `WORKSPACE_ROOT` to an **absolute** path of a real project directory.
+This is the server's blast radius: it executes playbooks and installs
+packages. Never `$HOME`, never `/`.
+
+**2. Restart LM Studio.** It reads `mcp.json` at startup; an edit made
+while running may not be picked up.
+
+**3. Check the tool list.** Open a chat with any loaded model and look at
+its tools/integrations panel. A **pass** is `ansible` present *and*
+expandable to show named tools (`ansible_lint`, `ansible_navigator`, and
+so on — 10 were seen on this machine via the handshake).
+
+**4. Interpret what you see.** These are genuinely different outcomes:
+
+| Observation | Meaning |
+|---|---|
+| Server listed, tools enumerated | **Pass.** Record it. |
+| Server listed, zero tools | Connected but tool discovery failed. Not a pass. |
+| Server absent | Config not read, or JSON invalid. Validate the file parses. |
+| Error/red indicator | Launch failed — usually `npx` not on the app's PATH. A desktop app does not inherit your shell's PATH. |
+
+**5. Record the result — pass or fail.** Update the `Verified` row in
+`configs/lm-studio/README.md` and the "Not verified" note at the end of its
+ansible section. A failure is a legitimate, useful outcome: it would mean
+this repo's LM Studio wiring is wrong, which is worth knowing. Do not
+overwrite the existing handshake-level evidence; add to it.
+
+**6. Restore `mcp.json` if this was only a test.** If you do not intend to
+keep the server wired, restore your backup — and say so in the record, so
+the next reader knows the file's state.
+
+Note on scope: a pass here would also let Phase 2's second exit criterion
+("one MCP server wired and verified in all three clients") close fully; it
+is currently recorded as *partly met*. That wording should only change once
+this procedure has actually been run.
+
 ## Human approval required for
 - Destructive tool capabilities in MCP servers.
 - Deleting or rewriting components (see AGENTS.md).
+- Publishing the repo, or changing remote visibility. `origin` is private
+  (TASK-0015); making it public is not meaningfully reversible.

@@ -192,6 +192,8 @@ instead of a guess.
   remote exists and is private; CI's status claim now matches an observed
   run. B-001's "CI exists" precondition is met as a side effect, though
   B-001 itself remains unscoped.
-- Commit: see below (docs commit ea5372e; CI-label commit follows)
-- Push: `origin master` — pushed successfully, remote URL token-free.
+- Commit: ea5372e (env docs + validate.sh check + ADR-0009), d586ed0 (CI
+  label VERIFIED + AGENTS.md git rules)
+- Push: `origin master` — both pushed successfully (ea5372e, then
+  ea5372e..d586ed0). Remote URL token-free; CI green on both.
 

@@ -83,6 +83,14 @@ any agent or human can understand, trust, and deploy.
   exercise that shape. `SPRINT-CURRENT.md` warned it "needs a real reason
   … not a synthetic one"; see TASK-0016 and ADR-0010 for the standing
   decision rather than a fourth candidate-list appearance.
+- Outcome: all five exit criteria met; sprint S4 closed 2026-09-13,
+  checkpoint REVIEW-0006. The backlog now holds no `ready` item — B-001 is
+  the only one left open, unblocked but unscoped.
+- Pattern this phase was created to fix: an item can sit in a candidate
+  list for sprints looking blocked when it is merely **undocumented**. The
+  git remote was the clearest case — the credentials had been in the
+  environment the entire time; nothing said so. Before carrying an item
+  forward again, check whether it is actually blocked or just unwritten.
 
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec
