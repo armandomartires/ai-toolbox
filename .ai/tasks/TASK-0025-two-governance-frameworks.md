@@ -237,5 +237,6 @@ the decision's rationale rather than an execution note.
   is empty for the second time in this repo's history; the divergence is
   now documented in both skills so the item cannot be re-raised by the
   next grep.
-- Commit: see below
-- Push: to `origin master`
+- Commit: `c0757d4`
+- Push: `origin master`, confirmed — local and
+  `git ls-remote origin master` both `c0757d4`.
