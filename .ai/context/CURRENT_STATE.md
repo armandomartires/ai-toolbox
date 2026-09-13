@@ -22,10 +22,16 @@ implementation yet).
 - **All three clients are now fully verified** for the ansible MCP server:
   Claude Code `✔ Connected`, OpenCode in live use, and LM Studio verified
   in its own UI (not merely at handshake level).
-- B-001…B-007 are all closed (B-001 last, by TASK-0018/ADR-0011). The
-  supposed `main`/`master` default-branch mismatch was **retracted as false**
-  by TASK-0019 — it never existed. One new backlog item, **B-008**
-  (`.ai/decisions/` dual naming), found by reading rather than by a check.
+- B-001…B-008 are all closed. The supposed `main`/`master` default-branch
+  mismatch was **retracted as false** by TASK-0019 — it never existed.
+- **`.ai/decisions/` filenames are now uniform** (`NNNN-short-title.md`,
+  TASK-0024, closing B-008), matching the `project-workflow` convention
+  this repo publishes. The *identifier* remains `ADR-NNNN` in every H1 and
+  throughout prose — only filenames changed.
+- **One open item: B-009.** `project-migration`'s scaffold emits
+  `ADR-NNNN-*.md`, so every project it scaffolds starts on the scheme this
+  repo just left. Blocked on a **decision** (do the two skills share a
+  convention?), not on effort — write the ADR before the rename.
 - Three live components: the `project-migration` and `project-workflow`
   skills (deployed to Claude Code and OpenCode), and the `ansible` external
   MCP server. One loop: `loops/release-check`.

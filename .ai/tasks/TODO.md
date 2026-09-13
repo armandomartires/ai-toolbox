@@ -50,7 +50,13 @@ decisions in ADR-0012. Run in order — each depends on the one above.
       `.ai/tasks/completed/` could hide a brief from the check, fixed
       before shipping)
 
-**Sprint S5 complete.** Next: `REVIEW-0007` (S5 checkpoint).
+**Sprint S5 complete.** Checkpoint: `REVIEW-0007`.
+
+## Post-S5 (no sprint open)
+- [x] TASK-0024 — Unify `.ai/decisions/` filenames on `NNNN-*`; close
+      B-008 (done — 7 renames, and found `.ai/README.md` was prescribing
+      the superseded scheme, which would have regenerated the
+      inconsistency at ADR-0013. Raised B-009)
 
 Notes:
 - "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)

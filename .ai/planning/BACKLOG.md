@@ -9,11 +9,11 @@
 | B-005 | Re-scope Phase 2 exit criterion (LM Studio has no Agent Skills target) | high | medium | none | low | **done** | resolved by ADR-0006 |
 | B-006 | ~~Port~~ **Author** a loop component | medium | medium | none | low | **done** | TASK-0008; verb corrected — nothing existed to port (ADR-0006) |
 | B-007 | De-duplicate sync-registry.sh per-section loops (or assert no `_template*` row) | medium | medium | none | low | **done** | TASK-0011 — did both |
-| B-008 | Unify `.ai/decisions/` file naming (`ADR-NNNN-*` vs `NNNN-*`) | low | low | none | low | open | now — it is a rename plus a link sweep, blocked by nothing |
+| B-008 | Unify `.ai/decisions/` file naming (`ADR-NNNN-*` vs `NNNN-*`) | low | low | none | low | **done** | TASK-0024 — 7 files renamed to `NNNN-*`; found `.ai/README.md` was prescribing the *old* scheme |
+| B-009 | `project-migration` scaffolds `ADR-NNNN-*.md`, diverging from `project-workflow`'s `NNNN-*` | low | low | none | low | open | needs a decision first: are the two skills meant to agree? See TASK-0024 |
 
-**B-001…B-007 are all closed.** B-008 is the only open item, and unlike the
-scaffold boilerplate that filled this table for four sprints, it was found
-by reading real files.
+**B-001…B-008 are all closed.** B-009 is the only open item — raised by
+closing B-008, and blocked on a decision rather than on effort.
 
 Notes:
 - B-001 was scaffold boilerplate from the initial commit (`e72b78c`), never
@@ -67,3 +67,21 @@ Notes:
   `SPRINT-CURRENT.md`): it was found while reading for PLAN-0002 and has
   nothing to do with handover. Fixing it mid-sprint would bundle an
   unrelated rename into a contract change.
+
+  **Closed by TASK-0024.** It was never a matter of taste: the
+  `project-workflow` skill, which this repo owns and is canonical for
+  (ADR-0004), prescribes `decisions/NNNN-short-title.md`. The `0008`–`0012`
+  files followed it; `ADR-0001`–`ADR-0007` predated it and were never
+  migrated. **The item as written understated the problem** — it described
+  a cosmetic split, but `.ai/README.md:4` was actively prescribing the
+  *old* scheme, so the normative doc contradicted the convention this repo
+  publishes to other projects. A grep for broken paths does not find a doc
+  that is wrong; only reading it does.
+- B-009 came out of closing B-008. `project-migration`'s scaffold script
+  emits `.ai/decisions/ADR-0001-repo-structure.md` and documents
+  `ADR-NNNN-*.md`, so every project it scaffolds starts on the scheme this
+  repo just migrated away from. **Deliberately not fixed in TASK-0024**:
+  `project-migration` is an independent skill that never claims alignment
+  with `project-workflow`, so "make them agree" is a decision about
+  whether the two skills share one convention — not a rename. It needs
+  that decision (an ADR) before it needs code.

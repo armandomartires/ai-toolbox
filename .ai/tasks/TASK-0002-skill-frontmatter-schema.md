@@ -31,7 +31,7 @@ deferred to backlog B-002 (Skill Linter).
 - Update `docs/development/authoring-guide.md`: document the keys under
   "Skills" and replace the "frontmatter comment" versioning rule with
   `metadata.version` (semver).
-- Add `.ai/decisions/ADR-0003-skill-frontmatter-schema.md`.
+- Add `.ai/decisions/0003-skill-frontmatter-schema.md`.
 - Normalize `skills/project-migration/SKILL.md:7` from `'1.0'` to
   `1.0.0`.
 
@@ -47,7 +47,7 @@ deferred to backlog B-002 (Skill Linter).
 ## Likely files
 - `skills/_template/SKILL.md`
 - `docs/development/authoring-guide.md` (Skills section; lines 17-19)
-- `.ai/decisions/ADR-0003-skill-frontmatter-schema.md` (new)
+- `.ai/decisions/0003-skill-frontmatter-schema.md` (new)
 - `skills/project-migration/SKILL.md` (line 7)
 
 ## Execution plan

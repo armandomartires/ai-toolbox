@@ -55,7 +55,7 @@ see ADR-0005 for the full reasoning and rejected alternatives.
   server; leave the rule as Python-only).
 
 ## Likely files
-- `.ai/decisions/ADR-0005-mcp-servers-allow-node-packages.md` (new)
+- `.ai/decisions/0005-mcp-servers-allow-node-packages.md` (new)
 - `AGENTS.md`
 - `docs/development/authoring-guide.md`
 - `.ai/context/GLOSSARY.md`

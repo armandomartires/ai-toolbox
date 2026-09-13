@@ -67,7 +67,7 @@ Full decomposition and rationale: `.ai/planning/plans/PLAN-0001-port-ansible-mcp
 - `tests/validate.sh`
 - `docs/development/authoring-guide.md`
 - `AGENTS.md`
-- `.ai/decisions/ADR-0005-mcp-servers-allow-node-packages.md` (amend)
+- `.ai/decisions/0005-mcp-servers-allow-node-packages.md` (amend)
 - `docs/registry.md` (regenerated)
 - `.ai/context/CURRENT_STATE.md`
 

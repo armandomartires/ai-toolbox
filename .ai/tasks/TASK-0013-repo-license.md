@@ -11,7 +11,7 @@ The repo has no `LICENSE` file. ADR-0003 noticed this at the time and
 recorded it honestly rather than hiding it:
 
 > `license: MIT` on a skill is unbacked until the repo ships a `LICENSE`
-> file (backlog B-004). — `.ai/decisions/ADR-0003-skill-frontmatter-schema.md:53`
+> file (backlog B-004). — `.ai/decisions/0003-skill-frontmatter-schema.md:53`
 
 That is the defect: the repo makes a licensing *claim* it does not
 substantiate. Anyone taking the skills at their word has no grant to rely
@@ -49,7 +49,7 @@ so no frontmatter has to change.
 ## Likely files
 - `LICENSE` (new)
 - `README.md`
-- `.ai/decisions/ADR-0003-skill-frontmatter-schema.md`
+- `.ai/decisions/0003-skill-frontmatter-schema.md`
 - `.ai/planning/BACKLOG.md`, `.ai/tasks/TODO.md`
 
 ## Execution plan
