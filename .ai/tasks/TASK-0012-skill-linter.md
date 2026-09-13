@@ -142,6 +142,6 @@ dropped.
     trusting a clean `git status` alone.
   - `scripts/sync-registry.sh` ran; registry unchanged.
 - Result: success. B-002 closed with its scope reduction recorded.
-- Commit: 8d20055
+- Commit: 9151bb0
 - Push: deferred to TASK-0015, which wires the remote (no remote existed
   at commit time; ADR-0007 makes this a recorded state, not a skipped step)

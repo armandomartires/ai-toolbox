@@ -2,14 +2,24 @@
 
 | ID | Title | Priority | Value | Dependencies | Risk | Status | Ready when |
 |----|-------|----------|-------|--------------|------|--------|-----------|
-| B-001 | Subagent-run registry validation | low | medium | Phase 3 | low | idea | CI exists |
-| B-002 | Skill Linter (frontmatter + line budget) | medium | high | Phase 1 | low | ready | TASK-0001 done — condition met |
+| B-001 | Subagent-run registry validation | low | medium | Phase 3 | low | idea | CI exists — remote added by TASK-0015, so the condition is now met; still unscoped |
+| B-002 | Skill Linter (frontmatter ~~+ line budget~~) | medium | high | Phase 1 | low | **done** | TASK-0012 — frontmatter only; line budget dropped per ADR-0008 |
 | B-003 | MCP server smoke test harness | medium | high | Phase 1 | medium | **done** | TASK-0009 — `tests/smoke-mcp.sh` |
 | B-005 | Re-scope Phase 2 exit criterion (LM Studio has no Agent Skills target) | high | medium | none | low | **done** | resolved by ADR-0006 |
 | B-006 | ~~Port~~ **Author** a loop component | medium | medium | none | low | **done** | TASK-0008; verb corrected — nothing existed to port (ADR-0006) |
 | B-007 | De-duplicate sync-registry.sh per-section loops (or assert no `_template*` row) | medium | medium | none | low | **done** | TASK-0011 — did both |
 
 Notes:
+- B-002's title was the defect, like B-006's verb before it. It bundled a
+  fully-specified requirement (frontmatter rules, written down in
+  `docs/development/authoring-guide.md` and unenforced) with an entirely
+  unspecified one (a "line budget" defined nowhere in the repo). That
+  mismatch is why it sat `ready` for three sprints: it could not be
+  scoped as written. Split, the first half took one commit. See ADR-0008.
+- B-004 was a *known* gap, not a discovered one — ADR-0003 recorded at the
+  time that `license: MIT` was unbacked, and it stayed that way for three
+  sprints. Recording a gap honestly is necessary but not sufficient; it
+  also has to get closed.
 - B-003 closed by TASK-0009. Its seed was TASK-0006's by-hand `initialize`
   handshake; that incantation is now `tests/smoke-mcp.sh`, driven entirely
   from each `server.json` manifest. Kept out of `tests/validate.sh` on
@@ -24,4 +34,4 @@ Notes:
   because its *verb* was the defect: it said "port", and a search found no
   first-party loop artifact existed anywhere to port. Recording the
   correction is the point.
-| B-004 | Repo LICENSE file (backs skill `license:` claims) | low | medium | none | low | idea | license chosen by human |
+| B-004 | Repo LICENSE file (backs skill `license:` claims) | low | medium | none | low | **done** | TASK-0013 — MIT chosen by human; ADR-0003's known gap closed |

@@ -48,7 +48,15 @@ next imported skill.
   `metadata` sub-keys are indented and cannot shadow them. A future
   nested `name:` under `metadata` would break the generator — the parser
   is naive by design and stays that way until B-002.
+  **Update (2026-09-13):** B-002 closed as TASK-0012, and `validate.sh`
+  now parses frontmatter properly, but this note still stands for
+  `sync-registry.sh`, which remains deliberately naive. The gate catches
+  the malformed case before the generator has to.
 - Skills gain traceable versions, enabling future drift detection between
   repo and deployed client copies.
-- `license: MIT` on a skill is unbacked until the repo ships a `LICENSE`
-  file (backlog B-004).
+- ~~`license: MIT` on a skill is unbacked until the repo ships a `LICENSE`
+  file (backlog B-004).~~ **Resolved 2026-09-13 by TASK-0013:** the repo
+  ships an MIT `LICENSE`, so both skills' claims are now backed. Kept
+  struck through rather than deleted — this was a real gap carried
+  knowingly for three sprints, and the record of that is worth more than a
+  tidy list.
