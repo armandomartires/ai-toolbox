@@ -24,7 +24,13 @@
   assumed every server would be Python; the first real candidate
   (ansible) wasn't. Then the remainder split again into 0005 (build the
   external-server mechanism) and 0007 (use it) — see PLAN-0001.
-- Completed tasks: TASK-0001, TASK-0002, TASK-0003, TASK-0004. Blocked
-  tasks: none.
-- Recommended next task: TASK-0005 (plan:
-  `.ai/planning/plans/PLAN-0001-port-ansible-mcp-server.md`).
+- Completed tasks: TASK-0001, TASK-0002, TASK-0003, TASK-0004,
+  TASK-0005, TASK-0007. Blocked tasks: none.
+- Recommended next task: TASK-0006 (client config snapshots) — now the
+  only open task in this sprint. PLAN-0001 is fully executed.
+- Sprint success criteria status: `tests/validate.sh` green (and now
+  covers MCP shape/manifest integrity, not just skills); registry lists
+  every ported component (2 skills + 1 external MCP server); install.sh
+  verified in Claude Code — the ansible wiring reached `✔ Connected`
+  from a clean start, which also satisfies the Phase 1 roadmap milestone
+  "first component installed and used in a real session".

@@ -2,9 +2,12 @@
 
 - Current objective: populate the component layer with existing skills,
   MCP servers, and loops.
-- Status: two live components. project-migration and project-workflow
-  skills both fixed, registered, and versioned (TASK-0001–0003). Skill
-  frontmatter schema (license/metadata) accepted (ADR-0003).
+- Status: three live components. project-migration and project-workflow
+  skills both fixed, registered, and versioned (TASK-0001–0003); the
+  `ansible` MCP server ported as the first external-shape component and
+  verified `✔ Connected` in a clean Claude Code install (TASK-0007).
+  Skill frontmatter schema (license/metadata) accepted (ADR-0003);
+  external MCP manifest shape accepted (ADR-0005 + its Clarification).
 - Completed: harmonized structure, install/registry/validate scripts;
   TASK-0001 (project-migration script-path fix, masked-commit-failure
   fix, ADR-0002-compliant CLAUDE.md fallback, AGENTS.md idempotence fix,
@@ -23,12 +26,21 @@
   working connection in this environment, `@ansible/ansible-mcp-server`,
   is npm, not Python; AGENTS.md/authoring-guide/GLOSSARY/PROJECT_MAP all
   amended together so none contradicts the others).
-- Incomplete: actually porting the ansible server — now planned as
-  PLAN-0001 and split into TASK-0005 (build the external-server
-  mechanism: `server.json` manifest schema, sync-registry/install
-  discovery, validate.sh checks incl. an executable destructive-
-  capability gate) and TASK-0007 (port ansible using it); loop
-  component; client config snapshots (TASK-0006).
+- Completed since: TASK-0005 (external-server mechanism —
+  `mcp-servers/<name>/server.json` schema documented normatively,
+  `_template-external/`, two-shape discovery in sync-registry/install,
+  and `validate.sh` MCP checks that make `AGENTS.md`'s destructive-
+  capability rule executable: `capabilities.destructive: true` now
+  *requires* `authorization.granted: true` plus an existing
+  `authorization.task` file. Also fixed a latent template-leak bug — the
+  old `_template` exact-match skip let `template-mcp-server` sit in the
+  registry as a real component); TASK-0007 (ansible ported: manifest,
+  three client wiring snippets, authorization recorded, pinned to
+  upstream 26.6.0).
+- Incomplete: loop component; client config snapshots (TASK-0006).
+  Pre-existing and out of scope so far: the registry's Skills table
+  still lists `template-skill`, because the skills loop in
+  sync-registry.sh has no template skip (the MCP loop now does).
 - In flight: `opencode-customization` (a separate repo) still has its own
   stale copy of project-workflow and an unresolved `S025_WorkflowHarmonization`
   sprint referencing it — that repo's own follow-up, not this repo's, per
@@ -38,17 +50,28 @@
 - Blockers: none. Risks: symlink support on Windows checkouts (ADR-0002).
 - Expected branch: master. Latest relevant commits: TASK-0001–0004 (see
   `git log --oneline -5` for hashes).
-- Recommended next action: TASK-0005, then TASK-0007. Both are specified
-  in `.ai/planning/plans/PLAN-0001-port-ansible-mcp-server.md`, which
-  also resolves two ambiguities so they are not re-litigated: external
-  metadata lives in `mcp-servers/<name>/server.json` (not in
-  `configs/*/README.md` prose, which ADR-0005's original wording implied
-  but a generator cannot parse), and ansible's destructive tool surface
+- Recommended next action: TASK-0006 (client config snapshots), the last
+  open task in sprint S1. It should generalize the per-client structure
+  that TASK-0007 filled in for one server; the ansible rows in
+  `configs/*/README.md` are the worked example. Two known gaps it could
+  close: LM Studio's snippet is unverified (not installed in WSL), and
+  the registry's Skills table still lists the template.
+- Standing decisions not to re-litigate: external MCP metadata lives in
+  `mcp-servers/<name>/server.json`, with shape *derived* from which
+  marker file is present rather than self-declared (ADR-0005
+  Clarification); ansible's destructive tools
   (`ansible_navigator`, `ade_setup_environment`,
-  `define_and_build_execution_env`) is human-authorized as of 2026-09-13
-  to ship enabled, with disclosure in the manifest and every wiring
-  snippet. Re-verified at plan time: ansible connects; proxmox still
-  lacks `numpy`; obsidian's app still isn't running.
+  `define_and_build_execution_env`, `ansible_lint --fix`,
+  `create_ansible_projects`) are human-authorized as of 2026-09-13 to
+  ship enabled, mitigated by disclosure in the manifest and every wiring
+  snippet, and enforced by `validate.sh`; the ansible launch command is
+  version-pinned so upstream breaking changes cannot land silently.
+- Environment notes (re-verified 2026-09-13): ansible connects, 10 tools;
+  proxmox still lacks `numpy` for its router; obsidian's desktop app
+  still isn't running. Upstream ansible declares `node>=24.0` while this
+  machine runs node v22.23.2 — npm warns `EBADENGINE` and the server
+  works, because `engines` is advisory unless `engine-strict` is set. If
+  that ever changes, ansible launches break with no repo-side change.
 - Known validations: tests/validate.sh, scripts/sync-registry.sh.
 - Validated in: WSL (development). Deployment targets: local agent
   clients (~/.claude/skills, OpenCode, LM Studio) via scripts/install.sh.

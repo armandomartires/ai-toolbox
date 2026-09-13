@@ -1,0 +1,46 @@
+{
+  "name": "ansible",
+  "description": "Ansible Development Tools: lint, navigator run, execution-environment build, project scaffolding, best-practice prompts",
+  "upstream": {
+    "registry": "npm",
+    "package": "@ansible/ansible-mcp-server",
+    "version": "26.6.0",
+    "license": "MIT",
+    "homepage": "https://github.com/ansible/vscode-ansible#readme"
+  },
+  "launch": {
+    "command": ["npx", "-y", "@ansible/ansible-mcp-server@26.6.0", "--stdio"],
+    "transport": "stdio"
+  },
+  "runtime": {
+    "declared": "node>=24.0",
+    "tested": "node v22.23.2"
+  },
+  "environment": {
+    "WORKSPACE_ROOT": {
+      "required": true,
+      "description": "Absolute path to the repo the server may read and write. This is the blast radius for the destructive tools below - set it to the project directory, never to $HOME or /."
+    }
+  },
+  "preconditions": [
+    "Node and npx on PATH. Upstream declares node>=24.0; npm reports EBADENGINE on node 22 but the server runs (npm engines are advisory unless engine-strict is set).",
+    "Ansible tooling (ansible-lint, ansible-navigator, ansible-dev-tools) must be installed for the corresponding tools to work. Without it the server still connects and read-only prompt tools work, but environment-dependent tools report a missing dependency rather than failing the connection.",
+    "ansible_navigator defaults to containerized execution environments; a working Podman or Docker is needed unless execution environments are disabled."
+  ],
+  "capabilities": {
+    "destructive": true,
+    "destructive_tools": [
+      "ansible_navigator: executes playbooks, which can change real managed infrastructure",
+      "ade_setup_environment: installs OS packages via dnf/apt/brew/pacman and creates virtualenvs",
+      "define_and_build_execution_env: writes execution-environment.yml and builds container images",
+      "ansible_lint (fix: true): rewrites playbook files in place",
+      "create_ansible_projects: scaffolds directory trees on disk"
+    ]
+  },
+  "authorization": {
+    "granted": true,
+    "by": "human (repo owner)",
+    "date": "2026-09-13",
+    "task": ".ai/tasks/TASK-0007-port-ansible-mcp-server.md"
+  }
+}

@@ -211,17 +211,86 @@ real risk surface written down and mechanically gated rather than
 discovered later by whoever runs a playbook they did not expect.
 
 ## Status
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-13
 - Updated: 2026-09-13
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
+- Date: 2026-09-13
+- Agent: opencode (anthropic/claude-opus-5)
+- Actions: re-verified the live server before porting (10 tools,
+  identical to the authorized table — no scope creep, so the
+  authorization in this file still covers the real surface); re-checked
+  proxmox (still no `numpy`) and obsidian (app still not running), so
+  ansible remains the only viable candidate; re-read upstream facts from
+  npm rather than trusting the plan's copies; wrote
+  `mcp-servers/ansible/server.json`; wrote wiring snippets for all three
+  clients; verified the Claude Code snippet from a clean start.
+- Version-pinning decision (deferred to this task by PLAN-0001):
+  **pinned** to `@ansible/ansible-mcp-server@26.6.0` in the manifest and
+  all three snippets. Reasoning: unpinned `npx -y` refetches on every
+  launch, so a breaking upstream release would land silently between one
+  agent session and the next, with no repo-side change to point at when
+  debugging. The cost is manual bumps going stale, which is visible and
+  cheap; the cost of the alternative is an invisible failure. Confirmed
+  the pinned specifier resolves and runs.
 - Observations:
+  1. **`runtime.declared` vs `runtime.tested` earned its place.** Running
+     the pinned command printed `npm warn EBADENGINE ... required: {
+     node: '>=24.0' }, current: { node: 'v22.23.2' }` and then worked.
+     Recording only the declared value would imply node 24 is needed;
+     recording only the tested value would hide that upstream disclaims
+     node 22. Both are in the manifest, and the reason (npm `engines` is
+     advisory unless `engine-strict`) is in `preconditions`.
+  2. **Added three `preconditions`** beyond the env var: node/npx on
+     PATH with the engine caveat; ansible tooling installed (without it
+     the server still connects and read-only tools work — which is
+     exactly why last session's `ade_environment_info` failures were a
+     setup gap, not a broken server); and Podman/Docker for
+     `ansible_navigator`'s default containerized execution.
+  3. **The OpenCode snippet's `WORKSPACE_ROOT: "."`** was lifted from the
+     known-working live config, but `"."` resolves against whatever
+     directory the client started in — so the blast radius follows the
+     user's shell. Documented, with absolute paths recommended; LM
+     Studio's snippet requires absolute, since a desktop app's working
+     directory is not a project the user chose.
+  4. Schema needed **no changes** to fit a real server — TASK-0005's
+     paper check against proxmox/obsidian did its job.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → OK with the real manifest present.
+  - **Gate bite-test on the real manifest** (not just TASK-0005's
+    fixtures): set `authorization.granted: false` → fails with
+    `capabilities.destructive is true but authorization.granted is not
+    true`; restored → OK. Restore confirmed byte-identical by `md5sum`
+    (`bfb2367ad6dab1aa7c78ffcace1b4700`), since `git diff` proves nothing
+    for an untracked file.
+  - `bash scripts/sync-registry.sh` → ansible appears with shape
+    `external`; no template rows.
+  - `bash scripts/install.sh link` → prints the pinned launch command,
+    `requires env: WORKSPACE_ROOT`, all three preconditions, and
+    `WARNING: exposes destructive tools - see .ai/tasks/TASK-0007-...`.
+  - Live re-verification: `ansible_list_available_tools` → the same 10
+    tools; `npm view` → 26.6.0, MIT, `engines.node >= 24.0`, homepage
+    `https://github.com/ansible/vscode-ansible#readme`.
+- Phase 3 — clean-start client verification: **done, and it passed.**
+  Claude Code is installed here and `claude mcp list` confirmed it had
+  **no** prior ansible entry, making it a genuinely clean target (unlike
+  this session's OpenCode instance, where a pass would have proved only
+  that the server works, not that the snippet does). In a disposable
+  `/tmp` directory: the `.mcp.json` form registered and reported `⏸
+  Pending approval` (Claude Code's normal gate for project-scoped
+  servers); the `claude mcp add --scope local` form, with `--env`, then
+  reported **`✔ Connected`**. Removed afterwards. The claude-code
+  snippet's pre-emptive "unverified" label was corrected to record this.
+  LM Studio remains **unverified** — not installed in WSL (`lms`/
+  `lmstudio` absent, no `~/.lmstudio`), and its snippet says so rather
+  than implying coverage.
+- Residue: `claude mcp remove` leaves an empty `projects` entry for the
+  scratch dir in `~/.claude.json` (`mcpServers: []`). Deliberately not
+  cleaned: rewriting the user's entire global config to delete one inert
+  empty key is a worse trade than leaving it. Not repo state.
+- Result: success.
+- Commit: `853aacd` "Port the ansible MCP server as the first
+  external-shape component" on `master`.
+- Push: no remote configured — nothing to push.

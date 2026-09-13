@@ -306,5 +306,6 @@ it is enforced by a script rather than by hoping a reader remembers it.
       is not simply failing unconditionally, which a negative-only proof
       would not have shown)
 - Result: success.
-- Commit: see below.
+- Commit: `0e43f95` "Add external MCP server manifest shape with
+  validated authorization gate" on `master`.
 - Push: no remote configured — nothing to push.
