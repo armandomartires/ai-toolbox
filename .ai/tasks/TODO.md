@@ -64,7 +64,8 @@ decisions in ADR-0012. Run in order — each depends on the one above.
 ## Sprint S6 — Ansible agent guardrails (open)
 Planned by `.ai/planning/plans/PLAN-0003-ansible-agent-guardrails.md`;
 decisions ADR-0014…0016 (all **proposed**, none accepted yet). Raised
-B-010…B-013. **Planning only so far — no implementation.**
+B-010…B-013. **Planning only so far — no implementation.** Sprint opened by
+commit `9528d13`, pushed and confirmed.
 
 Phase 0 (independent of each other, may run in parallel):
 - [ ] TASK-0026 — Correct the `WORKSPACE_ROOT` blast-radius claim; disable

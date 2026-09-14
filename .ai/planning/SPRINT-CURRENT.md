@@ -6,6 +6,12 @@ plan rather than a backlog item, and the first to start from a
 human-supplied analysis that had to be corrected before it could be
 built.
 
+Sprint opened by commit `9528d13` (pushed to `origin/master`, confirmed by
+`git fetch` + `git log origin/master`). That commit contains **no component
+changes** — `skills/`, `mcp-servers/`, `loops/`, `configs/`, `scripts/`,
+`tests/` and `docs/` are all untouched, and `sync-registry.sh` produced no
+diff, which is the correct result for a planning-only commit.
+
 ## What this sprint is for
 
 The `ansible` MCP server has shipped since S1 with **no instruct layer**:

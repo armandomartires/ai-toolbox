@@ -7,7 +7,8 @@ implementation yet).
 `PLAN-0003` opened Phase 6: an **instruct layer** for the `ansible` MCP
 server (skill + loop), a narrowing of that server's blast radius, and one
 real enforcement. Ten artifacts written, zero components changed:
-TASK-0026…0032, ADR-0014…0016 (all **proposed**), B-010…B-013.
+TASK-0026…0032, ADR-0014…0016 (all **proposed**), B-010…B-013. Opened by
+commit `9528d13`, pushed to `origin/master` and confirmed by re-fetch.
 
 **The sprint began from a human-supplied analysis rather than a backlog
 item** — a first for this repo — and **six of its claims were corrected
