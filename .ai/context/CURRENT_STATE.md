@@ -1,7 +1,81 @@
 # Current State
 
-Last updated 2026-09-13, after opening sprint S5 (planning only — no
+Last updated 2026-09-14, after opening sprint S6 (planning only — no
 implementation yet).
+
+## Sprint S6 is open — planning complete, nothing implemented
+`PLAN-0003` opened Phase 6: an **instruct layer** for the `ansible` MCP
+server (skill + loop), a narrowing of that server's blast radius, and one
+real enforcement. Ten artifacts written, zero components changed:
+TASK-0026…0032, ADR-0014…0016 (all **proposed**), B-010…B-013.
+
+**The sprint began from a human-supplied analysis rather than a backlog
+item** — a first for this repo — and **six of its claims were corrected
+before planning finished**. In order of consequence:
+
+1. **There is no staging inventory in the target estate, and there cannot
+   be one.** The analysis's central worked example
+   (`--check --diff -l staging`, then `-l staging`, then production) is
+   unimplementable against one inventory file, one 6-node PVE cluster at
+   3-of-4 quorum with no verified margin, and one DC holding all seven FSMO
+   roles. The real workflow is **`--check --diff` plus snapshot and
+   rollback**. Building from the source text would have produced a runbook
+   gating on an inventory that does not exist.
+2. **The pinned MCP server exposes 2 of the 7 capabilities the analysis
+   recommends** — and they are the two destructive ones. Verified by live
+   tool enumeration, not by reading its README.
+3. **`ansible_navigator` has no inventory, limit, `--check` or `--diff`
+   parameter**, so it cannot perform the safe workflow while it *can*
+   execute against production. Human authorized disabling it (2026-09-14).
+4. **This repo overstates its own blast radius.** `server.json:22` calls
+   `WORKSPACE_ROOT` "the blast radius for the destructive tools below" —
+   false for `ansible_navigator` (reaches remote infrastructure) and
+   `ade_setup_environment` (installs OS packages system-wide). Restated in
+   all three `configs/*/README.md`, so a reader is told the same wrong
+   thing four times. **Lesson 6 reappearing inside `mcp-servers/` and
+   `configs/`.**
+5. **`userMessage` undercuts the determinism argument for MCP.** It is a
+   natural-language string the server parses to locate a playbook, so
+   invocation is LLM-message-parsed, not schema-pinned.
+6. **Value inverts from the analysis's ranking.** Highest value is the
+   *guard*, not the skill; MCP is lowest.
+
+**S6's highest-value item is TASK-0031**, and it is not a component. The
+target repo's `ansible.cfg:21-48` documents that default fact-gathering
+stats `/etc/pve`, which on wedged pmxcfs is an uninterruptible D-state hang
+that `timeout` cannot kill; records that **both** global fixes fail
+(rejected in `[defaults]`, silently ignored in group_vars — verified
+empirically there); and concludes "A code-review or CI check should confirm
+this… **Tracked as unenforced until then.**" A written rule, node-hanging
+failure mode, statically checkable, enforced by nothing. Being static, it
+survives TASK-0028 reporting either way.
+
+**Limitation recorded at plan time, not at checkpoint:** under Option (a)
+`ansible-ops` is authored *from* `SIGMA-infrastructure` but never executed
+*in* it, so it will end S6 as **unexercised scaffolding — the same status
+`mcp-servers/_template/` already carries**. S5's equivalent limitation
+surfaced only at REVIEW-0007; this one is stated up front and should be
+S6's headline checkpoint finding.
+
+**`SIGMA-infrastructure` is read as evidence and never modified** (human
+decision, Option a). Its four stale claims (`.ansible-lint:4`,
+`.pre-commit-config.yaml:42`, `ci.yml:13,44`, `requirements.yml:4-6`) and
+its 42 unpushed commits are recorded by TASK-0032 and fixed nowhere;
+adoption there is that repo's own sprint to open. Its `ansible-lint` gate
+has also never had content to lint — `profile: production` is set and
+`playbooks/` is not excluded, so it should now be linting two committed
+playbooks, but no run has ever been recorded.
+
+Two gate properties discovered while planning, both of which changed the
+file layout:
+- `tests/validate.sh:456-463` **fails** any file in `.ai/tasks/` not
+  matching `TASK-####-*.md`. So the two spikes are **numbered task briefs**,
+  not a new `SPIKE-####` artifact type — weakening the gate for a naming
+  preference would have been the wrong trade.
+- `:402`, `:450-465` require `## Inputs` and `## Outputs / handover`
+  non-empty for **every** brief ≥ 0020, including unexecuted ones. So each
+  planned brief states an explicitly-labelled *intended* end state; the
+  check detects omission, not correctness, and cannot tell the difference.
 
 ## Where the project is
 - **Phases 1–4 complete, with no outstanding criteria in any of them.**
@@ -28,10 +102,11 @@ implementation yet).
   TASK-0024, closing B-008), matching the `project-workflow` convention
   this repo publishes. The *identifier* remains `ADR-NNNN` in every H1 and
   throughout prose — only filenames changed.
-- **The backlog is empty. B-001…B-009 are all closed**, and nothing is in
-  flight. B-009 closed by TASK-0025/ADR-0013 as *decided, not
-  implemented*: its premise — that the two skills share a convention —
-  was false.
+- **B-001…B-009 are all closed; B-010…B-013 are open**, raised by
+  PLAN-0003 and scoped in S6. B-009 closed by TASK-0025/ADR-0013 as
+  *decided, not implemented*: its premise — that the two skills share a
+  convention — was false. Two of the four new items (B-012, B-013) are
+  corrections to **this repo's own claims** rather than to a component.
 - **The two skills scaffold two different frameworks, deliberately**
   (ADR-0013). `project-migration`: `context/`, `planning/`, `sessions/`,
   `templates/`, `TASK-####`, `ADR-NNNN-*.md`, entry `AGENTS.md` — **this

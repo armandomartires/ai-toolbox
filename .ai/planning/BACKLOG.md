@@ -11,9 +11,25 @@
 | B-007 | De-duplicate sync-registry.sh per-section loops (or assert no `_template*` row) | medium | medium | none | low | **done** | TASK-0011 — did both |
 | B-008 | Unify `.ai/decisions/` file naming (`ADR-NNNN-*` vs `NNNN-*`) | low | low | none | low | **done** | TASK-0024 — 7 files renamed to `NNNN-*`; found `.ai/README.md` was prescribing the *old* scheme |
 | B-009 | `project-migration` scaffolds `ADR-NNNN-*.md`, diverging from `project-workflow`'s `NNNN-*` | low | low | none | low | **done** | TASK-0025 — closed as **decided, not implemented** (ADR-0013). Its premise was false: the skills scaffold two different frameworks, not one spelled two ways |
+| B-010 | No instruct layer for the `ansible` MCP server | high | high | none | medium | **ready** | S6 / TASK-0029, TASK-0030 — scoped by PLAN-0003 against a real Ansible repo before estimating; six claims in the source analysis were corrected first |
+| B-011 | A documented, statically checkable, unenforced Ansible safety rule | high | high | B-010 (shares the skill's vocabulary) | medium | **ready** | S6 / TASK-0031 — `gather_subset: "!mounts"`; the rule and its failure mode are already written down in the target repo, so nothing needs inventing |
+| B-012 | `server.json` overstates `WORKSPACE_ROOT` as the blast radius | medium | medium | none | low | **ready** | S6 / TASK-0026 — false for `ansible_navigator` (remote infra) and `ade_setup_environment` (system packages); restated in all 3 wiring snippets |
+| B-013 | `ansible_navigator` cannot express the safe workflow but can execute unsafely | high | high | none | low | **ready** | S6 / TASK-0026 — no inventory/limit/`--check`/`--diff` parameter exists; disable it. Human authorized 2026-09-14 |
 
-**The backlog is empty — B-001…B-009 are all closed.** New work needs a
-new item with its own justification.
+**Four items are open — B-010…B-013, all raised by PLAN-0003 and all
+scoped in S6.** B-001…B-009 remain closed.
+
+All four were written **after** the artifacts were read, which is the
+practice the note below ("read the artifacts before estimating the work")
+asks for. The source analysis that prompted them proposed a
+staging-promotion workflow the target estate cannot implement at all; that
+correction happened at plan time rather than becoming a fourth item closed
+on a false premise.
+
+Two are corrections to **this repo's own claims** (B-012, B-013), not to a
+component. Worth noting because the governance layer polices components
+and nothing polices the governance layer — the standing lesson 6 — and
+these two are that pattern reappearing in `mcp-servers/` and `configs/`.
 
 Three of the nine were closed by **scoping rather than building**: B-001
 (superseded, ADR-0011), B-002 (split, ADR-0008), B-009 (false premise,

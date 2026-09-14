@@ -61,8 +61,68 @@ decisions in ADR-0012. Run in order — each depends on the one above.
       the two skills scaffold two different frameworks, differing nine
       ways; its premise of a shared convention was false (done)
 
-**The backlog is empty — B-001…B-009 all closed.** Nothing is in flight,
-no sprint is open. Confirm scope with the human before starting anything.
+## Sprint S6 — Ansible agent guardrails (open)
+Planned by `.ai/planning/plans/PLAN-0003-ansible-agent-guardrails.md`;
+decisions ADR-0014…0016 (all **proposed**, none accepted yet). Raised
+B-010…B-013. **Planning only so far — no implementation.**
+
+Phase 0 (independent of each other, may run in parallel):
+- [ ] TASK-0026 — Correct the `WORKSPACE_ROOT` blast-radius claim; disable
+      `ansible_navigator` in 3 wiring snippets; LM Studio → models-only
+- [ ] TASK-0027 — *Spike.* Lint the two real playbooks on a `/tmp/opencode/`
+      copy; record what degraded; choose the guard's home
+- [ ] TASK-0028 — *Spike.* Can a Claude Code `PreToolUse` hook match
+      `mcp__ansible__*`? OpenCode's equivalent? Non-blocking
+
+Phase 1 — decisions (each depends on its spike):
+- [ ] ADR-0014 — Accept and narrow the MCP surface (needs TASK-0027)
+- [ ] ADR-0015 — Portable core + templates; check+snapshot, not staging
+      (needs TASK-0027)
+- [ ] ADR-0016 — Hooks as a category, expected "no" (needs TASK-0028)
+
+Phase 2 — instruct layer (ordered; the skill settles the vocabulary):
+- [ ] TASK-0029 — `skills/ansible-ops/` (needs ADR-0015)
+- [ ] TASK-0030 — `loops/ansible-change/` (needs TASK-0029)
+
+Phase 3 — enforcement and record:
+- [ ] TASK-0031 — The `gather_subset` guard + 5 fixture proofs (needs
+      ADR-0016, TASK-0027). **The sprint's highest-value item**
+- [ ] TASK-0032 — Record the target-repo findings; state what was
+      deliberately left alone (needs TASK-0029)
+
+**Four backlog items are open — B-010…B-013**, all raised by PLAN-0003 and
+all scoped in S6. B-001…B-009 remain closed.
+
+Notes on S6:
+- The sprint began from a **human-supplied analysis**, not a backlog item —
+  a first. Six of its claims were corrected before anything was planned.
+  The largest: its central worked example gates on a **staging inventory
+  that does not exist and cannot** in the target estate (one inventory, one
+  6-node cluster at 3-of-4 quorum, one DC holding all seven FSMO roles).
+  The real workflow is `--check --diff` plus snapshot/rollback.
+- **Two spikes are numbered task briefs, not `SPIKE-####` files.**
+  `tests/validate.sh:456-463` fails any file in `.ai/tasks/` not matching
+  `TASK-####-*.md`, deliberately, so a renaming scheme cannot disable the
+  handover check. Weakening the gate for a naming preference is the wrong
+  trade.
+- **Every unexecuted brief states an *intended* end state, labelled as
+  such.** The handover check requires `## Outputs / handover` non-empty for
+  briefs ≥ 0020 including unrun ones, and it detects omission rather than
+  correctness (ADR-0012 Decision 3) — so it cannot tell an intention from a
+  state. Each brief says which it is.
+- **TASK-0031 is the highest-value item, and it is not the skill.** It
+  enforces a rule already written in the target repo's `ansible.cfg:21-48`
+  whose failure mode is an uninterruptible D-state hang on a cluster node,
+  and which that file itself records as "Tracked as unenforced until then."
+  It is *static*, so it survives TASK-0028 reporting either way.
+- **Known limitation, recorded at plan time rather than at checkpoint:**
+  under Option (a) the skill is authored *from* the target repo but never
+  executed *in* it, so `ansible-ops` ends S6 as unexercised scaffolding —
+  the same status `mcp-servers/_template/` already carries. S5's equivalent
+  limitation was only stated at REVIEW-0007; this one is stated up front.
+- `SIGMA-infrastructure` is **read as evidence and never modified**
+  (Option a). Its four stale claims and 42 unpushed commits are recorded by
+  TASK-0032 and fixed nowhere.
 
 Notes:
 - "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)
