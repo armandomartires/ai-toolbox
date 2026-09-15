@@ -261,8 +261,15 @@ Phase 3 — the design half (the genuine capability gap):
       held, which is the evidence two artifacts were right. A gate proof
       nearly returned a false negative by grepping for a sibling check's
       wording: **match the check's own message or exit status**)
-- [ ] TASK-0043 — Roles: `designer-manager` (**primary**), `ideator`,
-      `critic`, `design-doc-writer` (needs TASK-0040, TASK-0042)
+- [x] TASK-0043 — Roles: `designer-manager` (**primary**), `ideator`,
+      `critic`; **`design-doc-writer` declined** on evidence — zero
+      references anywhere in shipped content, and the manager + `git-ops`
+      already own its work (done — **Phase 2 exercised end to end**: gate
+      passes on real content, registry populates, 6 files emitted and
+      inspected, **`critic` proved read-only at runtime in both clients**.
+      Its step-2 gate found the vocabulary could not express a delegation
+      allowlist — escalated, then added as a **tenth term** via follow-ups to
+      TASK-0037/0038/0040 in definition→enforcement→emission order)
 
 Phase 4 — the production half, owned here:
 - [ ] TASK-0044 — `loops/project-build/` — from `bmad-workflow.md:8-38`,
@@ -318,7 +325,7 @@ Notes on S7:
   they are not re-raised.
 - **Known limitation, stated up front and given a pre-committed review
   question:** this sprint adds two loops, one skill, a category and six or
-  seven roles. If TASK-0046 does not run, all of it is scaffolding — the
+  **six** roles (design-doc-writer declined, TASK-0043). If TASK-0046 does not run, all of it is scaffolding — the
   **third** instance of the pattern `mcp-servers/_template/` established and
   `agent-tiers` continued. REVIEW-0008 opens with *did anything get
   exercised?*

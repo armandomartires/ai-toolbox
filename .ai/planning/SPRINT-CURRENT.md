@@ -74,7 +74,7 @@ two vendors' current docs.** Three corrections matter most:
 | ADR-0019 | — | **accepted** 2026-09-15 | Convergence is **human acceptance**; the autonomy boundary is a pre-merge gate; workflows rejected. Unblocks TASK-0041 and TASK-0044 |
 | TASK-0041 | ADR-0019 | **done** | `loops/design-brief/` — **seven** steps, not four; cap 3 with its unit stated; lock = frontmatter **plus the commit**. Read-back caught the manager holding commit rights; delegated to `git-ops` |
 | TASK-0042 | TASK-0041 | **done** | `skills/design-flow/` — 3.3 KB core + 3 `references/` + brief template. Distinctness = a **load-bearing commitment**; critique has **8 named obligations** |
-| TASK-0043 | TASK-0040, TASK-0042 | **planned** | Roles: `designer-manager` (**primary**), `ideator`, `critic`. **`design-doc-writer` expected to be declined** — the loop gives it nothing to do |
+| TASK-0043 | TASK-0040, TASK-0042 | **done** | Roles: `designer-manager` (**primary**), `ideator`, `critic`. **`design-doc-writer` declined** on evidence — zero references in all shipped content. **Phase 2 exercised end to end**: gate passes on real content, registry populates, 6 files emitted and inspected, **`critic` proved read-only at runtime in both clients**. Its step-2 gate found the vocabulary missing a **delegation-allowlist** term — escalated, then fixed as follow-ups to TASK-0037/0038/0040 in ADR-0008's order |
 | TASK-0044 | ADR-0019, ~~TASK-0035~~ | **planned — NOT blocked** | `loops/project-build/` — from `bmad-workflow.md:8-38`, with the merge gate explicit. Its TASK-0035 dependency was for **read access only**, and TASK-0034 verified the file is readable in place (53 lines, every cited section present) at `~/AI_Workspaces/opencode-customization/opencode/skills/agent-tiers/templates/bmad/bmad-workflow.md`. Read it there; do not wait on an import that may never happen |
 | TASK-0045 | TASK-0040, TASK-0044 | **planned — RESCOPED** 2026-09-15 | ~~Reconcile~~ **Author** `qa-test`/`review`/`git-ops` in `agents/`, using the installed `agent-tiers` copies as **read-only reference**. There is nothing in this repo to reconcile *with* (ADR-0017 rejected), so the one-owner problem the brief was built around does not arise. `git-ops` must declare `clients: [opencode]` — it is OpenCode-only by measurement. Also a **Phase 3 dependency**: `loops/design-brief/` delegates its step-7 commit to it |
 | TASK-0046 | TASK-0043, TASK-0045 | **planned** | **Pilot.** Run both loops to produce S6's `ansible-ops` and `ansible-change` |
@@ -159,7 +159,8 @@ roles that already work where they are — never Phase 2 and never Phase 5.
 
 ## Known limitation, recorded at plan time
 
-**This sprint adds two loops, one skill, seven roles and a whole component
+**This sprint adds two loops, one skill, **six** roles (not seven —
+`design-doc-writer` was declined by TASK-0043 on evidence) and a whole component
 category. If Phase 5 does not run, all of it is scaffolding** — and the
 sprint would have diagnosed that exact pattern in `agent-tiers` while
 reproducing it. Third instance of the pattern `mcp-servers/_template/`

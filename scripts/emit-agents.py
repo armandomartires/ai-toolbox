@@ -74,6 +74,19 @@ VOCAB = {
         "opencode": [("task", "deny")],
         "claude_code": {"deny_tools": ["Agent"]},
     },
+    # The one PARAMETERISED term: its output depends on the role's
+    # `delegates_to` list, so both emitters special-case it rather than
+    # reading a static value from this table. Marked here so the table stays
+    # the single index of what the vocabulary contains.
+    #
+    # Valid only with mode: primary, enforced by validate.sh. Claude Code
+    # honours Agent(...) only for a main-thread agent and IGNORES the type
+    # list in a subagent definition, so emitting it for a subagent would
+    # silently widen the boundary.
+    "delegation-allowlist": {
+        "opencode": "PARAMETERISED",
+        "claude_code": "PARAMETERISED",
+    },
     "no-webfetch": {
         "opencode": [("webfetch", "deny"), ("websearch", "deny")],
         "claude_code": {"deny_tools": ["WebFetch", "WebSearch"]},
@@ -170,6 +183,14 @@ def parse(path):
 def emit_opencode(role, fm, body):
     perms = {}
     for term in fm["capabilities"]:
+        if term == "delegation-allowlist":
+            # Deny-first, then the allowed names. OpenCode's rules are
+            # last-match-wins, so "*" MUST come first — emitting the names
+            # first would leave a blanket deny winning and block everything.
+            perms["task"] = {"*": "deny"}
+            for name in fm.get("delegates_to", []):
+                perms["task"][name] = "allow"
+            continue
         for key, value in VOCAB[term]["opencode"]:
             if isinstance(value, dict):
                 merged = perms.get(key)
@@ -200,8 +221,15 @@ def emit_opencode(role, fm, body):
 
 
 def emit_claude_code(role, fm, body):
-    deny, extra = [], {}
+    deny, extra, allow_tools = [], {}, []
     for term in fm["capabilities"]:
+        if term == "delegation-allowlist":
+            # Agent(a, b) is an ALLOWLIST, so it goes in `tools` rather than
+            # `disallowedTools`. Honoured only for a main-thread agent, which
+            # is why validate.sh requires mode: primary.
+            names = ", ".join(fm.get("delegates_to", []))
+            allow_tools.append("Agent(%s)" % names)
+            continue
         spec = VOCAB[term]["claude_code"]
         if spec is None:
             raise Refused(
@@ -223,6 +251,13 @@ def emit_claude_code(role, fm, body):
                 seen.add(t)
                 uniq.append(t)
         out.append("disallowedTools: %s" % ", ".join(uniq))
+    if allow_tools:
+        # `tools` here carries ONLY Agent(...) entries, never concrete tool
+        # names: `tools` is an allowlist, so naming a tool would silently
+        # remove every tool NOT named — a far wider change than the
+        # capability asked for. Claude Code applies disallowedTools first,
+        # then resolves tools against what remains.
+        out.append("tools: %s" % ", ".join(allow_tools))
     for k in sorted(extra):
         out.append("%s: %s" % (k, extra[k]))
     if fm.get("model"):

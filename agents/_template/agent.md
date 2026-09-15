@@ -8,8 +8,15 @@ capabilities:
 clients:
   - claude-code
   - opencode
-# Optional — a tier name, never a client-native model ID:
-# model: analyst
+# Required IFF capabilities includes `delegation-allowlist`, forbidden
+# otherwise. Valid only with `mode: primary` — Claude Code ignores a
+# subagent's allowlist, which would silently widen it. Example:
+# delegates_to:
+#   - some-worker
+#
+# `model` is deliberately omitted: it takes a tier name, never a
+# client-native ID, and no tier resolver exists in this repo. See the
+# authoring guide's "Known gap".
 ---
 
 # Template Agent

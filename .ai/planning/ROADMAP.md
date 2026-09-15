@@ -223,20 +223,19 @@ any agent or human can understand, trust, and deploy.
   **stays with `opencode-customization`**. It is this repo's **first
   `Rejected` ADR**, and it carries a 3-condition reopen trigger plus the one
   gap the rejection creates (no `{tier:}` resolver here).
-- Progress: TASK-0036, TASK-0037, TASK-0038, TASK-0039, TASK-0040,
-  TASK-0041 and TASK-0042 **done**. **Phase 2 of the plan (`agents/`
-  plumbing) is complete**: the category is defined, enforced, indexed and
-  deployable.   `TASK-0043` (design roles) is now **unblocked** — Phase 2 was
-  its only remaining dependency. `TASK-0044` is independent, and TASK-0034
-  **removed its last stated dependency** by verifying `bmad-workflow.md` is
-  readable in place. **TASK-0034 is done**; Phase 1 is closed as far as an
-  agent can close it, with ADR-0017 awaiting a human decision.
-  **`agents/` holds no real role and both client agents directories are
-  empty** — the plumbing is complete and wholly unexercised, which is the
-  standing caution below and REVIEW-0008's pre-committed question.
+- Progress: TASK-0034, TASK-0036, TASK-0037, TASK-0038, TASK-0039,
+  TASK-0040, TASK-0041, TASK-0042 and **TASK-0043** done — nine of the
+  sprint's tasks. **Phases 1, 2 and 3 are complete.**
   **Phase 1 closed with its reclamation withdrawn, not delivered**
   (ADR-0017 rejected): the spike meant to prepare the claim is what stopped
   it, which is the ordering principle earning its place rather than failing.
+  **Phase 2's plumbing is no longer unexercised** — TASK-0043 authored three
+  real roles through it: the gate passed on real content, the registry
+  populated, and six client files were emitted and **inspected**.
+  Only **TASK-0044** (independent) and then **TASK-0045** remain before the
+  pilot. The design stage is complete and deployable but **still unrun**,
+  which is the standing caution below and REVIEW-0008's pre-committed
+  question.
 - The second phase in a row planned from a **human-supplied analysis**
   rather than a backlog item. Eight of its claims were corrected before
   planning finished, against six in Phase 6. The three that reshaped the
@@ -280,7 +279,12 @@ any agent or human can understand, trust, and deploy.
     observed failing on a fixture violating exactly that rule, plus a valid
     control so the group is proven not to fail unconditionally. Note what
     the criterion does **not** require and therefore does not certify —
-    that any of it has been exercised by a real role. It has not.
+    that any of it has been exercised by a real role. ~~It has not.~~
+    **It has, as of TASK-0043 (2026-09-15)**: three real roles authored,
+    the gate passed on real content, the registry populated, six client
+    files emitted and inspected, and `critic` proved read-only at runtime in
+    both clients. What remains unexercised is the **loop**, not the
+    plumbing — TASK-0046.
   - `loops/design-brief/` and `loops/project-build/` both carry a bounded
     iteration count and an explicit escalation path in
     `## Exit conditions` (TASK-0041, TASK-0044).

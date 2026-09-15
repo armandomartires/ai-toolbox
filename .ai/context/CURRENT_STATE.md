@@ -286,12 +286,52 @@ sprint's "verify before claiming" ordering earning its place rather than
 failing. The sprint's ordering principle was amended accordingly:
 *reclaim before authoring* → **verify before claiming**.
 
-S7 now proceeds on two fronts. **TASK-0043 (design roles) is unblocked** —
-Phase 2 was its only remaining dependency — and TASK-0044 is independent of
-all of it. `agents/` holds **no real role yet**, and both client
-agents directories are **empty**: the plumbing is complete and entirely
-unexercised, which is exactly the state REVIEW-0008's pre-committed
-question is about.
+**TASK-0043 is done — `agents/` now holds three real roles and Phase 2 is
+exercised end to end.** `designer-manager` (primary), `ideator` and `critic`
+are authored, gated, indexed and emitted; six client files exist where both
+directories were empty. **Phase 2's artifacts are no longer plausible-but-
+unproven**: the gate passed on real content for the first time, the registry
+populated, and the emitter produced output that was *inspected* rather than
+assumed.
+
+**`critic` is proved read-only at runtime in both clients** — the task's
+highest-consequence risk. Claude Code reports `WRITE=no EDIT=no AGENT=no`
+from the subagent's own tool list (contrast TASK-0036's `cc-permonly`
+fixture, which *had* Write and merely declined to use it), and OpenCode's
+resolver applies all six of its denies. `designer-manager`'s allowlist
+resolves deny-first: `task */deny`, then `critic`, `git-ops`, `ideator`.
+
+**Two decisions it settled:**
+
+- **`design-doc-writer` is declined**, on evidence: **zero** references
+  across all shipped content. The manager writes the brief at step 4 and
+  `git-ops` commits at step 7, so the role would exist to perform a
+  mechanical write another role must do anyway. **The sprint's role count is
+  six, not seven.**
+- **The capability vocabulary needed a tenth term.** TASK-0043's step-2 gate
+  found it could not express its central role's boundary — a primary
+  delegating to *exactly* three named subagents. Crucially this was a
+  **vocabulary gap, not a client limitation**: both clients can enforce an
+  allowlist, and `agent-tiers`' own primaries each carry one. Escalated
+  rather than worked around, then fixed as **follow-ups to the owning
+  tasks** in ADR-0008's order — definition (TASK-0037), enforcement
+  (TASK-0038), emission (TASK-0040) — each recorded in its own log rather
+  than patched from TASK-0043.
+
+**`delegation-allowlist` carries a schema rule worth knowing:** it requires
+`mode: primary`. Claude Code **ignores** an `Agent(...)` type list in a
+subagent definition, so a subagent declaring it would be enforced in
+OpenCode and **silently widened** in Claude Code — ADR-0018 clause 8's exact
+failure mode, now rejected by the gate. It is also the vocabulary's first
+**parameterised** term (`delegates_to`), and the first beyond the basic three
+that maps to *both* clients.
+
+S7 now proceeds on one front: **TASK-0044** (`loops/project-build/`), which
+is independent of everything above, then TASK-0045's three production roles.
+The design stage is **complete and deployable** — a gated loop, a documented
+method, and three emitted roles — but **still unrun**: TASK-0046's pilot is
+what REVIEW-0008's pre-committed question is about, and the loop's step 7
+cannot execute until TASK-0045 authors `git-ops`.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at
@@ -432,7 +472,7 @@ machine-specific runtime check, forbidden by ADR-0009). Recorded in S7's
 
 **S7's known limitation, stated up front and given a pre-committed review
 question:** the sprint adds two loops, one skill, a component category and
-six or seven roles. **If the pilot (TASK-0046) does not run, all of it is
+**six** roles (settled: `design-doc-writer` declined by TASK-0043). **If the pilot (TASK-0046) does not run, all of it is
 scaffolding** — and the sprint would have diagnosed that exact pattern in
 `agent-tiers` while reproducing it. This would be the **third** instance
 after `mcp-servers/_template/` (ADR-0010) and `agent-tiers` itself. Hence

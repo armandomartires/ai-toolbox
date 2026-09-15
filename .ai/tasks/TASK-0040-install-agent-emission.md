@@ -518,5 +518,49 @@ outside the repo needs removing to roll this task back today.
   document the refusal-vs-redirection difference, because refusing would
   have made all four existing roles OpenCode-only and left the Claude Code
   emitter dead on arrival.
-- Commit: `36cab90`
+### Amendment 1 — 2026-09-15: emit the tenth vocabulary term
+Attributed here because this task owns the emitter. Definition (TASK-0037)
+and enforcement (TASK-0038) landed first, in that order.
+
+`delegation-allowlist` is the vocabulary's **first parameterised term**: its
+output depends on the role's `delegates_to` list rather than on a static
+value, so both emit paths special-case it. `VOCAB` carries a
+`"PARAMETERISED"` marker for it so the table remains the single index of
+what the vocabulary contains — a term absent from `VOCAB` would be
+invisible to a reader checking coverage.
+
+Emitted output, verified by inspection for a primary declaring
+`delegation-allowlist` + `no-webfetch` + `worktree-only`:
+
+**OpenCode** — `permission.task` with `"*": deny` first, then each allowed
+name:
+```
+  task:
+    "*": deny
+    "worker-a": allow
+    "worker-b": allow
+```
+**Claude Code** — `tools: Agent(worker-a, worker-b)`, alongside
+`disallowedTools: WebFetch, WebSearch` and `isolation: worktree`.
+
+**Two things proved rather than assumed:**
+
+1. **`"*"` is first by guarantee, not by luck.** OpenCode's rules are
+   last-match-wins, so allowed names emitted before the blanket deny would
+   leave the deny winning and block *everything*. Tested with names chosen to
+   sort *before* `*` under a naive sort (`AAA-first`, `!bang`): `"*"` still
+   emitted first, because the sort key is `(g != "*", g)` rather than plain
+   alphabetical. Without this the emitter would produce a file that reads
+   correctly and enforces the opposite.
+2. **`tools` carries only `Agent(...)` entries, never concrete tool names.**
+   `tools` is an *allowlist* in Claude Code, so adding a tool name would
+   silently remove every tool **not** named — a far wider change than the
+   capability requested. Commented at the emission point, since the natural
+   next edit is to "also list the tools it needs".
+
+**No regression:** a role declaring an OpenCode-only term (`bash-allowlist`)
+alongside the allowlist and targeting `claude-code` still **refuses** with
+exit 1 and the remedy named.
+
+- Commit: `36cab90` (original), amendment in the TASK-0043 commit below
 - Push: confirmed — see below

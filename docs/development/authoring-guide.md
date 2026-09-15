@@ -116,6 +116,7 @@ supplies models and performs no agentic work (ADR-0006).
 | `description` | Required, non-empty, **single line**. It renders into one registry cell, and it is also what each client shows the delegating model — a folded (`>`) or block (`\|`) scalar breaks the row. |
 | `mode` | Required. `primary` or `subagent`. Not inferred: OpenCode has an explicit `mode` field while Claude Code has none, so the emitter must be told rather than guess. An interactive role **must** be `primary` — Claude Code strips `AskUserQuestion` from every subagent regardless of its tool list, and OpenCode's default `subagent_depth: 1` stops a subagent spawning workers. |
 | `capabilities` | Required, non-empty list drawn **only** from the vocabulary below. This is the role's safety boundary, stated in abstract terms because the emitter has to translate it into two different permission models — a boundary written in one client's syntax cannot be translated into the other's, and is silently discarded rather than rejected. |
+| `delegates_to` | *Required **iff** `capabilities` includes `delegation-allowlist`; forbidden otherwise.* A non-empty **block list** of role names this role may invoke — one `- name` per line. The inline flow form (`[a, b]`) is **not read** and fails the gate. Held in its own key rather than inside `capabilities` because every vocabulary term is a plain string and the parsers read flat sequences; nesting a parameter would change the schema's shape for one term. Stated as `iff` because it is checkable in both directions, and both are checked. |
 | `clients` | Required. List of clients this role is emitted for: `claude-code`, `opencode`, or both. Declared rather than derived, because a role asking for a capability a client cannot enforce is a **scoping decision**, not something the emitter should silently resolve. |
 | `model` | *Optional.* A **tier name**, never a client-native model ID. The two clients' model formats are mutually invalid — OpenCode wants `provider/model-id`, Claude Code wants an alias, a full ID or `inherit` — and OpenCode accepts a foreign value at parse time and **fails only at run time**. **Omit it: no tier resolver exists in this repo** — see the note below. |
 | Body | Required, non-empty. Everything after the frontmatter is the system prompt, emitted verbatim to both clients. It is the one part of a role that is genuinely portable. |
@@ -149,7 +150,8 @@ weaker of two clients, not by either client's native expressiveness.
 | Term | Meaning | OpenCode | Claude Code |
 |------|---------|----------|-------------|
 | `read-only` | May read and search; may not create or modify files. | `edit: deny`, `write: deny` | omit `Write`, `Edit` from `tools` |
-| `no-delegation` | May not invoke other agents. | `task: deny` | omit `Agent` from `tools` |
+| `no-delegation` | May not invoke **any** other agent. | `task: deny` | omit `Agent` from `tools` |
+| `delegation-allowlist` | May invoke **only** the roles named in `delegates_to`. Requires `mode: primary` — see below. | `task: {"*": "deny", "<name>": "allow", …}` | `tools: Agent(<name>, …)` |
 | `no-webfetch` | May not fetch network resources. | `webfetch: deny` | omit `WebFetch`, `WebSearch` from `tools` |
 | `worktree-only` | Confined to the project worktree. | `external_directory: deny` | **partial** — `isolation: worktree` gives an isolated *copy*, which is a different guarantee. See below. |
 | `test-files-only` | May edit test paths only. | `edit` glob map | **not per-agent** |
@@ -158,13 +160,39 @@ weaker of two clients, not by either client's native expressiveness.
 | `push-requires-confirmation` | Push prompts rather than proceeding. | `bash: {"git push*": ask}` | **no `ask` state exists** |
 | `webfetch-requires-confirmation` | Network fetches prompt rather than proceeding. | `webfetch: ask` | **no `ask` state exists** |
 
-**Only the first three are enforceable in both clients.** The other six are
-enforceable in OpenCode only, and the reason is structural: Claude Code's
-`tools`/`disallowedTools` gate **whole tools**, so anything needing
-*intra-tool* granularity — which paths, which commands, or a third `ask`
-state between allow and deny — has no per-agent expression. A
-`disallowedTools` entry with a specifier such as `Bash(git push *)` removes
-the entire `Bash` tool, not the matching commands.
+**Four of the ten are enforceable in both clients** — the first three plus
+`delegation-allowlist`. The other six are enforceable in OpenCode only, and
+the reason is structural: Claude Code's `tools`/`disallowedTools` gate
+**whole tools**, so anything needing *intra-tool* granularity — which paths,
+which commands, or a third `ask` state between allow and deny — has no
+per-agent expression. A `disallowedTools` entry with a specifier such as
+`Bash(git push *)` removes the entire `Bash` tool, not the matching
+commands.
+
+#### `delegation-allowlist` requires `mode: primary`, and that is a client constraint
+
+Claude Code's `Agent(<name>, …)` allowlist is honoured **only for an agent
+running as the main thread** (`claude --agent`). The docs are explicit that
+in a *subagent* definition, *"any type list inside the parentheses is
+ignored"* — the subagent gets unrestricted spawning instead, bounded only by
+the depth limit.
+
+So a subagent declaring `delegation-allowlist` would be enforced in OpenCode
+and **silently widened** in Claude Code: exactly the invisible-degradation
+failure ADR-0018 clause 8 exists to prevent. The pairing is therefore a
+**schema rule**, not a style preference: `delegation-allowlist` is valid only
+with `mode: primary`, and `tests/validate.sh` rejects the combination.
+
+A subagent that must not delegate uses `no-delegation`, which *is*
+expressible in both (omit `Agent` from `tools`). At OpenCode's default
+`subagent_depth: 1` a subagent cannot spawn workers anyway, so
+`no-delegation` on a subagent is belt-and-braces rather than redundant —
+the depth limit is global config a user can raise, while the role's own
+boundary travels with the role.
+
+**Emitted glob order matters.** OpenCode's `permission` rules are
+last-match-wins, so the emitter writes `"*": "deny"` first and the allowed
+names after. Reordering an emitted file inverts its meaning.
 
 A term that only one client can enforce is **still a legal term**. It is
 not excluded, because excluding it would mean a role could not state a

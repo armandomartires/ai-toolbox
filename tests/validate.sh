@@ -266,8 +266,8 @@ bad = []
 # mapping for, and ADR-0018 clause 8 requires emission to refuse rather
 # than silently drop it. A typo must fail here, not degrade there.
 VOCAB = {
-    "read-only", "no-delegation", "no-webfetch", "worktree-only",
-    "test-files-only", "bash-allowlist", "no-force-push",
+    "read-only", "no-delegation", "delegation-allowlist", "no-webfetch",
+    "worktree-only", "test-files-only", "bash-allowlist", "no-force-push",
     "push-requires-confirmation", "webfetch-requires-confirmation",
 }
 MODES = {"primary", "subagent"}
@@ -378,6 +378,41 @@ else:
         if c not in CLIENTS:
             bad.append("client '%s' is not one of: %s"
                        % (c, ", ".join(sorted(CLIENTS))))
+
+# delegation-allowlist is the one parameterised term: its argument lives in
+# `delegates_to` rather than inside `capabilities`, because every other
+# vocabulary entry is a plain string. Checked in BOTH directions so neither
+# half can drift from the other.
+delegates = seq("delegates_to")
+has_allowlist = bool(caps) and "delegation-allowlist" in caps
+if has_allowlist:
+    if delegates is None:
+        # seq() reads block sequences (`- item` on following lines) only, so
+        # an inline flow list (`delegates_to: [a, b]`) also lands here. That
+        # is the safe direction — it fails loudly rather than emitting an
+        # agent with an allowlist nobody parsed — but the message has to say
+        # so, or the author reads "missing" while looking at a present key.
+        bad.append("capability 'delegation-allowlist' requires a "
+                   "'delegates_to' block list naming the roles it may "
+                   "invoke (one '- name' per line; inline [a, b] form is "
+                   "not read)")
+    elif not delegates:
+        bad.append("key 'delegates_to' is empty — an allowlist that allows "
+                   "nothing is 'no-delegation'")
+    # Claude Code honours an Agent(...) allowlist ONLY for a main-thread
+    # agent; in a subagent definition the type list is IGNORED, so the
+    # subagent gets unrestricted spawning instead. Emitting that would be
+    # silent widening — the failure ADR-0018 clause 8 forbids.
+    if mode is not None and mode != "primary":
+        bad.append("capability 'delegation-allowlist' requires mode: "
+                   "primary (Claude Code ignores a subagent's allowlist, "
+                   "which would silently widen it)")
+    if caps and "no-delegation" in caps:
+        bad.append("capabilities 'delegation-allowlist' and "
+                   "'no-delegation' contradict each other")
+elif delegates is not None:
+    bad.append("key 'delegates_to' is present without capability "
+               "'delegation-allowlist' — it would have no effect")
 
 # metadata.version is optional, but must be semver when given, matching the
 # skill rule so the registry's version column stays comparable.

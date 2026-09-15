@@ -487,7 +487,44 @@ work is known to be necessary rather than presumed.
   boundary the schema could not express — one existed, and the honest
   outcome it asked for (a documented limitation, not a quietly added
   one-client term) is what the guide now carries.
-- Commit: `7ccfa6d`
+### Amendment 1 — 2026-09-15: a tenth vocabulary term
+Attributed here rather than to TASK-0043, because this task owns the schema
+and ADR-0008 forbids the gate or the emitter authoring a requirement.
+
+**TASK-0043's step-2 gate found the vocabulary could not express its central
+role's boundary.** `designer-manager` is a primary agent that must delegate
+to *exactly* `ideator`, `critic` and `git-ops`. The nine terms offered only
+`no-delegation` — all-or-nothing — while **both clients can enforce an
+allowlist** (`permission.task` deny-first in OpenCode, `tools: Agent(a, b)`
+for a Claude Code main-thread agent), and `agent-tiers`' own `plan`/`build`
+primaries both carry one. So this was a **vocabulary gap, not a client
+limitation**. Escalated to the human, who chose to extend the vocabulary as
+a follow-up to the owning tasks before authoring the roles.
+
+Added:
+- **`delegation-allowlist`** — the tenth term, and the **fourth** that maps
+  to both clients (the guide's "only the first three" line is corrected
+  accordingly).
+- **`delegates_to`** — a new frontmatter key, required *iff* that capability
+  is present and forbidden otherwise. It lives in its own key because every
+  other vocabulary entry is a plain string; nesting a parameter inside
+  `capabilities` would change the schema's shape for one term and break both
+  flat-sequence parsers.
+- **A schema rule: `delegation-allowlist` requires `mode: primary`.** Not
+  style — Claude Code honours `Agent(...)` only for a main-thread agent and
+  **ignores the type list in a subagent definition**, so a subagent
+  declaring it would be enforced in OpenCode and silently *widened* in
+  Claude Code. That is precisely ADR-0018 clause 8's invisible degradation.
+- **A block-list-only constraint on `delegates_to`**, documented after
+  testing: the inline flow form (`[a, b]`) is not read by either parser. It
+  fails the gate loudly rather than emitting an unparsed allowlist — the
+  safe direction — but the guide and the gate's message now both say so,
+  because "missing" while looking at a present key is a misleading error.
+
+The template gained commented examples of the new key and of why `model` is
+omitted.
+
+- Commit: `7ccfa6d` (original), amendment in the TASK-0043 commit below
 - Push: confirmed — `origin/master` at the follow-up commit, verified by
   re-fetch and by an independent GitHub API read of the remote head.
   (Hash written *after* committing this time; the prior two sessions each

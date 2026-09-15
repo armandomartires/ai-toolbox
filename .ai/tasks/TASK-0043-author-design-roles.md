@@ -288,18 +288,196 @@ in either sprint. If `design-doc-writer` was declined, TASK-0046's pilot has
 one fewer role to exercise and `PLAN-0004`'s "seven roles" count becomes six.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-15
+- Agent: opencode (claude-opus-5)
+
+#### Step 1 — the landed loop, read rather than assumed
+
+Two divergences from this brief's description, both minor and neither
+changing the role set:
+
+- **179 lines, not 176.** The brief's Inputs table was written before the
+  final edits.
+- The loop's `git-ops` paragraph now points at `agents/git-ops/` (TASK-0045)
+  rather than `skills/agent-tiers/` — corrected when ADR-0017 was rejected.
+
+Role mentions in the landed loop, counted: `manager` 12, `git-ops` 7,
+`ideator` 3, `critic` 3, **`design-doc-writer` 0**.
+
+#### Step 2 — the escalation the brief predicted, and it fired
+
+**The vocabulary could not express `designer-manager`'s central boundary.**
+The role must delegate to *exactly* `ideator`, `critic` and `git-ops`. The
+nine terms offered only `no-delegation` — all-or-nothing.
+
+This was a **vocabulary gap, not a client limitation**, which is the more
+consequential finding: **both clients can enforce an allowlist.**
+- OpenCode: `permission.task {"*": "deny", "<name>": "allow", …}`
+- Claude Code: `tools: Agent(a, b)`, valid for a `--agent` main thread
+
+And `agent-tiers`' own `plan`/`build` primaries each carry one, so a
+deny-first task allowlist is the *established* pattern for a primary here.
+
+Per the brief (*"Escalate any gap"*) this was **escalated rather than worked
+around**. The human chose to extend the vocabulary, **as follow-ups to the
+owning tasks first** — which is also what this brief's "Not included" demands
+(*"If one is needed, that is a Phase 2 defect found here — record it and fix
+it in the owning task"*).
+
+**Three follow-ups landed in ADR-0008's order — definition, then
+enforcement, then emission** — each recorded in its owning task's log:
+- **TASK-0037 amendment 1**: `delegation-allowlist` (tenth term, **fourth**
+  that maps to both clients) + the `delegates_to` key + the
+  `mode: primary` rule + the block-list-only constraint.
+- **TASK-0038 amendment 1**: five new checks, **each observed failing** on a
+  single-rule fixture, plus two controls. Runtime still sub-second.
+- **TASK-0040 amendment 1**: the vocabulary's first **parameterised** term,
+  emitted per client, with `"*"`-first ordering proved by adversarial names.
+
+**The `mode: primary` pairing is the substantive discovery.** Claude Code
+ignores an `Agent(...)` type list in a *subagent* definition, so a subagent
+declaring the allowlist would be enforced in OpenCode and **silently widened**
+in Claude Code — ADR-0018 clause 8's exact failure. It is now a schema rule
+the gate rejects, not a convention.
+
+#### Step 3 — `design-doc-writer`: DECLINED, on evidence
+
+The brief required this be *decided with reasoning recorded, not defaulted*.
+
+**Declined.** The landed loop references it **zero** times — verified by
+grepping all shipped content (`loops/`, `skills/`, `agents/`, `docs/`), not
+just the loop file. The work it was forecast to do has two owners already:
+the **manager** writes the brief at step 4 (it is the only role that has
+spoken to the human and holds the constraint list), and **`git-ops`** commits
+at step 7.
+
+So authoring it would create a role whose entire job is a mechanical write
+that another role must do anyway — and at `subagent_depth: 1` it could not
+be delegated to by anything except the manager. That is structure without
+benefit, and *"a role that does one mechanical write is exactly the kind of
+thing that survives because nobody asked whether it should."*
+
+**Sprint role count is six, not seven**, as TASK-0041 predicted from the
+sequence side.
+
+#### Step 4 — no name collisions
+Checked against both clients' built-ins — OpenCode (`build`, `plan`,
+`general`, `explore`, `scout`, `compaction`, `title`, `summary`) and Claude
+Code (`Explore`, `Plan`, `general-purpose`, `claude`, `statusline-setup`,
+`claude-code-guide`), case-insensitively. **All three clear.**
+
+This matters more in OpenCode, where a markdown agent file's body *replaces*
+a built-in's tuned system prompt wholesale rather than extending it.
+
+#### Steps 6–7 — Phase 2's artifacts exercised for the first time
+
+| Proof | Result |
+|---|---|
+| `validate.sh` on **real** agent content | **PASS** — first evidence TASK-0038's checks work on something other than a fixture |
+| Registry **populates** | All three roles present; `_template` excluded by the central skip |
+| Emission via `install.sh` | **6 files** — 3 roles × 2 clients |
+
+#### Steps 8–9 — emitted output inspected per role per client
+
+Read from the emitted files, not inferred from the sources:
+
+| Role | OpenCode | Claude Code |
+|---|---|---|
+| `designer-manager` | `mode: primary`; `task: {"*": deny, critic: allow, git-ops: allow, ideator: allow}`; `external_directory: deny` | `tools: Agent(ideator, critic, git-ops)`; `isolation: worktree` |
+| `ideator` | `mode: subagent`; `task: deny`; `external_directory: deny` | `disallowedTools: Agent`; `isolation: worktree` |
+| `critic` | `mode: subagent`; `edit/write/task/webfetch/websearch/external_directory: deny` | `disallowedTools: Write, Edit, NotebookEdit, Agent, WebFetch, WebSearch`; `isolation: worktree` |
+
+**`critic` is provably read-only in both clients — proved at runtime, not on
+paper.** This was the brief's highest-consequence risk (*"a read-only
+reviewer that can edit would pass every check this repo has"*).
+
+- **Claude Code:** delegated to it and asked it to report its own tool list.
+  Answer: **`WRITE=no EDIT=no AGENT=no`**. The tools are absent from its
+  pool, so no prompt-compliance question arises — unlike TASK-0036's
+  `cc-permonly` fixture, which *had* Write and merely declined to use it.
+- **OpenCode:** `opencode agent list` resolved all three with the correct
+  modes, and **all six** of `critic`'s denies are applied
+  (`edit`, `write`, `task`, `webfetch`, `websearch`, `external_directory`),
+  checked individually against the resolver's output.
+- **`designer-manager`'s allowlist resolved deny-first**:
+  `task */deny`, then `critic/allow`, `git-ops/allow`, `ideator/allow`.
+
+#### Step 10 — no live config touched
+`opencode.jsonc` mtime still **2026-08-24 23:48:09**, **no `agent` key**.
+
+**Emitted file paths, for rollback** (untracked, outside the repo):
+`~/.claude/agents/{critic,designer-manager,ideator}.md` and
+`~/.config/opencode/agents/{critic,designer-manager,ideator}.md`.
+
 - Actions:
+  1. Read the landed loop (179 lines) and the design-flow skill's
+     distinctness and critique-obligations references.
+  2. Hit the step-2 gate; escalated; landed three follow-ups in
+     definition→enforcement→emission order, each attributed to its owner.
+  3. Declined `design-doc-writer` on grep evidence.
+  4. Verified name collisions against both built-in lists.
+  5. Authored three roles from the template — abstract profiles only, short
+     descriptions, detail in the body, and **each body links** to the loop
+     and skill rather than restating them.
+  6. Ran the gate on real content; regenerated the registry; emitted.
+  7. Inspected all six emitted files; proved `critic` read-only at runtime in
+     both clients; verified `designer-manager`'s allowlist resolution.
+
 - Observations:
+  - **No role declares `model`.** Per ADR-0017's recorded gap: the
+    `{tier:}` placeholder has no resolver in this repo, so declaring a tier
+    would emit something no client understands.
+  - **`git-ops` is in `designer-manager`'s `delegates_to` before it
+    exists.** Deliberate: the allowlist is a *declaration of intent* and the
+    loop already names it. `validate.sh` does not (and should not) check
+    that a delegate exists — that would couple the gate to authoring order,
+    and a role legitimately references roles authored later. **Recorded so
+    it is not read as an oversight**, and it is exactly why the loop says
+    step 7 cannot execute until TASK-0045 lands.
+  - **`worktree-only` on all three** exercises the mapping TASK-0040 flagged
+    as the weakest in the vocabulary — refusal (OpenCode) vs redirection into
+    an isolated copy (Claude Code). Emitted as `isolation: worktree` per that
+    decision, and worth watching first if these roles ever behave
+    differently across clients.
+  - **No Phase 2 defect was found** — the schema, gate, registry and emitter
+    all handled real content correctly. What was found was a Phase 2
+    *omission* (a missing vocabulary term), fixed in the owning tasks rather
+    than patched from here.
+  - **The bodies are longer than the frontmatter by design.** Claude Code
+    warns when combined subagent *descriptions* exceed 15,000 tokens and
+    advises moving detail into the prompt, which loads only when the
+    subagent runs. Three descriptions of ~30 words are nowhere near it; the
+    discipline is the point.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → **PASS** (`validate.sh: OK`, exit 0) on three
+    real roles. Runtime 683/681/720 ms — still sub-second after the new
+    checks.
+  - `bash scripts/sync-registry.sh` → Agents section **populated** with
+    `critic`, `designer-manager`, `ideator`; `_template` excluded.
+  - `bash scripts/install.sh` → 6 agent files emitted, 0 refused, 0 skipped.
+  - `critic` read-only **verified at runtime in both clients**.
+  - `opencode.jsonc` unmodified; no `agent` key.
+  - Five new gate rules each **observed failing**; two controls passing.
+
+- Result: **done.** All twelve acceptance criteria met, including the two
+  that were really Phase 2's proofs: the gate works on real content and the
+  registry populates. **`agents/` now holds three real roles and the
+  category is exercised end to end** — schema → gate → registry → emitter →
+  inspected client output.
+
+  Two deviations, both recorded above rather than absorbed: the capability
+  vocabulary **needed a tenth term** (escalated, then fixed in the three
+  owning tasks in ADR-0008's order), and **`design-doc-writer` was
+  declined** on evidence, making the sprint's role count six.
+
+  `PLAN-0004`'s "seven roles" is now **six**: three here, three in TASK-0045.
+- Commit: recorded below
+- Push: recorded below

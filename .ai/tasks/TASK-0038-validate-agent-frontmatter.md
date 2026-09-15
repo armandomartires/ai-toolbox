@@ -437,6 +437,45 @@ property rather than a problem now.
   vocabulary, and cannot confirm the emitter will honour it. That is
   ADR-0018's accepted weakness, restated in the group's own comment rather
   than left implicit.
-- Commit: `e0e9d68`
+### Amendment 1 — 2026-09-15: enforce the tenth vocabulary term
+Attributed here because this task owns the agent checks. Definition landed
+first in TASK-0037 (ADR-0008's order preserved: the guide was amended before
+this file was touched).
+
+`delegation-allowlist` and `delegates_to` are now enforced, with **five new
+rules, each observed failing on a fixture violating exactly that rule**, plus
+two controls. Name matched directory in every fixture, so the
+name-mismatch check could not contaminate the result — the contamination
+this task's original run had to fix.
+
+| Rule | Observed message | Exit |
+|---|---|---|
+| allowlist without `delegates_to` | `capability 'delegation-allowlist' requires a 'delegates_to' block list naming the roles it may invoke (one '- name' per line; inline [a, b] form is not read)` | 1 |
+| `delegates_to` empty | `key 'delegates_to' is empty — an allowlist that allows nothing is 'no-delegation'` | 1 |
+| **allowlist on a subagent** | `capability 'delegation-allowlist' requires mode: primary (Claude Code ignores a subagent's allowlist, which would silently widen it)` | 1 |
+| allowlist + `no-delegation` | `capabilities 'delegation-allowlist' and 'no-delegation' contradict each other` | 1 |
+| `delegates_to` without the capability | `key 'delegates_to' is present without capability 'delegation-allowlist' — it would have no effect` | 1 |
+| **CONTROL** — valid primary with an allowlist | *(no message)* | **0** |
+| **CONTROL** — `no-delegation` subagent unchanged | *(no message)* | **0** |
+
+The subagent rule is the load-bearing one: it is the only check standing
+between a plausible source file and a Claude Code agent with unrestricted
+spawning.
+
+**One message was corrected after testing.** The inline flow form
+(`delegates_to: [a, b]`) also lands in the "missing" branch, because `seq()`
+reads block sequences only. Verified it **fails loudly** rather than emitting
+an unparsed allowlist — the safe direction — but the original message said
+"requires a 'delegates_to' list" while the author was looking at a present
+`delegates_to` key. Reworded to name the block-list requirement explicitly.
+**A correct verdict with a misleading message is still a defect**; the fixture
+proved the verdict, and reading the message proved the rest.
+
+Runtime re-measured: **683 / 681 / 720 ms**, against 609/643/567 after the
+original change. Still sub-second; the increase is within run-to-run noise
+and adds no new `python3` process (the checks are inside the existing
+heredoc).
+
+- Commit: `e0e9d68` (original), amendment in the TASK-0043 commit below
 - Push: pushed with the sequence's other Phase-2 commits; confirmed by
   re-fetch and an independent GitHub API read.
