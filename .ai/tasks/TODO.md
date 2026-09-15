@@ -143,10 +143,17 @@ Notes on S6:
   relax it.
 
 ## Sprint S7 — Design and production agent loops (open)
-Planned by `.ai/planning/plans/PLAN-0004-design-and-production-agent-loops.md`;
-decisions ADR-0017…0019 (**0019 accepted 2026-09-15**; 0017 and 0018 still
-proposed and blocked on their spikes). Raised B-014…B-017. **Planning only
-so far — no implementation.** Sprint opened by TASK-0033.
+Planned by `.ai/planning/plans/PLAN-0004-design-and-production-agent-loops.md`.
+Raised B-014…B-017. Sprint opened by TASK-0033.
+
+**Decisions, all settled 2026-09-15:** ADR-0018 **accepted** (on TASK-0036's
+evidence), ADR-0019 **accepted** (ratification), ADR-0017 **rejected**
+(human decision — `agent-tiers` stays with `opencode-customization`).
+
+**Eight tasks done:** TASK-0034, 0036, 0037, 0038, 0039, 0040, 0041, 0042 —
+Phase 1 closed and **Phase 2 complete** (`agents/` defined, enforced,
+indexed, deployable). TASK-0035 **cancelled**. The header previously read
+"planning only — no implementation"; that stopped being true at TASK-0041.
 
 Phase 0:
 - [x] TASK-0033 — Park S6; open S7; add ROADMAP Phase 6 **and** 7; add the
@@ -165,15 +172,19 @@ Phase 1 — reclaim, then decide (the two spikes are mutually independent):
       2026-09-13, explicit user decision, stated reason, **unpulled reopen
       trigger**. S7 planned from a four-day-stale quotation of that repo's
       older roadmap)
-- [ ] ADR-0017 — ~~ai-toolbox owns `agent-tiers`~~ **BLOCKED: do not accept
-      as drafted.** Its premise is disproved. Three options with a
-      recommendation (**option 3**: take the four *roles* into `agents/`
-      under ADR-0018, leave the PowerShell installer where it was
-      deliberately kept) are in TASK-0034's log. **Human decision required**
-- [ ] TASK-0035 — ~~Import to `skills/agent-tiers/`~~ **blocked, and its
-      justification is gone**: importing would create the second copy
-      ADR-0004 exists to prevent, *against* the other repo's recorded
-      decision. Do not start until ADR-0017's disposition is decided
+- [x] ADR-0017 — ~~ai-toolbox owns `agent-tiers`~~ → **REJECTED 2026-09-15**
+      (human decision). `agent-tiers` **stays with
+      `opencode-customization`**. Premise disproved by TASK-0034; this repo
+      has no standing to pull another repo's reopen trigger; and
+      "OpenCode-specific" is substantively right — **Codex has no per-role
+      agent mechanism at all** (verified) and `git-ops`/`shell-runner` are
+      inexpressible as Claude Code subagents. Carries its own 3-condition
+      reopen trigger, and records the `{tier:}`-resolver gap the rejection
+      creates
+- [x] TASK-0035 — ~~Import to `skills/agent-tiers/`~~ → **CANCELLED**,
+      superseded by ADR-0017's rejection. Not blocked — its premise is gone,
+      not pending. Brief retained unrun as the plan a future handover would
+      start from (ADR-0017 trigger 1)
 - [x] TASK-0036 — *Spike.* Verify the per-client agent field mapping against
       **live** docs; test unknown-key handling (done — emission confirmed on
       **new** evidence: a superset file loads in Claude Code and silently
@@ -259,8 +270,16 @@ Phase 4 — the production half, owned here:
       dependency is dropped** — TASK-0034 verified `bmad-workflow.md` is
       readable in place at 53 lines with every cited section present, and the
       dependency was for read access only)
-- [ ] TASK-0045 — Reconcile `qa-test`/`review`/`git-ops` into `agents/`.
-      **Reconcile, not duplicate** (needs TASK-0040, TASK-0044)
+- [ ] TASK-0045 — **RESCOPED 2026-09-15**: ~~Reconcile~~ **author**
+      `qa-test`/`review`/`git-ops` in `agents/`, with the installed
+      `agent-tiers` copies as **read-only reference** (needs TASK-0040,
+      TASK-0044). There is nothing in this repo to reconcile *with*
+      (ADR-0017 rejected), so the one-owner problem the brief was built
+      around does not arise. `git-ops` declares `clients: [opencode]` — it
+      is OpenCode-only by measurement, and the emitter refuses otherwise.
+      Roles **omit `model`** (no tier resolver here). Also a **Phase 3
+      dependency**: `loops/design-brief/` delegates its step-7 commit to
+      `git-ops`, so the design loop cannot run end to end until this lands
 
 Phase 5 — exercise it:
 - [ ] TASK-0046 — **Pilot.** Run both loops to produce S6's `ansible-ops`

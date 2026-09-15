@@ -242,8 +242,12 @@ and this repo acquires a `commands/` question it does not currently have,
 which would need its own decision rather than being absorbed silently.
 
 ## Status
-- Status: done — **with a blocking finding; ADR-0017 must not be accepted as
-  drafted.** Awaiting a human decision (see Escalation below).
+- Status: done. **Its blocking finding is resolved:** the human decided
+  2026-09-15 that `agent-tiers` **stays with `opencode-customization`**.
+  ADR-0017 is **Rejected** (with a 3-condition reopen trigger), TASK-0035 is
+  **cancelled**, and TASK-0045 is **rescoped** to author the three roles
+  rather than import them. The Escalation section below is retained as the
+  evidence the decision was made on.
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15

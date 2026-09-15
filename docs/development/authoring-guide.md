@@ -117,8 +117,29 @@ supplies models and performs no agentic work (ADR-0006).
 | `mode` | Required. `primary` or `subagent`. Not inferred: OpenCode has an explicit `mode` field while Claude Code has none, so the emitter must be told rather than guess. An interactive role **must** be `primary` — Claude Code strips `AskUserQuestion` from every subagent regardless of its tool list, and OpenCode's default `subagent_depth: 1` stops a subagent spawning workers. |
 | `capabilities` | Required, non-empty list drawn **only** from the vocabulary below. This is the role's safety boundary, stated in abstract terms because the emitter has to translate it into two different permission models — a boundary written in one client's syntax cannot be translated into the other's, and is silently discarded rather than rejected. |
 | `clients` | Required. List of clients this role is emitted for: `claude-code`, `opencode`, or both. Declared rather than derived, because a role asking for a capability a client cannot enforce is a **scoping decision**, not something the emitter should silently resolve. |
-| `model` | *Optional.* A **tier name**, never a client-native model ID. The two clients' model formats are mutually invalid — OpenCode wants `provider/model-id`, Claude Code wants an alias, a full ID or `inherit` — and OpenCode accepts a foreign value at parse time and **fails only at run time**. Tier-to-model resolution belongs to the emitter. |
+| `model` | *Optional.* A **tier name**, never a client-native model ID. The two clients' model formats are mutually invalid — OpenCode wants `provider/model-id`, Claude Code wants an alias, a full ID or `inherit` — and OpenCode accepts a foreign value at parse time and **fails only at run time**. **Omit it: no tier resolver exists in this repo** — see the note below. |
 | Body | Required, non-empty. Everything after the frontmatter is the system prompt, emitted verbatim to both clients. It is the one part of a role that is genuinely portable. |
+
+#### Known gap: `model` has no resolver in this repo
+
+`scripts/emit-agents.py` emits `model: "{tier:<name>}"` verbatim and **does
+not resolve it**. That is deliberate (ADR-0018 clause 7: model references
+belong in one place), but the file that owns the tier→model mapping —
+`agent-tiers`' `models.jsonc` — **stays in `opencode-customization`**
+(ADR-0017, rejected 2026-09-15). So a role declaring `model` emits an
+unresolved placeholder that no client understands.
+
+**Therefore: omit `model` until this is resolved.** Every role authored so
+far does. A role needing a specific model is the trigger to decide, not a
+reason to improvise.
+
+**Do not close this gap by adding a second tier→model mapping here.** Two
+owners of one fact is the defect clause 7 exists to prevent, and it is worse
+than the gap. The real options, when a role forces the question, are: drop
+`model` from this schema; own the mapping here and supersede clause 7 by a
+new ADR; or emit a client-native model ID per client and accept the
+duplication. ADR-0017's "one gap this creates" section carries the full
+reasoning.
 
 ### Capability vocabulary
 A role declares **intent**; the emitter translates it into each client's

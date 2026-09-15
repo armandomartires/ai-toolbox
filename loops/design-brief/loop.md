@@ -48,8 +48,12 @@ brief file. `ideator`, `critic` and `git-ops` are subagents. That split is
 structural, not stylistic: a subagent cannot ask the user a question, and
 cannot spawn workers of its own. See `ADR-0018`.
 
-`git-ops` is reused from `skills/agent-tiers/`, not invented here, so the
-guarded commit boundary has one owner across both loops.
+`git-ops` is authored in `agents/git-ops/` by `TASK-0045`, not invented
+here, so the guarded commit boundary has one owner across both loops. Its
+shape is derived from the long-standing `agent-tiers` role of the same name,
+which stays with `opencode-customization` (ADR-0017) and is read as
+reference rather than imported. **Until TASK-0045 lands, this step cannot
+execute** — a known ordering constraint, not a defect.
 
 Steps 1 and 7 run once. Steps 2–6 are **the cycle**, and one pass through
 2→6 is **one iteration** for the purposes of the cap below.

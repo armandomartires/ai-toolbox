@@ -21,6 +21,20 @@ The control is that emission is cheap and idempotent, and install.sh is
 re-run. If you are here to add a staleness check, read those two ADRs
 first.
 
+`model` IS EMITTED UNRESOLVED, AND NOTHING HERE RESOLVES IT
+-----------------------------------------------------------
+A role's optional `model` is a tier name, emitted verbatim as
+`model: "{tier:<name>}"`. ADR-0018 clause 7 keeps the tier->model mapping in
+one place rather than duplicating it here — but that place,
+`agent-tiers`' models.jsonc, stays in opencode-customization (ADR-0017,
+rejected 2026-09-15). So the placeholder currently resolves nowhere.
+
+Roles should omit `model`; every role authored so far does. Do NOT add a
+tier->model table to this file to "fix" it: two owners of one fact is
+exactly what clause 7 forbids, and worse than the gap. See
+docs/development/authoring-guide.md "Known gap: `model` has no resolver in
+this repo".
+
 REFUSE, NEVER DEGRADE
 ---------------------
 ADR-0018 clause 8. Five of the nine capability terms cannot be enforced

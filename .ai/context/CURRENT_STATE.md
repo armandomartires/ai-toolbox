@@ -12,14 +12,17 @@ implement, test, review and document — plus making `agents/` a real
 component category. Seventeen artifacts written, zero components changed:
 TASK-0033…0046, ADR-0017…0019, B-014…B-017.
 
-**ADR-0018 and ADR-0019 are both accepted (2026-09-15); only ADR-0017
-remains proposed**, blocked on TASK-0034. Accepting 0019 needed
+**All three S7 decisions are settled (2026-09-15): ADR-0018 and ADR-0019
+accepted, ADR-0017 REJECTED.** Accepting 0019 needed
 ratification rather than evidence — it *narrows a stated requirement*,
 which is the human's call. Ratification also caught a defect in the ADR's
 own text: it said "two clauses" while containing three, corrected in place
 rather than silently. **0018 was the opposite case**: it needed evidence,
 got it from TASK-0036, and its mechanism survived while its reasoning did
-not (detail below).
+not (detail below). **0017 is a third case: it needed evidence, got it, and
+the evidence killed it** — `agent-tiers` stays with
+`opencode-customization`, so this repo's first `Rejected` ADR withdraws a
+claim rather than declining a proposal.
 
 **TASK-0041 is done — S7's first implementation.** `loops/design-brief/` is
 a gated component: **seven** steps rather than the four planned, cap **3**
@@ -262,10 +265,11 @@ reasoning rather than improvised:**
   weakest mapping in the vocabulary; re-examine it first** if roles ever
   behave differently across clients.
 - **ADR-0018 clause 7: the emitter emits `{tier:<name>}` and never resolves
-  it**, so `models.jsonc` remains the single owner of tier→model. Cleaner
-  because `skills/agent-tiers/` is not even in the repo yet (TASK-0035 is
-  blocked), so the emitter could not read it — and resolving tiers itself
-  would have created a second owner the moment TASK-0035 lands.
+  it**, so `models.jsonc` remains the single owner of tier→model. **That
+  owner is now permanently in another repo** (ADR-0017 rejected), so the
+  placeholder resolves nowhere. Harmless today — `model` is optional and no
+  role uses it — and documented in three places. **Do not add a second
+  mapping here to close it**; that is the defect clause 7 forbids.
 
 **Emission's two accepted weaknesses, both documented in the client
 READMEs rather than patched:** no freshness check is possible (ADR-0009
@@ -275,10 +279,16 @@ emitting a fixture role, deleting it, re-running, and finding the emitted
 file still live. An installer that deletes from a user's config directory
 needs its own decision, not a convenience.
 
+**Phase 1 is closed — with its reclamation withdrawn rather than
+delivered.** TASK-0034 done, ADR-0017 rejected, TASK-0035 cancelled. The
+spike written to *prepare* the claim is what **stopped** it, which is the
+sprint's "verify before claiming" ordering earning its place rather than
+failing. The sprint's ordering principle was amended accordingly:
+*reclaim before authoring* → **verify before claiming**.
+
 S7 now proceeds on two fronts. **TASK-0043 (design roles) is unblocked** —
 Phase 2 was its only remaining dependency — and TASK-0044 is independent of
-all of it. Phase 1's spike `TASK-0034` is still unblocked; ADR-0017 stays
-proposed behind it. `agents/` holds **no real role yet**, and both client
+all of it. `agents/` holds **no real role yet**, and both client
 agents directories are **empty**: the plumbing is complete and entirely
 unexercised, which is exactly the state REVIEW-0008's pre-committed
 question is about.
@@ -327,13 +337,41 @@ six in S6). In order of consequence:
    `opencode.jsonc` still contains **no `agent` key**, so the topology has
    never been in effect.
 
-   **ADR-0017 therefore cannot be accepted as drafted, and TASK-0035's
-   justification is gone.** Three options and a recommendation (option 3:
-   bring the four *roles* into `agents/` under ADR-0018 and leave the
-   PowerShell installer where it was deliberately kept) are in TASK-0034's
-   log. **Awaiting a human decision.** Supporting evidence: all five
-   dangling cross-repo citations live in the *installer* half, and the four
-   role files contain **zero** — verified, so the roles are separable.
+   **DECIDED 2026-09-15 (human): `agent-tiers` stays with
+   `opencode-customization`.** ADR-0017 is **Rejected** — this repo's first
+   — with a 3-condition reopen trigger. **TASK-0035 is cancelled** (its
+   premise is gone, not pending) and **TASK-0045 is rescoped** to *author*
+   the three production roles in `agents/` under ADR-0018, reading the
+   installed copies as reference. Nothing is imported; nothing in that repo
+   changes.
+
+   The "OpenCode-specific" scoping that repo relied on is **substantively
+   correct**, not just a boundary of convenience — verified while deciding:
+   - `install-tiers.ps1` depends on `plan`/`build` being **OpenCode
+     built-in names overridable by config while keeping their tuned system
+     prompts**. Claude Code's custom files *replace* a built-in instead, so
+     the mechanism does not exist there.
+   - **Codex has no per-role agent definition at all** (`codex-cli
+     0.154.0`, checked on this machine): `codex agents` browses *sessions*;
+     there is no subagent, delegation or task-spawn concept; `--profile`
+     layers one whole config bundle, not a set of named roles. ADR-0006's
+     situation exactly — the gap is in the client.
+   - `git-ops` and `shell-runner` are **inexpressible as Claude Code
+     subagents** (TASK-0036), both existing purely to enforce a command
+     allowlist.
+
+   Supporting the split: all five dangling cross-repo citations live in the
+   *installer* half, and the four role files contain **zero** — verified,
+   so the roles are separable from the installer that ships them.
+
+   **One gap the rejection creates, recorded not left to surface:**
+   ADR-0018 clause 7 names `models.jsonc` the single owner of tier→model,
+   and that file is now permanently in another repo. `emit-agents.py` emits
+   `model: "{tier:<name>}"` with **no resolver in this repo**. Harmless
+   today — `model` is optional and no role uses it — and documented in the
+   authoring guide, the emitter's header and ADR-0017. **Do not close it by
+   adding a second mapping here**; that is the two-owners defect clause 7
+   exists to prevent.
 2. **Agent definitions are not portable between clients.** Location,
    identity (filename vs a required `name` field), capability gating
    (`permission` vs `tools`/`disallowedTools`), primary-vs-subagent (an
@@ -561,8 +599,10 @@ file layout:
   it** (TASK-0034), drifted from its source by two files (repo copy newer,
   no unique fix on the installed side), and with its topology never applied
   (no `agent` key in the live config). **It is not "deployed but unowned"** —
-  that earlier characterisation was wrong. S7's Phase 1 does **not** reclaim
-  it; ADR-0017's disposition is an open human decision.
+  that earlier characterisation was wrong. **ADR-0017 is rejected
+  (2026-09-15), so it stays there permanently** unless one of that ADR's
+  three reopen conditions is met. Its drift and its unapplied topology are
+  **that repo's business, not this one's** — do not "fix" either from here.
 - **`agents/` is now a real, fully-plumbed category** (TASK-0037…0040):
   schema, template, gate checks, registry section and per-client emission.
   It holds **no role yet**. `prompts/` remains an empty declared category
@@ -701,13 +741,18 @@ breaking changes cannot land silently.
    boilerplate; one held a real requirement, one did not. Scope each on its
    merits — but *do* scope it, because scoping B-001 found two defects even
    though the item itself was closed as superseded.
-   **Now three for nine** (B-001 superseded, B-002 split, B-009 false
-   premise): a backlog item's *title* encodes an assumption, and roughly a
-   third of them do not survive contact with the files. B-009 is the
-   sharpest case — it was written one task earlier, by this agent, from a
-   single grep hit, and proposed changing the scaffold that produced the
-   very structure the repo runs. **Read the artifacts before estimating
-   the work.**
+   **Now four for fourteen** (B-001 superseded, B-002 split, B-009 false
+   premise, **B-014 false premise**): a backlog item's *title* encodes an
+   assumption, and roughly a third of them do not survive contact with the
+   files. B-009 was the sharpest case — written one task earlier, by this
+   agent, from a single grep hit, proposing to change the scaffold that
+   produced the very structure the repo runs. **B-014 is now sharper
+   still**: its title asserted `agent-tiers` was *unowned*, an entire sprint
+   phase was ordered around reclaiming it, and the premise was false the
+   whole time because it rested on a **four-day-old quotation of another
+   repo's roadmap**. **Read the artifacts before estimating the work — and
+   when the artifact is in another repo, re-read it rather than the
+   quotation.**
 3. **The obvious check is often the wrong one.** "Is the env var set" and
    `grep -q '^name:'` both looked reasonable and both would have been
    useless or harmful.

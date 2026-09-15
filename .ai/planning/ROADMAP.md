@@ -218,10 +218,11 @@ any agent or human can understand, trust, and deploy.
   drift** (lesson 6 has recurred three times in this file's own history):
   **ADR-0019 accepted** 2026-09-15 (ratification, no spike needed);
   **ADR-0018 accepted** 2026-09-15 on TASK-0036's evidence, with clause 2's
-  reasoning replaced and a new clause 8; **ADR-0017 BLOCKED** — TASK-0034 is
-  done and **disproved its premise** (`agent-tiers` was deliberately kept by
-  `opencode-customization`, not orphaned), so its disposition is an open
-  human decision rather than a spike dependency.
+  reasoning replaced and a new clause 8; **ADR-0017 REJECTED** 2026-09-15
+  (human decision) — TASK-0034 disproved its premise, so `agent-tiers`
+  **stays with `opencode-customization`**. It is this repo's **first
+  `Rejected` ADR**, and it carries a 3-condition reopen trigger plus the one
+  gap the rejection creates (no `{tier:}` resolver here).
 - Progress: TASK-0036, TASK-0037, TASK-0038, TASK-0039, TASK-0040,
   TASK-0041 and TASK-0042 **done**. **Phase 2 of the plan (`agents/`
   plumbing) is complete**: the category is defined, enforced, indexed and
@@ -233,6 +234,9 @@ any agent or human can understand, trust, and deploy.
   **`agents/` holds no real role and both client agents directories are
   empty** — the plumbing is complete and wholly unexercised, which is the
   standing caution below and REVIEW-0008's pre-committed question.
+  **Phase 1 closed with its reclamation withdrawn, not delivered**
+  (ADR-0017 rejected): the spike meant to prepare the claim is what stopped
+  it, which is the ordering principle earning its place rather than failing.
 - The second phase in a row planned from a **human-supplied analysis**
   rather than a backlog item. Eight of its claims were corrected before
   planning finished, against six in Phase 6. The three that reshaped the
@@ -243,17 +247,21 @@ any agent or human can understand, trust, and deploy.
 - Exit criteria:
   - ~~`skills/agent-tiers/` exists in this repo, its drift resolved and
     recorded, version bumped, and the installed copy is a **symlink**
-    rather than the real directory it is today~~ (TASK-0034, ADR-0017,
-    TASK-0035). **This criterion rests on a false premise and cannot be met
-    as written** (TASK-0034, 2026-09-15): `agent-tiers` is **not** orphaned
-    — `opencode-customization` kept it deliberately on 2026-09-13 with a
-    stated reason and an unpulled reopen trigger. The *drift* half is
-    answered (repo copy newer for both files, no unique fix on the installed
-    side, all model IDs still resolving), but the *ownership* half is a human
-    decision, not a criterion this phase can satisfy. **Rewrite or drop this
-    criterion once ADR-0017's disposition is settled** — leaving it as a
-    tick-box invites someone to satisfy it by importing against another
-    repo's recorded decision.
+    rather than the real directory it is today~~ — **DROPPED 2026-09-15.**
+    The criterion rested on a false premise: `agent-tiers` is not orphaned.
+    `opencode-customization` kept it deliberately on 2026-09-13 with a
+    stated reason and an unpulled reopen trigger (TASK-0034), and the human
+    decided it **stays there** (ADR-0017 rejected, TASK-0035 cancelled).
+    Dropped rather than left struck through as pending, because a tick-box
+    invites someone to satisfy it by importing against another repo's
+    recorded decision. **Replaced by the criterion below.**
+  - **The three production roles exist as `agents/<role>/agent.md`**,
+    authored under ADR-0018 with the `agent-tiers` copies read as reference,
+    their boundaries proven in emitted output per client, and
+    `git-ops`/`shell-runner` recorded **OpenCode-only** (TASK-0045). The
+    drift question is closed as *answered and not this repo's to resolve*:
+    repo copy newer for both files, no unique fix installed-side, all four
+    model IDs resolving (TASK-0034).
   - ADR-0018 records the per-client agent mapping, the emission
     mechanism, and **explicitly** that agents have no `link` mode and
     why — with the further note that no freshness check is possible

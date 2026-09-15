@@ -1,36 +1,81 @@
-# TASK-0045 — Reconcile the three production roles into agents/
+# TASK-0045 — Author the three production roles in agents/
 
 ## Objective
-Bring `qa-test`, `review` and `git-ops` from `skills/agent-tiers/agents/`
-into `agents/` under ADR-0018's one-source contract — **reconciling, not
-duplicating**. Their permission boundaries are the real safety control in
-the production loop and they already work; this task must preserve them
-while changing how they are expressed.
+Author `qa-test`, `review` and `git-ops` as `agents/<role>/agent.md` under
+ADR-0018's one-source contract, **using the `agent-tiers` copies as
+read-only reference**. Their permission boundaries are the real safety
+control in the production loop and they already work; this task must
+reproduce those boundaries in the abstract vocabulary without weakening
+them.
+
+> **RESCOPED 2026-09-15: author fresh, do not import.** This task was
+> written as a *reconciliation* of files TASK-0035 would have imported into
+> `skills/agent-tiers/`. **ADR-0017 is Rejected and TASK-0035 is
+> cancelled** — `agent-tiers` stays with `opencode-customization` (human
+> decision). So there is nothing in this repo to reconcile *with*, and the
+> "one owner per role" problem this brief was built around **does not
+> arise**.
+>
+> What changes: the three roles are **authored** here, not moved. The
+> installed copy at `~/.config/opencode/skills/agent-tiers/agents/` is
+> **reference material read as evidence**, never a source to copy from or
+> modify — the same standing rule S6 applies to `SIGMA-infrastructure`.
+>
+> What does **not** change, and is the bulk of this brief: the boundaries
+> that must survive translation, the per-role-per-client emission proof,
+> and the `shell-runner` exclusion. Those were always the real work.
 
 ## Minimal context
 
-### Reconcile means one owner afterwards, not two copies
-After TASK-0035, `skills/agent-tiers/agents/{git-ops,shell-runner,qa-test,review}.md`
-exist in this repo as OpenCode-native markdown, installed by
-`install-tiers.ps1` into a target project's agents directory.
+### There is no reconciliation to do — and that is the point
 
-This task creates `agents/<role>/agent.md` in the client-agnostic format,
-emitted per client by `install.sh`. If both survive claiming to define the
-same role, the same fact has two owners and will drift — lesson 6, the
-one-owner rule, and the defect class ADR-0004 was written for.
+The original premise was that `skills/agent-tiers/agents/*.md` would exist
+in this repo after TASK-0035, creating two definitions of each role. **They
+will not.** The skill stays where it is, so:
 
-**So the end state must be one owner per role.** Which one is a real
-decision this task makes: either `agents/` becomes canonical and the skill's
-copies are removed or reduced to pointers, or the skill keeps them and
-`agents/` holds only the roles the skill does not. The first is consistent
-with Phase 2's whole purpose; the second would make Phase 2 pointless for
-these three. State the choice and its reasoning.
+- **`agents/<role>/agent.md` is the sole definition of each role in this
+  repo**, from the first commit. No removal step, no pointer step, no
+  version bump in a skill this repo does not own.
+- **`install-tiers.ps1` is not this task's concern.** The original brief
+  warned against breaking it while reconciling; there is nothing to break,
+  because this task touches no file in that repo.
 
-Note the complication: `install-tiers.ps1` copies those files as part of
-installing a *topology into a target project*, which is a different
-deployment act from `install.sh` emitting roles for *this machine's
-clients*. The two mechanisms overlap without being the same, and this task
-must not break the installer while reconciling the roles.
+**The two-owner question moves outward rather than disappearing.** After
+this task, `git-ops` exists twice on this machine by different routes:
+`install-tiers.ps1` writes it into a target project when someone runs
+`/bmad`, and `scripts/install.sh` emits it into
+`~/.config/opencode/agents/`. **Different scopes** — project-local versus
+global — so they do not overwrite each other, and OpenCode resolves
+project over global.
+
+That is a **coexistence to document, not a defect to fix.** It cannot be
+fixed from this repo anyway: the other copy belongs to another repo's
+installer. What this task must do is **state it plainly** in the role's own
+body or the config snapshot, so a reader who finds two `git-ops` files
+knows why. A future divergence between them is `opencode-customization`'s
+concern for its copy and this repo's for its own.
+
+### Authoring from reference is not copying
+
+The installed role files are OpenCode-native: `permission` blocks, glob
+maps, `{tier:...}` model placeholders. ADR-0018 forbids **any** of that in
+an `agent.md`. So even a direct import would have been a rewrite — the
+files share a *purpose*, not a format.
+
+Read them for three things and nothing else:
+1. **The boundaries**, listed below, which TASK-0034 verified are fully
+   expressible in the nine-term vocabulary.
+2. **The system prompts**, which are genuinely portable prose and the one
+   part that transfers close to verbatim (ADR-0018: the body is "the one
+   part of a role that is genuinely portable").
+3. **The role-splitting reasoning** — why `qa-test` reports failures rather
+   than fixing them, why `review` cannot edit. That reasoning is the
+   artifact's real value and is client-agnostic.
+
+Do **not** carry over: `model: "{tier:...}"` (no resolver exists in this
+repo — see ADR-0017's recorded gap; omit `model` entirely), `permission`
+blocks, or any reference to `install-tiers.ps1`, `opencode.jsonc`, or that
+repo's paths.
 
 ### The boundaries that must survive translation
 From `bmad-workflow.md:48-53` and the role files:
@@ -98,12 +143,13 @@ is how the second owner appears.
 
 | Artifact | Produced by | Expected state |
 |----------|-------------|----------------|
-| `skills/agent-tiers/agents/{git-ops,shell-runner,qa-test,review}.md` | TASK-0035 | In this repo; OpenCode-native; the four role definitions with their permission boundaries |
-| `skills/agent-tiers/templates/bmad/bmad-workflow.md` | TASK-0035 | `:48-53` the hard rules; `:30-32` the shell-runner note |
-| `skills/agent-tiers/models.jsonc` | TASK-0035 | Tier→model map with commented deviations; possibly with a stale-ID finding from TASK-0034 |
-| `skills/agent-tiers/install-tiers.ps1` | TASK-0035 | Copies the role files into a target project — **must not be broken** by this task |
+| `~/.config/opencode/skills/agent-tiers/agents/{git-ops,shell-runner,qa-test,review}.md` | `opencode-customization` | **READ-ONLY REFERENCE, outside this repo.** OpenCode-native; the four role definitions with their permission boundaries and system prompts. Verified by TASK-0034 to contain **zero** cross-repo citations, so the prose transfers cleanly |
+| `~/.config/opencode/skills/agent-tiers/templates/bmad/bmad-workflow.md` | same | **READ-ONLY REFERENCE.** 53 lines, verified readable in place by TASK-0034. `:48-53` the hard rules; `:30-32` the shell-runner note |
+| ~~`skills/agent-tiers/models.jsonc`~~ | — | **Not available and not needed.** Stays in `opencode-customization` (ADR-0017 rejected). Roles authored here **omit `model`** — there is no tier resolver in this repo. See ADR-0017's recorded gap |
+| ~~`skills/agent-tiers/install-tiers.ps1`~~ | — | **Out of scope entirely.** This task touches no file in that repo, so there is nothing to avoid breaking |
+| `.ai/decisions/0017-ai-toolbox-owns-agent-tiers.md` | TASK-0034 | **Rejected** 2026-09-15. Read its "one gap this creates" section before deciding anything about `model` |
 | `loops/project-build/loop.md` | TASK-0044 | `done`; names which role performs each step |
-| `.ai/decisions/0018-agent-portability-one-source-per-client-emission.md` | TASK-0033/0036 | Accepted; clause 7 on model references **must be settled** |
+| `.ai/decisions/0018-agent-portability-one-source-per-client-emission.md` | TASK-0033/0036 | Accepted; clause 7 on model references is **settled** — the emitter emits `{tier:<name>}` and never resolves it (TASK-0040), and the owning file is in another repo |
 | `agents/designer-manager/agent.md` and siblings | TASK-0043 | `done`; the format precedent and the per-role emission proof pattern |
 | `.ai/tasks/TASK-0043-author-design-roles.md` | TASK-0043 | `done`; its handover records any vocabulary limitation already hit |
 | `docs/development/authoring-guide.md` | TASK-0037 | The capability vocabulary — the authority for whether a glob-scoped edit is expressible |
@@ -146,11 +192,13 @@ scope changes before it starts.
 - `agents/qa-test/agent.md`, `agents/review/agent.md`,
   `agents/git-ops/agent.md`
 - `agents/shell-runner/agent.md` — conditional on the scope decision
-- `skills/agent-tiers/agents/*.md` — removed, reduced to pointers, or
-  untouched, per the ownership decision
-- `skills/agent-tiers/SKILL.md` — updated if the ownership decision changes
-  what the skill ships
+- `configs/opencode/README.md` — likely: the project-vs-global coexistence
+  of `git-ops` (this repo's emitted copy alongside `install-tiers.ps1`'s
+  project-local one) belongs in a wiring snapshot, not only in a task log
 - `docs/registry.md` — regenerated
+- **Nothing under `skills/agent-tiers/`** — it does not exist in this repo
+  and must not be created. **Nothing in `opencode-customization`** — that
+  repo is read as evidence and never modified (ADR-0017)
 - `.ai/tasks/TASK-0045-reconcile-production-roles.md` — this file
 
 ## Execution plan
@@ -245,7 +293,8 @@ sentence does it.
 |----------|-------------------|
 | `agents/qa-test/`, `agents/review/`, `agents/git-ops/` | Client-agnostic sources; all three boundaries preserved and **proven in emitted output** per client |
 | `agents/shell-runner/` | Present or deliberately absent, with reasoning |
-| `skills/agent-tiers/agents/` | Removed, reduced to pointers, or retained — **one owner per role either way**, with `install-tiers.ps1` still working |
+| `skills/agent-tiers/` | **Does not exist in this repo and must not.** `agent-tiers` stays with `opencode-customization` (ADR-0017 rejected). `agents/<role>/agent.md` is the sole definition here from the first commit |
+| The project-vs-global `git-ops` coexistence | **Documented**, not fixed: `install-tiers.ps1` writes a project-local copy, `install.sh` emits a global one, OpenCode resolves project over global. Unfixable from this repo; a reader finding two files must be able to learn why |
 | The `plan`/`build` asymmetry | Recorded: two loop steps are config overrides, not components, and creating `agents/plan/` would clobber an OpenCode built-in |
 | ADR-0018's abstraction | Tested against its narrowest case (`qa-test`'s glob-scoped edit); any limitation documented and escalated |
 | `docs/registry.md` | Regenerated; Agents section carries both design and production roles |
@@ -255,12 +304,20 @@ sentence does it.
 contract with one owner each, and Phase 2's plumbing has been exercised by
 two independent task sets. TASK-0046 can run the pilot end to end.
 
-Deviation to watch for: if the ownership decision removed the skill's role
-files, `skills/agent-tiers/`'s version must be bumped again and its `SKILL.md`
-updated — a second content change in one sprint to a skill this repo has only
-just adopted, which is worth recording as a consequence of reclaiming it
-mid-sprint rather than before. If `shell-runner` was reconciled after all,
-`PLAN-0004`'s seven-role count becomes eight.
+Deviation to watch for: **`git-ops` and `shell-runner` are OpenCode-only
+roles** (ADR-0018 clause 8.3, measured in TASK-0036 — a command allowlist
+has no per-agent Claude Code expression). So `agents/git-ops/agent.md` must
+declare `clients: [opencode]`, and the emitter will **refuse loudly** if it
+declares `claude-code`. That refusal is correct behaviour, not a bug to work
+around — narrow the `clients` list, never soften the emitter.
+
+Second: if `shell-runner` is authored after all, `PLAN-0004`'s role count
+grows. Note it is **also** OpenCode-only, for the same reason.
+
+Third: `loops/design-brief/loop.md` delegates its step-7 commit to
+`git-ops`, so that role is a **Phase 3 dependency too**, not only Phase 4.
+Until this task lands, the design loop cannot be executed end to end — an
+ordering fact already recorded in TASK-0041's log.
 
 ## Status
 - Status: planned

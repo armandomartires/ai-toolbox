@@ -35,7 +35,13 @@ two vendors' current docs.** Three corrections matter most:
   that handover for `project-workflow` **only**. Two files differ between
   the installed copy and its source while both claim `1.0.0`, and the live
   `~/.config/opencode/opencode.jsonc` contains **no `agent` key at all**.
-  Reclaiming it is Phase 1, and skipping it would have built a fifth copy.
+  ~~Reclaiming it is Phase 1~~ — **corrected 2026-09-15**: that quoted
+  roadmap was **superseded four days after ADR-0004**, when `S027` ran and
+  that repo recorded an explicit decision to **keep** the skill. It is
+  **owned, not orphaned**, so there is nothing to reclaim. This sprint
+  planned from its own stale quotation of an external document without
+  re-reading the source (TASK-0034). See decision 6 below; the drift facts
+  above remain accurate and are now that repo's business.
 - **Agent definitions are not portable between clients.** Location,
   identity, capability gating, primary-vs-subagent, model IDs and nesting
   **all** differ. The overlap is `description`, `model`, `color` —
@@ -56,8 +62,8 @@ two vendors' current docs.** Three corrections matter most:
 |------|-----------|--------|------|
 | TASK-0033 | — | **planned** | Park S6; open S7; add ROADMAP Phase 6 **and** 7; add the missing S6 session record; raise B-014…B-017 |
 | TASK-0034 | — | **done** | *Spike.* Drift fully characterised: **2** files, repo copy newer for **both**, consistently, from one commit; installed copy carries **no unique fix**; all 4 model IDs still resolve. **But the spike's premise is false** — `agent-tiers` is **not unowned**: `opencode-customization` kept it deliberately (commit `9bae137`, 2026-09-13, user decision) with a stated reason and an unpulled reopen trigger |
-| ADR-0017 | TASK-0034 | **BLOCKED — do not accept as drafted** | Asserts ai-toolbox owns `agent-tiers`, on a premise TASK-0034 disproved. Three options + a recommendation (**option 3**: take the four *roles* into `agents/` under ADR-0018, leave the PowerShell installer where it was deliberately kept) are in TASK-0034's log. **Human decision required** |
-| TASK-0035 | ADR-0017 | **blocked — justification gone** | Its import would create the second copy ADR-0004 exists to prevent, *against* the other repo's recorded decision. Do not start until ADR-0017's disposition is decided |
+| ADR-0017 | TASK-0034 | **REJECTED** 2026-09-15 | `agent-tiers` **stays with `opencode-customization`** (human decision). Its premise was disproved by TASK-0034; this repo has no standing to pull another repo's reopen trigger; and "OpenCode-specific" is substantively correct — Codex has **no per-role agent mechanism at all** (verified, `codex-cli 0.154.0`), and `git-ops`/`shell-runner` are inexpressible as Claude Code subagents. **The first `Rejected` ADR here**, and it carries its own 3-condition reopen trigger |
+| TASK-0035 | ADR-0017 | **CANCELLED** | Not blocked — *superseded*. Its premise is gone, not pending. Brief retained unrun as the plan a future handover would start from (ADR-0017 trigger 1) |
 | TASK-0036 | — | **done** | *Spike.* Emission **confirmed on new evidence**: a superset file loads in Claude Code and silently drops an OpenCode `permission:` block, leaving Write/Edit/Bash in the pool. **5 of 8 capability terms are OpenCode-only**; `git-ops`/`shell-runner` unexpressible as CC subagents. 4 ADR-0018 rows corrected |
 | ADR-0018 | TASK-0036 | **accepted** 2026-09-15 | Per-capability portability; one source, per-client **emission**; emission forbids `link` mode. Ratified on evidence: clause 2's reasoning replaced (safety, not syntax), 4 facts corrected, **new clause 8 — the emitter refuses, never degrades**, and `git-ops`/`shell-runner` recorded **OpenCode-only**. Unblocks TASK-0037, now the critical path |
 | TASK-0037 | ADR-0018 | **done** | `agents/_template/` + normative schema in `authoring-guide.md`. **Definition before enforcement** held — gate, registry and installer untouched. Vocabulary is **9** terms, not 8: `qa-test`'s `webfetch: ask` was unexpressible. The brief's "exclude one-client terms" rule was **overridden by ADR-0018 clause 8.3** — following it would have cut the vocabulary to 3 and dropped every real role's safety boundary. `worktree-only` is **partial**, not OpenCode-only; `color` dropped (**zero** shared values) |
@@ -70,15 +76,21 @@ two vendors' current docs.** Three corrections matter most:
 | TASK-0042 | TASK-0041 | **done** | `skills/design-flow/` — 3.3 KB core + 3 `references/` + brief template. Distinctness = a **load-bearing commitment**; critique has **8 named obligations** |
 | TASK-0043 | TASK-0040, TASK-0042 | **planned** | Roles: `designer-manager` (**primary**), `ideator`, `critic`. **`design-doc-writer` expected to be declined** — the loop gives it nothing to do |
 | TASK-0044 | ADR-0019, ~~TASK-0035~~ | **planned — NOT blocked** | `loops/project-build/` — from `bmad-workflow.md:8-38`, with the merge gate explicit. Its TASK-0035 dependency was for **read access only**, and TASK-0034 verified the file is readable in place (53 lines, every cited section present) at `~/AI_Workspaces/opencode-customization/opencode/skills/agent-tiers/templates/bmad/bmad-workflow.md`. Read it there; do not wait on an import that may never happen |
-| TASK-0045 | TASK-0040, TASK-0044 | **planned** | Reconcile `qa-test`/`review`/`git-ops` into `agents/`. **Reconcile, not duplicate** |
+| TASK-0045 | TASK-0040, TASK-0044 | **planned — RESCOPED** 2026-09-15 | ~~Reconcile~~ **Author** `qa-test`/`review`/`git-ops` in `agents/`, using the installed `agent-tiers` copies as **read-only reference**. There is nothing in this repo to reconcile *with* (ADR-0017 rejected), so the one-owner problem the brief was built around does not arise. `git-ops` must declare `clients: [opencode]` — it is OpenCode-only by measurement. Also a **Phase 3 dependency**: `loops/design-brief/` delegates its step-7 commit to it |
 | TASK-0046 | TASK-0043, TASK-0045 | **planned** | **Pilot.** Run both loops to produce S6's `ansible-ops` and `ansible-change` |
 
-Order follows one principle: **reclaim before authoring, decide before
-authoring, enforce before piloting, pilot last.** Each constraint is a
-defect already paid for — a duplicated skill (ADR-0004), an unsatisfiable
-portability criterion (ADR-0006), an unpoliced category, and unexercised
-scaffolding (ADR-0010). The two Phase-1 spikes are mutually independent;
-so are TASK-0038/0039/0040 once 0037 lands.
+Order follows one principle: ~~reclaim before authoring,~~ **verify before
+claiming, decide before authoring, enforce before piloting, pilot last.**
+Each constraint is a defect already paid for — a duplicated skill
+(ADR-0004), an unsatisfiable portability criterion (ADR-0006), an unpoliced
+category, and unexercised scaffolding (ADR-0010). The two Phase-1 spikes are
+mutually independent; so are TASK-0038/0039/0040 once 0037 lands.
+
+**"Reclaim before authoring" was replaced by "verify before claiming"
+(2026-09-15).** The reclamation half of Phase 1 was withdrawn when TASK-0034
+found there was nothing to reclaim (decision 6). The spike that was
+supposed to *prepare* the claim is what **stopped** it — which is the
+strongest available argument for the ordering having a spike first at all.
 
 ## Decisions taken at plan time — do not re-open
 
@@ -97,6 +109,19 @@ required" table with where each binds.
    independently by Claude Code's subagent tool filter, which strips
    `AskUserQuestion` from **every** subagent, and by OpenCode's
    `subagent_depth: 1`, under which a subagent cannot spawn workers.
+
+**Decision 6, taken mid-sprint on evidence (2026-09-15) — it reverses part
+of this sprint's premise:**
+
+6. **`agent-tiers` stays with `opencode-customization`; this repo does not
+   claim it** (human decision). Phase 1's "reclaim before authoring"
+   principle is **withdrawn** for the skill itself — TASK-0034 disproved the
+   orphan premise it rested on. What survives is narrower and better
+   founded: the four *role definitions* are **authored** in `agents/` under
+   ADR-0018 (TASK-0045), with the installed copy as read-only reference, and
+   `bmad-workflow.md` is **read in place** by TASK-0044. Nothing is imported
+   and nothing in that repo changes. ADR-0017 is Rejected with a 3-condition
+   reopen trigger; TASK-0035 is cancelled.
 
 ## Emission has no freshness check, and cannot have one
 

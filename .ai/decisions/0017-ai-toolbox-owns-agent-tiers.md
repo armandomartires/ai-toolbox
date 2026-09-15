@@ -1,6 +1,113 @@
-# ADR-0017 — ai-toolbox owns the agent-tiers skill
+# ADR-0017 — agent-tiers stays with opencode-customization (claim withdrawn)
 
 ## Status
+**REJECTED — 2026-09-15.** Human decision. Opened by `PLAN-0004` (sprint
+S7) and rejected in the same sprint, on TASK-0034's evidence.
+
+**`agent-tiers` stays with `opencode-customization`.** This repo does not
+import it, does not claim it, and makes no change in that repo.
+
+The first `Rejected` ADR in this repo. ADR-0016 is the nearest precedent but
+is a different shape — it *declined to add* a category on evidence it
+gathered itself. This one **withdraws a claim over a component another repo
+owns**, because the premise the claim rested on was false.
+
+### Why rejected
+
+1. **The premise was disproved.** `agent-tiers` was never orphaned.
+   `opencode-customization` kept it by explicit user decision on
+   2026-09-13, in commit `9bae137`, with a stated reason (*"confirmed
+   OpenCode-specific by design"*), a scope banner backing it
+   (`docs/07.agent-hierarchy.md`), and a written reopen trigger. That is a
+   deferral, not an omission.
+2. **This repo has no standing to override it.** The trigger in that repo
+   reads *"Revisit `agent-tiers` → `ai-toolbox` **if a concrete reason
+   emerges** (not scheduled)."* Pulling another repo's trigger is that
+   repo's decision to make.
+3. **The "OpenCode-specific" scoping is substantively correct**, verified
+   independently by TASK-0034:
+   - `install-tiers.ps1` (565 lines) deep-merges an `agent` key into
+     `opencode.jsonc` and depends on `plan`/`build` being **OpenCode
+     built-in names overridable by config while keeping their tuned system
+     prompts**. Claude Code's custom files *replace* a built-in rather than
+     layer over it, so the mechanism does not exist there.
+   - **Codex has no per-role agent definition at all.** Verified on this
+     machine (`codex-cli 0.154.0`): `codex agents` browses *sessions*;
+     there is no subagent, delegation or task-spawn concept; the nearest
+     analogue is `--profile`, one active config bundle rather than a set of
+     named roles. ADR-0006's situation exactly — the gap is in the client.
+   - Of the nine capability terms, **`git-ops` and `shell-runner` are not
+     expressible as Claude Code subagents at all** (TASK-0036), and both
+     exist purely to enforce a command allowlist.
+4. **Importing would recreate ADR-0004's defect against a live decision.**
+   A second copy of a component whose owner has just said it is keeping it
+   is worse than the three-copies problem ADR-0004 was written to fix,
+   because it would be deliberate.
+
+### Reopen trigger
+
+Recorded because a rejection without one is the very defect this ADR's
+Context accuses ADR-0004 of — and ADR-0010 is the shape to copy. **Reopen
+only if one of these becomes true:**
+
+1. **`opencode-customization` pulls its own trigger** and offers the
+   handover. Then this ADR is superseded by a new one, not amended.
+2. **A role authored in `agents/` needs the installer's `opencode.jsonc`
+   merge** — i.e. this repo needs to write an `agent` block into a live
+   config, not just emit role files. That is the one capability
+   `install-tiers.ps1` has and `scripts/emit-agents.py` deliberately does
+   not.
+3. **A third client gains a per-role agent mechanism** that makes the
+   topology genuinely portable, changing the "OpenCode-specific" premise
+   that justifies keeping it there.
+
+**Not a trigger:** wanting the four role definitions in `agents/`. Those are
+authored fresh under ADR-0018 by TASK-0045, using the installed copy as
+read-only reference. Authoring a role that resembles `git-ops` is not
+importing `agent-tiers`.
+
+### What the rejection does not touch
+
+- **`bmad-workflow.md` stays readable in place** and TASK-0044 derives
+  `loops/project-build/` from it — reading another repo's file as evidence
+  is not a claim on it (S6's precedent with `SIGMA-infrastructure`).
+- **The installed copy is unchanged**: still a real directory at
+  `~/.config/opencode/skills/agent-tiers/`, still drifted from its source
+  by two files, still never switched on (no `agent` key in
+  `opencode.jsonc`). All of that is now **that repo's business**.
+- **ADR-0018 stands**, with one consequence recorded below.
+
+### One gap this creates, recorded rather than left to surface
+
+**ADR-0018 clause 7 names `models.jsonc` the single owner of the
+tier→model mapping, and that file is now permanently in another repo.**
+
+`scripts/emit-agents.py` emits `model: "{tier:<name>}"` and **no resolver
+exists in this repo** — verified. That was acceptable while TASK-0035 was
+expected to bring `models.jsonc` in; it never will now.
+
+Nothing is broken today: `model` is **optional** in the agent schema and no
+role uses it. But the placeholder is emitted against a resolver that is not
+here, so:
+
+- **Do not add a second tier→model mapping to this repo** to close the gap.
+  That is exactly the "two owners of one fact" clause 7 forbids, and it
+  would be a worse outcome than the gap.
+- **Decide when a role actually needs a tier**, not now. The options at that
+  point are: drop `model` from the schema, resolve tiers from a file this
+  repo owns (superseding clause 7 by a new ADR), or emit a client-native
+  model ID directly and accept the per-client duplication.
+- Until then, **a role should omit `model`**, which every role authored so
+  far does.
+
+---
+
+**The original Proposed text follows, unchanged.** It is retained rather
+than deleted because its factual errors and their correction are the
+instructive part — the same handling ADR-0019 used for its own clause
+miscount.
+
+## Superseded status line (as originally drafted)
 **Proposed — and BLOCKED. Do not accept as drafted.** Opened by `PLAN-0004`
 (sprint S7), 2026-09-15.
 

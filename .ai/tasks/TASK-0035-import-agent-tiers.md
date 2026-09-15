@@ -256,10 +256,39 @@ needs its own decision, recorded here and escalated, never absorbed
 silently.
 
 ## Status
-- Status: planned
+- Status: **cancelled — superseded by ADR-0017's rejection (2026-09-15)**
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
+
+> **This task will not run.** `agent-tiers` stays with
+> `opencode-customization` (human decision, 2026-09-15). ADR-0017 — the
+> gate this task opens with — is **Rejected**, so the import it plans has
+> no authorization and no justification.
+>
+> **Why cancelled rather than left blocked:** a blocked task implies a
+> dependency that may clear. This one's premise is gone, not pending. The
+> brief below plans a 13-file import that would create a second copy of a
+> component whose owner has explicitly decided to keep it — the ADR-0004
+> defect, committed deliberately.
+>
+> **What survives, and where it went:**
+> - The **drift facts** this task would have resolved are already
+>   established by TASK-0034 (repo copy newer for both files, from one
+>   commit, no unique fix installed-side, all four model IDs resolving).
+>   Nothing was lost by not importing.
+> - The **four role definitions** are authored fresh in `agents/` under
+>   ADR-0018 by **TASK-0045**, rescoped for exactly this reason. The
+>   installed copy is read-only reference material there, not a source.
+> - **`bmad-workflow.md`** is read in place by TASK-0044 — verified
+>   readable at 53 lines with every cited section present.
+> - **`models.jsonc`** stays in that repo, which leaves ADR-0018 clause 7's
+>   single owner outside this repo. Recorded as a known gap in ADR-0017's
+>   rejection rather than closed by inventing a second mapping here.
+>
+> The brief is retained unrun rather than deleted: it is the concrete plan
+> a future handover would start from if `opencode-customization` ever pulls
+> its own reopen trigger (ADR-0017 trigger 1).
 
 ## Execution log
 ### Attempt 1
