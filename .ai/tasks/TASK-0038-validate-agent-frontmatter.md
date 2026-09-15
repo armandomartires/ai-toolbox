@@ -476,6 +476,6 @@ original change. Still sub-second; the increase is within run-to-run noise
 and adds no new `python3` process (the checks are inside the existing
 heredoc).
 
-- Commit: `e0e9d68` (original), amendment in the TASK-0043 commit below
+- Commit: `e0e9d68` (original), amendment in `3a588da`
 - Push: pushed with the sequence's other Phase-2 commits; confirmed by
   re-fetch and an independent GitHub API read.

@@ -110,4 +110,4 @@ above), then **TASK-0045** (three production roles, and the one that makes
 the design loop executable end to end), then **TASK-0046**'s pilot.
 
 - Result: TASK-0043 done, with three follow-up amendments to
-  TASK-0037/0038/0040. Commit recorded in the task log.
+  TASK-0037/0038/0040. Commit `3a588da`, pushed to `origin/master` and confirmed by re-fetch.

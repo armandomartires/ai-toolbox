@@ -562,5 +562,5 @@ name:
 alongside the allowlist and targeting `claude-code` still **refuses** with
 exit 1 and the remedy named.
 
-- Commit: `36cab90` (original), amendment in the TASK-0043 commit below
+- Commit: `36cab90` (original), amendment in `3a588da`
 - Push: confirmed — see below

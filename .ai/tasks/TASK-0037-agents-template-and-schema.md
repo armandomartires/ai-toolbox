@@ -524,7 +524,7 @@ Added:
 The template gained commented examples of the new key and of why `model` is
 omitted.
 
-- Commit: `7ccfa6d` (original), amendment in the TASK-0043 commit below
+- Commit: `7ccfa6d` (original), amendment in `3a588da`
 - Push: confirmed — `origin/master` at the follow-up commit, verified by
   re-fetch and by an independent GitHub API read of the remote head.
   (Hash written *after* committing this time; the prior two sessions each
