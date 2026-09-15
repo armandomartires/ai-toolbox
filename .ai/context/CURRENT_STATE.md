@@ -1,18 +1,153 @@
 # Current State
 
-Last updated 2026-09-14, after opening sprint S6 (planning only — no
-implementation yet).
+Last updated 2026-09-15, after **parking sprint S6 and opening sprint S7**
+(planning only — no implementation yet, in either sprint).
 
-## Sprint S6 is open — planning complete, nothing implemented
+## Sprint S7 is open; S6 is parked with zero implementation
+
+`PLAN-0004` opened Phase 7: a **two-stage agent system** — an interactive
+design stage that converges an idea into an accepted, locked brief, and a
+largely autonomous production stage that carries it through plan,
+implement, test, review and document — plus making `agents/` a real
+component category. Seventeen artifacts written, zero components changed:
+TASK-0033…0046, ADR-0017…0019 (all **proposed**), B-014…B-017.
+
+**S6 is parked, not closed and not abandoned** (human decision,
+2026-09-15). Archived at
+`.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md` with a parking
+note. Its ten artifacts stay `planned`/`proposed` and B-010…B-013 stay
+**ready** — parking a sprint does not un-scope its backlog items. **Parking
+cost nothing precisely because nothing had been implemented**; the same
+decision one sprint later would have needed reconciliation.
+
+**The second sprint in a row planned from a human-supplied analysis**, and
+**eight of its claims were corrected before planning finished** (against
+six in S6). In order of consequence:
+
+1. **Half the production stage already exists, unowned, drifted, and never
+   switched on.** `~/.config/opencode/skills/agent-tiers/` implements
+   `plan → build → qa-test → (fix loop, max 3) → review → git-ops commit`
+   with permission-enforced boundaries that are the real safety control.
+   `opencode-customization`'s own roadmap sequenced `S027` to hand
+   **`project-workflow` and `agent-tiers`** to this repo; **ADR-0004
+   executed that handover for `project-workflow` alone** and said nothing
+   about the second skill. Two files now differ between the installed copy
+   and its source while **both declare `metadata.version: "1.0.0"`** — the
+   exact version-integrity defect ADR-0004 was written to kill, on a second
+   skill. The installed copy is a **real directory** where this repo's two
+   skills are symlinks. And the live `~/.config/opencode/opencode.jsonc`
+   contains **no `agent` key at all**, so every permission boundary the
+   skill exists to install has never been in effect.
+2. **Agent definitions are not portable between clients.** Location,
+   identity (filename vs a required `name` field), capability gating
+   (`permission` vs `tools`/`disallowedTools`), primary-vs-subagent (an
+   explicit `mode` vs no equivalent field), model IDs, nesting defaults, and
+   delegation restriction **all** differ. The overlap is `description`,
+   `model`, `color` — **everything that makes an agent safe differs.** This
+   is ADR-0006's situation exactly, and its resolution generalizes:
+   portability is scoped **per capability**. Hence ADR-0018, before any role
+   is authored.
+3. **Claude Code dynamic workflows cannot do the design stage.** Their own
+   constraints table: *"No mid-run user input — Only agent permission
+   prompts can pause a run. For sign-off between stages, run each stage as
+   its own workflow."* An interactive design stage is mid-run user input by
+   definition. They are also a Claude-Code-only JS runtime, so a component
+   built on them is unportable by construction. **Excluded from the
+   architecture.**
+4. **Subagents cannot ask the user.** Claude Code strips a fixed tool list
+   from every subagent regardless of its `tools` field, including
+   `AskUserQuestion`. OpenCode reaches the same place via
+   `subagent_depth: 1`, under which a subagent cannot spawn workers. So
+   `designer-manager` must be a **primary** agent — forced independently by
+   each client, structural rather than stylistic.
+5. **`agents/` is a declared category with nothing behind it.** A 141-byte
+   README is the only file, yet it is named first-class in `AGENTS.md`,
+   `README.md`, ADR-0001, `GLOSSARY.md` and `PROJECT_MAP.md`. No template,
+   schema, check, registry section or install path. `prompts/` is identical
+   at 127 bytes. ADR-0016 already recorded this and drew the right
+   conclusion — *"A declared category can exist indefinitely with nothing
+   behind it"* — while deciding a different question.
+6. **Emission and symlinking are incompatible.** `install.sh:105` deploys
+   skills with `ln -sfn`, so a repo edit is live everywhere with no sync
+   step. A per-client **emitted** agent file cannot be a symlink — its
+   content differs per client by definition. Agents therefore deploy by
+   generation only: no `link`, no `copy`. That makes an emitted file a
+   fourth copy whose freshness **nothing can verify**, because ADR-0009
+   forbids checking runtime presence. The control is idempotent
+   regeneration, not a gate.
+7. **"No human intervention" collides with four `AGENTS.md` rules** —
+   destructive changes need authorization *in the task file*; pushing needs
+   `GITHUB_TOKEN` from the environment; the ambiguity policy says stop and
+   ask; the definition of done requires a *reviewed* diff. The defensible
+   scope is **autonomous within a locked plan, with a mandatory human gate
+   before merge and push**. ADR-0019 records it.
+8. **Value inverts from the proposal's ordering.** Highest value is
+   *reclaiming what already exists*, not authoring new roles; the genuine
+   capability gap is the **design** stage, since `agent-tiers`' `plan` writes
+   a spec in one pass with no ideation, no critique, and **no convergence
+   criterion**.
+
+**Four proposals were rejected outright**, each recreating a defect already
+paid for: a second `agent-skills` repo (ADR-0004's three-copies problem);
+in-repo `.claude/skills/` and `.claude/agents/` (a self-referential fourth
+copy and a second install path competing with the validated one); a
+`workflows/` category (`loops/` already is this, with mandatory exit
+conditions enforced at `validate.sh:193-213`); and `ci-skills-sync.yml` (a
+machine-specific runtime check, forbidden by ADR-0009). Recorded in S7's
+`SPRINT-CURRENT.md` "Out of scope" so they are not re-raised.
+
+**S7's known limitation, stated up front and given a pre-committed review
+question:** the sprint adds two loops, one skill, a component category and
+six or seven roles. **If the pilot (TASK-0046) does not run, all of it is
+scaffolding** — and the sprint would have diagnosed that exact pattern in
+`agent-tiers` while reproducing it. This would be the **third** instance
+after `mcp-servers/_template/` (ADR-0010) and `agent-tiers` itself. Hence
+REVIEW-0008 opens with: *did anything get exercised?*
+
+**Two omissions were found and repaired while planning:**
+- **The ROADMAP had no Phase 6 section at all.** S6 existed in
+  `SPRINT-CURRENT.md`, `TODO.md`, this file and `PLAN-0003`, but never in
+  the roadmap — the same drift REVIEW-0007 caught for Phase 5 ("in progress"
+  after completion), **recurring one phase after being diagnosed.** That is
+  evidence for its finding 6: the lesson needed a mechanism, not more prose.
+  No mechanism was added, and it repeated. Recorded in the new Phase 6
+  section rather than quietly backfilled.
+- **The S6 planning session left no `SESSION-*.md` record and no `INDEX.md`
+  row.** ADR-0012's invariant is that a task be startable cold from its own
+  file **plus the two index files**, so a missing row is a hole in the
+  mechanism this repo relies on for resumability. Reconstructed as
+  `SESSION-20260914-0330`, labelled as reconstructed, with unrecoverable
+  fields marked rather than guessed.
+
+**Cross-client claims decay faster than internal ones.** Every mapping fact
+above was **fetched 2026-09-15, not recalled**, from
+`code.claude.com/docs/en/{workflows,sub-agents}` and
+`opencode.ai/docs/agents/`. Both clients ship frequently and their docs
+already qualify behaviour by patch version in dozens of places. TASK-0036
+must **re-verify rather than cite `PLAN-0004`**, and every ADR records the
+date it read what it read.
+
+## Sprint S6, as planned and parked — still the plan of record
+
+Everything in this section remains accurate and unexecuted. It is the plan
+B-010…B-013 are still scoped against.
 `PLAN-0003` opened Phase 6: an **instruct layer** for the `ansible` MCP
 server (skill + loop), a narrowing of that server's blast radius, and one
 real enforcement. Ten artifacts written, zero components changed:
 TASK-0026…0032, ADR-0014…0016 (all **proposed**), B-010…B-013. Opened by
 commit `9528d13`, pushed to `origin/master` and confirmed by re-fetch.
 
+**S7's pilot (TASK-0046) delivers TASK-0029 and TASK-0030** — `ansible-ops`
+and `ansible-change` — by producing them *through* S7's new loops. Their
+disposition afterwards is decided in that task's execution log, deliberately
+not pre-empted. **TASK-0031, the highest-value item below, is not delivered
+by that pilot**; B-011 stays open. ADR-0014 and ADR-0015 remain unratified
+and still depend on TASK-0027, an unrun spike — a gap TASK-0046 must resolve
+explicitly rather than gloss.
+
 **The sprint began from a human-supplied analysis rather than a backlog
-item** — a first for this repo — and **six of its claims were corrected
-before planning finished**. In order of consequence:
+item** — a first for this repo at the time — and **six of its claims were
+corrected before planning finished**. In order of consequence:
 
 1. **There is no staging inventory in the target estate, and there cannot
    be one.** The analysis's central worked example
@@ -103,11 +238,15 @@ file layout:
   TASK-0024, closing B-008), matching the `project-workflow` convention
   this repo publishes. The *identifier* remains `ADR-NNNN` in every H1 and
   throughout prose — only filenames changed.
-- **B-001…B-009 are all closed; B-010…B-013 are open**, raised by
-  PLAN-0003 and scoped in S6. B-009 closed by TASK-0025/ADR-0013 as
-  *decided, not implemented*: its premise — that the two skills share a
-  convention — was false. Two of the four new items (B-012, B-013) are
-  corrections to **this repo's own claims** rather than to a component.
+- **B-001…B-009 are all closed; eight items are open** — B-010…B-013 (S6,
+  still `ready` despite the park) and B-014…B-017 (S7). B-009 closed by
+  TASK-0025/ADR-0013 as *decided, not implemented*: its premise — that the
+  two skills share a convention — was false. Two of S6's four items (B-012,
+  B-013) are corrections to **this repo's own claims** rather than to a
+  component. **Two of S7's four (B-014, B-015) describe state _outside_ this
+  repo** — a skill living in another repo plus a live machine config, and
+  two vendors' file formats. That is a new class here, and it decays faster:
+  both must be re-verified at the moment they are acted on.
 - **The two skills scaffold two different frameworks, deliberately**
   (ADR-0013). `project-migration`: `context/`, `planning/`, `sessions/`,
   `templates/`, `TASK-####`, `ADR-NNNN-*.md`, entry `AGENTS.md` — **this
@@ -119,6 +258,16 @@ file layout:
   `project-workflow` (`3.2.0`) skills (deployed to Claude Code and
   OpenCode), and the `ansible` external MCP server. One loop:
   `loops/release-check`.
+- **A fourth skill exists on this machine but not in this repo.**
+  `agent-tiers` (`1.0.0`) is installed at
+  `~/.config/opencode/skills/agent-tiers/` as a **real directory**, owned by
+  `opencode-customization`, already drifted from its source, and with its
+  topology never applied (no `agent` key in the live config). S7's Phase 1
+  reclaims it. Until then it is deployed but unowned — the only component on
+  this machine in that state.
+- **`agents/` and `prompts/` remain empty declared categories** (141 and 127
+  bytes of README). S7 makes `agents/` real; `prompts/` is deliberately left
+  alone and needs its own justification rather than symmetry.
 
 ## What S5 is fixing, and why it is not obvious
 The `project-workflow` skill's task template has Goal, Plan, Files
@@ -279,6 +428,12 @@ breaking changes cannot land silently.
    **Recurred immediately:** Phase 5's own roadmap header read "in
    progress" after every criterion was met, fixed by REVIEW-0007. The
    lesson needs a mechanism, not more prose.
+   **Recurred again, worse:** the roadmap had **no Phase 6 section at all**
+   while S6 was planned, opened, committed and pushed — found by TASK-0033
+   one sprint later. The same session also found the S6 planning session had
+   left no `SESSION-*.md` record. No mechanism was added after REVIEW-0007
+   said one was needed, so the class recurred twice in two sprints. **Still
+   nothing prevents a third.**
 7. **A claim decays between being written and being acted on.** S5's four
    tasks each found a false claim in their own inputs — a stale symlink
    assertion, a false premise in ADR-0012, a four-way merge that would
@@ -292,6 +447,22 @@ breaking changes cannot land silently.
    that cites this very lesson, by an agent that had just restated it.
    The control is not knowing the rule — it is running the check against
    a deliberately broken input before trusting it.
+9. **A decision that handles one item from a list of two, without saying why
+   the second was left, produces an orphan rather than a deferral.**
+   ADR-0004 quoted the other repo's roadmap naming **both**
+   `project-workflow` and `agent-tiers`, handed over the first, and said
+   nothing about the second. A deferral has a reopen trigger — ADR-0010 has
+   one, and it is explicitly *not* pulled. This had nothing, so the skill sat
+   unowned for a sprint and a half, drifted, and the version-integrity defect
+   that ADR was written to kill reappeared on it. **When a decision narrows
+   a list, record what happened to the remainder.**
+10. **An unexercised artifact is the repo's most reliable failure mode.**
+    `mcp-servers/_template/` (ADR-0010) established it, `agent-tiers`
+    continued it — installed, drifted, never switched on — and S7 is
+    structured to avoid being the third instance, with a pilot that produces
+    real components and a pre-committed review question. The pattern is
+    common enough that a plan adding new component surface should now name,
+    at plan time, **what will exercise it**.
 
 ## Validations
 `tests/validate.sh` (mandatory, automatic via hook) · `scripts/sync-registry.sh`

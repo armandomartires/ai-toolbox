@@ -61,11 +61,25 @@ decisions in ADR-0012. Run in order — each depends on the one above.
       the two skills scaffold two different frameworks, differing nine
       ways; its premise of a shared convention was false (done)
 
-## Sprint S6 — Ansible agent guardrails (open)
+## Sprint S6 — Ansible agent guardrails (PARKED 2026-09-15)
 Planned by `.ai/planning/plans/PLAN-0003-ansible-agent-guardrails.md`;
 decisions ADR-0014…0016 (all **proposed**, none accepted yet). Raised
-B-010…B-013. **Planning only so far — no implementation.** Sprint opened by
+B-010…B-013. **Planning only — no implementation, ever.** Sprint opened by
 commit `9528d13`, pushed and confirmed.
+
+**Parked by TASK-0033**, not closed and not abandoned. Human decision,
+2026-09-15; S7 opened instead. Archived at
+`.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md`. Every box
+below stays unchecked and B-010…B-013 stay **ready** — parking a sprint does
+not un-scope its backlog items. Parking cost nothing because nothing had
+been implemented.
+
+**S7's pilot (TASK-0046) delivers TASK-0029 and TASK-0030** by producing
+`skills/ansible-ops/` and `loops/ansible-change/` *through* S7's new loops.
+Their disposition afterwards — closed as delivered-by-S7, rewritten, or left
+parked — is decided in TASK-0046's execution log, deliberately not
+pre-empted. **TASK-0031, the highest-value item, is not delivered by that
+pilot**; B-011 stays open.
 
 Phase 0 (independent of each other, may run in parallel):
 - [ ] TASK-0026 — Correct the `WORKSPACE_ROOT` blast-radius claim; disable
@@ -91,8 +105,10 @@ Phase 3 — enforcement and record:
 - [ ] TASK-0032 — Record the target-repo findings; state what was
       deliberately left alone (needs TASK-0029)
 
-**Four backlog items are open — B-010…B-013**, all raised by PLAN-0003 and
-all scoped in S6. B-001…B-009 remain closed.
+**B-010…B-013 remain open and `ready`** despite the park, all raised by
+PLAN-0003 and all still scoped against the S6 task numbers above.
+B-001…B-009 remain closed. S7 raised B-014…B-017, so **eight items are open
+in total**.
 
 Notes on S6:
 - The sprint began from a **human-supplied analysis**, not a backlog item —
@@ -123,7 +139,106 @@ Notes on S6:
   limitation was only stated at REVIEW-0007; this one is stated up front.
 - `SIGMA-infrastructure` is **read as evidence and never modified**
   (Option a). Its four stale claims and 42 unpushed commits are recorded by
-  TASK-0032 and fixed nowhere.
+  TASK-0032 and fixed nowhere. **Still binding under S7** — parking does not
+  relax it.
+
+## Sprint S7 — Design and production agent loops (open)
+Planned by `.ai/planning/plans/PLAN-0004-design-and-production-agent-loops.md`;
+decisions ADR-0017…0019 (all **proposed**; 0017 and 0018 blocked on spikes,
+0019 awaiting ratification). Raised B-014…B-017. **Planning only so far — no
+implementation.** Sprint opened by TASK-0033.
+
+Phase 0:
+- [x] TASK-0033 — Park S6; open S7; add ROADMAP Phase 6 **and** 7; add the
+      missing S6 session record; raise B-014…B-017 (done)
+
+Phase 1 — reclaim, then decide (the two spikes are mutually independent):
+- [ ] TASK-0034 — *Spike.* Inventory the `agent-tiers` drift: 2 differing
+      files, both claiming `1.0.0`, installed copy a real dir. Read-only
+- [ ] ADR-0017 — ai-toolbox owns `agent-tiers`; mirrors ADR-0004 (needs
+      TASK-0034)
+- [ ] TASK-0035 — Import to `skills/agent-tiers/`; resolve drift; bump
+      version; symlink replaces the real directory (needs ADR-0017)
+- [ ] TASK-0036 — *Spike.* Verify the per-client agent field mapping against
+      **live** docs; test unknown-key handling
+- [ ] ADR-0018 — Per-capability portability; one source, per-client
+      **emission**; emission forbids `link` mode (needs TASK-0036)
+
+Phase 2 — make `agents/` a real category (0037 strictly first; then
+0038/0039/0040 are independent):
+- [ ] TASK-0037 — `agents/_template/` + normative schema in
+      `authoring-guide.md`. **Definition before enforcement** (ADR-0008)
+- [ ] TASK-0038 — `validate.sh` agent checks, parsed not grepped, each
+      **observed failing** on a fixture
+- [ ] TASK-0039 — `sync-registry.sh`: `extract()` gains `agent`; one
+      `emit_section` line
+- [ ] TASK-0040 — `install.sh` emission + `CLIENTS` fourth column; 3 config
+      snapshots gain an agents section
+
+Phase 3 — the design half (the genuine capability gap):
+- [ ] ADR-0019 — Convergence is **human acceptance**; autonomy stops at the
+      merge gate; dynamic workflows rejected
+- [ ] TASK-0041 — `loops/design-brief/` — clarify→ideate→critique→converge,
+      capped, with the acceptance gate (needs ADR-0019)
+- [ ] TASK-0042 — `skills/design-flow/` — portable core + templates (needs
+      TASK-0041)
+- [ ] TASK-0043 — Roles: `designer-manager` (**primary**), `ideator`,
+      `critic`, `design-doc-writer` (needs TASK-0040, TASK-0042)
+
+Phase 4 — the production half, owned here:
+- [ ] TASK-0044 — `loops/project-build/` — from `bmad-workflow.md:8-38`,
+      with the merge gate explicit (needs ADR-0019, TASK-0035)
+- [ ] TASK-0045 — Reconcile `qa-test`/`review`/`git-ops` into `agents/`.
+      **Reconcile, not duplicate** (needs TASK-0040, TASK-0044)
+
+Phase 5 — exercise it:
+- [ ] TASK-0046 — **Pilot.** Run both loops to produce S6's `ansible-ops`
+      and `ansible-change` (needs TASK-0043, TASK-0045). **The task that
+      decides whether S7 delivered anything**
+
+Notes on S7:
+- **The second sprint in a row planned from a human-supplied analysis.**
+  Eight of its claims were corrected before planning finished, against six
+  in S6. The three that reshaped the plan: half the production stage already
+  exists unowned and switched off; agent definitions are **not portable**
+  between clients; and Claude Code dynamic workflows cannot accept mid-run
+  user input, so they cannot run an interactive design stage.
+- **`agent-tiers` is ADR-0004's unfinished half.** That ADR quoted the other
+  repo's roadmap naming *both* skills, handed over `project-workflow` alone,
+  and said nothing about the second. A decision that handles one item from a
+  list of two without saying why the second was left produces an **orphan**
+  rather than a deferral — a deferral has a reopen trigger (ADR-0010 has
+  one); this had nothing.
+- **Phase 2 is four tasks with no user-visible output**, and the most
+  skippable-looking work in the sprint. ADR-0016 already recorded what
+  "later" has meant for `agents/` and `prompts/`: indefinitely. If the
+  sprint shrinks, the honest cut is **Phase 4**, never Phase 2 or Phase 5.
+- **Emission has no freshness check and cannot have one.** ADR-0009 forbids
+  validating runtime presence. Anyone who "fixes" this by checking the
+  deployed copy breaks every fresh clone and CI. ADR-0018 clause 4 exists to
+  be cited when they try.
+- **Cross-client claims decay faster than internal ones.** Every mapping fact
+  was fetched 2026-09-15, not recalled. TASK-0036 must **re-verify rather
+  than cite the plan**, and every ADR records the date it read what it read.
+- **Four proposals were rejected outright**, each recreating a defect already
+  paid for: a second `agent-skills` repo (ADR-0004's three-copies problem),
+  in-repo `.claude/skills/` (a second install path), a `workflows/` category
+  (`loops/` already exists with enforcement), and `ci-skills-sync.yml`
+  (ADR-0009's forbidden runtime check). Recorded in `SPRINT-CURRENT.md` so
+  they are not re-raised.
+- **Known limitation, stated up front and given a pre-committed review
+  question:** this sprint adds two loops, one skill, a category and six or
+  seven roles. If TASK-0046 does not run, all of it is scaffolding — the
+  **third** instance of the pattern `mcp-servers/_template/` established and
+  `agent-tiers` continued. REVIEW-0008 opens with *did anything get
+  exercised?*
+- **`designer-manager` must be a primary agent**, forced independently by
+  Claude Code stripping `AskUserQuestion` from every subagent and by
+  OpenCode's `subagent_depth: 1`. Structural, not stylistic.
+- **`plan` and `build` can never be `agents/` components.** They are
+  OpenCode built-in names, and a markdown agent body *replaces* a built-in's
+  tuned system prompt wholesale. Two of the production loop's steps are
+  therefore config overrides, not components (TASK-0045 records this).
 
 Notes:
 - "Port first MCP server" was split into 0005 (mechanism) + 0007 (payload)

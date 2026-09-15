@@ -15,9 +15,29 @@
 | B-011 | A documented, statically checkable, unenforced Ansible safety rule | high | high | B-010 (shares the skill's vocabulary) | medium | **ready** | S6 / TASK-0031 — `gather_subset: "!mounts"`; the rule and its failure mode are already written down in the target repo, so nothing needs inventing |
 | B-012 | `server.json` overstates `WORKSPACE_ROOT` as the blast radius | medium | medium | none | low | **ready** | S6 / TASK-0026 — false for `ansible_navigator` (remote infra) and `ade_setup_environment` (system packages); restated in all 3 wiring snippets |
 | B-013 | `ansible_navigator` cannot express the safe workflow but can execute unsafely | high | high | none | low | **ready** | S6 / TASK-0026 — no inventory/limit/`--check`/`--diff` parameter exists; disable it. Human authorized 2026-09-14 |
+| B-014 | `agent-tiers` is unowned, already drifted, and has never been switched on | high | high | none | medium | **ready** | S7 / TASK-0034, ADR-0017, TASK-0035 — `opencode-customization`'s own `S027` sequenced it to this repo alongside `project-workflow`; ADR-0004 moved only the latter. Two files differ between the installed copy and its source while both claim `1.0.0` |
+| B-015 | Agent definitions are not portable between clients, and no decision records it | high | high | none | medium | **ready** | S7 / TASK-0036, ADR-0018 — location, identity, capability gating, primary-vs-subagent, model IDs and nesting all differ; the overlap is `description`/`model`/`color`. Must be decided **before** any role is authored |
+| B-016 | `agents/` and `prompts/` are declared component categories with nothing behind them | medium | medium | B-015 (the schema depends on the portability decision) | low | **ready** | S7 / TASK-0037…0040 for `agents/` only — 141-byte and 127-byte READMEs, no template, no schema, no `validate.sh` check, no registry section, no `install.sh` path. `prompts/` is deliberately left out of scope |
+| B-017 | No design stage exists — `plan` writes specs but never ideates or critiques | high | high | B-014 (shares the role vocabulary), B-016 (roles need enforcement) | medium | **ready** | S7 / ADR-0019, TASK-0041…0043 — `bmad-workflow.md:14-16` has `plan` write a story/spec directly, with no alternatives generated, no adversarial review, and **no convergence criterion**. The genuine capability gap |
 
-**Four items are open — B-010…B-013, all raised by PLAN-0003 and all
-scoped in S6.** B-001…B-009 remain closed.
+**Eight items are open — B-010…B-013 (S6, parked) and B-014…B-017 (S7,
+raised by PLAN-0004).** B-001…B-009 remain closed.
+
+**B-010…B-013 stay `ready` even though S6 is parked.** Parking a sprint
+does not un-scope its backlog items: the items describe real gaps that are
+still real. Their "Ready when" column still names S6's task numbers, which
+remain the plan of record for them. Note that S7's pilot (TASK-0046)
+delivers B-010's two components by another route, while **B-011 — the
+highest-value item in either sprint — remains untouched.**
+
+B-014…B-017 were written after reading the artifacts, not before. Two of
+them are corrections to state **outside this repo**: B-014 describes a
+skill living in another repo and a live machine config, and B-015 describes
+two vendors' file formats. That is a new class here — every prior item was
+about this repo's own files — and it decays faster, because vendors ship
+and machines change without this repo noticing. Both items must be
+re-verified at the moment they are acted on rather than trusted from
+`PLAN-0004`.
 
 All four were written **after** the artifacts were read, which is the
 practice the note below ("read the artifacts before estimating the work")
@@ -125,3 +145,64 @@ Notes:
   systems while fixing nothing. Resolved with one documentation line in
   each `SKILL.md` naming the other skill, so the item cannot be re-raised
   by the next person who greps for `ADR-`.
+- B-014 is **ADR-0004's unfinished half, found sixteen months of sprints
+  later**. That ADR's own Context quotes `opencode-customization`'s roadmap:
+  *"`S027` hands `project-workflow` (and `agent-tiers`) to `ai-toolbox`
+  permanently."* The parenthesis was in the source text. ADR-0004 then
+  executed the handover for `project-workflow` alone and said nothing about
+  the other skill, so `agent-tiers` has been unowned ever since — not
+  decided against, just not carried across.
+
+  Three consequences, all now observable: two files differ between the
+  installed copy and its source while both declare `metadata.version:
+  "1.0.0"` (**exactly** the version-integrity defect ADR-0004 was written
+  to kill, on a second skill); the installed copy is a **real directory**
+  while this repo's two skills are symlinks, so `install.sh:100-103` would
+  announce a `NOTICE` and delete it; and the live global `opencode.jsonc`
+  has **no `agent` key**, so the permission boundaries that are the whole
+  point of the skill have never been in effect.
+
+  The lesson is narrower than "finish what you start": **a decision that
+  handles one item from a list of two, without saying why the second was
+  left, produces an orphan rather than a deferral.** A deferral has a
+  reopen trigger (ADR-0010 has one). This had nothing.
+- B-015 is the first item here whose subject is **two external file
+  formats**. It exists because the proposed architecture assumed one
+  markdown role file serves every client, and the vendors' current docs say
+  otherwise in six separate respects — including that OpenCode takes agent
+  identity from the *filename* while Claude Code requires a `name` field,
+  and that OpenCode has an explicit `mode: primary|subagent` with no Claude
+  Code equivalent.
+
+  Read alongside B-005, which is the same shape one capability earlier: a
+  criterion assuming cross-client uniformity, found unsatisfiable once
+  tested, resolved by ADR-0006 scoping portability **per capability**.
+  B-015 is that resolution's third application (skills → 2 clients, MCP →
+  3, agents → ?). **The pattern is now established enough to check for
+  proactively**: any new component category should have its portability
+  scoped before its first instance is authored, not after.
+- B-016 was raised by ADR-0016 before it had an ID. That ADR argued against
+  a `hooks/` category and cited this exact situation as its evidence:
+  *"`prompts/` and `agents/` are declared component categories with 3-line
+  stub READMEs and zero tooling. A declared category can exist
+  indefinitely with nothing behind it."* It used the observation to decline
+  new work and, reasonably, did not also fix it.
+
+  Deliberately scoped to **`agents/` only**. `prompts/` stays a 127-byte
+  README: this sprint has a concrete need for agent roles and none for
+  prompt fragments, and extending the work to a second category on the
+  strength of symmetry alone is how a sprint acquires an item nobody asked
+  for. If `prompts/` is ever built out it needs its own justification.
+- B-017 is the only one of the four that is a **genuine capability gap**
+  rather than a defect, a drift, or an orphan. The other three are cleanup
+  the sprint has to do before it can safely build this one.
+
+  `bmad-workflow.md:14-16` has `plan` write a story or spec artifact
+  directly: *"No code is written in this phase."* One pass, one artifact.
+  Nothing generates alternatives, nothing critiques them, and — the part
+  that matters most — **nothing defines when the design is finished.**
+  Without a convergence criterion an "iterate until happy" loop either runs
+  forever or stops arbitrarily, which is precisely why `loops/`' mandatory
+  `## Exit conditions` section is the right home for it and why ADR-0019
+  must settle that the criterion is **explicit human acceptance** rather
+  than a model's self-assessment.

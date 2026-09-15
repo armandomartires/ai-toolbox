@@ -1,162 +1,218 @@
-# Sprint S6 — Ansible agent guardrails
+# Sprint S7 — Design and production agent loops
 
-**Phase 6. Opened 2026-09-14, planning only — no implementation yet.**
-Planned by `PLAN-0003`. The second sprint since S1 to start from a written
-plan rather than a backlog item, and the first to start from a
-human-supplied analysis that had to be corrected before it could be
-built.
+**Phase 7. Opened 2026-09-15, planning only — no implementation yet.**
+Planned by `PLAN-0004`. The third sprint since S1 to start from a written
+plan, and the second in a row to start from a **human-supplied analysis
+that had to be corrected before it could be built** — eight corrections
+this time, against six in S6.
 
-Sprint opened by commit `9528d13` (pushed to `origin/master`, confirmed by
-`git fetch` + `git log origin/master`). That commit contains **no component
-changes** — `skills/`, `mcp-servers/`, `loops/`, `configs/`, `scripts/`,
-`tests/` and `docs/` are all untouched, and `sync-registry.sh` produced no
-diff, which is the correct result for a planning-only commit.
+**Sprint S6 is parked, not closed** (human decision, 2026-09-15). It is
+archived at `.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md`
+with a parking note. Its ten artifacts stay `planned`/`proposed` and
+B-010…B-013 stay **ready** — parking a sprint does not un-scope its
+backlog items. Nothing in S6 was implemented, which is why parking cost
+nothing.
 
 ## What this sprint is for
 
-The `ansible` MCP server has shipped since S1 with **no instruct layer**:
-nothing tells an agent how or when to use it, what this estate's workflow
-is, or which actions need approval. The premise, supplied by the human,
-is that MCP gives connectivity and structured tool use while a skill
-supplies the runbook and hooks supply enforcement.
+Build the two-stage agent system: an **interactive design stage** that
+converges an idea into an accepted, locked brief, and a **largely
+autonomous production stage** that carries that brief through plan,
+implement, test, review and document.
 
-The premise holds. **Its specifics did not survive contact with the
-files**, and six corrections are the substance of `PLAN-0003`. The two
-that matter most:
+The premise — that Claude Code and OpenCode already supply the primitives
+and the gap is orchestration glue, guardrails and CI hooks — holds. **The
+proposed architecture did not survive contact with this machine or with the
+two vendors' current docs.** Three corrections matter most:
 
-- **There is no staging inventory in the target estate, and there cannot
-  be one.** The analysis's central example (`--check --diff -l staging`,
-  then `-l staging`, then production) is unimplementable against a single
-  6-node cluster at 3-of-4 quorum with one inventory file. The real
-  graduated workflow is **`--check --diff` plus snapshot and rollback**.
-  Building from the source text would have produced a runbook gating on
-  an inventory that does not exist.
-- **The pinned MCP server exposes 2 of the 7 capabilities the analysis
-  recommends** — and they are the two destructive ones. `ansible_navigator`
-  has no inventory, limit, `--check` or `--diff` parameter, so it *cannot*
-  perform the safe workflow, while it *can* execute against production.
-  It is disabled by this sprint.
+- **Half the production stage already exists, is owned by another repo, has
+  already drifted, and has never been switched on.**
+  `~/.config/opencode/skills/agent-tiers/` implements
+  `plan → build → qa-test → (fix loop, max 3) → review → git-ops commit`
+  with permission-enforced boundaries that are the real safety control.
+  `opencode-customization`'s own roadmap sequenced `S027` to hand
+  **`project-workflow` and `agent-tiers`** to this repo; ADR-0004 executed
+  that handover for `project-workflow` **only**. Two files differ between
+  the installed copy and its source while both claim `1.0.0`, and the live
+  `~/.config/opencode/opencode.jsonc` contains **no `agent` key at all**.
+  Reclaiming it is Phase 1, and skipping it would have built a fifth copy.
+- **Agent definitions are not portable between clients.** Location,
+  identity, capability gating, primary-vs-subagent, model IDs and nesting
+  **all** differ. The overlap is `description`, `model`, `color` —
+  everything that makes an agent *safe* differs. This is ADR-0006's
+  situation exactly (a criterion assuming cross-client uniformity, found
+  unsatisfiable once tested), and its resolution generalizes: portability
+  is scoped **per capability**. Hence ADR-0018, before any role is written.
+- **Claude Code dynamic workflows cannot do the design stage.** Their own
+  constraints table: *"No mid-run user input — Only agent permission
+  prompts can pause a run. For sign-off between stages, run each stage as
+  its own workflow."* Requirement 1 is an interactive back-and-forth. They
+  are also a Claude-Code-only JS runtime, so anything built on them is
+  unportable by construction. **Excluded from the architecture.**
 
 ## Tasks
 
 | Task | Depends on | Status | What |
 |------|-----------|--------|------|
-| TASK-0026 | — | **planned** | Correct the `WORKSPACE_ROOT` blast-radius claim; disable `ansible_navigator` in 3 snippets; LM Studio → models-only |
-| TASK-0027 | — | **planned** | *Spike.* Lint the two real playbooks on a `/tmp/opencode/` copy; record what degraded; choose the guard's home |
-| TASK-0028 | — | **planned** | *Spike.* Can a Claude Code `PreToolUse` hook match `mcp__ansible__*`? OpenCode's equivalent? Non-blocking |
-| ADR-0014 | TASK-0027 | **proposed** | Accept and narrow the MCP surface; ADR-0010 stays closed |
-| ADR-0015 | TASK-0027 | **proposed** | Portable core + per-project templates; check+snapshot, not staging |
-| ADR-0016 | TASK-0028 | **proposed** | Hooks as a component category — expected "no" |
-| TASK-0029 | ADR-0015 | **planned** | `skills/ansible-ops/` |
-| TASK-0030 | TASK-0029 | **planned** | `loops/ansible-change/` |
-| TASK-0031 | ADR-0016, TASK-0027 | **planned** | The `gather_subset` guard + fixture proofs |
-| TASK-0032 | TASK-0029 | **planned** | Record the target-repo findings; state what was left alone |
+| TASK-0033 | — | **planned** | Park S6; open S7; add ROADMAP Phase 6 **and** 7; add the missing S6 session record; raise B-014…B-017 |
+| TASK-0034 | — | **planned** | *Spike.* Inventory the `agent-tiers` drift. Read-only |
+| ADR-0017 | TASK-0034 | **proposed** | ai-toolbox owns `agent-tiers`. Mirrors ADR-0004 |
+| TASK-0035 | ADR-0017 | **planned** | Import to `skills/agent-tiers/`; resolve drift; bump version; symlink replaces the real dir |
+| TASK-0036 | — | **planned** | *Spike.* Confirm the per-client agent field mapping empirically |
+| ADR-0018 | TASK-0036 | **proposed** | Per-capability portability; one source, per-client **emission**; emission forbids `link` mode |
+| TASK-0037 | ADR-0018 | **planned** | `agents/_template/` + normative schema in `authoring-guide.md`. **Definition before enforcement** |
+| TASK-0038 | TASK-0037 | **planned** | `validate.sh` agent checks, parsed not grepped |
+| TASK-0039 | TASK-0037 | **planned** | `sync-registry.sh`: `extract()` gains `agent`; one `emit_section` line |
+| TASK-0040 | TASK-0037 | **planned** | `install.sh` emission + `CLIENTS` fourth column; 3 config snapshots gain an agents section |
+| ADR-0019 | — | **proposed** | Convergence is **human acceptance**; the autonomy boundary is a pre-merge gate; workflows rejected |
+| TASK-0041 | ADR-0019 | **planned** | `loops/design-brief/` — clarify→ideate→critique→converge, capped, with the acceptance gate |
+| TASK-0042 | TASK-0041 | **planned** | `skills/design-flow/` — portable core + per-project templates |
+| TASK-0043 | TASK-0040, TASK-0042 | **planned** | Roles: `designer-manager` (**primary**), `ideator`, `critic`, `design-doc-writer` |
+| TASK-0044 | ADR-0019, TASK-0035 | **planned** | `loops/project-build/` — from `bmad-workflow.md:8-38`, with the merge gate explicit |
+| TASK-0045 | TASK-0040, TASK-0044 | **planned** | Reconcile `qa-test`/`review`/`git-ops` into `agents/`. **Reconcile, not duplicate** |
+| TASK-0046 | TASK-0043, TASK-0045 | **planned** | **Pilot.** Run both loops to produce S6's `ansible-ops` and `ansible-change` |
 
-Order matters, and for the same reason it did in S5: ground truth before
-decisions, decisions before the canonical shape, enforcement last.
-TASK-0026 and both spikes are mutually independent and may run in
-parallel or in one session — ADR-0012's second decision applies, so
-one-task-one-session remains the default rather than a rule.
+Order follows one principle: **reclaim before authoring, decide before
+authoring, enforce before piloting, pilot last.** Each constraint is a
+defect already paid for — a duplicated skill (ADR-0004), an unsatisfiable
+portability criterion (ADR-0006), an unpoliced category, and unexercised
+scaffolding (ADR-0010). The two Phase-1 spikes are mutually independent;
+so are TASK-0038/0039/0040 once 0037 lands.
 
 ## Decisions taken at plan time — do not re-open
 
-All are human decisions from the planning session, recorded in
-`PLAN-0003`'s "Human decisions required" table with where each binds.
+All from the planning session; recorded in `PLAN-0004`'s "Human decisions
+required" table with where each binds.
 
-1. **MCP surface: accept-and-document.** No Python MCP server. ADR-0010
-   stays closed and its reopen trigger is deliberately not pulled, even
-   though the 2-of-7 gap is exactly the kind of "real reason" that
-   trigger describes. ADR-0014 must close this door explicitly so the
-   next reader who notices the gap does not re-raise it.
-2. **`ansible_navigator` is disabled.** Not a preference — it cannot
-   express the safe workflow and the control venv's own
-   `ansible-playbook` strictly dominates it.
-3. **Option (a) for cross-repo work.** This repo ships portable
-   components. `SIGMA-infrastructure` is **read as evidence and never
-   modified**; its 42 unpushed commits and 4 stale claims are left
-   untouched. Adoption there is that repo's own sprint to open.
-4. **The working guard beats the portable abstraction.** If the guard
-   ships usefully without a new component category, it does.
-5. **Spike linting happens on a `/tmp/opencode/` copy**, not in place.
+1. **S6 is parked, not finished first and not absorbed.** S7 opens now.
+2. **Agent portability is one source with per-client emission** — not
+   OpenCode-only, and not two hand-maintained per-client files.
+3. **The pilot is S6's `ansible-ops` + `ansible-change`.** The loops are
+   exercised by producing real, already-scoped components.
+4. **Dynamic workflows are excluded** (agent decision, ratified by
+   ADR-0019): the vendor's own constraint table rules them out for an
+   interactive stage, and they are single-client.
+5. **`designer-manager` is a primary agent** (agent decision): forced
+   independently by Claude Code's subagent tool filter, which strips
+   `AskUserQuestion` from **every** subagent, and by OpenCode's
+   `subagent_depth: 1`, under which a subagent cannot spawn workers.
 
-## The highest-value item, and why it is not the skill
+## Emission has no freshness check, and cannot have one
 
-`ansible.cfg:21-48` in the target repo carries a capitalised warning that
-`ansible.builtin.setup`'s default fact gathering stats `/etc/pve`, which on
-a node with wedged pmxcfs is an uninterruptible D-state hang that
-`timeout` cannot kill. It records that the intended global fix **does not
-work** (`gather_subset` is rejected in `[defaults]` and silently ignored in
-group_vars — verified empirically, there), that it is a play-level keyword
-only, and then: *"A code-review or CI check should confirm this before that
-playbook is trusted against a live node. **Tracked as unenforced until
-then.**"*
+Decision 2's consequence, stated up front because it looks like an
+oversight later. `install.sh:105` deploys skills with `ln -sfn`, so an edit
+in the repo is live everywhere with no sync step. **A per-client emitted
+agent file cannot be a symlink** — its content differs per client by
+definition. So agents deploy by **generation only**: no `link` mode, no
+`copy` mode.
 
-A written rule, with a node-hanging failure mode, statically checkable,
-enforced by nothing. Unlike every example in the source analysis, it does
-**not** depend on whether hooks can intercept MCP tool calls — so it
-survives TASK-0028 reporting either way. TASK-0031 is the sprint's
-strongest deliverable; everything else is supporting structure.
+That makes an emitted file a fourth copy whose freshness nothing verifies.
+ADR-0009 forbids checking runtime presence — a gate that cannot pass on a
+clean checkout stops being run. The mitigation is that emission is cheap
+and idempotent and `install.sh` is re-run; **not** that a check will catch
+staleness. Anyone who later "fixes" this by adding a presence check to
+`validate.sh` breaks every fresh clone and CI. ADR-0018 must say so
+explicitly.
+
+## The least interesting item, and why it cannot be cut
+
+`agents/README.md` is 141 bytes and the only file in that directory, yet
+`agents/` is named a first-class component category in `AGENTS.md`,
+`README.md`, ADR-0001, `GLOSSARY.md` and `PROJECT_MAP.md`. No template, no
+schema, no `validate.sh` check, no registry section, no `install.sh` path.
+`prompts/` is identical at 127 bytes.
+
+ADR-0016 already recorded this and drew the right conclusion: *"A declared
+category can exist indefinitely with nothing behind it."* Phase 2 is four
+tasks with no user-visible output whose entire justification is that the
+alternative leaves the newest category the **only** one the gate does not
+police, while the other three are all enforced.
+
+**If this sprint has to shrink, the honest cut is Phase 4** — reconciling
+roles that already work where they are — never Phase 2 and never Phase 5.
 
 ## Known limitation, recorded at plan time
 
-**Under Option (a) the skill is authored from the target repo as evidence
-but never executed there during S6.** `ansible-ops` will therefore end
-this sprint in the same epistemic position as `mcp-servers/_template/`:
-plausible, unexercised scaffolding. That is the honest price of clean repo
-ownership.
+**This sprint adds two loops, one skill, seven roles and a whole component
+category. If Phase 5 does not run, all of it is scaffolding** — and the
+sprint would have diagnosed that exact pattern in `agent-tiers` while
+reproducing it. Third instance of the pattern `mcp-servers/_template/`
+established and ADR-0010 recorded.
 
-This is deliberately written down *now*, before the work, because S5's
-equivalent limitation (four tasks in one session leaving the cold-start
-benefit untested) was only stated at its checkpoint. It should be S6's
-headline checkpoint finding.
+That is why the pilot produces real components rather than a throwaway, and
+why **REVIEW-0008's headline question is fixed in advance: did anything get
+exercised?** S5's equivalent limitation was only stated at its checkpoint;
+S6's was stated up front; this one is stated up front *and* given a
+pre-committed review question.
 
 ## Standing constraints
 
-Unchanged, and four bind this sprint directly:
+Unchanged, and five bind this sprint directly:
 
 - `tests/validate.sh` is a commit gate: offline, hermetic, sub-second —
-  all three load-bearing. TASK-0031 validates *other* repos' content, so
-  it likely belongs in `tests/` as its own harness rather than inside the
-  mandatory gate. It must never require the network or an env var.
+  all three load-bearing. TASK-0038 adds checks to it and must measure that
+  it is still sub-second, not assume it.
 - **A check that cannot fail is worse than no check, because it is still
   trusted.** Lesson 8 records that knowing this has not prevented
-  authoring one — twice. The control is TASK-0031's fixture proofs run
-  before the guard is trusted.
-- **No invented size budget for `SKILL.md`** (ADR-0008,
-  `authoring-guide.md:17-21`). To add one, define it there first, in
-  bytes, with a rationale.
-- Destructive changes need explicit human authorization in the task file.
-  TASK-0026 *narrows* an existing authorization rather than widening one,
-  which is the safe direction but still a change to a recorded grant.
+  authoring one — twice. TASK-0038's control is *observing* the new checks
+  fail on malformed fixtures. Note the local trap: on this
+  `core.filemode=false` WSL checkout every file reports `rwxrwxrwx`, which
+  is how an earlier `[ -x ]` check could never fail.
+- **Enforcement follows definition** (ADR-0008). TASK-0037 writes the agent
+  schema into `authoring-guide.md` **before** TASK-0038 enforces any of it,
+  and **no size budget is invented** for any new file type.
+- **Validation checks documentation completeness, never runtime presence**
+  (ADR-0009). Binds TASK-0038 and TASK-0040 directly.
+- `SIGMA-infrastructure` is **read as evidence and never modified**, its
+  unpushed commits untouched. Inherited from S6 and **not relaxed by
+  parking it**; binds the pilot.
 
-## Two gate properties discovered while planning
+## Vendor APIs are a moving target
 
-Both changed this sprint's file layout, and both are worth knowing before
-adding any artifact:
+Every cross-client claim in `PLAN-0004` was **fetched this session, not
+recalled**: `code.claude.com/docs/en/workflows`,
+`code.claude.com/docs/en/sub-agents`, `opencode.ai/docs/agents/`. Both
+clients ship frequently and their docs already carry per-version caveats
+(Claude Code's subagent page qualifies behaviour by patch version in a
+dozen places).
 
-- `tests/validate.sh:456-463` **fails** on any file in `.ai/tasks/` not
-  matching `TASK-####-*.md`. So the two spikes are **numbered task
-  briefs**, not a `SPIKE-####` type. Introducing a new artifact type
-  would have meant weakening the gate for a naming preference.
-- `:402`, `:450-465` require `## Inputs` and `## Outputs / handover`
-  non-empty for every brief ≥ 0020 — **including briefs not yet
-  executed**. Every unexecuted brief in this sprint therefore states an
-  explicitly-labelled *intended* end state. A planned brief cannot
-  describe a real one, and the check cannot tell the difference: it
-  detects omission, not correctness (ADR-0012 Decision 3).
+**TASK-0036 must re-verify against live docs rather than cite this plan**,
+and every ADR must record the date it read what it read. Lesson 7: a claim
+decays between being written and being acted on — and this sprint's claims
+are about *external* state, which decays faster than this repo's own.
 
 ## Out of scope, recorded not hidden
 
-- **Modifying `SIGMA-infrastructure` in any way** — decision 3. Its four
-  stale claims (`.ansible-lint:4`, `.pre-commit-config.yaml:42`,
-  `ci.yml:13,44`, `requirements.yml:4-6`) are recorded by TASK-0032 as
-  evidence and fixed nowhere. Its `ansible-lint` gate has also never had
-  content to lint, which TASK-0027 establishes but does not fix there.
-- **Authoring a Python MCP server** — decision 1.
-- **A `hooks/` component category**, unless ADR-0016 justifies it against
-  TASK-0028's evidence. Note it would need two implementations (Claude
-  Code `settings.json` JSON vs an OpenCode TS plugin), which is a real
-  portability problem under `AGENTS.md`'s "portable across every client
-  that supports its capability."
-- **Retrofitting the `ansible` server to the Python shape.** ADR-0010,
-  unchanged.
+Four items from the source proposal are **rejected**, each because it
+recreates a defect this repo has already paid for. Recorded here so they
+are not re-raised:
+
+- **A second `agent-skills` repo.** ai-toolbox *is* the component library;
+  it has no product code to separate from. A second repo recreates
+  ADR-0004's "three copies all claiming 2.1.0" version-integrity defect.
+- **In-repo `.claude/skills/` and `.claude/agents/`.** This repo is the
+  *source*; `install.sh` deploys outward. Symlinking back inward creates a
+  self-referential fourth copy and a second install path competing with the
+  one `validate.sh` actually checks.
+- **A `workflows/` category.** `loops/` already is "a repeatable multi-step
+  agent workflow", with mandatory `## Exit conditions`, enforced by
+  `validate.sh:193-213` and emitted to the registry. Mandatory exit
+  conditions are precisely what "iterate until the design is accepted"
+  needs in order not to run forever.
+- **`ci-skills-sync.yml`.** Checking that `~/.claude/skills/` matches the
+  repo is machine-specific runtime state; it would fail on every clone and
+  in CI. Forbidden by ADR-0009.
+
+Also out of scope:
+
+- **Modifying `SIGMA-infrastructure`** — S6's decision 3, unchanged.
+- **`opencode-customization`'s retirement of its own `agent-tiers` copy.**
+  ADR-0017 reuses ADR-0004's handling: left as a real, acknowledged gap for
+  that repo's own task, never fixed across a repo boundary.
+- **A `prompts/` category build-out.** `prompts/` stays a 127-byte README.
+  This sprint makes `agents/` real; extending the same treatment to
+  `prompts/` needs its own justification, not momentum.
+- **Applying the BMAD topology to the live global `opencode.jsonc`.**
+  Reclaiming the skill (Phase 1) and switching it on are different acts;
+  the second is a change to live machine configuration and needs its own
+  task and its own authorization.

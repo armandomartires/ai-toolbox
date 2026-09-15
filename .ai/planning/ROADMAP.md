@@ -156,9 +156,125 @@ any agent or human can understand, trust, and deploy.
   keeps the gate and drops the read-order step keeps the part that found
   nothing.
 
+## Phase 6 — Ansible agent guardrails (parked 2026-09-15, not started)
+- Objective: add the **instruct layer** the `ansible` MCP server has
+  lacked since S1 — nothing tells an agent how or when to use it, what the
+  estate's workflow is, or which actions need approval — correct two false
+  claims in this repo's own MCP wiring, narrow that server's blast radius,
+  and ground it all in evidence read from a real Ansible repository
+  without modifying it.
+- Planned by `PLAN-0003`; decisions ADR-0014…0016, all **proposed**, none
+  accepted. Sprint S6, tasks TASK-0026…0032. Raised B-010…B-013.
+- **This section was written on 2026-09-15, by TASK-0033, one sprint
+  late.** The roadmap had no Phase 6 at all: S6 existed in
+  `SPRINT-CURRENT.md`, `TODO.md`, `CURRENT_STATE.md` and `PLAN-0003`, but
+  never here. That is the same roadmap-drift REVIEW-0007 caught for
+  Phase 5 (its header still read "in progress" after completion),
+  recurring one phase later — which is evidence for that review's own
+  finding 6: **the lesson needed a mechanism, not more prose.** No
+  mechanism was added then, and the omission repeated. Recorded rather
+  than quietly backfilled.
+- Exit criteria — **none met; the sprint was parked before implementation
+  began**, so every criterion below is as written on 2026-09-14:
+  - `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
+    execution or system package installation (TASK-0026).
+  - `ansible_navigator` disabled in all three wiring snippets with the
+    reason, and `authorization` re-recorded for the narrowed set
+    (TASK-0026).
+  - `skills/ansible-ops/` and `loops/ansible-change/` exist and pass the
+    gate (TASK-0029, TASK-0030).
+  - The `gather_subset`/`ansible_mounts` guard is **observed failing** on
+    a broken fixture and on an ambiguous `hosts:` case, and observed
+    silent on the two known-good playbooks (TASK-0031).
+  - `SIGMA-infrastructure`'s `git status` byte-identical before and after
+    (all tasks).
+- Status: **parked, not closed and not abandoned** (human decision,
+  2026-09-15, recorded in `PLAN-0004`). Archived at
+  `.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md` with a
+  parking note. All ten artifacts stay `planned`/`proposed`; B-010…B-013
+  stay **ready** — parking a sprint does not un-scope its backlog items.
+  Parking cost nothing precisely because nothing had been implemented.
+- **Phase 7 delivers two of this phase's artifacts.** `TASK-0046` produces
+  `skills/ansible-ops/` and `loops/ansible-change/` *through* Phase 7's
+  new design and build loops, as the pilot that proves those loops work.
+  So this phase's highest-value item (TASK-0031, the guard) remains
+  outstanding while its instruct layer arrives by another route.
+- Limitation recorded at plan time and still true: under Option (a) the
+  skill is authored *from* the target repo but never executed *in* it, so
+  it would end the phase as unexercised scaffolding — the status
+  `mcp-servers/_template/` already carries. Phase 7's pilot is a partial
+  answer to that, since producing a component through a loop at least
+  exercises the loop.
+
+## Phase 7 — Design and production agent loops (in progress, opened 2026-09-15)
+- Objective: build a two-stage agent system — an **interactive design
+  stage** that converges a project idea into an accepted, locked brief,
+  and a **largely autonomous production stage** that carries that brief
+  through plan, implement, test, review and document. Make `agents/` a
+  real component category so the roles involved are enforced rather than
+  unpoliced text.
+- Planned by `PLAN-0004`; decisions ADR-0017…0019, all **proposed**.
+  Sprint S7, tasks TASK-0033…0046. Raised B-014…B-017.
+- The second phase in a row planned from a **human-supplied analysis**
+  rather than a backlog item. Eight of its claims were corrected before
+  planning finished, against six in Phase 6. The three that reshaped the
+  plan: half the production stage already exists unowned and switched off;
+  agent definitions are **not portable** between clients; and Claude Code
+  dynamic workflows cannot accept mid-run user input, so they cannot run
+  an interactive design stage and are excluded.
+- Exit criteria:
+  - `skills/agent-tiers/` exists in this repo, its drift resolved and
+    recorded, version bumped, and the installed copy is a **symlink**
+    rather than the real directory it is today (TASK-0034, ADR-0017,
+    TASK-0035).
+  - ADR-0018 records the per-client agent mapping, the emission
+    mechanism, and **explicitly** that agents have no `link` mode and
+    why — with the further note that no freshness check is possible
+    (ADR-0009) and adding one would break every clone.
+  - `agents/` is a real category: template, a normative schema in
+    `authoring-guide.md` written **before** enforcement, `validate.sh`
+    checks **observed failing** on malformed fixtures, a generated
+    registry section, and an `install.sh` emission path (TASK-0037…0040).
+  - `loops/design-brief/` and `loops/project-build/` both carry a bounded
+    iteration count and an explicit escalation path in
+    `## Exit conditions` (TASK-0041, TASK-0044).
+  - ADR-0019 records the autonomy boundary against the four `AGENTS.md`
+    rules it collides with, and records dynamic workflows as rejected with
+    the vendor's own constraint quoted.
+  - **The pilot ran**: `skills/ansible-ops/` and `loops/ansible-change/`
+    were produced *through* the loops, with the execution log recording
+    where each loop's exit conditions actually fired (TASK-0046).
+- Known limitation, recorded at plan time: this phase adds two loops, one
+  skill, seven roles and a component category. **If the pilot does not
+  run, all of it is scaffolding** — and the phase would have diagnosed
+  that exact pattern in `agent-tiers` while reproducing it. Third instance
+  of the pattern `mcp-servers/_template/` established. Hence REVIEW-0008's
+  headline question is fixed in advance: *did anything get exercised?*
+- Standing caution: Phase 2 of the plan (`agents/` plumbing) has no
+  user-visible output and is the most skippable-looking work in the
+  sprint. ADR-0016 already recorded what "later" has meant for `agents/`
+  and `prompts/`: indefinitely. If the sprint shrinks, the honest cut is
+  role reconciliation, never the plumbing and never the pilot.
+
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec
   evolution. Mitigations: configs/ snapshots, ADR-0002, spec templates.
+- **A phase can be executed without ever appearing on the roadmap.**
+  Phase 6 ran a full planning cycle — a plan, ten artifacts, four backlog
+  items, a sprint file, a commit — while this file went from Phase 5
+  straight to Risks. REVIEW-0007 caught the same class one phase earlier
+  and concluded the lesson needed a mechanism; none was added, and it
+  recurred. Nothing here yet prevents a third instance.
+- **Cross-client claims decay faster than internal ones.** Phase 7's
+  decisions rest on two vendors' current documentation, both of which ship
+  frequently and already qualify behaviour by patch version. A claim about
+  external state must be re-verified at the moment it is acted on, not
+  cited from a plan written days earlier.
+- **An emitted artifact has no owner-of-record at its destination.**
+  Phase 7 introduces generated per-client files that no check can verify
+  are fresh, because ADR-0009 forbids validating runtime presence. The
+  control is idempotent regeneration and nothing else; that is a real
+  weakness, accepted deliberately rather than papered over.
 - **A convention can grow the thing it exists to bound.** Phase 5 adds a
   reference file and template sections to a convention whose entry point
   is already over its own budget. New content goes to the load-on-demand
