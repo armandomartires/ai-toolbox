@@ -8,3 +8,4 @@ build/
 node_modules/
 .DS_Store
 .ai/tasks/completed/archive/
+.pilot-scratch/
