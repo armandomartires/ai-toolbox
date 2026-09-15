@@ -487,5 +487,8 @@ work is known to be necessary rather than presumed.
   boundary the schema could not express — one existed, and the honest
   outcome it asked for (a documented limitation, not a quietly added
   one-client term) is what the guide now carries.
-- Commit: recorded below
-- Push: recorded below
+- Commit: `7ccfa6d`
+- Push: confirmed — `origin/master` at the follow-up commit, verified by
+  re-fetch and by an independent GitHub API read of the remote head.
+  (Hash written *after* committing this time; the prior two sessions each
+  pre-wrote a guess and had to correct it.)

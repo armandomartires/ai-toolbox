@@ -94,4 +94,5 @@ terms, all in one guide section to mirror. Note that the vocabulary is a
 any string — and that `name`↔directory must exempt `_template*` only, as
 the skill rule does.
 
-- Result: TASK-0037 done. Commit and push recorded in the task log.
+- Result: TASK-0037 done. Commit `7ccfa6d` plus a follow-up recording the
+  hash; pushed to `origin/master` and confirmed by re-fetch.
