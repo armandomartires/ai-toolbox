@@ -526,5 +526,5 @@ Two supporting reasons:
   (**option 3**: bring the four roles into `agents/` under ADR-0018, leave
   the PowerShell installer where it was deliberately kept). **The choice is
   the human's**, and TASK-0035 should not start until it is made.
-- Commit: recorded below
-- Push: recorded below
+- Commit: `5078757`
+- Push: confirmed — see below
