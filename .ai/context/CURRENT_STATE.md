@@ -205,11 +205,83 @@ SHA-256. The inverse of lesson 1: the usual risk is a check that cannot
 fail, and here the point was proving a check is genuinely *absent*, so
 TASK-0038 is known-necessary rather than presumed so.
 
-S7 now proceeds on three independent fronts. **TASK-0038, TASK-0039 and
-TASK-0040 are all unblocked and mutually independent**; TASK-0043 sits
-behind TASK-0040, which now also owes the `worktree-only` decision. Phase
-1's remaining spike is `TASK-0034`, still unblocked; ADR-0017 stays
-proposed behind it.
+**Phase 2 is complete. `agents/` is defined, enforced, indexed and
+deployable** (TASK-0037…0040, run in that order after checking they were
+safe to sequence rather than parallelise — see below).
+
+- **TASK-0039 (registry)** — two lines plus a comment, which is what B-007's
+  centralization was for. Three things proven rather than assumed: the
+  template's exclusion comes from **the central skip** (shown by disabling
+  it and watching all five templates appear), the section genuinely
+  **populates** (a temporary fixture, since an empty header looks correct
+  either way), and the registry-integrity checks **extend automatically**
+  (observed failing in both directions with correct section attribution).
+- **TASK-0038 (the gate)** — a ninth check group, **17 rules each observed
+  failing** on a single-rule fixture plus a valid control. `agents/` is no
+  longer the only unpoliced category. Runtime 654→606 ms, still sub-second,
+  with linear scaling in role count recorded as a known property.
+- **TASK-0040 (emission)** — `scripts/emit-agents.py` plus a fourth
+  `CLIENTS` column. **All nine capability terms proven per client: four map,
+  five refuse for Claude Code** with the remedy named. ADR-0018 clause 8 is
+  now executable rather than aspirational.
+
+**Three findings from the sequence that matter beyond it:**
+
+1. **A finding travelled between tasks and was closed by the next one.**
+   TASK-0039 discovered that a folded `description: >-` reaches the registry
+   as the literal `>-` with the text dropped — and **`validate.sh` passes
+   it**, because the column count is still right. It could not fix that
+   (wrong task's file), so it handed it to TASK-0038, which now rejects
+   folded descriptions two ways. Worth noting the shape: the defect was
+   invisible to the check that "covers" the registry.
+2. **A fixture harness was unsound on its first run, and its output looked
+   like success.** TASK-0038's 17 fixtures each violated the name↔directory
+   rule *as well as* their target rule, so every case failed — for the wrong
+   reason. A careless reading records "17 for 17 proven". Fixed and re-run
+   so each case emits exactly one message. **A fixture meant to isolate one
+   rule can violate several, and then the failure proves nothing about the
+   rule under test.**
+3. **The three tasks were dependency-independent but not safely
+   concurrent**, which is why they were sequenced after checking rather than
+   run in parallel as first proposed. Two would have edited
+   `tests/validate.sh`; and TASK-0038's `agents/_fixture-*` directories are
+   **not** covered by the `_template*` skip, so a concurrent TASK-0039
+   regeneration would have committed fixture rows into `docs/registry.md`.
+   Verified directly — the fixture *did* appear in the registry while it
+   existed. In the event TASK-0040 needed **no** `validate.sh` change at
+   all, so the file collision never materialised, but that was not knowable
+   in advance.
+
+**Two decisions the plan assigned to TASK-0040, both recorded with
+reasoning rather than improvised:**
+- **`worktree-only` emits Claude Code's `isolation: worktree`.** Not
+  equivalent to OpenCode's `external_directory: deny` — refusal versus
+  redirection into an isolated *copy*. Emitted anyway because all four
+  existing roles declare the term, so refusing would have made every one of
+  them OpenCode-only and left the Claude Code emitter dead on arrival. **The
+  weakest mapping in the vocabulary; re-examine it first** if roles ever
+  behave differently across clients.
+- **ADR-0018 clause 7: the emitter emits `{tier:<name>}` and never resolves
+  it**, so `models.jsonc` remains the single owner of tier→model. Cleaner
+  because `skills/agent-tiers/` is not even in the repo yet (TASK-0035 is
+  blocked), so the emitter could not read it — and resolving tiers itself
+  would have created a second owner the moment TASK-0035 lands.
+
+**Emission's two accepted weaknesses, both documented in the client
+READMEs rather than patched:** no freshness check is possible (ADR-0009
+forbids checking runtime presence, so re-running `install.sh` *is* the
+control), and **nothing prunes a stale emitted file** — demonstrated by
+emitting a fixture role, deleting it, re-running, and finding the emitted
+file still live. An installer that deletes from a user's config directory
+needs its own decision, not a convenience.
+
+S7 now proceeds on two fronts. **TASK-0043 (design roles) is unblocked** —
+Phase 2 was its only remaining dependency — and TASK-0044 is independent of
+all of it. Phase 1's spike `TASK-0034` is still unblocked; ADR-0017 stays
+proposed behind it. `agents/` holds **no real role yet**, and both client
+agents directories are **empty**: the plumbing is complete and entirely
+unexercised, which is exactly the state REVIEW-0008's pre-committed
+question is about.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at

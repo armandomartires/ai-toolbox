@@ -41,6 +41,48 @@ readlink -f ~/.config/opencode/skills/project-workflow
 grep -m1 version ~/.config/opencode/skills/project-workflow/SKILL.md
 ```
 
+## Agents
+
+Deployed by the same command as skills; there is no separate step.
+
+```bash
+bash scripts/install.sh --client opencode
+```
+
+Agents are **emitted, not linked** (ADR-0018). A role is authored once in
+`agents/<role>/agent.md` with an *abstract* capability profile, and
+`scripts/emit-agents.py` generates an OpenCode-native file at
+`~/.config/opencode/agents/<role>.md`. The `link`/`copy` mode applies to
+skills only: an emitted file's content differs per client by definition, so
+it cannot be a symlink to one source.
+
+The directory is `~/.config/opencode/agents/` (**plural**). TASK-0036
+observed that OpenCode discovers **both** `agents/` and the undocumented
+singular `agent/`; this repo writes the documented plural. Do not "fix" a
+singular directory found in place. It is created under an existing
+`~/.config/opencode`; if that is absent the client is skipped and nothing
+is created.
+
+**Currently deployed: none.** No real role exists yet (TASK-0043,
+TASK-0045); `agents/_template/` is never emitted.
+
+All nine capability terms are expressible here, via the `permission` model —
+which is why an OpenCode-only role is a legitimate outcome rather than a
+degradation. Note that `permission` glob rules are **last-match-wins**, so
+the emitter writes the broad rule (`"*"`) first and the specific ones after;
+reordering an emitted file changes its meaning.
+
+**Emission writes role files only. It never touches `opencode.jsonc`** — no
+`agent` key is added, and the `agent-tiers` BMAD topology stays unapplied.
+Those are separate acts needing their own authorization.
+
+**Two known properties of emission**, both deliberate:
+- **No freshness check exists or may be added.** The emitted file is a copy
+  outside the repo; nothing verifies it is current. ADR-0009 forbids
+  validating runtime presence, so the control is re-running `install.sh`.
+- **Nothing prunes a stale emitted file.** Deleting a role from the repo
+  leaves `~/.config/opencode/agents/<role>.md` in place. Remove it by hand.
+
 ## MCP servers
 
 Add to `~/.config/opencode/opencode.json` (or `opencode.jsonc`).

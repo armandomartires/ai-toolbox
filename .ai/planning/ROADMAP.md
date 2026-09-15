@@ -220,9 +220,15 @@ any agent or human can understand, trust, and deploy.
   **ADR-0018 accepted** 2026-09-15 on TASK-0036's evidence, with clause 2's
   reasoning replaced and a new clause 8; **ADR-0017 still proposed**,
   blocked on TASK-0034.
-- Progress: TASK-0041, TASK-0042 and TASK-0036 **done**. TASK-0037 is now
-  the critical path — 0038/0039/0040 are mutually independent behind it,
-  and TASK-0043 sits behind 0040.
+- Progress: TASK-0036, TASK-0037, TASK-0038, TASK-0039, TASK-0040,
+  TASK-0041 and TASK-0042 **done**. **Phase 2 of the plan (`agents/`
+  plumbing) is complete**: the category is defined, enforced, indexed and
+  deployable. `TASK-0043` (design roles) is now **unblocked** — Phase 2 was
+  its only remaining dependency. `TASK-0044` is independent. `TASK-0034`
+  remains the open Phase-1 spike, with ADR-0017 proposed behind it.
+  **`agents/` holds no real role and both client agents directories are
+  empty** — the plumbing is complete and wholly unexercised, which is the
+  standing caution below and REVIEW-0008's pre-committed question.
 - The second phase in a row planned from a **human-supplied analysis**
   rather than a backlog item. Eight of its claims were corrected before
   planning finished, against six in Phase 6. The three that reshaped the
@@ -249,6 +255,11 @@ any agent or human can understand, trust, and deploy.
     `authoring-guide.md` written **before** enforcement, `validate.sh`
     checks **observed failing** on malformed fixtures, a generated
     registry section, and an `install.sh` emission path (TASK-0037…0040).
+    **Met 2026-09-15**, every clause including the hard one: 17 checks each
+    observed failing on a fixture violating exactly that rule, plus a valid
+    control so the group is proven not to fail unconditionally. Note what
+    the criterion does **not** require and therefore does not certify —
+    that any of it has been exercised by a real role. It has not.
   - `loops/design-brief/` and `loops/project-build/` both carry a bounded
     iteration count and an explicit escalation path in
     `## Exit conditions` (TASK-0041, TASK-0044).

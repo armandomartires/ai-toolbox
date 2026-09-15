@@ -26,6 +26,45 @@ Currently deployed: `project-migration`, `project-workflow`. Templates
 replaced only when this repo owns a skill of that name, and the
 replacement is announced — skills this repo does not own are left alone.
 
+## Agents
+
+Deployed by the same command as skills; there is no separate step.
+
+```bash
+bash scripts/install.sh --client claude-code
+```
+
+Agents are **emitted, not linked** (ADR-0018). A role is authored once in
+`agents/<role>/agent.md` with an *abstract* capability profile, and
+`scripts/emit-agents.py` generates a Claude Code-native file at
+`~/.claude/agents/<role>.md`. The `link`/`copy` mode applies to skills only:
+an emitted file's content differs per client by definition, so it cannot be
+a symlink to one source.
+
+The directory is `~/.claude/agents/` — confirmed by observation in
+TASK-0036, not from documentation alone. It is created under an existing
+`~/.claude`; if `~/.claude` is absent the client is skipped and nothing is
+created.
+
+**Currently deployed: none.** No real role exists yet (TASK-0043,
+TASK-0045); `agents/_template/` is never emitted.
+
+Capability terms map to `disallowedTools` plus, for `worktree-only`,
+`isolation: worktree`. Five of the nine terms — `test-files-only`,
+`bash-allowlist`, `no-force-push`, `push-requires-confirmation`,
+`webfetch-requires-confirmation` — **cannot be enforced per-agent here**,
+because `tools`/`disallowedTools` gate whole tools and Claude Code has no
+third `ask` state. A role declaring one of them for this client makes
+emission **fail loudly** rather than emit a file with the boundary dropped
+(ADR-0018 clause 8). Narrow such a role's `clients` list to `opencode`.
+
+**Two known properties of emission**, both deliberate:
+- **No freshness check exists or may be added.** The emitted file is a copy
+  outside the repo; nothing verifies it is current. ADR-0009 forbids
+  validating runtime presence, so the control is re-running `install.sh`.
+- **Nothing prunes a stale emitted file.** Deleting a role from the repo
+  leaves `~/.claude/agents/<role>.md` in place. Remove it by hand.
+
 ## MCP servers
 
 `scripts/install.sh` prints the launch command for every server, read from

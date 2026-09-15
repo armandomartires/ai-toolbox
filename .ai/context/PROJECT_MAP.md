@@ -22,5 +22,10 @@
   `mcp-servers/*/server.json` manifests (ADR-0005). Templates are
   excluded from the MCP table.
 - Data flow: repo (git) → scripts/install.sh → client skill dirs/configs.
+  Skills travel by **symlink** (one file, live everywhere). Agents travel by
+  **generation**: `install.sh` calls `scripts/emit-agents.py`, which reads
+  `agents/<role>/agent.md` and writes a client-native file per client
+  (ADR-0018). No `link`/`copy` mode for agents, no freshness check possible
+  (ADR-0009), and nothing prunes a stale emitted file.
 - Fragile/unknown areas: cross-client config formats drift; revisit
   configs/ after client updates.

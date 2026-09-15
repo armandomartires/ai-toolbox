@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Deploy skills to agent clients and print MCP registration commands.
+# Deploy skills to agent clients, emit agent roles, and print MCP
+# registration commands.
 #
 # Usage: install.sh [link|copy] [--client claude-code|opencode|all]
 #
 # link (default) symlinks skills into each client's skills dir, per
 # ADR-0002's symlink-first preference; copy is the fallback for checkouts
-# where symlinks are unavailable.
+# where symlinks are unavailable. The mode applies to SKILLS ONLY: agents
+# are generated per client (ADR-0018), so they have no link or copy mode.
 #
 # Overwrite policy (TASK-0006): a client target is replaced only when this
 # repo owns a skill of that name, and replacing a pre-existing non-symlink
@@ -32,10 +34,22 @@ done
 # Clients this script can deploy skills to. tests/validate.sh reads these
 # names from here and requires configs/<name>/README.md for each, so the
 # names must match the configs/ directory names exactly.
-# name|skills target dir|parent dir that must already exist
+#
+# A fourth column (agents target) rather than a second table: the gate's
+# parse anchors on the FIRST field (`grep -oE '^[a-z0-9_-]+\|'`), so extra
+# columns are invisible to it, and the loop below reads fields positionally
+# with `IFS='|' read`. Both verified before choosing (TASK-0040). A second
+# table would have introduced a second list of client names that could
+# disagree with this one — the defect the config-pairing check exists to
+# prevent, reintroduced one level up.
+#
+# The agents directory names are TASK-0036's OBSERVED values, not the
+# documented ones: OpenCode discovers both `agents/` (documented) and
+# `agent/` (undocumented), and this repo writes the documented plural.
+# name|skills target dir|parent dir that must already exist|agents target dir
 CLIENTS="
-claude-code|${HOME}/.claude/skills|${HOME}/.claude
-opencode|${HOME}/.config/opencode/skills|${HOME}/.config/opencode
+claude-code|${HOME}/.claude/skills|${HOME}/.claude|${HOME}/.claude/agents
+opencode|${HOME}/.config/opencode/skills|${HOME}/.config/opencode|${HOME}/.config/opencode/agents
 "
 # LM Studio is intentionally absent: its hub/skills directory is not an
 # Agent Skills target. It is configured for MCP only - see
@@ -76,7 +90,7 @@ if [ -d .githooks ] && git rev-parse --git-dir >/dev/null 2>&1; then
 fi
 
 deployed_any=0
-while IFS='|' read -r client target parent; do
+while IFS='|' read -r client target parent agents_target; do
   [ -n "$client" ] || continue
   case "$WANT_CLIENT" in
     all) ;;
@@ -107,6 +121,35 @@ while IFS='|' read -r client target parent; do
     esac
     echo "skill deployed: $name -> $client ($MODE)"
   done
+
+  # Agents are EMITTED, never linked (ADR-0018 clause 3): a per-client file's
+  # content differs by definition, so it cannot be a symlink to one source.
+  # $MODE deliberately does not apply here — there is no link or copy mode
+  # for agents.
+  #
+  # NO FRESHNESS CHECK EXISTS OR MAY BE ADDED. Emission creates a copy
+  # outside the repo whose currency nothing verifies; that is an accepted
+  # weakness, not an oversight. ADR-0018 clause 4: "anyone who later 'fixes'
+  # this by checking the deployed copy breaks every fresh clone and CI."
+  # ADR-0009: "a gate that cannot pass on a clean checkout stops being run,
+  # and a gate that is not run is worse than no gate, because it is still
+  # trusted." The control is that this is cheap and idempotent — re-run it.
+  #
+  # Nothing prunes a stale emitted file either: deleting a role here leaves
+  # its agent live in both clients. Recorded, not silently patched — an
+  # installer that deletes files from a user's config directory needs its own
+  # decision, not a convenience.
+  #
+  # Exits non-zero if emission is REFUSED for a declared capability the
+  # client cannot enforce (clause 8). That failure is intentional and must
+  # not be softened to a warning.
+  if [ -d agents ]; then
+    mkdir -p "$agents_target"
+    python3 scripts/emit-agents.py "$client" "$agents_target" || {
+      echo "agent emission failed for $client" >&2
+      exit 1
+    }
+  fi
 done <<EOF
 $CLIENTS
 EOF

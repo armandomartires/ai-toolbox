@@ -199,8 +199,16 @@ Phase 2 — make `agents/` a real category (0037 strictly first; then
       empty header. **Finding handed to TASK-0038:** a folded
       `description: >-` produces a valid-looking registry row containing
       the literal `>-`, and nothing currently detects it)
-- [ ] TASK-0040 — `install.sh` emission + `CLIENTS` fourth column; 3 config
-      snapshots gain an agents section
+- [x] TASK-0040 — `install.sh` emission + `CLIENTS` fourth column; 3 config
+      snapshots gain an agents section (done — emitter is a separate
+      `scripts/emit-agents.py`. **`validate.sh` needed no change**: its
+      `CLIENTS` parse anchors on field 1, so extra columns are invisible to
+      it — measured before choosing the shape. All 9 capability terms proven
+      per client: 4 map, **5 refuse** for Claude Code rather than degrade.
+      Two assigned decisions recorded: `worktree-only` emits
+      `isolation: worktree`; the emitter emits `{tier:<name>}` and never
+      resolves it. **Phase 2 complete** — `agents/` is defined, enforced,
+      indexed and deployable)
 
 Phase 3 — the design half (the genuine capability gap):
 - [x] ADR-0019 — Convergence is **human acceptance**; autonomy stops at the

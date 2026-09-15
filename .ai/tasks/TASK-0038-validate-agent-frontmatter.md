@@ -437,5 +437,6 @@ property rather than a problem now.
   vocabulary, and cannot confirm the emitter will honour it. That is
   ADR-0018's accepted weakness, restated in the group's own comment rather
   than left implicit.
-- Commit: recorded below
-- Push: recorded below
+- Commit: `e0e9d68`
+- Push: pushed with the sequence's other Phase-2 commits; confirmed by
+  re-fetch and an independent GitHub API read.

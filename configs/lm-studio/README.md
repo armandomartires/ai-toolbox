@@ -25,6 +25,23 @@ therefore exempt from the `configs/<client>/README.md` pairing that
 `tests/validate.sh` enforces for deployable clients — it is documented
 here as a config-only client.
 
+## Agents — not supported
+
+`scripts/install.sh` does not emit agent roles here, for a stronger reason
+than the skills case above: LM Studio **supplies models and performs no
+agentic work**, so it has nothing an agent role would configure. There is no
+directory to guess at.
+
+ADR-0006 settled the general rule — portability is scoped **per
+capability**, not promised globally — and ADR-0018 extends it to agents:
+the agent capability spans Claude Code and OpenCode only, the same two
+clients as skills. This is not a gap awaiting work; it is the correct end
+state for this client.
+
+Consistent with the skills position, LM Studio stays absent from
+`install.sh`'s client list and therefore from the fourth (agents target)
+column added in TASK-0040.
+
 ## MCP servers
 
 LM Studio reads `mcp.json`. On this machine it lives at
