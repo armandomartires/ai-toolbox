@@ -69,5 +69,5 @@ above — that is the next unit of work, and it is a ratification, so it is
 the human's call. TASK-0034 remains the other unblocked Phase 1 spike.
 Phase 2 (TASK-0037) unblocks once ADR-0018 is accepted.
 
-- Result: TASK-0036 done. Commit `46c4c10`, pushed to `origin/master`
-  and confirmed by re-fetch.
+- Result: TASK-0036 done. Commit `724f62c` (plus a follow-up recording the
+  hash), pushed to `origin/master` and confirmed by re-fetch.

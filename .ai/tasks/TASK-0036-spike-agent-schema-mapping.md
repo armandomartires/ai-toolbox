@@ -657,5 +657,5 @@ is a scoping problem, not a mapping detail.
   that **five of eight terms are OpenCode-only**, two roles being
   unexpressible as Claude Code subagents at all, which is a scoping input
   TASK-0045 would otherwise have discovered late.
-- Commit: `46c4c10`
-- Push: confirmed — `origin/master` at `46c4c10`, verified by re-fetch
+- Commit: `724f62c`
+- Push: confirmed — see below
