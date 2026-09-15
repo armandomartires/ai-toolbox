@@ -3,6 +3,27 @@
 ## Status
 Accepted (2026-09-13)
 
+> **Superseded in part by ADR-0020, 2026-09-15.** The **client findings
+> below are false** and are left as written, because an ADR is a dated
+> record rather than a live status page.
+>
+> The client is **Bionic** (LM Studio's agent-oriented workspace, 1.1.1+5),
+> and it **does** have an Agent Skills target — `~/.lmstudio/skills/`
+> (global) and `<project>/.agents/skills/` (project), documented in Bionic's
+> own bundled `skill-management/SKILL.md:23-25`. It **does** perform agentic
+> work: its bundle carries `lmstudio/exploration-subagent-v1`,
+> `lmstudio/coder-yolo-subagents`, and `lmstudio/coder-v0-yolo-subagents`.
+>
+> The error was checking `~/.lmstudio/hub/skills/` — a *hub cache*, sibling
+> to `hub/models` and `hub/presets` — and reading absence of evidence there
+> as evidence of absence across the client. The reopening condition at
+> `:59-62` below is what made this correction checkable, and it is met.
+>
+> **The loops half of this ADR is unaffected and still stands**: loops are
+> authored here, not ported. Skills remain undeployed to this client, but
+> for the narrower reason ADR-0020 gives — global installs are
+> approval-gated (`SKILL.md:31`), not absent.
+
 ## Context
 Two roadmap statements written at scaffold time turned out to be
 unsatisfiable once tested against reality. Both were found by

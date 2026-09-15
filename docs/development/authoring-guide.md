@@ -105,8 +105,10 @@ possible** — ADR-0009 forbids validating runtime presence, so the control
 is that emission is cheap, idempotent, and re-run. Do not add a check that
 inspects a deployed agent file; it would fail on every clean clone.
 
-The agent capability spans **Claude Code and OpenCode only**. LM Studio
-supplies models and performs no agentic work (ADR-0006).
+The agent capability spans **Claude Code and OpenCode only**. Bionic (LM
+Studio's agent-oriented workspace) *is* agentic and does have subagents, but
+no user-authored agent-role directory has been found in it, so there is no
+surface to emit into (ADR-0020).
 
 | Rule | Detail |
 |------|--------|

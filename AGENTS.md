@@ -5,8 +5,10 @@ Collect, develop, validate, and deploy AI customization tools (skills,
 MCP servers, loops, prompts, agent roles). Every component must be
 self-contained and portable across every client that supports its
 capability: skills to Claude Code and OpenCode; MCP servers to those two
-and LM Studio, which is MCP-only (ADR-0006). Out of scope: application
-code, public services, secrets.
+and Bionic, LM Studio's agent-oriented workspace (ADR-0020). Bionic *has*
+an Agent Skills target, but its global installs are approval-gated, so
+nothing is auto-deployed there yet. Out of scope: application code, public
+services, secrets.
 
 ## Security and secrets
 - Never commit secrets, tokens, passwords, private keys, or `.env` files.

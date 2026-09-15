@@ -102,7 +102,7 @@ of detecting its own failure case.
 |--------|---------------|------------------------|
 | Claude Code | `~/.claude/skills/` | yes |
 | OpenCode | `~/.config/opencode/skills/` | yes |
-| LM Studio | none (no Agent Skills target) | no — MCP config only |
+| Bionic (LM Studio) | `~/.lmstudio/skills/` global · `<project>/.agents/skills/` project | no — global installs are approval-gated (ADR-0020) |
 
 `install.sh` replaces a client-side skill only when this repo owns a skill
 of that name, and announces replacing any pre-existing real directory.
@@ -140,23 +140,40 @@ Only `initialize` is ever sent. Tools are never invoked — ansible's surface
 includes playbook execution and OS package installation, and a smoke test
 must never be the thing that runs a playbook.
 
-## Verifying an MCP server in LM Studio's UI (human procedure)
+## Verifying an MCP server in an LM Studio app's UI (human procedure)
 
 The one verification step no script can perform. `tests/smoke-mcp.sh`
-proves a server *speaks MCP*; it cannot prove LM Studio **lists the
-server's tools in its own interface**, because that needs the desktop GUI
-running. This procedure exists so that gap is closeable on demand rather
-than rediscovered each sprint (TASK-0016).
+proves a server *speaks MCP*; it cannot prove the app **lists the server's
+tools in its own interface**, because that needs the desktop GUI running.
+This procedure exists so that gap is closeable on demand rather than
+rediscovered each sprint (TASK-0016).
 
-Status: **`mcp-servers/ansible` has now passed this procedure**
-(2026-09-13, TASK-0017). It is kept as the reference procedure for the next
-server, and because it caught a real defect — see step 7.
+Status, per client — the two are **not** interchangeable (ADR-0020):
 
-**1. Add the server entry.** LM Studio is installed Windows-side, so from
-WSL the file is at `/mnt/c/Users/<user>/.lmstudio/mcp.json` (in the app:
-Program ▸ Install ▸ Edit `mcp.json`). Back it up first, then paste the
-`ansible` block from `configs/lm-studio/README.md` — copy it from there
-rather than retyping, so the pinned version stays correct.
+| App | Status |
+|---|---|
+| Classic LM Studio 0.4.24 | **passed** 2026-09-13 (TASK-0017), `qwen3.8 27b` enumerated the tools |
+| **Bionic 1.1.1+5** | **open — never run.** Bionic reading `~/.lmstudio/mcp.json` is inferred from the shared data root, not verified |
+
+**Run this against Bionic.** It is the outstanding human action from
+TASK-0047. Both apps may be installed simultaneously (Bionic at
+`~/AppData/Local/Programs/Bionic/`, classic at `C:\Program Files\LM Studio\`),
+so **note which one you opened** — recording a Bionic pass from a classic
+window is the exact error TASK-0047 was written to undo.
+
+Kept as the reference procedure for the next server, and because it caught a
+real defect — see step 7.
+
+**1. Add the server entry.** Both apps are installed Windows-side and share
+one config, so from WSL the file is at
+`/mnt/c/Users/<user>/.lmstudio/mcp.json`. Back it up first, then paste the
+`ansible` block from `configs/lm-studio-bionic/README.md` — copy it from
+there rather than retyping, so the pinned version stays correct.
+
+If the entry does not appear in Bionic, check whether Bionic has begun
+reading `ng-mcp.json` instead: both binaries contain that string literal,
+and it is dormant as of 2026-09-15. Finding it live is a real result —
+record it in `configs/lm-studio-bionic/README.md`.
 
 **2. Replace `WORKSPACE_ROOT` before starting the app.** A separate step
 because skipping it is not hypothetical: the first run of this procedure
@@ -174,8 +191,8 @@ before continuing:
 ls -d /your/chosen/workspace     # must succeed
 ```
 
-**3. Restart LM Studio.** It reads `mcp.json` at startup; an edit made
-while running may not be picked up.
+**3. Restart the app.** It reads `mcp.json` at startup; an edit made while
+running may not be picked up.
 
 **4. Check the tool list.** Open a chat with any loaded model and look at
 its tools/integrations panel, or simply ask the model what tools the server
@@ -196,11 +213,12 @@ server exposes a meta-tool: ansible exposes 10, of which
 `list_available_tools` enumerates the other 9, so a model asked to list
 "available tools" reasonably reports 9. Reconcile before assuming drift.
 
-**6. Record the result — pass or fail.** Update the `Verified` row in
-`configs/lm-studio/README.md` and the verification note at the end of its
-ansible section. A failure is a legitimate, useful outcome: it would mean
-this repo's LM Studio wiring is wrong, which is worth knowing. Do not
-overwrite the existing handshake-level evidence; add to it.
+**6. Record the result — pass or fail, and name the app and version.**
+Update the `Verified (MCP)` row in `configs/lm-studio-bionic/README.md` and
+the "Bionic MCP status" section. A failure is a legitimate, useful outcome:
+it would mean this repo's wiring is wrong, which is worth knowing. Do not
+overwrite the existing handshake-level evidence, and do not overwrite the
+classic-0.4.24 attribution; add to it.
 
 **7. Re-check `WORKSPACE_ROOT` after a pass.** Not redundant with step 2 —
 this is the step the first run of this procedure needed and did not have.

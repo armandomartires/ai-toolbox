@@ -266,6 +266,17 @@ Clause 8 is new and is the substantive addition from `TASK-0036`.
    is excluded by ADR-0006's logic and stays absent from the emission target
    list, as it is absent from the skills list.
 
+   > **Re-grounded by ADR-0020, 2026-09-15.** The *conclusion* stands; the
+   > *reason* given here does not. ADR-0006's logic is falsified — the client
+   > is Bionic, it has an Agent Skills target, and it performs agentic work
+   > (its bundle carries `lmstudio/exploration-subagent-v1` and two
+   > `coder-*-subagents` entries). The exclusion now rests on a narrower
+   > observation: **no user-authored agent-role directory has been found** in
+   > Bionic, of the kind `~/.claude/agents/` and
+   > `~/.config/opencode/agents/` are. Its subagents appear built-in and
+   > internally named, so there is no surface to emit into — a findable gap,
+   > not an absent capability.
+
 7. **Model references belong in one place.** `agent-tiers`' `models.jsonc`
    already solved this for OpenCode with `{tier:<name>}` placeholders
    substituted at install time. Whether the emitter reuses that file or

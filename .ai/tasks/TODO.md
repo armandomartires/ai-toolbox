@@ -302,6 +302,23 @@ Phase 5 — exercise it:
 - [ ] TASK-0046 — **Pilot.** Run both loops to produce S6's `ansible-ops`
       and `ansible-change` (needs TASK-0043, TASK-0045). **The task that
       decides whether S7 delivered anything**
+      (Its task file has been `done` since 2026-09-15 with a recorded
+      commit and push. This box is unticked in error — the *second* instance
+      of the TASK-0019 omission class noted below, found by TASK-0047 while
+      reading this file. Left unticked deliberately: correcting it belongs
+      to a commit about the pilot, not to a commit about client naming.)
+
+Out of sprint — corrections found by inspection:
+- [x] TASK-0047 — The LM Studio client is **Bionic**;
+      `configs/lm-studio` → `configs/lm-studio-bionic`. ADR-0020 supersedes
+      ADR-0006's client findings: Bionic **does** have an Agent Skills
+      target (`~/.lmstudio/skills/`, `<project>/.agents/skills/`) and
+      **does** perform agentic work. The old claim rested on the
+      `hub/skills/` cache. Raised B-018; retracted B-005's stated reason;
+      re-grounded ADR-0018 clause 6. The 2026-09-13 UI pass is re-attributed
+      to **classic LM Studio 0.4.24**, which is installed alongside Bionic;
+      Bionic's MCP support is *inferred, not verified*, with a GUI check
+      left open in the runbook (done)
 
 Notes on S7:
 - **The second sprint in a row planned from a human-supplied analysis.**

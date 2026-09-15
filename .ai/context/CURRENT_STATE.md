@@ -1,10 +1,53 @@
 # Current State
 
-Last updated 2026-09-15, after **TASK-0046 ran S7's pilot: both loops were
-executed end to end**, producing `skills/ansible-ops/` and
-`loops/ansible-change/` plus an accepted, locked design brief. S7's five
+Last updated 2026-09-15, after **TASK-0047 corrected the identity and
+capabilities of the third client** (below). Before that, TASK-0046 ran S7's
+pilot: both loops were executed end to end, producing `skills/ansible-ops/`
+and `loops/ansible-change/` plus an accepted, locked design brief. S7's five
 phases are complete and **exercised**; S6 remains parked, but its TASK-0029
 and TASK-0030 are now delivered.
+
+## The third client is Bionic, and two findings about it were false
+
+**TASK-0047 / ADR-0020, 2026-09-15.** A human noticed that
+`configs/lm-studio` should name **Bionic** — LM Studio's agent-oriented
+workspace — not the classic local-LLM desktop app. The premise held, and
+checking it falsified two claims this repo had relied on since 2026-09-13:
+
+- **Bionic *does* have an Agent Skills target**: `~/.lmstudio/skills/`
+  (global) and `<project>/.agents/skills/` (project), documented in Bionic's
+  own bundled `skill-management/SKILL.md:23-25`. ADR-0006 concluded there
+  was none, resting on `~/.lmstudio/hub/skills/` — a *hub cache*, sibling to
+  `hub/models` and `hub/presets`. Absence of evidence in one directory was
+  recorded as absence across the client.
+- **Bionic *does* perform agentic work.** `configs/`' claim that it "supplies
+  models and performs no agentic work" was inverted: its bundle carries
+  `lmstudio/exploration-subagent-v1` plus two `coder-*-subagents` entries,
+  with projects, session transcripts, a permissions store and `bionic_tool`
+  dispatch.
+
+Skills still are not deployed there, but for a **narrower, real reason**:
+global installs are approval-gated (`SKILL.md:31`, "DO NOT edit global
+skills directly"), which `install.sh` cannot drive non-interactively.
+Project skills *are* writable — raised as **B-018**. No agent roles are
+emitted either, now because **no user-authored agent-role directory has been
+found**, not because the client is inert (ADR-0018 clause 6 re-grounded).
+
+Two things worth carrying forward:
+
+1. **Classic LM Studio 0.4.24 is still installed** at
+   `C:\Program Files\LM Studio\`, alongside Bionic 1.1.1+5. They are modelled
+   as one `configs/` entry by human decision, and the 2026-09-13 UI
+   verification is credited to **classic**, where it was earned. Bionic is
+   marked unverified rather than inheriting a pass it never took.
+2. **No check in this repo could have caught this, and none realistically
+   can.** It survived four tasks (0006, 0007, 0016, 0017) and two reviews,
+   and was caught by a human reading a product name. The standing defence is
+   that capability claims about third-party clients must cite vendor
+   documentation or a version-stamped observation, so the next reader can
+   re-check them cheaply — and that directory-name inference is not evidence
+   **in either direction**, which is the generalisation ADR-0006 was one
+   step short of making.
 
 ## Sprint S7 is open; S6 is parked with zero implementation
 
@@ -761,6 +804,12 @@ file layout:
 - **All three clients are now fully verified** for the ansible MCP server:
   Claude Code `✔ Connected`, OpenCode in live use, and LM Studio verified
   in its own UI (not merely at handshake level).
+  **Amended 2026-09-15 (TASK-0047, ADR-0020):** the third client is
+  **classic LM Studio 0.4.24**, which is what that UI check actually
+  exercised. The client this repo now targets is **Bionic 1.1.1+5**, a
+  separate app installed alongside it, and Bionic is **unverified** — it
+  almost certainly shares `~/.lmstudio/mcp.json`, but that is an inference
+  and the GUI check is an open human action.
 - B-001…B-008 are all closed. The supposed `main`/`master` default-branch
   mismatch was **retracted as false** by TASK-0019 — it never existed.
 - **`.ai/decisions/` filenames are now uniform** (`NNNN-short-title.md`,
@@ -768,7 +817,11 @@ file layout:
   this repo publishes. The *identifier* remains `ADR-NNNN` in every H1 and
   throughout prose — only filenames changed.
 - **B-001…B-009 are all closed; eight items are open** — B-010…B-013 (S6,
-  still `ready` despite the park) and B-014…B-017 (S7). B-009 closed by
+  still `ready` despite the park), B-015…B-017 (S7), and **B-018** (Bionic
+  skills deployment, raised by TASK-0047; B-014 closed 2026-09-15).
+  **B-005's stated reason is retracted** by ADR-0020 — it closed on the
+  false "no Agent Skills target" premise, though its *action* was correct.
+  B-009 closed by
   TASK-0025/ADR-0013 as *decided, not implemented*: its premise — that the
   two skills share a convention — was false. Two of S6's four items (B-012,
   B-013) are corrections to **this repo's own claims** rather than to a

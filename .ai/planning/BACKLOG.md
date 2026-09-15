@@ -6,7 +6,7 @@
 | B-002 | Skill Linter (frontmatter ~~+ line budget~~) | medium | high | Phase 1 | low | **done** | TASK-0012 — frontmatter only; line budget dropped per ADR-0008 |
 | B-003 | MCP server smoke test harness | medium | high | Phase 1 | medium | **done** | TASK-0009 — `tests/smoke-mcp.sh` |
 | B-004 | Repo LICENSE file (backs skill `license:` claims) | low | medium | none | low | **done** | TASK-0013 — MIT chosen by human; ADR-0003's known gap closed |
-| B-005 | Re-scope Phase 2 exit criterion (LM Studio has no Agent Skills target) | high | medium | none | low | **done** | resolved by ADR-0006 |
+| B-005 | Re-scope Phase 2 exit criterion (~~LM Studio has no Agent Skills target~~ — **premise false**) | high | medium | none | low | **done** | resolved by ADR-0006. **Reason retracted 2026-09-15 by ADR-0020**: the client is Bionic and its Agent Skills target existed all along (`~/.lmstudio/skills/`); the repo checked the `hub/skills/` cache. Stays closed because the *action* — re-scoping the criterion per capability — was right and is done. See B-018 |
 | B-006 | ~~Port~~ **Author** a loop component | medium | medium | none | low | **done** | TASK-0008; verb corrected — nothing existed to port (ADR-0006) |
 | B-007 | De-duplicate sync-registry.sh per-section loops (or assert no `_template*` row) | medium | medium | none | low | **done** | TASK-0011 — did both |
 | B-008 | Unify `.ai/decisions/` file naming (`ADR-NNNN-*` vs `NNNN-*`) | low | low | none | low | **done** | TASK-0024 — 7 files renamed to `NNNN-*`; found `.ai/README.md` was prescribing the *old* scheme |
@@ -19,14 +19,25 @@
 | B-015 | Agent definitions are not portable between clients, and no decision records it | high | high | none | medium | **ready** | S7 / TASK-0036, ADR-0018 — location, identity, capability gating, primary-vs-subagent, model IDs and nesting all differ; the overlap is `description`/`model`/`color`. Must be decided **before** any role is authored |
 | B-016 | `agents/` and `prompts/` are declared component categories with nothing behind them | medium | medium | B-015 (the schema depends on the portability decision) | low | **ready** | S7 / TASK-0037…0040 for `agents/` only — 141-byte and 127-byte READMEs, no template, no schema, no `validate.sh` check, no registry section, no `install.sh` path. `prompts/` is deliberately left out of scope |
 | B-017 | No design stage exists — `plan` writes specs but never ideates or critiques | high | high | B-014 (closed — roles now authored by TASK-0045), B-016 (roles need enforcement) | medium | **ready** | S7 / ADR-0019, TASK-0041…0043 — `bmad-workflow.md:14-16` has `plan` write a story/spec directly, with no alternatives generated, no adversarial review, and **no convergence criterion**. The genuine capability gap |
+| B-018 | Deploy skills to Bionic — its Agent Skills target exists and is unused | medium | medium | none | medium | **ready** | TASK-0047 / ADR-0020 corrected the premise: the target is `~/.lmstudio/skills/` (global) and `<project>/.agents/skills/` (project), **not** the `hub/skills/` cache the repo checked for two sprints. Needs a design decision, not just code: global installs are approval-gated (`skill-management/SKILL.md:31` — "DO NOT edit global skills directly", routed through a user-prompting `skill.install` tool), which `install.sh` cannot drive non-interactively. Project skills *are* plain writable files. So the real question is whether a per-project target belongs in a global installer at all, or whether Bionic needs a separate path. Frontmatter is already compatible (Bionic ignores unknown keys) |
 
-**Seven items are open — B-010…B-013 (S6, parked) and B-015…B-017 (S7).
-B-014 closed 2026-09-15** as *decided, not implemented*: ADR-0017 rejected,
-so `agent-tiers` stays with `opencode-customization`. That makes **two**
-items closed on a false premise (B-009 and now B-014) out of fourteen —
-see the lesson-2 note in `CURRENT_STATE.md`.
+**Eight items are open — B-010…B-013 (S6, parked), B-015…B-017 (S7), and
+B-018. B-014 closed 2026-09-15** as *decided, not implemented*: ADR-0017
+rejected, so `agent-tiers` stays with `opencode-customization`. That makes
+**two** items closed on a false premise (B-009 and now B-014) out of
+fourteen — see the lesson-2 note in `CURRENT_STATE.md`.
 
 B-014…B-017 were raised by `PLAN-0004`. **B-001…B-009 remain closed.**
+
+**B-018 was raised by TASK-0047, and B-005 is the item it embarrasses.**
+B-005 ("LM Studio has no Agent Skills target") was closed as *resolved by
+ADR-0006* — and its premise was false. The target existed the whole time;
+the repo checked a cache directory and generalised. B-005 stays closed
+because its *action* (re-scope the Phase 2 exit criterion) was correct and
+is done, but its stated reason is retracted by ADR-0020. That is now
+**three** of eighteen items touching a false premise, and the only one where
+the falsehood propagated into two ADRs and four tasks before a human caught
+it by noticing a product name.
 
 **B-010…B-013 stay `ready` even though S6 is parked.** Parking a sprint
 does not un-scope its backlog items: the items describe real gaps that are

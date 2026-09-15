@@ -51,9 +51,20 @@ CLIENTS="
 claude-code|${HOME}/.claude/skills|${HOME}/.claude|${HOME}/.claude/agents
 opencode|${HOME}/.config/opencode/skills|${HOME}/.config/opencode|${HOME}/.config/opencode/agents
 "
-# LM Studio is intentionally absent: its hub/skills directory is not an
-# Agent Skills target. It is configured for MCP only - see
-# configs/lm-studio/README.md.
+# Bionic (LM Studio's agent-oriented workspace) is intentionally absent,
+# but NOT for the reason previously recorded here. It does have an Agent
+# Skills target - ~/.lmstudio/skills/ globally, <project>/.agents/skills/
+# per project - documented in Bionic's own bundled skill-management
+# SKILL.md. The earlier claim rested on ~/.lmstudio/hub/skills/, which is a
+# hub cache, sibling to hub/models and hub/presets (ADR-0020 corrects this).
+#
+# It stays absent because global installs are approval-gated: the vendor
+# says "DO NOT edit global skills directly", routing installs through a
+# skill.install tool call that prompts the user. That is incompatible with
+# this script, which is non-interactive and idempotent. Project skills
+# under .agents/skills/ ARE directly writable, so adding Bionic is a real
+# design option - tracked as backlog B-018, deliberately not improvised.
+# See configs/lm-studio-bionic/README.md.
 
 # Activate the tracked pre-commit hook (ADR-0007). Hooks live in
 # .githooks/ rather than .git/hooks/ so they are version-controlled and
