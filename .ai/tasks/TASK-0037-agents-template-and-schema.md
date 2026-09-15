@@ -549,7 +549,7 @@ Same shape as amendment 1, so the same resolution:
   restrictive."* It also sets the rule for any future parameterised term:
   own key, deny default.
 
-- Commit: `7ccfa6d` (original), amendments in `3a588da` and the TASK-0045
+- Commit: `7ccfa6d` (original), amendments in `3a588da` and `4fc1f12`
   commit below
 - Push: confirmed — `origin/master` at the follow-up commit, verified by
   re-fetch and by an independent GitHub API read of the remote head.

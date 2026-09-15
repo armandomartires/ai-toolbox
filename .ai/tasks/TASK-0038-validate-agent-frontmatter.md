@@ -499,7 +499,7 @@ command allowlist is meaningful for a subagent — indeed all three roles using
 it are subagents — whereas Claude Code ignores a subagent's *agent* allowlist,
 which is what forced that pairing. The asymmetry is deliberate.
 
-- Commit: `e0e9d68` (original), amendments in `3a588da` and the TASK-0045
+- Commit: `e0e9d68` (original), amendments in `3a588da` and `4fc1f12`
   commit below
 - Push: pushed with the sequence's other Phase-2 commits; confirmed by
   re-fetch and an independent GitHub API read.

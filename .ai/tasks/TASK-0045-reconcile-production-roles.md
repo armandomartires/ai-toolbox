@@ -543,5 +543,5 @@ an executor will read it rather than only here.
   The task's own worst defect was **mine, not inherited**: alphabetical glob
   ordering silently downgraded force-push from deny to ask. It would have
   passed every check this repo has.
-- Commit: recorded below
-- Push: recorded below
+- Commit: `4fc1f12`
+- Push: confirmed — see below

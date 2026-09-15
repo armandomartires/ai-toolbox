@@ -615,6 +615,6 @@ harmless, accepted by OpenCode, kept by the resolver, and defence in depth
 against a future key rename. **`edit: deny` is the operative rule**, now
 stated in the emitter so nobody removes the wrong line.
 
-- Commit: `36cab90` (original), amendments in `3a588da` and the TASK-0045
+- Commit: `36cab90` (original), amendments in `3a588da` and `4fc1f12`
   commit below
 - Push: confirmed — see below
