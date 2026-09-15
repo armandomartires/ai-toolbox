@@ -15,7 +15,7 @@
 | B-011 | A documented, statically checkable, unenforced Ansible safety rule | high | high | B-010 (shares the skill's vocabulary) | medium | **ready** | S6 / TASK-0031 — `gather_subset: "!mounts"`; the rule and its failure mode are already written down in the target repo, so nothing needs inventing |
 | B-012 | `server.json` overstates `WORKSPACE_ROOT` as the blast radius | medium | medium | none | low | **ready** | S6 / TASK-0026 — false for `ansible_navigator` (remote infra) and `ade_setup_environment` (system packages); restated in all 3 wiring snippets |
 | B-013 | `ansible_navigator` cannot express the safe workflow but can execute unsafely | high | high | none | low | **ready** | S6 / TASK-0026 — no inventory/limit/`--check`/`--diff` parameter exists; disable it. Human authorized 2026-09-14 |
-| B-014 | `agent-tiers` is unowned, already drifted, and has never been switched on | high | high | none | medium | **ready** | S7 / TASK-0034, ADR-0017, TASK-0035 — `opencode-customization`'s own `S027` sequenced it to this repo alongside `project-workflow`; ADR-0004 moved only the latter. Two files differ between the installed copy and its source while both claim `1.0.0` |
+| B-014 | ~~`agent-tiers` is unowned~~ — **premise false**; it is drifted and has never been switched on, but it **has an owner** | high | medium | none | medium | **blocked — needs a human decision** | S7 / TASK-0034 **done**. The "unowned" premise is **retracted**: `opencode-customization` kept it deliberately (commit `9bae137`, 2026-09-13, explicit user decision, stated reason, **unpulled reopen trigger**). This repo read ADR-0004's four-day-old quotation of that repo's *older* roadmap and never re-read the source after `S027` ran. Drift is fully characterised and benign: repo copy newer for **both** files from one commit, **no unique fix** on the installed side, all 4 model IDs still resolve. ADR-0017 is **blocked, not ready**; option 3 (take the four roles into `agents/`, leave the installer) recommended in TASK-0034's log |
 | B-015 | Agent definitions are not portable between clients, and no decision records it | high | high | none | medium | **ready** | S7 / TASK-0036, ADR-0018 — location, identity, capability gating, primary-vs-subagent, model IDs and nesting all differ; the overlap is `description`/`model`/`color`. Must be decided **before** any role is authored |
 | B-016 | `agents/` and `prompts/` are declared component categories with nothing behind them | medium | medium | B-015 (the schema depends on the portability decision) | low | **ready** | S7 / TASK-0037…0040 for `agents/` only — 141-byte and 127-byte READMEs, no template, no schema, no `validate.sh` check, no registry section, no `install.sh` path. `prompts/` is deliberately left out of scope |
 | B-017 | No design stage exists — `plan` writes specs but never ideates or critiques | high | high | B-014 (shares the role vocabulary), B-016 (roles need enforcement) | medium | **ready** | S7 / ADR-0019, TASK-0041…0043 — `bmad-workflow.md:14-16` has `plan` write a story/spec directly, with no alternatives generated, no adversarial review, and **no convergence criterion**. The genuine capability gap |
@@ -145,13 +145,21 @@ Notes:
   systems while fixing nothing. Resolved with one documentation line in
   each `SKILL.md` naming the other skill, so the item cannot be re-raised
   by the next person who greps for `ADR-`.
-- B-014 is **ADR-0004's unfinished half, found sixteen months of sprints
-  later**. That ADR's own Context quotes `opencode-customization`'s roadmap:
-  *"`S027` hands `project-workflow` (and `agent-tiers`) to `ai-toolbox`
-  permanently."* The parenthesis was in the source text. ADR-0004 then
-  executed the handover for `project-workflow` alone and said nothing about
-  the other skill, so `agent-tiers` has been unowned ever since — not
-  decided against, just not carried across.
+- B-014 was raised as **ADR-0004's unfinished half**. That ADR's own Context
+  quotes `opencode-customization`'s roadmap: *"`S027` hands
+  `project-workflow` (and `agent-tiers`) to `ai-toolbox` permanently."* The
+  parenthesis was in the source text, and ADR-0004 executed the handover for
+  `project-workflow` alone.
+
+  **TASK-0034 (2026-09-15) found the conclusion drawn from that is wrong.**
+  `agent-tiers` has *not* been unowned: the quoted roadmap was **superseded
+  four days after ADR-0004**, when `S027` actually executed and that repo
+  recorded an explicit user decision to **keep** the skill (commit
+  `9bae137`) with a stated reason (*"confirmed OpenCode-specific by
+  design"*) and a written, unpulled reopen trigger. This repo acted on its
+  own four-day-old quotation of an external document without re-reading the
+  source — **lesson 7, not lesson 9.** The item is retained rather than
+  deleted because the error pattern is the valuable part.
 
   Three consequences, all now observable: two files differ between the
   installed copy and its source while both declare `metadata.version:

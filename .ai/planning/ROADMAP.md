@@ -218,14 +218,18 @@ any agent or human can understand, trust, and deploy.
   drift** (lesson 6 has recurred three times in this file's own history):
   **ADR-0019 accepted** 2026-09-15 (ratification, no spike needed);
   **ADR-0018 accepted** 2026-09-15 on TASK-0036's evidence, with clause 2's
-  reasoning replaced and a new clause 8; **ADR-0017 still proposed**,
-  blocked on TASK-0034.
+  reasoning replaced and a new clause 8; **ADR-0017 BLOCKED** — TASK-0034 is
+  done and **disproved its premise** (`agent-tiers` was deliberately kept by
+  `opencode-customization`, not orphaned), so its disposition is an open
+  human decision rather than a spike dependency.
 - Progress: TASK-0036, TASK-0037, TASK-0038, TASK-0039, TASK-0040,
   TASK-0041 and TASK-0042 **done**. **Phase 2 of the plan (`agents/`
   plumbing) is complete**: the category is defined, enforced, indexed and
-  deployable. `TASK-0043` (design roles) is now **unblocked** — Phase 2 was
-  its only remaining dependency. `TASK-0044` is independent. `TASK-0034`
-  remains the open Phase-1 spike, with ADR-0017 proposed behind it.
+  deployable.   `TASK-0043` (design roles) is now **unblocked** — Phase 2 was
+  its only remaining dependency. `TASK-0044` is independent, and TASK-0034
+  **removed its last stated dependency** by verifying `bmad-workflow.md` is
+  readable in place. **TASK-0034 is done**; Phase 1 is closed as far as an
+  agent can close it, with ADR-0017 awaiting a human decision.
   **`agents/` holds no real role and both client agents directories are
   empty** — the plumbing is complete and wholly unexercised, which is the
   standing caution below and REVIEW-0008's pre-committed question.
@@ -237,10 +241,19 @@ any agent or human can understand, trust, and deploy.
   dynamic workflows cannot accept mid-run user input, so they cannot run
   an interactive design stage and are excluded.
 - Exit criteria:
-  - `skills/agent-tiers/` exists in this repo, its drift resolved and
+  - ~~`skills/agent-tiers/` exists in this repo, its drift resolved and
     recorded, version bumped, and the installed copy is a **symlink**
-    rather than the real directory it is today (TASK-0034, ADR-0017,
-    TASK-0035).
+    rather than the real directory it is today~~ (TASK-0034, ADR-0017,
+    TASK-0035). **This criterion rests on a false premise and cannot be met
+    as written** (TASK-0034, 2026-09-15): `agent-tiers` is **not** orphaned
+    — `opencode-customization` kept it deliberately on 2026-09-13 with a
+    stated reason and an unpulled reopen trigger. The *drift* half is
+    answered (repo copy newer for both files, no unique fix on the installed
+    side, all model IDs still resolving), but the *ownership* half is a human
+    decision, not a criterion this phase can satisfy. **Rewrite or drop this
+    criterion once ADR-0017's disposition is settled** — leaving it as a
+    tick-box invites someone to satisfy it by importing against another
+    repo's recorded decision.
   - ADR-0018 records the per-client agent mapping, the emission
     mechanism, and **explicitly** that agents have no `link` mode and
     why — with the further note that no freshness check is possible

@@ -153,12 +153,27 @@ Phase 0:
       missing S6 session record; raise B-014…B-017 (done)
 
 Phase 1 — reclaim, then decide (the two spikes are mutually independent):
-- [ ] TASK-0034 — *Spike.* Inventory the `agent-tiers` drift: 2 differing
+- [x] TASK-0034 — *Spike.* Inventory the `agent-tiers` drift: 2 differing
       files, both claiming `1.0.0`, installed copy a real dir. Read-only
-- [ ] ADR-0017 — ai-toolbox owns `agent-tiers`; mirrors ADR-0004 (needs
-      TASK-0034)
-- [ ] TASK-0035 — Import to `skills/agent-tiers/`; resolve drift; bump
-      version; symlink replaces the real directory (needs ADR-0017)
+      (done — drift fully characterised: **repo copy newer for both files,
+      consistently, from one commit**; installed copy carries **no unique
+      fix**; all 4 model IDs still resolve against a live 2026-09-15
+      listing; 5 dangling citations, **all in the installer half**; the two
+      slash commands are client config and out of scope.
+      **BLOCKING FINDING: `agent-tiers` is not unowned.**
+      `opencode-customization` kept it deliberately — commit `9bae137`,
+      2026-09-13, explicit user decision, stated reason, **unpulled reopen
+      trigger**. S7 planned from a four-day-stale quotation of that repo's
+      older roadmap)
+- [ ] ADR-0017 — ~~ai-toolbox owns `agent-tiers`~~ **BLOCKED: do not accept
+      as drafted.** Its premise is disproved. Three options with a
+      recommendation (**option 3**: take the four *roles* into `agents/`
+      under ADR-0018, leave the PowerShell installer where it was
+      deliberately kept) are in TASK-0034's log. **Human decision required**
+- [ ] TASK-0035 — ~~Import to `skills/agent-tiers/`~~ **blocked, and its
+      justification is gone**: importing would create the second copy
+      ADR-0004 exists to prevent, *against* the other repo's recorded
+      decision. Do not start until ADR-0017's disposition is decided
 - [x] TASK-0036 — *Spike.* Verify the per-client agent field mapping against
       **live** docs; test unknown-key handling (done — emission confirmed on
       **new** evidence: a superset file loads in Claude Code and silently
@@ -240,7 +255,10 @@ Phase 3 — the design half (the genuine capability gap):
 
 Phase 4 — the production half, owned here:
 - [ ] TASK-0044 — `loops/project-build/` — from `bmad-workflow.md:8-38`,
-      with the merge gate explicit (needs ADR-0019, TASK-0035)
+      with the merge gate explicit (needs ADR-0019; **its TASK-0035
+      dependency is dropped** — TASK-0034 verified `bmad-workflow.md` is
+      readable in place at 53 lines with every cited section present, and the
+      dependency was for read access only)
 - [ ] TASK-0045 — Reconcile `qa-test`/`review`/`git-ops` into `agents/`.
       **Reconcile, not duplicate** (needs TASK-0040, TASK-0044)
 

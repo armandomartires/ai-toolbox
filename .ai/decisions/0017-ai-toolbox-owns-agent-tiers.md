@@ -1,13 +1,48 @@
 # ADR-0017 — ai-toolbox owns the agent-tiers skill
 
 ## Status
-**Proposed**, 2026-09-15. Opened by `PLAN-0004` (sprint S7).
+**Proposed — and BLOCKED. Do not accept as drafted.** Opened by `PLAN-0004`
+(sprint S7), 2026-09-15.
 
-**Depends on TASK-0034.** The drift resolution cannot be decided before the
-spike reports *which* side of each differing file is newer and why. Two
-files are known to differ; what they differ *in* is not yet established,
-and deciding "this repo's copy is canonical" before knowing whether the
-installed copy carries a fix would silently discard it.
+> **⚠ TASK-0034 disproved this ADR's central premise (2026-09-15).**
+>
+> This ADR asserts that `agent-tiers` was **orphaned** by ADR-0004 and is
+> therefore this repo's to claim. **It was not.** `opencode-customization`
+> **deliberately kept it** by explicit user decision on 2026-09-13, in
+> commit `9bae137`:
+>
+> *"`agent-tiers` is deliberately kept in this repo (user decision) —
+> confirmed OpenCode-specific by design (`docs/07.agent-hierarchy.md`'s own
+> scope banner), a separate concern from `project-workflow`'s removal."*
+>
+> Corroborated by that repo's `.ai/30.ROADMAP.md:45` (*"`agent-tiers` stays,
+> confirmed OpenCode-specific"*) and by a written, **unpulled reopen
+> trigger** at `:240` — *"Revisit `agent-tiers` → `ai-toolbox` if a concrete
+> reason emerges (not scheduled)."*
+>
+> That is a **deferral with a reason and a reopen trigger**, which is
+> precisely what the Context below claims it lacks. The error was acting on
+> ADR-0004's four-day-old *quotation* of that repo's **older** roadmap
+> without re-reading the source after `S027` actually executed.
+>
+> **The "Established" section below is therefore partly false**, and is left
+> in place rather than rewritten so the correction is visible (ADR-0019's
+> precedent). Read it only alongside TASK-0034's execution log, which
+> carries the measured drift facts and three options with a recommendation
+> (**option 3**: bring the four *role definitions* into `agents/` under
+> ADR-0018 and leave the PowerShell installer where it was deliberately
+> kept).
+>
+> **Accepting, rejecting, or rescoping this ADR is a human decision**, and
+> `TASK-0035` must not start until it is made. An agent cannot invoke
+> another repo's reopen trigger on its own authority.
+
+**TASK-0034 is done**, so the drift question this ADR waited on is answered:
+**two** files differ, the **repo copy is newer for both**, consistently,
+from that one commit, and the **installed copy carries no unique fix** — so
+no content would be lost whichever side were preferred. All four distinct
+model IDs in `models.jsonc` still resolve against a live 2026-09-15
+listing. The blocker is not the drift; it is the ownership premise.
 
 ## Context
 

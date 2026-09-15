@@ -242,18 +242,289 @@ and this repo acquires a `commands/` question it does not currently have,
 which would need its own decision rather than being absorbed silently.
 
 ## Status
-- Status: planned
+- Status: done — **with a blocking finding; ADR-0017 must not be accepted as
+  drafted.** Awaiting a human decision (see Escalation below).
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-15
+- Agent: opencode (claude-opus-5)
+
+#### ESCALATION — the spike's premise is false, and the sprint inherited it
+
+**`agent-tiers` is not unowned. It was deliberately kept by
+`opencode-customization`, by an explicit user decision, on 2026-09-13.**
+
+The evidence is that repo's own commit `9bae137`
+(2026-09-13 19:50:49 +0200), whose message states:
+
+> *"`agent-tiers` is **deliberately kept in this repo (user decision)** —
+> confirmed OpenCode-specific by design (`docs/07.agent-hierarchy.md`'s own
+> scope banner), a separate concern from `project-workflow`'s removal."*
+
+Corroborated in two more places in that repo:
+- `.ai/30.ROADMAP.md:45` — *"`S027_RemoveProjectWorkflow` | 2026-09-13 |
+  Removed `project-workflow`/`/scaffold-ai-docs` — migrated to `ai-toolbox`.
+  **`agent-tiers` stays, confirmed OpenCode-specific.**"*
+- `.ai/30.ROADMAP.md:240` — Next-up item 1: *"**Revisit `agent-tiers` →
+  `ai-toolbox`** if a concrete reason emerges (**not scheduled**)."*
+
+And the cited basis is real: `docs/07.agent-hierarchy.md` opens with
+*"**OpenCode-specific.** … Codex and Claude Code have different agent
+models; a cross-harness version is explicitly deferred."*
+
+**This inverts the framing S7 was planned on.** `PLAN-0004`, ADR-0017,
+`CURRENT_STATE.md` and this brief all describe the skill as *"unowned"*,
+*"orphaned"*, and an ADR-0004 omission — lesson 9's worked example (*"a
+decision that handles one item from a list of two … produces an orphan"*).
+**It is not an orphan. It is a deferral with a stated reason and a written
+reopen trigger** — the exact shape ADR-0010 has and which this repo's own
+lesson 9 says an orphan lacks.
+
+The planning session read ADR-0004's quotation of that repo's *older*
+roadmap (`S027` hands over "project-workflow (and agent-tiers)") and did not
+re-read the roadmap as it stands **after** `S027` actually executed. The
+parenthesis was real when written; it was superseded four days later by the
+commit that closed that sprint.
+
+**What this means concretely:**
+- **ADR-0017 must not be accepted as drafted.** It would assert this repo's
+  ownership of a component another repo has explicitly and recently decided
+  to keep, on the strength of a premise now known false.
+- **TASK-0035 (the import) is not merely blocked — its justification is
+  gone.** Importing would create the second copy ADR-0004 exists to
+  prevent, this time *against* the other repo's recorded decision rather
+  than in fulfilment of it.
+- **This repo has no standing to overrule that decision unilaterally.** Both
+  repos are the same human's; the reopen trigger is *"if a concrete reason
+  emerges"*. **ADR-0018 is arguably that concrete reason** — this repo now
+  has an emitter, a schema and a gate for agent roles, which is a
+  cross-harness capability that repo explicitly deferred. But invoking a
+  reopen trigger in another repo is a **human decision**, not an agent's.
+
+**Three options, for the human:**
+
+1. **Drop the reclamation.** Mark ADR-0017 `Rejected` with this evidence,
+   close TASK-0035 as superseded, and record that `agent-tiers` stays in
+   `opencode-customization`. TASK-0045 then reconciles the four roles into
+   `agents/` **by authoring them fresh against ADR-0018's contract**, citing
+   the installed copy as a reference rather than importing it. Cost: the
+   roles are re-derived; benefit: no cross-repo ownership fight and no
+   second copy.
+2. **Invoke the reopen trigger.** Decide that ADR-0018's per-client emitter
+   *is* the concrete reason, and hand the skill over — which requires a
+   corresponding change in `opencode-customization` (its roadmap, its
+   docs, its removal of the skill), i.e. work in a repo S7 has declared out
+   of scope. Cost: cross-repo coordination; benefit: one owner.
+3. **Narrow the scope to the roles only.** Leave the *skill*
+   (`install-tiers.ps1`, `fragments/`, `models.jsonc`, the PowerShell
+   topology installer) with `opencode-customization`, and bring only the
+   four **role definitions** into `agents/` under ADR-0018. The two are
+   separable: the installer writes `opencode.jsonc` blocks, the roles are
+   markdown files. Cost: the boundary needs stating; benefit: this repo
+   takes the part its new plumbing actually serves and leaves the
+   OpenCode-specific installer where it was deliberately kept.
+
+**Recommendation: option 3**, with option 1 as the fallback. It is the only
+one that respects the other repo's decision *and* uses Phase 2's plumbing,
+and it needs no work in `opencode-customization`. It also matches ADR-0006's
+established habit of scoping by capability rather than by repo boundary.
+**Not decided here** — ADR-0017's disposition is a human call, and this
+spike's job was to produce the evidence.
+
+#### Steps 1–2 — before-state and the symlink trap
+Recorded before touching anything:
+- `git -C ~/AI_Workspaces/opencode-customization status --short` → **empty
+  (clean)**; HEAD `f9f5e37`, branch `main`.
+- The two trees are **genuinely distinct**, not the same directory reached
+  twice: `readlink -f` gives
+  `/home/armando.martires/.config/opencode/skills/agent-tiers` versus
+  `/mnt/c/Users/armando.martires/AI Workspaces/opencode-customization/opencode/skills/agent-tiers`.
+  The installed copy has an empty `LinkType` — a **real directory**, as the
+  brief expected.
+
+#### Step 3 — the differing set, measured not cited
+`diff -rq` on 2026-09-15 reports **exactly the two files the brief
+predicted**:
+- `SKILL.md`
+- `templates/bmad/docs/stories/README.md`
+
+**One correction to the brief's Inputs table: the skill has 13 files, not
+12.** Both trees have 13, so it does not affect the diff — but the count was
+wrong and is the kind of number that gets restated.
+
+#### Steps 4–5 — per-file diffs, newer side, and the consistency answer
+
+**The newer side is CONSISTENT: the repo copy is newer for both files.**
+So resolution is *pick a side*, not merge-per-file — the brief's flagged
+deviation does **not** fire.
+
+Basis, three independent signals agreeing:
+
+| File | Installed mtime | Repo mtime | Repo-side commit | Newer |
+|---|---|---|---|---|
+| `SKILL.md` | 2026-08-24 23:47:36 | 2026-09-13 19:33:44 | `9bae137` | **repo** |
+| `templates/bmad/docs/stories/README.md` | 2026-08-24 23:47:36 | 2026-09-13 19:34:02 | `9bae137` | **repo** |
+
+Both files are **clean in git** on the repo side (`git status --short` on
+that subtree is empty), so the repo content is committed, not a working-tree
+scratch edit.
+
+**Both changes come from the same commit, and both do the same thing:
+remove `project-workflow` cross-references.**
+- `SKILL.md`: the section `## Relationship to other skills in this repo`
+  became `## Scope`, dropping three references to `project-workflow` and
+  `.ai/00.CONVENTIONS.md`.
+- `stories/README.md`: *"if this project also uses the `project-workflow`
+  `.ai/` convention"* became *"if this project also has a sprint-prefixed
+  task convention"* — the same de-coupling, generalised.
+
+**The installed copy carries no unique fix.** This is the question the
+spike existed to answer (*"if it carries a fix absent upstream, declaring
+the repo copy canonical silently discards that fix"*). It does not: the
+installed copy is simply **older**, predating `S027`. Nothing would be lost
+by preferring the repo copy — which is now moot for import purposes, but
+still the answer.
+
+#### Step 6 — citations that would dangle after a move
+
+The repo copy has **already removed three of the four** `SKILL.md` dangling
+citations, as a side effect of `S027`. What remains, in **both** copies:
+
+| File | Line | Citation | Dangles? |
+|---|---|---|---|
+| `SKILL.md` | 137 | *"matching this repo's `install-opencode.ps1` convention"* | **Yes** — no such file in `ai-toolbox` (verified absent) |
+| `install-tiers.ps1` | 33 | `opencode/install-opencode.ps1`'s existing behavior | **Yes** |
+| `install-tiers.ps1` | 405 | re-running `opencode/install-opencode.ps1` from the repo | **Yes** |
+| `install-tiers.ps1` | 408 | `install-opencode.ps1`'s allowlist does not mirror back | **Yes** |
+| `install-tiers.ps1` | 413 | same, **inside a runtime `Write-Warning` string** shown to the user | **Yes** |
+
+So the dangling-citation surface is **five references across two files**,
+four of them in `install-tiers.ps1` and one of those in text a user sees at
+runtime. `models.jsonc` cites no ADR (the brief anticipated a possible
+`decisions/0001-*` citation; there is none — that ADR is referenced from
+that repo's *roadmap*, not from the skill).
+
+**This materially supports option 3.** Every dangling citation is in the
+*installer* half, not the *roles* half. The four `agents/*.md` files contain
+**zero** cross-repo references — checked, they are self-contained.
+
+#### Step 7 — model IDs re-verified against a live listing
+
+`models.jsonc` claimed verification on **2026-08-19** (four weeks stale).
+Re-verified **2026-09-15** against `opencode models` (506 lines).
+
+`models.jsonc` declares five tiers but **four distinct IDs** — `analyst`
+deliberately duplicates `coder`, documented in the file as intentional.
+
+| ID | Tiers | Result |
+|---|---|---|
+| `perplexity-agent/anthropic/claude-opus-5` | `frontier` | **RESOLVES** |
+| `perplexity-agent/anthropic/claude-sonnet-5` | `coder`, `analyst` | **RESOLVES** |
+| `perplexity-agent/anthropic/claude-haiku-4-5` | `guarded` | **RESOLVES** |
+| `perplexity-agent/openai/gpt-5.6-luna` | `cheap` | **RESOLVES** |
+
+**All four resolve.** The four-week-old verification still holds; no stale
+model ID would have been inherited. The brief's fallback (record it as
+*unverifiable* if `opencode models` could not run) was not needed — the
+command ran offline against the local provider catalogue.
+
+#### Step 8 — `tier3.md` / `bmad.md` are client config, not skill content
+
+**Recommendation: out of scope for any import.** Both are OpenCode
+*command* files (`opencode/commands/`), each carrying OpenCode-native
+frontmatter and a body whose first instruction is
+`skill({ name: "agent-tiers" })` — they **invoke** the skill, they are not
+part of it. They are the same class of artifact as a client wiring snippet.
+
+Two supporting reasons:
+- This repo has **no `commands/` category** and would acquire one silently.
+  `AGENTS.md` names five component categories; `commands/` is not among
+  them, and adding one deserves its own decision rather than arriving as
+  import overspill.
+- `skill()` invocation is OpenCode-specific, so a command file is
+  single-client by construction — the same property that excluded dynamic
+  workflows in ADR-0019.
+
 - Actions:
+  1. Recorded the before-state of `opencode-customization` (clean,
+     `f9f5e37`, `main`).
+  2. Proved the two trees are distinct paths via `readlink -f`.
+  3. Re-ran `diff -rq`; confirmed the two-file differing set; corrected the
+     file count to 13.
+  4. Produced `diff -u` for both files; collected mtimes and
+     `git log --follow` on the repo side.
+  5. Determined the newer side per file and answered the consistency
+     question.
+  6. Grepped both copies plus every other skill file for cross-repo
+     citations; verified `install-opencode.ps1` is absent from this repo.
+  7. Re-verified all four distinct model IDs against a live listing.
+  8. Read both command files and decided their scope.
+  9. **Read that repo's commit `9bae137` and its roadmap** — which is where
+     the blocking finding came from, and which was not in the brief's plan.
+  10. Re-checked the after-state of both locations.
+
 - Observations:
+  - **The finding came from a step the brief did not ask for.** The plan
+    covered diffing, mtimes, and `git log --follow` **on the two differing
+    files**. It did not ask *why* they differ. Reading the commit message
+    behind the drift is what surfaced the ownership decision — the drift and
+    the decision have the same cause (`S027`), so investigating one
+    necessarily reveals the other, but only if you read the commit rather
+    than just its diff. **A `diff -u` answers "what changed"; the commit
+    message answers "who decided what, and when".**
+  - **Lesson 9 was misapplied by the planning session, and that is worth
+    recording precisely.** Lesson 9 says a decision handling one of two
+    items without saying why produces an orphan. ADR-0004 *did* look like
+    that. But the other repo subsequently supplied the missing half —
+    reason, scope banner, and a reopen trigger — so the orphan was closed
+    **elsewhere**, four days later, and this repo never re-read the source
+    it had quoted. **Lesson 7 (a claim decays between being written and
+    being acted on) outranked lesson 9 here**, and the decayed claim was a
+    quotation of an *external* document, which CURRENT_STATE already flags
+    as the faster-decaying class.
+  - **`CURRENT_STATE.md`'s S7 section states this as fact in three places**
+    (*"unowned"*, *"deployed but unowned — the only component on this
+    machine in that state"*, and B-014's framing). Those need correcting
+    whichever option the human picks, so the repo does not keep restating a
+    false premise — the exact pattern TASK-0019 was written about.
+  - **The installed copy is still the live one and still a real directory**,
+    so nothing about the current machine state changed or needs to change
+    until the disposition is decided.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → **PASS** (`validate.sh: OK`, exit 0). This
+    task edits only its own brief.
+  - `scripts/sync-registry.sh` → **not run; not applicable.** No component
+    added or changed.
+  - **`opencode-customization` byte-identical**: `git status --short` empty
+    before and after; HEAD `f9f5e37` unchanged. Never written to;
+    `install-tiers.ps1` never executed, not even with `-WhatIf`.
+  - **`~/.config/opencode/` unmodified**: the installed skill is still a
+    real directory with `SKILL.md` mtime 2026-08-24 23:47:36;
+    `opencode.jsonc` mtime still 2026-08-24 23:48:09 with **no `agent`
+    key**.
+  - **No secret material read, copied or printed.**
+
+- Result: **done as a spike — every acceptance criterion met — but its
+  headline output is a blocking finding rather than the expected drift
+  resolution.**
+
+  The drift question itself is fully answered: **two files differ, the repo
+  copy is newer for both, consistently, from one commit, and the installed
+  copy carries no unique fix.** All four model IDs still resolve. Five
+  dangling citations exist, all in the installer half. The two slash
+  commands are client config and out of scope.
+
+  **But ADR-0017 cannot be written as drafted, because the premise it rests
+  on — that `agent-tiers` is unowned — is false.** The other repo kept it
+  deliberately, with a stated reason and an unpulled reopen trigger, on
+  2026-09-13. Three options are laid out above with a recommendation
+  (**option 3**: bring the four roles into `agents/` under ADR-0018, leave
+  the PowerShell installer where it was deliberately kept). **The choice is
+  the human's**, and TASK-0035 should not start until it is made.
+- Commit: recorded below
+- Push: recorded below

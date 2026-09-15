@@ -295,20 +295,45 @@ decision one sprint later would have needed reconciliation.
 **eight of its claims were corrected before planning finished** (against
 six in S6). In order of consequence:
 
-1. **Half the production stage already exists, unowned, drifted, and never
-   switched on.** `~/.config/opencode/skills/agent-tiers/` implements
+1. ~~**Half the production stage already exists, unowned**~~ — **the
+   "unowned" half of this claim is RETRACTED as false (TASK-0034,
+   2026-09-15).** `~/.config/opencode/skills/agent-tiers/` does implement
    `plan → build → qa-test → (fix loop, max 3) → review → git-ops commit`
-   with permission-enforced boundaries that are the real safety control.
-   `opencode-customization`'s own roadmap sequenced `S027` to hand
-   **`project-workflow` and `agent-tiers`** to this repo; **ADR-0004
-   executed that handover for `project-workflow` alone** and said nothing
-   about the second skill. Two files now differ between the installed copy
-   and its source while **both declare `metadata.version: "1.0.0"`** — the
-   exact version-integrity defect ADR-0004 was written to kill, on a second
-   skill. The installed copy is a **real directory** where this repo's two
-   skills are symlinks. And the live `~/.config/opencode/opencode.jsonc`
-   contains **no `agent` key at all**, so every permission boundary the
-   skill exists to install has never been in effect.
+   with permission-enforced boundaries, it *has* drifted, and it *has*
+   never been switched on. But it is **not unowned**:
+   `opencode-customization` **deliberately kept it** by explicit user
+   decision on 2026-09-13, in commit `9bae137` — *"agent-tiers is
+   deliberately kept in this repo (user decision) — confirmed
+   OpenCode-specific by design"* — corroborated by that repo's
+   `.ai/30.ROADMAP.md:45` and by a written, **unpulled reopen trigger** at
+   `:240` (*"Revisit `agent-tiers` → `ai-toolbox` if a concrete reason
+   emerges (not scheduled)"*).
+
+   S7 planned from ADR-0004's quotation of that repo's **older** roadmap
+   ("`S027` hands `project-workflow` (and `agent-tiers`)") without re-reading
+   that roadmap after `S027` actually ran four days later. So this was not
+   lesson 9 (an orphan) but **lesson 7 (a decayed claim)** — and the decayed
+   claim was a quotation of an *external* document, the class this file
+   already flags as fastest-decaying.
+
+   The drift itself is fully characterised and harmless: **two** files
+   differ, the **repo copy is newer for both, consistently, from that one
+   commit**, and both changes merely remove `project-workflow`
+   cross-references. **The installed copy carries no unique fix**, so
+   nothing would be lost by preferring either side. Both still declare
+   `metadata.version: "1.0.0"`, which remains a real version-integrity
+   defect — but in *that* repo's component, not an unowned one. The installed
+   copy is a **real directory** where this repo's skills are symlinks, and
+   `opencode.jsonc` still contains **no `agent` key**, so the topology has
+   never been in effect.
+
+   **ADR-0017 therefore cannot be accepted as drafted, and TASK-0035's
+   justification is gone.** Three options and a recommendation (option 3:
+   bring the four *roles* into `agents/` under ADR-0018 and leave the
+   PowerShell installer where it was deliberately kept) are in TASK-0034's
+   log. **Awaiting a human decision.** Supporting evidence: all five
+   dangling cross-repo citations live in the *installer* half, and the four
+   role files contain **zero** — verified, so the roles are separable.
 2. **Agent definitions are not portable between clients.** Location,
    identity (filename vs a required `name` field), capability gating
    (`permission` vs `tools`/`disallowedTools`), primary-vs-subagent (an
@@ -529,16 +554,20 @@ file layout:
   `project-workflow` (`3.2.0`) skills (deployed to Claude Code and
   OpenCode), and the `ansible` external MCP server. One loop:
   `loops/release-check`.
-- **A fourth skill exists on this machine but not in this repo.**
-  `agent-tiers` (`1.0.0`) is installed at
-  `~/.config/opencode/skills/agent-tiers/` as a **real directory**, owned by
-  `opencode-customization`, already drifted from its source, and with its
-  topology never applied (no `agent` key in the live config). S7's Phase 1
-  reclaims it. Until then it is deployed but unowned — the only component on
-  this machine in that state.
-- **`agents/` and `prompts/` remain empty declared categories** (141 and 127
-  bytes of README). S7 makes `agents/` real; `prompts/` is deliberately left
-  alone and needs its own justification rather than symmetry.
+- **A fourth skill exists on this machine but not in this repo, and it has
+  an owner.** `agent-tiers` (`1.0.0`) is installed at
+  `~/.config/opencode/skills/agent-tiers/` as a **real directory**, **owned
+  by `opencode-customization` by an explicit 2026-09-13 decision to keep
+  it** (TASK-0034), drifted from its source by two files (repo copy newer,
+  no unique fix on the installed side), and with its topology never applied
+  (no `agent` key in the live config). **It is not "deployed but unowned"** —
+  that earlier characterisation was wrong. S7's Phase 1 does **not** reclaim
+  it; ADR-0017's disposition is an open human decision.
+- **`agents/` is now a real, fully-plumbed category** (TASK-0037…0040):
+  schema, template, gate checks, registry section and per-client emission.
+  It holds **no role yet**. `prompts/` remains an empty declared category
+  (127-byte README), deliberately left alone — it needs its own
+  justification rather than symmetry (B-016).
 
 ## What S5 is fixing, and why it is not obvious
 The `project-workflow` skill's task template has Goal, Plan, Files
@@ -723,13 +752,25 @@ breaking changes cannot land silently.
    ADR-0004 quoted the other repo's roadmap naming **both**
    `project-workflow` and `agent-tiers`, handed over the first, and said
    nothing about the second. A deferral has a reopen trigger — ADR-0010 has
-   one, and it is explicitly *not* pulled. This had nothing, so the skill sat
-   unowned for a sprint and a half, drifted, and the version-integrity defect
-   that ADR was written to kill reappeared on it. **When a decision narrows
-   a list, record what happened to the remainder.**
+   one, and it is explicitly *not* pulled. **When a decision narrows a list,
+   record what happened to the remainder.**
+
+   **The lesson stands; its worked example was wrong, and the correction is
+   more instructive than the original.** S7 read ADR-0004's silence as an
+   orphan and planned a reclamation around it. TASK-0034 found the *other*
+   repo had closed the gap itself four days later (commit `9bae137`,
+   2026-09-13): a stated reason, a scope banner, and a written reopen
+   trigger — a textbook deferral. **The orphan existed only in this repo's
+   copy of the story.** So the real failure was not ADR-0004's omission but
+   **acting on a four-day-old quotation of an external document without
+   re-reading the source** — lesson 7, in the class this file already calls
+   fastest-decaying. Two lessons pointed at the same facts and the wrong one
+   was applied, because the orphan reading was the one this repo had a name
+   for.
 10. **An unexercised artifact is the repo's most reliable failure mode.**
     `mcp-servers/_template/` (ADR-0010) established it, `agent-tiers`
-    continued it — installed, drifted, never switched on — and S7 is
+    continued it — installed, drifted, never switched on (though **owned**;
+    see lesson 9's correction) — and S7 is
     structured to avoid being the third instance, with a pilot that produces
     real components and a pre-committed review question. The pattern is
     common enough that a plan adding new component surface should now name,
