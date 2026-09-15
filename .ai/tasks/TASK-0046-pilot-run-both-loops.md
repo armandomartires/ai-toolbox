@@ -290,18 +290,277 @@ is for, and reporting it honestly is worth more than two components that
 were going to be written anyway.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-15
+- Agent: OpenCode (manager), delegating to the emitted roles `ideator`,
+  `critic`, `git-ops`, `qa-test`, `review`, and the built-ins `plan`/`build`
+
+**Both loops were executed, not simulated.** The per-iteration detail below
+is the deliverable; the two components are the by-product.
+
+#### Steps 1–2: preconditions
+
+All five Phase 3/4 artifacts confirmed `done` with files present (2 loops,
+1 skill + 3 references + 1 template, 6 roles + template). No stop condition.
+
+`SIGMA-infrastructure` before-state: `git status --short` = **empty output**,
+exit 0; HEAD `d4e2dd1`. **Cold-start discrepancy:** this brief's `Inputs`
+table said to expect "42 commits ahead"; that number was not confirmed, only
+that the tree is clean. See cold-start assessment below.
+
+#### Step 3: the ADR-0014/0015 gap — resolved, not glossed
+
+**Human decision: Option 2** — build from `PLAN-0003`'s recorded F1–F7
+evidence; both ADRs **remain `proposed` and still owe ratification**.
+
+**What the pilot is therefore allowed to claim about `ansible-ops`:** nothing
+that rests on an observed lint result (C8). Recorded in the brief, and
+enforced through to the artifact — `lint_run` records only *that* lint ran.
+
+**A brief assumption corrected:** the brief framed Option 1 as expensive
+because `TASK-0027` had not run. `ansible-lint 26.8.0 / ansible-core 2.20.8`
+is present and working at `~/.venvs/sigma-ansible/bin/ansible-lint`, so the
+spike is **cheap**, not blocked. Also noted: the lint result bears mainly on
+what the skill may say about linting and on TASK-0031's guard home; ADR-0015's
+substance rests on F1/F5, already read from real files.
+
+#### The design loop — `loops/design-brief/`
+
+**Exit condition fired: success — accepted and locked. One iteration.**
+The cap of 3 was **not** reached.
+
+- **Step 1 (clarify, manager + human).** Problem stated as a problem;
+  13 constraints marked hard/assumed; out-of-scope list; 4 success criteria;
+  4 assumptions; brief path fixed at `docs/design/ansible-ops-brief.md`
+  (human-chosen, keeping a non-governance artifact out of `.ai/` per
+  ADR-0013). **C10 marked `assumed`** on the human's decision, precisely so
+  ideation could challenge it.
+- **Step 2 (ideate, `ideator`).** **Four** candidates, each naming a distinct
+  load-bearing commitment: declared estate profile; derived and persisted
+  nowhere; enforced change record; generated per-estate runbook. It also
+  flagged that success criterion 1 might smuggle C10 back in, and refused to
+  resolve two admissibility questions — correct conduct for step 2.
+- **Step 3 (critique, `critic`, read-only).** **35 findings** — 25
+  per-candidate (6/6/8/5), 8 shared, **2 against the task prompt itself**.
+  No candidate returned empty.
+
+**What the critique found (the question this task was written to answer):**
+
+1. **Its most consequential finding was against step 1, not any candidate.**
+   Success criteria 1 and 3 re-imported C10 as a *hard measurement* after it
+   was marked assumed — so candidate 1 was measured by a test shaped like
+   candidate 1, and candidate 2 scored as failing on the axis where it is
+   strongest. **The loop cannot catch this**: step 5 re-reads the constraint
+   list, not the success criteria. Resolved by human decision: both criteria
+   rewritten commitment-neutral.
+2. **It corrected the prompt I gave it.** I misattributed the C10 claim to
+   the ideator. No such claim existed. The critic checked the *substance*
+   anyway, found it correct and **stronger** than stated (two criteria, not
+   one). Had it obeyed the prompt, the misattribution would have propagated.
+   This is the single best evidence in the pilot that an adversarial
+   read-only role earns its place.
+3. **Finding 1.2 (severe, verified) decided the design.** `install.sh`
+   defaults to `ln -sfn`, so a deployed skill is a **symlink into this repo's
+   working tree**; an operator filling in candidate 1's
+   `templates/estate-profile.md` would write one estate's production facts
+   into the portable component. **C10 failed on evidence, not preference.**
+4. **It insisted the two admissibility questions go to the human
+   together**, because both strict readings simultaneously leave only
+   candidates 1 and 2 — neither of which offers machine detection —
+   collapsing the design's second goal to "documented only". Human decision:
+   candidate 3 admissible (its checker validates a *record*, never playbook
+   content, so B-011 stays open), candidate 4 **not** admissible (C1).
+5. **It could not verify F1/F2/F5** — its `worktree-only` boundary denies
+   reads into the evidence estate — and said so rather than working around
+   it. It proved decay is real in-repo: `PLAN-0003` cites `validate.sh` at
+   474 lines/`:193-213`; now **732** lines/`:196-213`, in four days.
+   Human decision: re-verify. **F1, F2, F5 and the two playbooks'
+   `gather_facts: false` all re-confirmed read-only on 2026-09-15.**
+- **Step 4 (converge, manager).** Brief written: candidate **2** composed
+  with candidate **3**, rejected alternatives named with reasons, 7 accepted
+  costs, 4 open questions, assumptions marked verified/unverified.
+- **Step 5 (verify against constraints).** All 13 checked one by one; **no
+  hard constraint violated**; C10 deliberately declined. A drift check looked
+  for unauthorised imports and found none — the checker sits closest to a
+  scope line and is bounded in writing.
+- **Step 6 (present).** **Explicit human acceptance.** Not a summary, not a
+  clean constraint check, not an empty critique.
+- **Step 7 (lock).** Frontmatter set, then the commit **delegated to
+  `git-ops`** — the manager never held commit rights. Lock commit
+  **`8e1d1be`**; `.gitignore` commit `1e07584` kept separate.
+
+#### The production loop — `loops/project-build/`
+
+**Exit conditions fired: the ambiguity-stop (step 1), the fix cycle
+(1 of 3), and five `review` blocks. Terminus: the merge gate.**
+
+- **Step 1 (plan).** **The ambiguity-stop fired.** `plan` decomposed the
+  locked brief into a 481-line story and found **10 ambiguities, 4 HIGH**,
+  which the brief does not settle: the probe's form, `derivation.md`'s role
+  set, the ordered gate sequence, and whether `unknown` is fatal in every
+  field. **It refused to invent answers** (ADR-0019 clause 2.5) and named the
+  competing readings. All four (plus AMB-6) settled **by the human**;
+  recorded in `.pilot-scratch/ambiguity-decisions.md` as decisions made in
+  the brief's silence, never as amendments to the locked brief.
+- **Step 2 (build).** Nine files. Self-reported an accidental
+  `sync-registry.sh` run and its revert, unprompted.
+- **Step 3 (test, `qa-test`).** **Returned BLOCKED without producing test
+  evidence** — see boundary engagements. It wrote a 26 KB harness it could
+  not execute, and **refused to claim unobserved passes or to rename the
+  checker to look like a test file**. It predicted four defects statically.
+- **Step 4 (fix, bounded — 1 iteration of 3).** I confirmed two of its
+  predictions **by direct observation** before handing back:
+  `snapshot_ref: unknown  # comment` exited **0**, and
+  `snapshot_ref: [unknown]` exited **0** — the AMB-4 rule defeated by a
+  trailing comment and by a flow sequence. `build` confirmed all four,
+  replaced the hand-rolled line parser with a YAML-subset parser (stdlib
+  only, so `validate.sh` stays hermetic), and **proved the fix by
+  reversion**: the repaired harness gives 56 passed/0 failed against the fix
+  and **49 passed/7 failed** against a verbatim copy of the pre-fix checker.
+  It also found the harness itself was truncating files before reading them,
+  so **7 of `qa-test`'s reported passes had been vacuous**.
+- **Step 5 (review, `review`, read-only). Six rounds: BLOCKED ×5, then
+  PASS.** No single finding survived three rounds, so the escalation bound
+  was never reached. A review block returns to step 2 and **does not** consume
+  the fix cycle's budget — that separation was exercised for real.
+
+**The pilot's most consequential methodological finding:** rounds 1–5 each
+surfaced a **new instance of one defect class** — a false claim an artifact
+makes about its own structure:
+
+  - **B1** "every gate maps to a field" — false; gates 3, 7, 8 fill none, so
+    a fully green record could describe a change never parsed, applied
+    unbounded and never verified.
+  - **B2** the field→gate table numbered against 8 obligations, not 9 gates,
+    misrouting the remedy path for 2 of 9 fields.
+  - **B3** "stated nowhere else… so it cannot drift" — falsified one line
+    later.
+  - **B4** "linked, never restated" — falsified by the summaries C6 requires.
+  - **B5/B6/B7**, then a final one.
+  - **W1, found by the sweep and independently confirmed: the checker's own
+    header claimed `tests/validate.sh` runs it. Nothing does** — zero hits
+    across `validate.sh`, `.githooks/pre-commit` and CI. The class's own
+    diagnosis ("mechanically unenforced") was true of the enforcement
+    artifact itself.
+
+`review` diagnosed the cause: **the sweep had been per-finding, not
+class-wide.** A deliberate class-wide sweep then verified **35 claims and
+found 12 false**, every one **narrowed rather than deleted**. Round 6 passed.
+**`validate.sh` cannot catch this class** — it checks frontmatter, never
+prose claims.
+- **Step 6 (document).** `sync-registry.sh` run: both components appear.
+  `CURRENT_STATE.md` updated. This log written.
+- **Step 7 (commit).** Delegated to `git-ops`.
+- **Step 8 (stop at the gate).** See below.
+
+#### Boundary engagements — five, all observed, none asserted
+
+The brief asked whether any role's emitted permissions blocked something they
+should have. **Four bound correctly; one revealed a real defect.**
+
+| Role | Boundary | What it blocked | Verdict |
+|---|---|---|---|
+| `ideator` | `worktree-only` → `external_directory: deny` | Reading the step-1 handoff at `/tmp/opencode/` | **Correct.** Handoff moved inside the worktree |
+| `critic` | `write: deny`, `edit: deny` | Writing its own critique to a file | **Correct** — and my prompt was wrong to ask. Manager saved the reply instead |
+| `critic` | `worktree-only` | Reading `SIGMA-infrastructure` to verify F1/F2/F5 | **Correct**, and it reported the block as a finding rather than working around it |
+| `git-ops` | `bash-allowlist` (`git *`) | Two `&&` chains and one `git diff -- <path>` | **Correct.** Reissued as plain `git` commands; no `--no-verify`, no push attempted |
+| `qa-test` | `bash-allowlist` (`git status/diff/log` only) | **Running the tests it exists to run** | **A REAL DEFECT** — see below |
+
+**`qa-test` cannot execute tests.** Its emitted allowlist admits only
+`git status*`, `git diff*`, `git log*`, so the role whose entire purpose is
+"write and run tests… pass/fail evidence" **cannot run anything**. It behaved
+impeccably — refused to fabricate results, refused to disguise the checker as
+a test file, reported the block — but step 3 of `loops/project-build/` cannot
+be satisfied by this role as provisioned. Attributed to **TASK-0045**
+(authored the role) and **TASK-0037/0040** (the vocabulary lacks a term for
+"may run the test command"). Not patched here, per this brief's instruction
+to attribute rather than fix.
+
+Also observed: `opencode run --agent <subagent>` **silently falls back to the
+default agent** with a warning, so an early step-2 attempt was executed by
+`build`, not `ideator`. Caught by asking the invoked agent to state its own
+identity and permissions; that output was **discarded** and step 2 re-run
+through genuine Task-tool delegation. Any future pilot must verify *who
+actually ran*, not that a command exited 0.
+
+#### Answers to the questions this task was written to ask
+
+- **Where did each loop's exit conditions fire?** Design loop: success/lock,
+  1 iteration. Production loop: ambiguity-stop (step 1), fix cycle (1 of 3),
+  five review blocks, merge-gate terminus. **No loop hit a cap.**
+- **Did the design loop converge, hit its cap, or get accepted trivially?**
+  **Converged in one iteration — but not trivially.** The critique produced 35
+  findings and forced a rewrite of two success criteria, a re-verification of
+  the evidence base, and two human admissibility decisions before convergence
+  was possible.
+- **Did the critique step find anything?** **Yes, abundantly** — including
+  two findings against its own prompt and one that invalidated the
+  measurement instrument. ADR-0019 clause 1.3's failure mode did not occur.
+- **Did any role's boundary block something it should have?** **Yes, five
+  times**, all observed. One (`qa-test`) blocked something it should *not*
+  have, which is the more valuable finding.
+- **Was the handover contract sufficient across a session gap?** See below.
+
+#### Cold-start sufficiency of this brief's `Inputs` (S5 follow-up 1)
+
+**Largely sufficient; three gaps.** The table correctly located every Phase
+3/4 artifact, `PLAN-0003`, the two S6 briefs, both ADRs and the target repo,
+and its "verify, don't assume" instruction was load-bearing — it is why
+TASK-0027's `planned` status was checked rather than assumed.
+
+Gaps: (1) the expected `SIGMA-infrastructure` state ("42-ahead") **did not
+match** and could not be confirmed — the tree is clean; (2) the table does not
+mention `~/.venvs/sigma-ansible`, without which the Option 1/2 decision would
+have been made on a false cost assumption; (3) it names the roles but not the
+**runtime** fact that a session's Task roster is fixed at start, so newly
+emitted roles are unavailable — the single biggest practical obstacle.
+
+**S5's central claim is still not fully tested**: this ran in one session, so
+no genuine session gap was crossed. Recorded rather than claimed.
+
+#### Validation
+
+- `bash tests/validate.sh` → `validate.sh: OK`, exit 0 (run repeatedly
+  throughout, and by the pre-commit hook on every commit)
+- `bash scripts/sync-registry.sh` → both components in `docs/registry.md`
+- Checker observed: complete fixture exit **0**; incomplete exit **1** naming
+  exactly three fields; template exit **1** (`PLACEHOLDER FIELD` only);
+  the two confirmed defects now exit **1**
+- **`SIGMA-infrastructure` after-state: `git status --short` = empty, HEAD
+  `d4e2dd1` — byte-identical to before. No playbook was run in any mode.**
+
+#### Deviations and known gaps
+
+- **`.pilot-scratch/` is gitignored**, so step 2's candidates, step 3's
+  critique, the story and the ambiguity decisions are **not committed**. The
+  reasoning is preserved in this log; the raw artifacts are not durable.
+- **Three YAML spellings still pass green** (`&a unknown`, `!!str unknown`,
+  `"unkno\x77n"`). Closing them needs a real YAML parser, which the
+  offline/hermetic constraint forbids. **Documented as known gaps** in the
+  checker, `derivation.md` and `change-record.md` — the round-5 block was
+  precisely a file claiming they did not exist.
+- **The checker is unwired.** Nothing in this repo runs it; its sole caller is
+  step 9 of `loops/ansible-change/`. Now disclosed in eight places.
+- **Six mapping facts remain duplicated across three files** with nothing
+  enforcing agreement. The reciprocal notes are the whole mechanism. Worth a
+  backlog item.
+- **ADR-0014/0015 still owe ratification**, and **ADR-0015's intended clause
+  1 is now contradicted** by finding 1.2 — it must be rewritten, not merely
+  cited.
+- **B-011 / TASK-0031 remain open.** The pilot ships no execution-time
+  enforcement of the F2 hazard, and says so rather than implying coverage.
+
+- Result: **success.** Both loops executed end to end; both components
+  produced through them; the design brief accepted and locked; the production
+  loop stopped at the merge gate.
+- Commit: `8e1d1be` (brief lock), `1e07584` (gitignore), plus the components
+  and documentation commit recorded by `git-ops` at step 7.
+- Push: **awaited human authorization** — ADR-0019 clause 2.2. The loop
+  stopped at the gate rather than pushing, which is the boundary
+  demonstrated rather than asserted.

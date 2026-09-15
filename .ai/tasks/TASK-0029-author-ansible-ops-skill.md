@@ -249,18 +249,50 @@ against seven, and S5 saw a four-section merge become three once the files
 were measured.
 
 ## Status
-- Status: planned
+- Status: done — **delivered by S7's TASK-0046 pilot**, not run as its own task
 - Owner: agent
 - Created: 2026-09-14
-- Updated: 2026-09-14
+- Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-15
+- Agent: OpenCode, via `loops/design-brief/` then `loops/project-build/`
+
+**Disposition: closed as delivered-by-S7.** Decided in TASK-0046's execution
+log, which S6's archived sprint file explicitly deferred to that task.
+
+`skills/ansible-ops/` exists and was produced **through** S7's two new loops
+rather than by executing this brief directly — that was the point of the
+pilot (S7 decision 3: the loops are exercised by producing real,
+already-scoped components).
+
+**What shipped:** `SKILL.md`, `references/derivation.md`,
+`references/hazards.md`, `references/check-mode-fidelity.md`,
+`templates/change-record.md`, `scripts/check-change-record.sh`, and
+`fixtures/{complete,incomplete}-record.md`.
+
+**Two things this brief planned that the pilot decided differently, on
+evidence — read these before citing this brief again:**
+
+1. **The core-plus-`templates/` shape (ADR-0015's intended clause 1) was
+   rejected.** It was carried into the design as an *assumed* constraint, and
+   the design loop's critique found (severe, verified) that `install.sh`
+   deploys skills with `ln -sfn` — so a deployed skill is a symlink into this
+   repo's working tree, and an operator filling in a shipped
+   `estate-profile.md` would write one estate's production facts into the
+   portable component. The shipped design **derives per-estate facts and
+   persists none**. **ADR-0015 must be rewritten before ratification**, not
+   merely cited.
+2. **No claim rests on an observed lint result.** `TASK-0027` is still unrun
+   (human decision: Option 2), so `lint_run` records only *that* lint ran.
+
+**Not delivered:** the `gather_subset` guard. B-011 and TASK-0031 stay open,
+and the shipped skill states plainly that it ships no enforcement rather than
+implying coverage.
+
+- Validation: `tests/validate.sh` green; `scripts/sync-registry.sh`
+  regenerated and `ansible-ops` appears in `docs/registry.md`
+- Result: **delivered as a by-product of TASK-0046**
+- Commit: recorded in TASK-0046's log
+- Push: awaited human authorization, per ADR-0019 clause 2.2

@@ -208,18 +208,47 @@ expected output, say which and why rather than shipping a vague step.
 that is a finding about the domain, not a formatting problem.
 
 ## Status
-- Status: planned
+- Status: done — **delivered by S7's TASK-0046 pilot**, not run as its own task
 - Owner: agent
 - Created: 2026-09-14
-- Updated: 2026-09-14
+- Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-15
+- Agent: OpenCode, via `loops/design-brief/` then `loops/project-build/`
+
+**Disposition: closed as delivered-by-S7.** Decided in TASK-0046's execution
+log, which S6's archived sprint file explicitly deferred to that task.
+
+`loops/ansible-change/loop.md` exists, carries the three mandatory sections,
+a bound of 3, and four escalate-without-retry conditions — and was produced
+**through** S7's loops rather than by executing this brief directly.
+
+**Three deviations from this brief's plan, each decided on evidence:**
+
+1. **Nine gates, not eight.** The gate sequence was a HIGH ambiguity the
+   accepted design brief did not settle; the `plan` agent refused to infer it
+   from record-field order and **stopped to ask** (ADR-0019 clause 2.5). The
+   human chose: derive → lint → syntax → `--check --diff` → fidelity verdict
+   → snapshot → bounded apply → verify → close the record, ordered
+   cheapest-and-safest first.
+2. **This brief's "restates nothing" requirement is unsatisfiable as
+   written, and asking for it caused a real defect.** `## Steps` must state
+   each gate's expected output (the `release-check` precedent and the design
+   brief both require it), which *is* restatement. The loop was authored
+   claiming "linked, never restated" and `review` **blocked** it as a false
+   claim about its own structure. The correct formulation, now shipped: the
+   linked artifacts are **normative** and the loop's mentions are deliberate
+   **partial summaries subordinate** to them. **Anyone reusing this brief's
+   wording will re-import the defect** — `review` flagged exactly that risk.
+3. **The checker is unwired.** Nothing in this repo runs
+   `check-change-record.sh`; the loop's step 9 is its sole caller. Disclosed
+   in eight places rather than left implied.
+
+- Validation: `tests/validate.sh` green (including the loop-section checks at
+  `validate.sh:196-213`); `scripts/sync-registry.sh` regenerated and
+  `ansible-change` appears in `docs/registry.md`
+- Result: **delivered as a by-product of TASK-0046**
+- Commit: recorded in TASK-0046's log
+- Push: awaited human authorization, per ADR-0019 clause 2.2

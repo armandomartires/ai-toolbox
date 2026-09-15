@@ -1,7 +1,10 @@
 # Current State
 
-Last updated 2026-09-15, after **parking sprint S6 and opening sprint S7**
-(planning only — no implementation yet, in either sprint).
+Last updated 2026-09-15, after **TASK-0046 ran S7's pilot: both loops were
+executed end to end**, producing `skills/ansible-ops/` and
+`loops/ansible-change/` plus an accepted, locked design brief. S7's five
+phases are complete and **exercised**; S6 remains parked, but its TASK-0029
+and TASK-0030 are now delivered.
 
 ## Sprint S7 is open; S6 is parked with zero implementation
 
@@ -417,11 +420,47 @@ emits `write: deny` anyway — inert, accepted, kept by the resolver, and
 defence in depth against a key rename — with `edit: deny` noted in the
 emitter as the operative rule, so nobody removes the wrong line.
 
-**S7's only remaining task is TASK-0046's pilot.** Phases 1–4 are complete:
-two loops, six roles, a component category that is defined, enforced,
-indexed and deployable. **Everything is in place and nothing has been
-run** — which is precisely the state REVIEW-0008's pre-committed question
-was written for.
+**TASK-0046's pilot has RUN, and both loops were executed end to end**
+(2026-09-15). Phases 1–4 built two loops, six roles and a component category
+that is defined, enforced, indexed and deployable; **Phase 5 exercised all
+of it**. REVIEW-0008's pre-committed question — *did anything get
+exercised?* — is answerable **yes**, from recorded evidence.
+
+What the pilot produced: `skills/ansible-ops/` (SKILL.md, 3 `references/`,
+1 `templates/`, 1 `scripts/`, 2 `fixtures/`) and
+`loops/ansible-change/loop.md`, both **through** the loops rather than by
+hand, plus the accepted, locked design brief at
+`docs/design/ansible-ops-brief.md` (lock commit `8e1d1be`).
+
+**The loops survived contact, and the roles' boundaries bound for real.**
+Five distinct permission engagements were observed, not asserted: `critic`
+could not write its own critique (`write`/`edit: deny`) and could not read
+the evidence estate (`worktree-only`); `ideator` could not read a `/tmp`
+handoff, which moved the handoff inside the worktree; `git-ops` refused
+`&&` chains and a `--` pathspec under its `bash-allowlist`; and **`qa-test`
+could not run the tests it exists to run** — its allowlist admits only
+`git status/diff/log`, so it correctly refused to claim unobserved passes.
+That last one is a real defect in the vocabulary, not a misconfiguration,
+and it is the pilot's most actionable finding.
+
+**Both loops' exit conditions fired.** The design loop converged in **one**
+iteration (cap 3 unreached) and its critique returned **35 findings** across
+four candidates — the opposite of the empty-critique failure mode ADR-0019
+clause 1.3 warns about. The production loop's **ambiguity-stop fired in step
+1**: `plan` found four HIGH ambiguities the locked brief did not settle and
+refused to invent answers, which is clause 2.5 working as designed. `review`
+blocked **five** times before passing on round 6.
+
+**The most consequential finding is about method, not about either
+component:** five consecutive review rounds each surfaced a *new* instance of
+one defect class — a false claim an artifact makes about its own structure
+("every gate maps to a field", "stated nowhere else, so it cannot drift",
+"linked, never restated", and a checker header asserting `validate.sh` runs
+it when **nothing** does). Per-finding fixes never converged; the reviewer
+diagnosed that the sweep had been per-finding rather than class-wide, and a
+deliberate class-wide sweep then verified **35 claims and found 12 false**.
+Nothing in `validate.sh` can catch this class — it checks frontmatter, never
+prose claims.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at
@@ -601,13 +640,39 @@ real enforcement. Ten artifacts written, zero components changed:
 TASK-0026…0032, ADR-0014…0016 (all **proposed**), B-010…B-013. Opened by
 commit `9528d13`, pushed to `origin/master` and confirmed by re-fetch.
 
-**S7's pilot (TASK-0046) delivers TASK-0029 and TASK-0030** — `ansible-ops`
-and `ansible-change` — by producing them *through* S7's new loops. Their
-disposition afterwards is decided in that task's execution log, deliberately
-not pre-empted. **TASK-0031, the highest-value item below, is not delivered
-by that pilot**; B-011 stays open. ADR-0014 and ADR-0015 remain unratified
-and still depend on TASK-0027, an unrun spike — a gap TASK-0046 must resolve
-explicitly rather than gloss.
+**S7's pilot (TASK-0046) DELIVERED TASK-0029 and TASK-0030** (2026-09-15) —
+`skills/ansible-ops/` and `loops/ansible-change/` were produced *through*
+S7's new loops, and both S6 briefs are **closed as delivered-by-S7**.
+**TASK-0031, the highest-value item below, is NOT delivered**; B-011 stays
+open, and the shipped skill says so in writing rather than implying coverage.
+
+**The ADR-0014/0015 gap was resolved explicitly, not glossed** (human
+decision, Option 2): the components were built from `PLAN-0003`'s recorded
+F1–F7 evidence, and both ADRs **remain `proposed` and still owe
+ratification**. The binding consequence, recorded in the brief: the design
+may make **no claim resting on an observed lint result**, because
+`TASK-0027` is still unrun. `ansible-lint 26.8.0` was confirmed present in
+the control venv, so that spike is now cheap to run — it was *not* the
+blocker the sprint assumed.
+
+**ADR-0015's intended clause 1 is now contradicted by evidence and must be
+rewritten before ratification.** Its "portable core plus per-project
+`templates/`" shape was marked *assumed* rather than hard, then **tested and
+found wrong**: `install.sh` deploys skills with `ln -sfn`, so a deployed
+skill is a symlink into this repo's working tree — an operator filling in a
+shipped `templates/estate-profile.md` would write one estate's production
+facts into the portable component. The pilot chose a **derived, persist
+nothing** shape instead. This is exactly what marking a constraint *assumed*
+was for, and it is the clearest instance yet of planning prose failing
+contact with a file.
+
+**F1, F2 and F5 were re-verified read-only on 2026-09-15** before being
+restated, per `PLAN-0003`'s own rule. All three hold: one inventory wired at
+`ansible.cfg:8`; the `ansible_mounts` D-state hazard and its
+"Tracked as unenforced" note verbatim; and `ansible_navigator` still
+exposing no inventory, limit, `--check` or `--diff`. **The decay is real
+and was measured**: `PLAN-0003` cites `tests/validate.sh` as 474 lines with
+the loop check at `:193-213`; it is now 732 lines and `:196-213`. Four days.
 
 **The sprint began from a human-supplied analysis rather than a backlog
 item** — a first for this repo at the time — and **six of its claims were
