@@ -437,5 +437,5 @@ Restored, hash-verified identical, green again.
   **Not authored here:** the three roles the loop names. `qa-test`, `review`
   and `git-ops` are TASK-0045's, and **until they exist neither loop can
   execute** — `loops/design-brief/` step 7 also delegates to `git-ops`.
-- Commit: recorded below
-- Push: recorded below
+- Commit: `180051f`
+- Push: confirmed — see below

@@ -90,4 +90,4 @@ step 7 delegates its commit to `git-ops`. All three are TASK-0045's.
 pilot — which is what REVIEW-0008's pre-committed question ("did anything get
 exercised?") is really about.
 
-- Result: TASK-0044 done. Commit recorded in the task log.
+- Result: TASK-0044 done. Commit `180051f`, pushed to `origin/master` and confirmed by re-fetch.
