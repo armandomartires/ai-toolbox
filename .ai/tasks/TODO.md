@@ -159,10 +159,17 @@ Phase 1 — reclaim, then decide (the two spikes are mutually independent):
       TASK-0034)
 - [ ] TASK-0035 — Import to `skills/agent-tiers/`; resolve drift; bump
       version; symlink replaces the real directory (needs ADR-0017)
-- [ ] TASK-0036 — *Spike.* Verify the per-client agent field mapping against
-      **live** docs; test unknown-key handling
+- [x] TASK-0036 — *Spike.* Verify the per-client agent field mapping against
+      **live** docs; test unknown-key handling (done — emission confirmed on
+      **new** evidence: a superset file loads in Claude Code and silently
+      discards an OpenCode `permission:` block, leaving Write/Edit/Bash in
+      the pool. 5 of 8 capability terms OpenCode-only; 4 ADR-0018 rows
+      corrected)
 - [ ] ADR-0018 — Per-capability portability; one source, per-client
-      **emission**; emission forbids `link` mode (needs TASK-0036)
+      **emission**; emission forbids `link` mode. **Ready to accept** —
+      needs decision 2's reasoning replaced, 4 rows corrected, and one new
+      clause: the emitter must **refuse, not degrade**, a capability term
+      it cannot enforce on a target
 
 Phase 2 — make `agents/` a real category (0037 strictly first; then
 0038/0039/0040 are independent):

@@ -74,10 +74,61 @@ Two findings from it:
   **When proving a check bites, match on that check's own message or on exit
   status — never on a message remembered from a sibling check.**
 
+**TASK-0036 is done — ADR-0018 is unblocked, its mechanism confirmed and
+its reasoning replaced.** All three vendor pages re-fetched 2026-09-15
+against installed `opencode 1.18.31` and `claude 2.1.246`. Emission stands,
+but on different evidence than the ADR predicted, and four of its stated
+facts were wrong.
+
+The finding that changes the design:
+
+- **A superset file is not merely inelegant — it silently drops the safety
+  contract.** A fixture declaring read-only using *only* OpenCode's
+  `permission:` syntax **loaded in Claude Code with `Write`, `Edit` and
+  `Bash` in its tool pool**, while the native-syntax control reported
+  `WRITE=no EDIT=no BASH=no`. The block was discarded with no warning. That
+  is ADR-0018's predicted emitter bug — *"a `review` agent that can
+  edit"* — except a superset file produces it **on every role, with no bug
+  required**. Honest limit: the subagent then *refused* to write, on prompt
+  grounds, so the breach is the **tool pool**, not a completed write.
+- **Five of eight capability terms map to OpenCode only**, and they are the
+  five carrying the safety value. Everything needing *intra-tool*
+  granularity — which paths, which commands, or an `ask` state — has no
+  per-agent Claude Code expression. **`git-ops` and `shell-runner` cannot
+  be expressed as Claude Code subagents at all** without a session-wide
+  rule or a hook, both outside a single agent file. TASK-0045 inherits a
+  scoping problem, not a mapping detail.
+- **The lossy direction is OpenCode → Claude Code.** So the abstract
+  profile must sit at Claude Code's ceiling for anything it claims to
+  enforce in both, and the emitter must **refuse** a term it cannot
+  enforce rather than degrade it. That is ADR-0018's one needed new clause.
+- **Four of ADR-0018's "established" rows were wrong in four days**:
+  OpenCode identity (a `name:` field overrides the filename, undocumented),
+  the three-field overlap (`description` is the *only* portable field —
+  `model` and `color` overlap in name but their values are mutually
+  invalid), unknown-key behaviour (OpenCode **documents** forwarding
+  unknown keys *to the provider*, so they are not inert), and
+  `.opencode/agent/` singular **also loads**.
+- **The installed client is older than the docs describing it.** 6 of the
+  35 patch versions the subagent page cites are newer than 2.1.246. A
+  doc-confirmed field is not an installed field.
+
+**This task's own log had to be corrected five times**, which is the
+recurring lesson arriving inside the task written to guard against it:
+a `validate.sh` output invented from memory (`All checks passed, 24 files,
+0.39s` — the gate prints `validate.sh: OK`); a permission-key count of
+"16/6" that is **15/5** when counted; "11" newer patch versions that is
+**6**; one changed `~/.claude/` file when **three** were rewritten; and
+worst, **an absence asserted from too small a search** — `subagent_depth`'s
+default was recorded *unverified* because it is missing from the agents
+page, then found stated verbatim on the *config* page. **The brief named
+three pages; the fact was on a fourth.** A negative claim about
+documentation is a claim about where you looked.
+
 S7 now proceeds on two independent fronts: Phase 3's remaining task is
 `TASK-0043` (the roles), **still blocked** on Phase 2 via TASK-0040 →
-TASK-0037 → ADR-0018; and Phase 1's two spikes remain unblocked and mutually
-independent. **The critical path now runs through Phase 1**, since
+TASK-0037, but ADR-0018 is now ready to accept; and Phase 1's remaining
+spike is TASK-0034. **The critical path still runs through Phase 1**, since
 everything left in Phase 3 and 4 depends on ADR-0018 being accepted.
 
 **S6 is parked, not closed and not abandoned** (human decision,
