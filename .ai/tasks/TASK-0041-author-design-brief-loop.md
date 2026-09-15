@@ -329,6 +329,10 @@ against the original:**
   before the break-tests and restored from it afterwards.
 - Result: **done.** Every acceptance criterion met. The loop is a gated
   component; the cap and the lock mechanism both have exactly one owner
-  (this file), as ADR-0019 clause 1.2 requires for the cap.
-- Commit: see below.
-- Push: see below.
+  (`loops/design-brief/loop.md`), as ADR-0019 clause 1.2 requires for the
+  cap.
+- Commit: `1fc55a9`
+- Push: **confirmed.** Pushed to `origin/master` (`c03537e..1fc55a9`) using
+  basic auth with `GITHUB_TOKEN` from the environment — never in the remote
+  URL or a tracked file (ADR-0009). Verified by re-fetch:
+  `git log --oneline -1 origin/master` shows `1fc55a9`.
