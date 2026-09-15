@@ -122,4 +122,4 @@ for: *did anything get exercised?* Everything is in place; none of it is
 evidence yet.
 
 - Result: TASK-0045 done, with amendments to TASK-0037/0038/0040. Commit
-  recorded in the task log.
+  `4fc1f12`, pushed to `origin/master` and confirmed by re-fetch.
