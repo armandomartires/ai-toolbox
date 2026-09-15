@@ -251,9 +251,22 @@ count is 14.
   a hole in it. **(3)** Parking cost nothing precisely because S6 had zero
   implementation; the same decision one sprint later would have needed
   reconciliation.
-- Validation: `bash tests/validate.sh` → see result below.
-  `bash scripts/sync-registry.sh` → expected no diff to `docs/registry.md`,
-  since no component was touched.
-- Result: see below.
-- Commit: see below.
-- Push: see below.
+- Validation: `bash tests/validate.sh` → `validate.sh: OK`, run twice
+  (once manually, once by `.githooks/pre-commit` during the commit).
+  `bash scripts/sync-registry.sh` → **no diff** to `docs/registry.md`,
+  confirming no component was touched. `git status --porcelain` filtered
+  for `skills/|mcp-servers/|loops/|configs/|scripts/|tests/|docs/` →
+  **no matches**. Secret scan across `.ai/` for `ghp_`, `github_pat_`, PEM
+  headers, bearer tokens and assignment patterns → only pre-existing
+  matches in `REVIEW-0006`, `REVIEW-0007` and `TASK-0015`, all of which
+  *describe* scan patterns rather than containing secrets. `git remote -v`
+  verified token-free before and after the push.
+- Result: **done.** 27 files, +5814/−152, all under `.ai/`. Sprint S7 is
+  open with 17 artifacts written and none executed; S6 is archived as
+  parked with its ten artifacts and four backlog items unchanged.
+- Commit: `9105246`
+- Push: **confirmed.** Pushed to `origin/master`
+  (`cb0aa96..9105246`) using basic auth with `GITHUB_TOKEN` supplied from
+  the environment — never in the remote URL or any tracked file, per
+  ADR-0009 and `docs/operations/runbook.md`. Verified by re-fetch:
+  `git log --oneline -2 origin/master` shows `9105246` at the tip.
