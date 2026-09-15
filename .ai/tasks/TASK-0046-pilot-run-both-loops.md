@@ -568,6 +568,31 @@ no genuine session gap was crossed. Recorded rather than claimed.
   **`git-ops` also corrected the caller**: the instruction said the skill held
   9 files; it holds **8** (9 counting `loop.md`). Nothing was missing — the
   count in the instruction was wrong, and the guarded role caught it.
-- Push: **awaited human authorization** — ADR-0019 clause 2.2. The loop
-  stopped at the gate rather than pushing, which is the boundary
-  demonstrated rather than asserted.
+- Push: **done and confirmed by re-fetch**, 2026-09-15, on explicit human
+  authorization given after the loop reported (ADR-0019 clause 2.2 satisfied
+  in the intended order: the loop stopped, the human decided, then the push
+  happened). `33e6570..ff212dd  master -> master`; after `git fetch`,
+  `git status --short --branch` reads `## master...origin/master` (level) and
+  `git log --oneline -1 origin/master` is `ff212dd`. All four commits are on
+  the remote. `git remote -v` verified **token-free** before and after;
+  `GITHUB_TOKEN` came from the environment and was never written to a tracked
+  file, a remote URL, or any output. Diff scanned for credential patterns
+  before pushing — none found. No force-push.
+
+  **Boundary engagement #6, and the sharpest of the pilot.** The first push
+  attempt was **delegated to `git-ops`**, whose
+  `push-requires-confirmation` boundary fired and whose interactive permission
+  prompt was **rejected** — so the push did not happen. `git-ops` then
+  **refused to route around its own denial** by pushing directly, and treated
+  the live rejection as overriding the written authorization in its
+  instruction file. That is the single most valuable boundary observation in
+  this task: the one operation the sprint's autonomy claim says must never
+  happen without a human was stopped by the mechanism built to stop it, and
+  the guarded role declined the obvious workaround. The push was then
+  performed by the manager under the human's second, explicit instruction.
+
+  **Recorded as a usability finding, not a defect:** a nested sub-agent
+  permission prompt is easy to miss or auto-reject, so a delegated push can
+  fail for reasons unrelated to intent. Anyone automating this should expect
+  the confirmation to surface in the human's own session rather than inside a
+  sub-agent's.
