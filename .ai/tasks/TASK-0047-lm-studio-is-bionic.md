@@ -373,8 +373,18 @@ Deviations from the Plan, for a reader who scoped against it:
   - Stale-reference grep → only dated `.ai/` history and deliberate citations
 - Result: **done.** Both false findings corrected and recorded; no
   verification invented for Bionic; no behavioural change shipped.
-- Commit: 1cba79b
-- Push: confirmed — `origin/master` at `1cba79b`, `git status` clean and
-  `master...origin/master` in sync. Pushed with a per-command basic-auth
-  header per `docs/operations/runbook.md`; `git remote -v` remains
-  token-free.
+- Commit: `c3c0392` — "The LM Studio client is Bionic; correct its skills and
+  agents findings". 13 files, +1041/-191. Pre-commit hook ran and passed
+  (`validate.sh: OK`); not bypassed.
+- Push: **confirmed** — `e508ed3..c3c0392 master -> master`. `origin/master`
+  resolves to `c3c0392` and `git status -sb` shows `master...origin/master`
+  with no divergence. Pushed with a per-command basic-auth header per
+  `docs/operations/runbook.md`; `git remote -v` verified token-free
+  afterwards.
+
+  Note for the next reader: this task file was amended **after** `c3c0392`
+  to replace a placeholder commit hash with the real one and to record the
+  push. That amendment is a second, trivial commit — the log below is
+  therefore accurate about `c3c0392`'s contents, and the hash of the
+  amendment itself is deliberately not recorded, to avoid an infinite
+  regress.
