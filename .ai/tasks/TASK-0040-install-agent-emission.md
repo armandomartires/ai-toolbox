@@ -562,5 +562,59 @@ name:
 alongside the allowlist and targeting `claude-code` still **refuses** with
 exit 1 and the remedy named.
 
-- Commit: `36cab90` (original), amendment in `3a588da`
+### Amendment 2 — 2026-09-15: two emitter defects found by TASK-0045
+
+Both are **this task's** defects, recorded here rather than patched from
+TASK-0045, which is what that brief requires of a Phase 2 finding.
+
+**Defect A — glob ordering was wrong among the specific patterns, and it
+silently downgraded force-push.**
+
+This log's original amendment 1 claimed `"*"`-first ordering was proved, and
+that claim **remains true**. What was *not* proved was ordering **among** the
+specific patterns, because the fixture used at the time had only one.
+
+With `git-ops`' real profile — `bash-allowlist` + `no-force-push` +
+`push-requires-confirmation` merged into one `bash` map — plain alphabetical
+order produced:
+
+```
+"*": deny → "git *": allow → "git filter-branch*": deny →
+"git push --force*": deny → "git push -f*": deny → "git push*": ask → …
+```
+
+OpenCode resolves **last match wins**, so `git push --force origin main`
+matched `git *` (allow), then `git push --force*` (deny), then
+**`git push*` (ask)** — resolving to **ask, not deny**, in the one role whose
+reason to exist is that it cannot force-push.
+
+Fixed: sort key is now `(g != "*", len(g), g)` — **shorter patterns first**,
+because a longer pattern is the more specific rule and must come later to
+win. Verified by resolving seven commands against the emitted order
+(`git push --force` → deny, `git push` → ask, `rm -rf /` → deny). Both
+ordering rules are now written into the emitter's comment, because the next
+person to "tidy" that sort would reintroduce it.
+
+**Defect B — `no-force-push` omitted `git clean -f*`.**
+
+The reference `git-ops` denies it explicitly; the emitter's mapping did not
+list it, so it matched `git *` → **allow** and the emitted role could delete
+untracked files irrecoverably. Added, along with
+`git push --force-with-lease*`, and the term's comment now states what it
+actually covers: *"git operations that destroy work rather than adding to
+it"* — which is why a command that pushes nothing belongs in it.
+
+Found by **diffing emitted output against the reference role fact by fact**
+rather than reading it for plausibility. Both defects would have passed a
+read-through.
+
+**Also recorded (not a defect): `write` is not an OpenCode permission key.**
+The live table documents **15** keys, and `edit` gates `write`, `edit` and
+`apply_patch`. The emitter emits `write: deny` for `read-only` anyway —
+harmless, accepted by OpenCode, kept by the resolver, and defence in depth
+against a future key rename. **`edit: deny` is the operative rule**, now
+stated in the emitter so nobody removes the wrong line.
+
+- Commit: `36cab90` (original), amendments in `3a588da` and the TASK-0045
+  commit below
 - Push: confirmed — see below

@@ -46,8 +46,16 @@ TASK-0036, not from documentation alone. It is created under an existing
 `~/.claude`; if `~/.claude` is absent the client is skipped and nothing is
 created.
 
-**Currently deployed: none.** No real role exists yet (TASK-0043,
-TASK-0045); `agents/_template/` is never emitted.
+**Currently deployed: three of six roles** — `designer-manager` (primary),
+`ideator` and `critic` (TASK-0043). `agents/_template/` is never emitted.
+
+**The three production roles are deliberately absent.** `qa-test`, `review`
+and `git-ops` declare `clients: [opencode]` because each needs a command
+allowlist or a path-scoped edit, and neither has a per-agent expression here
+— `tools`/`disallowedTools` gate whole tools, so "git commands only" cannot
+be said at all. `install.sh` **skips** them for this client (exit 0), rather
+than emitting a `git-ops` that could run any command. See ADR-0018 clause 8
+and `agents/git-ops/agent.md`'s scope note.
 
 Capability terms map to `disallowedTools` plus, for `worktree-only`,
 `isolation: worktree`. Five of the nine terms — `test-files-only`,

@@ -150,10 +150,12 @@ Raised B-014…B-017. Sprint opened by TASK-0033.
 evidence), ADR-0019 **accepted** (ratification), ADR-0017 **rejected**
 (human decision — `agent-tiers` stays with `opencode-customization`).
 
-**Eight tasks done:** TASK-0034, 0036, 0037, 0038, 0039, 0040, 0041, 0042 —
-Phase 1 closed and **Phase 2 complete** (`agents/` defined, enforced,
-indexed, deployable). TASK-0035 **cancelled**. The header previously read
-"planning only — no implementation"; that stopped being true at TASK-0041.
+**Eleven tasks done** (counted, not estimated): TASK-0034, 0036, 0037, 0038,
+0039, 0040, 0041, 0042, 0043, 0044, 0045. **Phases 1–4 complete** — both
+loops exist and both their role sets are authored, gated, indexed and
+emitted. TASK-0035 **cancelled**. **Only TASK-0046's pilot remains.**
+The header previously read "planning only — no implementation"; that stopped
+being true at TASK-0041.
 
 Phase 0:
 - [x] TASK-0033 — Park S6; open S7; add ROADMAP Phase 6 **and** 7; add the
@@ -281,16 +283,20 @@ Phase 4 — the production half, owned here:
       two-owners question answered as *two artifacts, one ancestor, neither
       updating the other* — the brief's two options both assumed this repo
       can edit a skill in another repo, and it cannot)
-- [ ] TASK-0045 — **RESCOPED 2026-09-15**: ~~Reconcile~~ **author**
+- [x] TASK-0045 — **RESCOPED 2026-09-15**: ~~Reconcile~~ **author**
       `qa-test`/`review`/`git-ops` in `agents/`, with the installed
-      `agent-tiers` copies as **read-only reference** (needs TASK-0040,
-      TASK-0044). There is nothing in this repo to reconcile *with*
-      (ADR-0017 rejected), so the one-owner problem the brief was built
-      around does not arise. `git-ops` declares `clients: [opencode]` — it
-      is OpenCode-only by measurement, and the emitter refuses otherwise.
-      Roles **omit `model`** (no tier resolver here). Also a **Phase 3
-      dependency**: `loops/design-brief/` delegates its step-7 commit to
-      `git-ops`, so the design loop cannot run end to end until this lands
+      `agent-tiers` copies as **read-only reference** (done — all three
+      authored, **all three OpenCode-only**, so `install.sh` cleanly *skips*
+      them for Claude Code. `shell-runner` **not authored**: no loop step
+      references it. The ownership question had **no applicable options** —
+      all three assumed the skill is in this repo. **Two emitter defects
+      found by diffing emitted output against the references fact by fact**:
+      alphabetical glob ordering downgraded `git push --force` from **deny to
+      ask**, and `no-force-push` omitted `git clean -f*`. Both would have
+      passed a read-through; both fixed in TASK-0040 and attributed there.
+      `bash-allowlist` also needed **parameterising** (`bash_allow`) before
+      any role could be authored faithfully, following TASK-0043's
+      precedent. **Both loops' role sets now exist.**)
 
 Phase 5 — exercise it:
 - [ ] TASK-0046 — **Pilot.** Run both loops to produce S6's `ansible-ops`

@@ -117,6 +117,7 @@ supplies models and performs no agentic work (ADR-0006).
 | `mode` | Required. `primary` or `subagent`. Not inferred: OpenCode has an explicit `mode` field while Claude Code has none, so the emitter must be told rather than guess. An interactive role **must** be `primary` — Claude Code strips `AskUserQuestion` from every subagent regardless of its tool list, and OpenCode's default `subagent_depth: 1` stops a subagent spawning workers. |
 | `capabilities` | Required, non-empty list drawn **only** from the vocabulary below. This is the role's safety boundary, stated in abstract terms because the emitter has to translate it into two different permission models — a boundary written in one client's syntax cannot be translated into the other's, and is silently discarded rather than rejected. |
 | `delegates_to` | *Required **iff** `capabilities` includes `delegation-allowlist`; forbidden otherwise.* A non-empty **block list** of role names this role may invoke — one `- name` per line. The inline flow form (`[a, b]`) is **not read** and fails the gate. Held in its own key rather than inside `capabilities` because every vocabulary term is a plain string and the parsers read flat sequences; nesting a parameter would change the schema's shape for one term. Stated as `iff` because it is checkable in both directions, and both are checked. |
+| `bash_allow` | *Required **iff** `capabilities` includes `bash-allowlist`; forbidden otherwise.* A non-empty **block list** of command patterns this role may run — one `- 'git *'` per line, quoted because a glob is not a bare YAML scalar. Everything not matched is **denied**, not prompted. Same block-list-only rule as `delegates_to`, for the same parser reason. |
 | `clients` | Required. List of clients this role is emitted for: `claude-code`, `opencode`, or both. Declared rather than derived, because a role asking for a capability a client cannot enforce is a **scoping decision**, not something the emitter should silently resolve. |
 | `model` | *Optional.* A **tier name**, never a client-native model ID. The two clients' model formats are mutually invalid — OpenCode wants `provider/model-id`, Claude Code wants an alias, a full ID or `inherit` — and OpenCode accepts a foreign value at parse time and **fails only at run time**. **Omit it: no tier resolver exists in this repo** — see the note below. |
 | Body | Required, non-empty. Everything after the frontmatter is the system prompt, emitted verbatim to both clients. It is the one part of a role that is genuinely portable. |
@@ -155,7 +156,7 @@ weaker of two clients, not by either client's native expressiveness.
 | `no-webfetch` | May not fetch network resources. | `webfetch: deny` | omit `WebFetch`, `WebSearch` from `tools` |
 | `worktree-only` | Confined to the project worktree. | `external_directory: deny` | **partial** — `isolation: worktree` gives an isolated *copy*, which is a different guarantee. See below. |
 | `test-files-only` | May edit test paths only. | `edit` glob map | **not per-agent** |
-| `bash-allowlist` | May run only named commands. | `bash` glob map | **not per-agent** |
+| `bash-allowlist` | May run **only** the commands named in `bash_allow`; everything else is denied. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **not per-agent** |
 | `no-force-push` | May not force-push, hard-reset or rewrite history. | `bash` deny globs | **not per-agent** |
 | `push-requires-confirmation` | Push prompts rather than proceeding. | `bash: {"git push*": ask}` | **no `ask` state exists** |
 | `webfetch-requires-confirmation` | Network fetches prompt rather than proceeding. | `webfetch: ask` | **no `ask` state exists** |
@@ -193,6 +194,24 @@ boundary travels with the role.
 **Emitted glob order matters.** OpenCode's `permission` rules are
 last-match-wins, so the emitter writes `"*": "deny"` first and the allowed
 names after. Reordering an emitted file inverts its meaning.
+
+#### The two parameterised terms deny by default
+
+`delegation-allowlist` and `bash-allowlist` are the only terms taking an
+argument, and both are **deny-first allowlists**: what is not named is
+**denied**, never prompted.
+
+That distinction is the whole point of the term. An earlier draft of the
+emitter produced `bash: {"*": "ask"}` for `bash-allowlist` — which permits
+*any* command subject to a prompt, where the roles it models **deny**
+everything but a named set. For a role whose entire purpose is "git
+operations only", `ask` means a human could approve `rm -rf` at a prompt the
+role was designed to never reach. **A boundary that degrades to a prompt is
+not the boundary that was declared**, and it fails silently, because the
+emitted file still looks restrictive.
+
+So a term that names a set must carry the set. If you add a third
+parameterised term, give it its own key and make the default **deny**.
 
 A term that only one client can enforce is **still a legal term**. It is
 not excluded, because excluding it would mean a role could not state a

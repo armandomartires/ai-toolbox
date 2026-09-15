@@ -524,7 +524,33 @@ Added:
 The template gained commented examples of the new key and of why `model` is
 omitted.
 
-- Commit: `7ccfa6d` (original), amendment in `3a588da`
+### Amendment 2 — 2026-09-15: the second parameterised term
+Attributed here for the same reason as amendment 1: this task owns the
+schema.
+
+**TASK-0045 found `bash-allowlist` could not name the commands it
+permits.** The guide defined it as *"May run only named commands"* while the
+emitter produced `bash: {"*": "ask"}` — permitting *any* command behind a
+prompt. For `git-ops`, whose stated purpose is "git operations only", that
+means a human could approve `rm -rf` at a prompt the role was designed never
+to reach.
+
+Same shape as amendment 1, so the same resolution:
+- **`bash_allow`** — a new key, required *iff* `capabilities` includes
+  `bash-allowlist` and forbidden otherwise, block-list only. Patterns are
+  quoted, since a glob is not a bare YAML scalar.
+- `bash-allowlist`'s definition now states the deny default explicitly:
+  *"May run **only** the commands named in `bash_allow`; everything else is
+  denied."*
+- A new subsection, **"The two parameterised terms deny by default"**,
+  recording why an `ask` default is not the boundary that was declared —
+  *"a boundary that degrades to a prompt is not the boundary that was
+  declared, and it fails silently, because the emitted file still looks
+  restrictive."* It also sets the rule for any future parameterised term:
+  own key, deny default.
+
+- Commit: `7ccfa6d` (original), amendments in `3a588da` and the TASK-0045
+  commit below
 - Push: confirmed — `origin/master` at the follow-up commit, verified by
   re-fetch and by an independent GitHub API read of the remote head.
   (Hash written *after* committing this time; the prior two sessions each

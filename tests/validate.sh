@@ -414,6 +414,25 @@ elif delegates is not None:
     bad.append("key 'delegates_to' is present without capability "
                "'delegation-allowlist' — it would have no effect")
 
+# bash-allowlist is the second parameterised term, same shape as the first:
+# the set it permits lives in its own key. Without it the emitter cannot say
+# WHICH commands, and an allowlist that names nothing is not an allowlist.
+bash_allow = seq("bash_allow")
+has_bash_allowlist = bool(caps) and "bash-allowlist" in caps
+if has_bash_allowlist:
+    if bash_allow is None:
+        bad.append("capability 'bash-allowlist' requires a 'bash_allow' "
+                   "block list naming the command patterns it may run "
+                   "(one quoted '- pattern' per line; inline [a, b] form is "
+                   "not read)")
+    elif not bash_allow:
+        bad.append("key 'bash_allow' is empty — an allowlist that permits "
+                   "nothing denies everything, which is not what this term "
+                   "means")
+elif bash_allow is not None:
+    bad.append("key 'bash_allow' is present without capability "
+               "'bash-allowlist' — it would have no effect")
+
 # metadata.version is optional, but must be semver when given, matching the
 # skill rule so the registry's version column stays comparable.
 for line in fm:

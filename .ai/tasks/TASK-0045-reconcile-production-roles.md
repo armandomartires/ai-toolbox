@@ -320,18 +320,228 @@ Until this task lands, the design loop cannot be executed end to end — an
 ordering fact already recorded in TASK-0041's log.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-15
+- Agent: opencode (claude-opus-5)
+
+#### Both gates passed
+- **ADR-0018 clause 7 is settled** — TASK-0040 decided it: the emitter emits
+  `{tier:<name>}` and never resolves it, so `models.jsonc` stays the single
+  owner. Roles here therefore **omit `model`** entirely (ADR-0017's recorded
+  gap: no tier resolver exists in this repo).
+- **TASK-0043's handover records one vocabulary limit**, since fixed — the
+  missing `delegation-allowlist` term. `test-files-only` **is** in the
+  vocabulary (OpenCode-only), so `qa-test`'s glob-scoped edit — the brief's
+  named test case — was expressible. No escalation needed on that count.
+
+#### Three fidelity defects found by diffing emitted output against the reference
+
+The brief asked for boundaries *"verified in the **emitted** output per
+client, not in the source."* Doing that literally — extracting every
+`key=action` fact from both files and set-differencing them — found three
+discrepancies. **Two were safe, one was a real weakening.**
+
+| # | Discrepancy | Verdict |
+|---|---|---|
+| 1 | `qa-test` bash `*`: reference `ask`, emitted **`deny`** | **Stricter, intended.** `bash-allowlist` means "everything unnamed is denied". The reference's `git push*: deny` / `git commit*: deny` are subsumed by `*: deny`. |
+| 2 | `websearch: deny` emitted, absent from reference | **Stricter, intended.** `no-webfetch` maps to both `webfetch` and `websearch`; the reference predates the key. |
+| 3 | **`git clean -f*: deny` missing from emitted `git-ops`** | **A real weakening.** It matched `git *` → allow, so the emitted role could delete untracked files irrecoverably. |
+
+**Defect 3 is the one that matters** and it is exactly the class ADR-0018
+names: a plausible file with a weaker boundary than the source declared.
+`no-force-push`'s mapping omitted `git clean -f*`, which the reference denies
+explicitly. Fixed in the emitter (TASK-0040's file — see amendment), and
+`git push --force-with-lease*` added at the same time as the same family. The
+term is now documented as covering *"git operations that destroy work rather
+than adding to it"*, which is what it always meant.
+
+**Re-verified after the fix: nothing missing**, and the only extras are the
+two intended stricter ones.
+
+#### A second fidelity gap, found before authoring: `bash-allowlist` could not name commands
+
+Step 3's boundary check found `bash-allowlist` emitted **`bash: {"*":
+"ask"}`** — permitting *any* command behind a prompt, where all three roles
+**deny** everything outside a named set.
+
+For `git-ops`, whose entire stated purpose is *"Executes git operations
+only"*, that means a human could approve `rm -rf` at a prompt the role was
+designed never to reach. **The guide's own definition promised more than the
+emitter delivered** (*"May run only named commands"* against a mapping that
+named none).
+
+**This is the same shape as TASK-0043's `delegation-allowlist` gap**, and the
+human's ruling there — parameterise the term, as follow-ups to the owning
+tasks, in ADR-0008's order — applies directly. Followed rather than
+re-escalated, because the precedent is explicit and the alternative was
+shipping three roles weaker than their references. Landed as:
+
+- **TASK-0037 amendment 2** — `bash_allow` key (required *iff*
+  `bash-allowlist`, forbidden otherwise, block-list only), plus a subsection
+  stating that **both** parameterised terms deny by default and why an
+  `ask` default is not the boundary that was declared.
+- **TASK-0038 amendment 2** — three checks, each observed failing.
+- **TASK-0040 amendment 2** — the second parameterised emit path, merging
+  rather than assigning the `bash` key, since a role can carry
+  `bash-allowlist` + `no-force-push` + `push-requires-confirmation` together.
+
+#### The emitter's glob ordering was wrong, and it silently downgraded force-push
+
+**The most consequential find of the task, and it was my own defect, not an
+inherited one.**
+
+Emitting the merged `bash` map alphabetically after `"*"` produced:
+
+```
+"*": deny → "git *": allow → "git filter-branch*": deny →
+"git push --force*": deny → "git push -f*": deny → "git push*": ask → …
+```
+
+OpenCode resolves **last match wins**. `git push --force origin main` matches
+`git *` (allow), then `git push --force*` (deny), then **`git push*` (ask)** —
+so it resolved to **ask**, not deny. The reference role has `git push*: ask`
+*before* the force denies, so there it correctly resolves to deny.
+
+**A force-push would have prompted instead of being refused**, in the one
+role whose reason to exist is that it cannot force-push.
+
+Fixed by sorting **shorter patterns first** (`key=(g != "*", len(g), g)`): a
+longer pattern is the more specific rule and must come later to win.
+Re-verified by resolving seven commands against the emitted order:
+
+| Command | Resolves to |
+|---|---|
+| `git status` | allow |
+| `git push origin main` | **ask** |
+| `git push --force origin main` | **deny** |
+| `git push -f` | **deny** |
+| `git reset --hard HEAD` | **deny** |
+| `git rebase -i` | **deny** |
+| `rm -rf /` | **deny** |
+
+Both ordering rules are now stated in the emitter's own comment, because the
+next person to "tidy" that sort would reintroduce the defect.
+
+#### `write` is not an OpenCode permission key
+
+Found while proving `review` read-only: the resolver showed `edit: deny`
+applied but `write` not resolving as a deny. Checked the **live** key table —
+OpenCode documents **15** keys, and `edit` is the one that gates `write`,
+`edit` **and** `apply_patch`. There is no separate `write` key.
+
+**Kept anyway**, deliberately: the long-standing `agent-tiers` roles carry
+it, OpenCode accepts it, the resolver keeps it, and it is harmless defence in
+depth against a future key rename. **`edit: deny` is what enforces
+read-only** — that is now stated in the emitter so nobody mistakes `write`
+for the operative rule and removes the wrong line.
+
+#### The two scope decisions
+
+**Ownership: nothing to decide, and that is the answer.** The brief asks
+whether the skill's copies are *"removed, reduced to pointers, or retained"*
+and to verify `install-tiers.ps1` still works. **All three options assume the
+skill is in this repo.** It is not — ADR-0017 was rejected, TASK-0035
+cancelled. So `agents/<role>/agent.md` is the sole definition **in this
+repo** from the first commit; the skill's copies are untouched because they
+are in another repo; and `install-tiers.ps1` cannot break because nothing
+here touches it.
+
+**The two-owners question moved outward, as the rescope predicted**, and is
+now documented rather than fixed: `git-ops` will exist twice on this machine
+— project-local via `/bmad`, global via `install.sh` — and OpenCode resolves
+**project over global**, so they do not collide. Written into
+`configs/opencode/README.md`, because a reader who finds two `git-ops` files
+needs it there, not in a task log.
+
+**`shell-runner`: not authored.** `bmad-workflow.md:30-32` says `build`
+*"never invokes shell-runner directly in the BMAD topology — qa-test owns
+test execution"*, and `loops/project-build/` names it at no step. A role
+nothing references is structure without benefit — the same reasoning that
+declined `design-doc-writer`. **Sprint role count is six**, confirmed.
+
+#### `plan` and `build` cannot be components — recorded, not attempted
+Both are OpenCode **built-in** names. A markdown agent file's body *replaces*
+a built-in's tuned system prompt wholesale, so `agents/plan/` would silently
+destroy it. They are inline config overrides (`model` + `permission`) only.
+
+**Consequence for the loop: two of its eight steps are performed by agents
+that cannot exist as `agents/` components.** `loops/project-build/` already
+states this in its Steps preamble, so the mixed role set is documented where
+an executor will read it rather than only here.
+
 - Actions:
+  1. Passed both gates; confirmed `test-files-only` expressible.
+  2. Enumerated all three roles' boundaries from the reference files and
+     `bmad-workflow.md:48-53`.
+  3. Found `bash-allowlist`'s fidelity gap; landed three amendments in
+     ADR-0008's order.
+  4. Authored `qa-test`, `review`, `git-ops` — abstract profiles, no `model`,
+     no client-native syntax.
+  5. Ran the gate on six real roles; regenerated the registry; emitted.
+  6. Diffed emitted output against the references fact by fact; found and
+     fixed defect 3; found and fixed the glob-ordering defect.
+  7. Proved the boundaries at the resolver level.
+  8. Documented the coexistence in both client snapshots.
+
 - Observations:
+  - **All three roles are `clients: [opencode]`.** `install.sh` **skips**
+    them for Claude Code with exit 0 — a clean skip because their `clients`
+    list says so, not a refusal. The refusal path is for a role that declares
+    an unenforceable term *and* names the client; these correctly do not.
+  - **`qa-test`'s glob-scoped edit resolves correctly** — the vocabulary's
+    narrowest term, proved at the resolver: `*` deny, then seven test-path
+    allows. This was the brief's named test case for whether ADR-0018's
+    abstraction holds. It does.
+  - **`review`'s five denies resolve** (`edit`, `task`, `webfetch`,
+    `websearch`, `external_directory`), plus the inert `write`.
+  - **A Phase 2 defect was found and attributed, not patched here.** The
+    glob-ordering bug is `scripts/emit-agents.py`'s, i.e. TASK-0040's, and is
+    recorded as that task's amendment 2 — which the brief requires
+    (*"record it and attribute it to its owning task"*). Its original log's
+    claim that `"*"`-first ordering was proved is **still true**; what was
+    not proved was ordering *among* the specific patterns, and that gap is
+    now recorded there.
+  - **The fidelity method is the finding worth reusing.** Reading the emitted
+    file and judging it plausible would have passed all three defects.
+    Extracting `key=action` facts from both sides and set-differencing them
+    found all three in one command.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → **PASS** on six real roles, after every edit.
+  - `bash scripts/sync-registry.sh` → Agents section carries **six** roles:
+    `critic`, `designer-manager`, `git-ops`, `ideator`, `qa-test`, `review`.
+  - `bash scripts/install.sh` → exit 0; **9 files** emitted (3 roles × 2
+    clients for the design roles, 3 × 1 for the production roles), 3 skips,
+    0 refusals.
+  - Emitted-vs-reference fact diff: **nothing missing** for any role; extras
+    are the two intended stricter ones.
+  - Resolver proof for `qa-test`'s globs and `review`'s denies.
+  - Three new gate rules **each observed failing**.
+  - `opencode.jsonc` mtime still **2026-08-24 23:48:09**, no `agent` key.
+  - `opencode-customization` clean at `f9f5e37` — never touched.
+
+  **Emitted file paths, for rollback** (untracked, outside the repo):
+  `~/.config/opencode/agents/{critic,designer-manager,git-ops,ideator,qa-test,review}.md`
+  and `~/.claude/agents/{critic,designer-manager,ideator}.md`.
+
+- Result: **done.** All acceptance criteria met. **Both loops' role sets now
+  exist**, so `loops/design-brief/` step 7 and `loops/project-build/` steps
+  3/5/7 are executable for the first time.
+
+  Two deviations, both recorded above: the brief's **ownership question had no
+  applicable options** (all three assumed the skill is in this repo), and
+  `bash-allowlist` **needed parameterising** before any of these roles could
+  be authored faithfully — followed from TASK-0043's precedent rather than
+  re-escalated.
+
+  The task's own worst defect was **mine, not inherited**: alphabetical glob
+  ordering silently downgraded force-push from deny to ask. It would have
+  passed every check this repo has.
+- Commit: recorded below
+- Push: recorded below

@@ -224,21 +224,20 @@ any agent or human can understand, trust, and deploy.
   `Rejected` ADR**, and it carries a 3-condition reopen trigger plus the one
   gap the rejection creates (no `{tier:}` resolver here).
 - Progress: TASK-0034, TASK-0036, TASK-0037, TASK-0038, TASK-0039,
-  TASK-0040, TASK-0041, TASK-0042, TASK-0043 and **TASK-0044** done — ten of
-  the sprint's tasks. **Phases 1, 2, 3 and 4's loop half are complete**;
-  both loops exist as gated components.
+  TASK-0040, TASK-0041, TASK-0042, TASK-0043, TASK-0044 and **TASK-0045**
+  done — **eleven** of the sprint's tasks. **Phases 1–4 are complete**: two
+  loops and six roles, all gated, indexed and emitted.
   **Phase 1 closed with its reclamation withdrawn, not delivered**
   (ADR-0017 rejected): the spike meant to prepare the claim is what stopped
   it, which is the ordering principle earning its place rather than failing.
   **Phase 2's plumbing is no longer unexercised** — TASK-0043 authored three
   real roles through it: the gate passed on real content, the registry
   populated, and six client files were emitted and **inspected**.
-  Only **TASK-0045** remains before the pilot, and it is now the single
-  blocker: both loops name `qa-test`/`review`/`git-ops`, and
-  `design-brief`'s step 7 delegates its commit to `git-ops`, so **neither
-  loop can execute until those three roles exist**. Both are complete,
-  deployable and **still unrun** — the standing caution below and
-  REVIEW-0008's pre-committed question.
+  **Only TASK-0046's pilot remains.** Both loops' role sets now exist, so
+  both are executable for the first time — and **neither has been run**.
+  That is exactly the state the standing caution below describes and
+  REVIEW-0008's pre-committed question was written for: everything is in
+  place, and nothing is evidence yet.
 - The second phase in a row planned from a **human-supplied analysis**
   rather than a backlog item. Eight of its claims were corrected before
   planning finished, against six in Phase 6. The three that reshaped the
@@ -260,7 +259,13 @@ any agent or human can understand, trust, and deploy.
   - **The three production roles exist as `agents/<role>/agent.md`**,
     authored under ADR-0018 with the `agent-tiers` copies read as reference,
     their boundaries proven in emitted output per client, and
-    `git-ops`/`shell-runner` recorded **OpenCode-only** (TASK-0045). The
+    `git-ops`/`shell-runner` recorded **OpenCode-only** (TASK-0045).
+    **Met 2026-09-15**, and the "proven in emitted output" clause earned its
+    place: diffing emitted files against the references fact by fact found
+    **two emitter defects** a read-through would have passed — alphabetical
+    glob ordering downgrading `git push --force` from deny to **ask**, and
+    `no-force-push` omitting `git clean -f*`. `shell-runner` was **not
+    authored**: no loop step references it. The
     drift question is closed as *answered and not this repo's to resolve*:
     repo copy newer for both files, no unique fix installed-side, all four
     model IDs resolving (TASK-0034).

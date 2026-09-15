@@ -362,12 +362,66 @@ The executor read-back confirmed the sequence is executable under
 **by `build`, a primary** — never subagent-to-subagent, which is the natural
 way to write it wrong.
 
-**S7's remaining work is TASK-0045, then the pilot.** Both loops are gated
-components and **neither can execute yet**: `project-build` names `qa-test`,
-`review` and `git-ops`, and `design-brief`'s step 7 delegates its commit to
-`git-ops` — all three authored by TASK-0045. That task is now the single
-thing standing between the sprint and TASK-0046's pilot, which is what
-REVIEW-0008's pre-committed question is about.
+**TASK-0045 is done — six roles now exist and both loops are executable.**
+`qa-test`, `review` and `git-ops` are authored in `agents/` from the
+`agent-tiers` copies read as reference (never imported — ADR-0017). All
+three are **OpenCode-only**: each needs a command allowlist or a path-scoped
+edit, neither of which has a per-agent Claude Code expression, so
+`install.sh` **skips** them there with exit 0 rather than refusing. Nine
+files now emitted across two clients.
+
+**The task's own worst defect was in the emitter, not in the roles — and it
+was mine, not inherited.** Merging `git-ops`' three bash-related terms and
+sorting the globs **alphabetically** produced an order where, under
+OpenCode's last-match-wins resolution, `git push --force` matched
+`git push*: ask` *after* `git push --force*: deny` — resolving to **ask, not
+deny**, in the one role whose reason to exist is that it cannot force-push.
+Fixed by sorting **shorter patterns first** (a longer pattern is the more
+specific rule and must win), verified by resolving seven commands against
+the emitted order. A second defect: `no-force-push` omitted
+`git clean -f*`, which matched `git *` → allow and would have let the role
+delete untracked files irrecoverably.
+
+**Both were found by diffing emitted output against the reference roles fact
+by fact, and both would have passed a read-through.** That method is the
+transferable part: extract every `key=action` pair from each side and
+set-difference them. Reading an emitted file and judging it plausible is what
+ADR-0018 warns produces "a plausible agent file with wrong permissions".
+
+A third fidelity gap was found *before* authoring: **`bash-allowlist` could
+not name the commands it permits**, emitting `bash: {"*": "ask"}` where the
+roles **deny** everything unnamed. For `git-ops` that meant a human could
+approve `rm -rf` at a prompt the role was designed never to reach. Same
+shape as TASK-0043's `delegation-allowlist` gap, so the same resolution was
+followed rather than re-escalated: parameterise it (`bash_allow`) as
+amendments to TASK-0037/0038/0040 in ADR-0008's order. **The vocabulary now
+has two parameterised terms, and both deny by default** — recorded in the
+guide as the rule for any future one.
+
+**Two scope questions answered:**
+- **Ownership: none of the brief's three options applied**, because all
+  three assumed the skill is in this repo. It is not, so
+  `agents/<role>/agent.md` is the sole definition here from the first commit.
+  The two-owners question moved outward instead and is **documented, not
+  fixed**: `git-ops` will exist twice on this machine — project-local via
+  `/bmad`, global via `install.sh` — and OpenCode resolves **project over
+  global**, so they do not collide. Written into both client snapshots.
+- **`shell-runner` not authored.** No step in `loops/project-build/`
+  references it, and `bmad-workflow.md` says `build` never invokes it
+  directly. A role nothing references is structure without benefit — the same
+  reasoning that declined `design-doc-writer`. **Role count six, confirmed.**
+
+Also recorded: **`write` is not an OpenCode permission key.** The live table
+documents 15, and `edit` gates `write`/`edit`/`apply_patch`. The emitter
+emits `write: deny` anyway — inert, accepted, kept by the resolver, and
+defence in depth against a key rename — with `edit: deny` noted in the
+emitter as the operative rule, so nobody removes the wrong line.
+
+**S7's only remaining task is TASK-0046's pilot.** Phases 1–4 are complete:
+two loops, six roles, a component category that is defined, enforced,
+indexed and deployable. **Everything is in place and nothing has been
+run** — which is precisely the state REVIEW-0008's pre-committed question
+was written for.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at

@@ -476,6 +476,30 @@ original change. Still sub-second; the increase is within run-to-run noise
 and adds no new `python3` process (the checks are inside the existing
 heredoc).
 
-- Commit: `e0e9d68` (original), amendment in `3a588da`
+### Amendment 2 — 2026-09-15: enforce `bash_allow`
+Definition landed first in TASK-0037 amendment 2 (ADR-0008's order held
+again).
+
+Three checks, **each observed failing** on a fixture violating exactly that
+rule:
+
+| Rule | Observed message | Exit |
+|---|---|---|
+| `bash-allowlist` without `bash_allow` | `capability 'bash-allowlist' requires a 'bash_allow' block list naming the command patterns it may run (one quoted '- pattern' per line; inline [a, b] form is not read)` | 1 |
+| `bash_allow` empty | `key 'bash_allow' is empty — an allowlist that permits nothing denies everything, which is not what this term means` | 1 |
+| `bash_allow` without the capability | `key 'bash_allow' is present without capability 'bash-allowlist' — it would have no effect` | 1 |
+
+The message wording for the missing-key case reuses amendment 1's lesson: it
+names the **block-list** requirement, because the inline flow form lands in
+the same branch and *"requires a list"* reads as false when the author is
+looking at a present key.
+
+**No `mode` pairing rule for this term**, unlike `delegation-allowlist`. A
+command allowlist is meaningful for a subagent — indeed all three roles using
+it are subagents — whereas Claude Code ignores a subagent's *agent* allowlist,
+which is what forced that pairing. The asymmetry is deliberate.
+
+- Commit: `e0e9d68` (original), amendments in `3a588da` and the TASK-0045
+  commit below
 - Push: pushed with the sequence's other Phase-2 commits; confirmed by
   re-fetch and an independent GitHub API read.

@@ -63,8 +63,30 @@ singular directory found in place. It is created under an existing
 `~/.config/opencode`; if that is absent the client is skipped and nothing
 is created.
 
-**Currently deployed: none.** No real role exists yet (TASK-0043,
-TASK-0045); `agents/_template/` is never emitted.
+**Currently deployed: six roles.** Design stage — `designer-manager`
+(primary), `ideator`, `critic` (TASK-0043). Production stage — `qa-test`,
+`review`, `git-ops` (TASK-0045). `agents/_template/` is never emitted.
+
+**Three of the six are OpenCode-only** (`qa-test`, `review`, `git-ops`):
+each needs a command allowlist or a path-scoped edit, and neither has a
+per-agent expression in Claude Code. `install.sh` **skips** them for that
+client — a clean skip with exit 0, because their `clients` list says so,
+rather than a refusal.
+
+### `git-ops` may exist twice on this machine, by design
+
+`agent-tiers` (in `opencode-customization`) also ships a `git-ops`, written
+into a **project's** `.opencode/agents/` by its `/bmad` command. This repo
+emits its own into the **global** `~/.config/opencode/agents/`.
+
+They do not collide: OpenCode resolves **project over global**, so a project
+that ran `/bmad` uses that copy and every other project uses this one. Both
+enforce the same boundary — git only, push asks, force-push denied.
+
+**This is a coexistence, not a defect, and it cannot be fixed from here** —
+the other copy belongs to another repo's installer (ADR-0017). If the two
+ever diverge, this repo's copy governs work in this repo. Recorded so that
+finding two `git-ops` files is explicable rather than alarming.
 
 All nine capability terms are expressible here, via the `permission` model —
 which is why an OpenCode-only role is a legitimate outcome rather than a

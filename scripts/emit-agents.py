@@ -66,6 +66,15 @@ import sys
 # opencode: a list of (permission_key, value) or (key, {glob: action}) pairs.
 # claude_code: a set of tool names to withhold, or None if unexpressible.
 VOCAB = {
+    # `edit` is the key that actually gates writes: OpenCode documents it as
+    # gating `write`, `edit` AND `apply_patch`. `write` is NOT a documented
+    # permission key — it is emitted as belt-and-braces because the
+    # long-standing agent-tiers roles carry it, OpenCode accepts it, and the
+    # resolver keeps it. It is defence in depth against a future key rename,
+    # not the operative rule. `edit: deny` is what enforces read-only;
+    # removing `write` would change nothing, and removing `edit` would
+    # silently unlock writing (verified in TASK-0045 against the live key
+    # table).
     "read-only": {
         "opencode": [("edit", "deny"), ("write", "deny")],
         "claude_code": {"deny_tools": ["Write", "Edit", "NotebookEdit"]},
@@ -114,17 +123,35 @@ VOCAB = {
         })],
         "claude_code": None,
     },
+    # The SECOND parameterised term: its permitted set comes from the role's
+    # `bash_allow` list, so the emit path special-cases it like
+    # `delegation-allowlist`. Marked here so the table stays the single index
+    # of the vocabulary.
+    #
+    # Deny-first, never ask-first. An earlier version emitted {"*": "ask"},
+    # which permits any command behind a prompt — for a role whose purpose is
+    # "git operations only" that means a human could approve `rm -rf` at a
+    # prompt the role was designed never to reach. A boundary that degrades
+    # to a prompt is not the boundary that was declared.
     "bash-allowlist": {
-        "opencode": [("bash", {"*": "ask"})],
+        "opencode": "PARAMETERISED",
         "claude_code": None,
     },
+    # "no-force-push" is shorthand: it denies the whole family of git
+    # operations that destroy work rather than adding to it. `git clean -f`
+    # belongs here even though it pushes nothing — it deletes untracked
+    # files irrecoverably, and it was missing from an earlier version of this
+    # list, which left it ALLOWED via a `git *` allowlist entry (caught in
+    # TASK-0045 by diffing emitted output against the reference role).
     "no-force-push": {
         "opencode": [("bash", {
             "git push --force*": "deny",
+            "git push --force-with-lease*": "deny",
             "git push -f*": "deny",
             "git reset --hard*": "deny",
             "git rebase*": "deny",
             "git filter-branch*": "deny",
+            "git clean -f*": "deny",
         })],
         "claude_code": None,
     },
@@ -191,6 +218,18 @@ def emit_opencode(role, fm, body):
             for name in fm.get("delegates_to", []):
                 perms["task"][name] = "allow"
             continue
+        if term == "bash-allowlist":
+            # Same deny-first shape, merged rather than assigned: a role can
+            # carry bash-allowlist AND no-force-push AND
+            # push-requires-confirmation, all of which write `bash` keys.
+            merged = perms.get("bash")
+            if not isinstance(merged, dict):
+                merged = {}
+            merged["*"] = "deny"
+            for pattern in fm.get("bash_allow", []):
+                merged[pattern] = "allow"
+            perms["bash"] = merged
+            continue
         for key, value in VOCAB[term]["opencode"]:
             if isinstance(value, dict):
                 merged = perms.get(key)
@@ -212,7 +251,23 @@ def emit_opencode(role, fm, body):
             v = perms[key]
             if isinstance(v, dict):
                 out.append("  %s:" % key)
-                for glob in sorted(v, key=lambda g: (g != "*", g)):
+                # OpenCode resolves LAST MATCH WINS, so emission order is
+                # semantic, not cosmetic. Two rules follow:
+                #
+                #   1. "*" first, or the blanket rule would override every
+                #      specific one and the role would permit (or deny)
+                #      everything.
+                #   2. SHORTER patterns before longer ones. A longer pattern
+                #      is the more specific rule, so it must come later to
+                #      win.
+                #
+                # Rule 2 was a real defect caught in TASK-0045: plain
+                # alphabetical order put `git push*: ask` AFTER
+                # `git push --force*: deny`, so a force-push resolved to
+                # *ask* instead of *deny* — silently weakening the one
+                # boundary `git-ops` exists to enforce. Length first, then
+                # alphabetical for a stable diff.
+                for glob in sorted(v, key=lambda g: (g != "*", len(g), g)):
                     out.append("    \"%s\": %s" % (glob, v[glob]))
             else:
                 out.append("  %s: %s" % (key, v))
