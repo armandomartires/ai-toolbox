@@ -245,46 +245,106 @@ and step 7's commit delegation are sequence, not method, and need none.
 
 ## Outputs / handover
 
-**Intended end state — this task has not run.** The table below is a plan.
-`validate.sh` requires this section non-empty for briefs ≥ 0020 and cannot
-distinguish an intention from a state (ADR-0012 Decision 3), so this
-sentence does it.
+**Written after the work. This task has run** — see the execution log.
 
-| Artifact | Intended end state |
-|----------|-------------------|
-| `skills/design-flow/SKILL.md` | Terse portable core: the method for each of the loop's steps, with the critique's obligations and ideation's distinctness requirement both concrete |
-| `skills/design-flow/templates/` | The brief template supporting the loop's lock mechanism, carrying the copy-never-symlink rule |
-| `skills/design-flow/references/` | Load-on-demand detail, following `project-workflow`'s progressive disclosure |
-| Governance boundary | Stated explicitly: not a framework, no task IDs, no sprints; the two governance skills named per ADR-0013's pattern |
-| `docs/registry.md` | Regenerated; skills count incremented |
+| Artifact | End state |
+|----------|-----------|
+| `skills/design-flow/SKILL.md` | **3354 bytes.** A step→method routing table, the three load-bearing rules, the brief's location and lock fields, the governance boundary, and maintenance. `metadata.version: "1.0.0"`, quoted single-line `description`. Passes all five ADR-0003 rules |
+| `skills/design-flow/references/distinctness.md` | 2614 B. Distinctness defined as **differing in a load-bearing commitment** — one whose change forces *rewriting* rather than *adjusting*. Five concrete examples of load-bearing, five of not. The forcing question: *what would have to be thrown away if we changed our mind?* Plus what to do when only variants emerge: report **which constraint** forces the design |
+| `skills/design-flow/references/critique-obligations.md` | 3551 B. **Eight named obligations**, so an empty critique is a claim with content. Four rules for the critic, including never-fix (same reason `review` is read-only) and criticise-on-own-terms-before-comparing, because shared flaws are the ones that survive convergence |
+| `skills/design-flow/references/clarify-and-converge.md` | 3936 B. Step 1's four establishables with hard-vs-assumed constraint marking; the ask-vs-assume-and-record rule; step 4's seven brief contents; and the combining-candidates trap — a combination is *strictly a candidate nobody critiqued* |
+| `skills/design-flow/templates/brief.md` | 2526 B. Frontmatter carries the three lock fields empty; seven sections incl. rejected-alternatives and assumptions tables, accepted costs, and open questions. Copy-never-symlink rule stated |
+| Progressive disclosure | **12.6 KB in `references/`, 3.3 KB in the always-loaded core.** No budget invented (ADR-0008); terse by construction |
+| `docs/registry.md` | Regenerated; **three** skills. Quotes stripped correctly by `unquote()`, no pipe defect |
+| Deployment | Symlinked into **both** clients and verified by `ls -ld` + `readlink -f`, not by `install.sh` exiting 0 |
+| Gate proofs | Three checks **observed failing**: name mismatch, folded multi-line `description`, non-semver version |
 | Roles | **Not authored.** TASK-0043 |
 
-**Next task starts here**: the design stage has both a gated sequence
-(`loops/design-brief/`) and a documented method (`skills/design-flow/`), so
-TASK-0043 can author the four roles against a fixed step list and a fixed
-method, with nothing left to infer.
+**Next task starts here**: the design stage has a gated sequence
+(`loops/design-brief/`, 7 steps) and a documented method
+(`skills/design-flow/`, 3 references + 1 template), both deployed. TASK-0043
+can author roles against a fixed step list and a fixed method, with the
+critique's obligations and the distinctness test both concrete enough to
+write a system prompt from.
 
-Deviation to watch for: if the loop's landed step list differs from
-clarify/ideate/critique/converge, the method's sections change with it —
-record the divergence, since TASK-0043 is scoped against **four** roles and
-a different step count may mean a different role set. Also record if any
-method detail turned out to belong in the loop instead: that is a
-boundary-placement finding worth having, since the sequence-vs-method split
-is the whole basis for having two artifacts.
+**Deviations from the plan, recorded because TASK-0043 was scoped against
+the original:**
+
+1. **The four-step forecast was already known stale** and this brief was
+   corrected before execution — the loop has seven steps. The method covers
+   **four** of them (1, 2, 3, 4); steps 5–7 are sequence, not method, and
+   the skill says so explicitly rather than padding.
+
+2. **No method detail turned out to belong in the loop.** The
+   sequence-vs-method split held under authoring, which is the evidence that
+   having two artifacts was right. The one seam worth naming: the loop says
+   an empty critique *must state what was examined*, and the skill supplies
+   *the list it states* — the obligation is the loop's, the content is the
+   skill's.
+
+3. **A near-miss worth recording.** The gate-bite proof for the name
+   mismatch first appeared to produce **no output**, which would have read as
+   "the check does not fire." The check fired correctly; my grep filtered for
+   `NAME MISMATCH` (the *loops* check's wording) while skills emit
+   `INVALID SKILL: … name … does not match directory`. A less careful run
+   would have recorded a false negative about the gate. **The lesson is
+   narrow and reusable: when proving a check bites, match on the check's own
+   message, or on exit status — never on a message remembered from a
+   different check.**
+
+4. **`references/` deliberately holds three files, not seven.** The
+   `project-workflow` exemplar has seven. Three is what the four method
+   steps need; adding more for symmetry with the exemplar would be the same
+   unrequested-work pattern B-016 declines for `prompts/`.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-15
+- Agent: opencode (anthropic/claude-opus-5)
+- Actions: Read the landed `loops/design-brief/loop.md` (steps section in
+  full), `skills/project-workflow/SKILL.md` as the terse-core exemplar,
+  `skills/_template/SKILL.md`, the authoring guide's Skills section, and
+  listed `project-workflow/templates/reference/` for the disclosure pattern.
+  Wrote the three `references/` files first, then `templates/brief.md`, then
+  the `SKILL.md` core last — detail before summary, so the core routes to
+  content that already exists. Ran the read-back against the loop. Proved
+  three gate checks bite. Regenerated the registry, deployed, and verified
+  the symlinks.
+- Observations: Four findings, all in Outputs / handover. Two worth
+  restating.
+  **(1) The read-back found nothing to fix**, which is the useful result
+  here: no method detail belonged in the loop, and the skill restates no exit
+  condition and — verified by grep — **no cap number**. Every `3` in the
+  skill is a step number or a list index. The sequence-vs-method boundary
+  held under authoring pressure, which is the evidence that splitting them
+  across two artifacts was correct rather than bureaucratic.
+  **(2) A gate proof nearly produced a false negative.** The name-mismatch
+  test appeared to output nothing, which would have read as "the check does
+  not fire" — the exact class of claim this repo has been burned by (lesson
+  1). Re-running showed the check fires correctly with
+  `INVALID SKILL: … name 'wrong-name' does not match directory 'design-flow'`;
+  my grep had filtered for `NAME MISMATCH`, which is the *loops* check's
+  wording. The gate was right and the test was wrong. Recorded because the
+  reusable rule is narrow: **match on the check's own message or on exit
+  status, never on a message remembered from a sibling check.**
+- Validation: `bash tests/validate.sh` → `validate.sh: OK`. Three checks
+  observed failing on modified copies, then restored: name mismatch
+  (`INVALID SKILL: … does not match directory`), a folded `description: >-`
+  spanning three lines (`description spans 3 lines — must be a single
+  line` — the exact defect that would break a registry row), and
+  `version: "one"` (`not semver`). `bash scripts/sync-registry.sh` → three
+  skills, quotes stripped, no pipe defect. `bash scripts/install.sh link` →
+  deployed to both clients; **effect verified** with `ls -ld` (both are
+  symlinks into this repo) and `readlink -f` on `SKILL.md`, not by the
+  script's exit code. Confirmed no `README.md` inside the skill folder.
+  Backup at `/tmp/opencode/df-backup.md`, restored after the break-tests.
+- Result: **done.** Every acceptance criterion met. Core 3354 B with 12.6 KB
+  in `references/`; no budget invented, per ADR-0008.
+- Commit: see below.
+- Push: see below.

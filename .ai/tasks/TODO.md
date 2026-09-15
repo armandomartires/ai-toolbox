@@ -190,8 +190,16 @@ Phase 3 — the design half (the genuine capability gap):
       found the manager holding its own commit rights and delegated to
       `git-ops`. **`design-doc-writer` gets nothing to do**, so the sprint's
       role count is six, not seven)
-- [ ] TASK-0042 — `skills/design-flow/` — portable core + templates (needs
-      TASK-0041)
+- [x] TASK-0042 — `skills/design-flow/` — portable core + templates (done —
+      3.3 KB core routing to 12.6 KB in `references/`; no budget invented.
+      **Distinctness** = differing in a *load-bearing commitment*, one whose
+      change forces rewriting rather than adjusting. **Critique has eight
+      named obligations**, so an empty critique is a claim with content.
+      Method covers 4 of the loop's 7 steps; 5–7 are sequence, not method.
+      The read-back found **nothing** to move — the sequence/method split
+      held, which is the evidence two artifacts were right. A gate proof
+      nearly returned a false negative by grepping for a sibling check's
+      wording: **match the check's own message or exit status**)
 - [ ] TASK-0043 — Roles: `designer-manager` (**primary**), `ideator`,
       `critic`, `design-doc-writer` (needs TASK-0040, TASK-0042)
 

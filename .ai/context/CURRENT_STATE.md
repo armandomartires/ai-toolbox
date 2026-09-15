@@ -41,9 +41,44 @@ Three findings from it that change downstream scope:
   design loop cannot be *executed* end to end until that lands — TASK-0046's
   ordering problem, recorded rather than discovered there.
 
-S7 now proceeds on two independent fronts: Phase 3 continues with
-`TASK-0042` (the method the loop references), and Phase 1's two spikes
-remain unblocked and mutually independent.
+**TASK-0042 is done — the design stage now has both halves.**
+`skills/design-flow/` is the *method* the loop references: a 3.3 KB core
+routing to 12.6 KB in `references/` (no budget invented, ADR-0008), plus a
+brief template carrying the three lock fields. Three skills now ship.
+
+Its two substantive contributions are the ones that stop the method being
+decorative:
+
+- **Distinctness is defined as differing in a load-bearing commitment** —
+  one whose change would force *rewriting* rather than *adjusting*. With five
+  worked examples of load-bearing (where a fact lives; derived vs declared;
+  the unit of deployment; where a boundary sits; enforced vs documented) and
+  five of not. Without a test this concrete, step 2 produces variants and the
+  critique compares near-identical candidates.
+- **A critique carries eight named obligations**, so "found nothing" is a
+  claim with content rather than an absence of effort. This is lesson 1's
+  shape in content form: an empty critique recorded as a pass is a check that
+  cannot fail.
+
+Two findings from it:
+- **The read-back found nothing to move**, and no cap number is restated
+  anywhere in the skill (verified by grep — every `3` is a step number or
+  list index). The sequence-vs-method boundary held under authoring, which is
+  the evidence that splitting them across two artifacts was right rather
+  than bureaucratic.
+- **A gate proof nearly produced a false negative.** The name-mismatch test
+  appeared to output nothing — which would have been recorded as "the check
+  does not fire," exactly the claim class lesson 1 covers. The check fired
+  correctly; the grep matched `NAME MISMATCH`, which is the *loops* check's
+  wording, while skills emit `INVALID SKILL: … does not match directory`.
+  **When proving a check bites, match on that check's own message or on exit
+  status — never on a message remembered from a sibling check.**
+
+S7 now proceeds on two independent fronts: Phase 3's remaining task is
+`TASK-0043` (the roles), **still blocked** on Phase 2 via TASK-0040 →
+TASK-0037 → ADR-0018; and Phase 1's two spikes remain unblocked and mutually
+independent. **The critical path now runs through Phase 1**, since
+everything left in Phase 3 and 4 depends on ADR-0018 being accepted.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at
