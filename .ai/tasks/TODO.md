@@ -165,11 +165,12 @@ Phase 1 — reclaim, then decide (the two spikes are mutually independent):
       discards an OpenCode `permission:` block, leaving Write/Edit/Bash in
       the pool. 5 of 8 capability terms OpenCode-only; 4 ADR-0018 rows
       corrected)
-- [ ] ADR-0018 — Per-capability portability; one source, per-client
-      **emission**; emission forbids `link` mode. **Ready to accept** —
-      needs decision 2's reasoning replaced, 4 rows corrected, and one new
-      clause: the emitter must **refuse, not degrade**, a capability term
-      it cannot enforce on a target
+- [x] ADR-0018 — Per-capability portability; one source, per-client
+      **emission**; emission forbids `link` mode (**accepted** 2026-09-15 —
+      ratified on evidence: clause 2's reasoning replaced with the observed
+      safety failure, 4 facts corrected in place, and **new clause 8: the
+      emitter refuses, never degrades**. `git-ops` and `shell-runner`
+      recorded **OpenCode-only** rather than left for TASK-0045)
 
 Phase 2 — make `agents/` a real category (0037 strictly first; then
 0038/0039/0040 are independent):

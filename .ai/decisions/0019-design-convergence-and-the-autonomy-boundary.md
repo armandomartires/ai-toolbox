@@ -195,6 +195,16 @@ proposed and still blocked on `TASK-0036`. So the design *sequence* and its
 That is the intended order: the loop is authored first so the roles are
 shaped by the sequence rather than the reverse.
 
+> **Superseded in part, 2026-09-15.** The paragraph above is left as
+> written because it records the state at *this* ADR's ratification, and an
+> ADR is a dated record rather than a live status page. For the current
+> state: `TASK-0036` is done and **ADR-0018 is accepted**, so the chain
+> described here is unblocked down to `TASK-0037`, which is now the
+> critical path. `TASK-0043` is still blocked, but on `TASK-0040` rather
+> than on a proposed decision. Annotated rather than rewritten, so the
+> claim and its correction are both visible — the same handling this
+> ADR used for its own clause miscount.
+
 The practical consequence is that S7 can proceed along two independent
 fronts — Phase 3's first two tasks, and Phase 1's two spikes — which suits
 `ADR-0012`'s Decision 2: one task per session is the default, not a rule.

@@ -213,8 +213,16 @@ any agent or human can understand, trust, and deploy.
   through plan, implement, test, review and document. Make `agents/` a
   real component category so the roles involved are enforced rather than
   unpoliced text.
-- Planned by `PLAN-0004`; decisions ADR-0017…0019, all **proposed**.
-  Sprint S7, tasks TASK-0033…0046. Raised B-014…B-017.
+- Planned by `PLAN-0004`. Sprint S7, tasks TASK-0033…0046. Raised
+  B-014…B-017. Decision status, **kept current here rather than left to
+  drift** (lesson 6 has recurred three times in this file's own history):
+  **ADR-0019 accepted** 2026-09-15 (ratification, no spike needed);
+  **ADR-0018 accepted** 2026-09-15 on TASK-0036's evidence, with clause 2's
+  reasoning replaced and a new clause 8; **ADR-0017 still proposed**,
+  blocked on TASK-0034.
+- Progress: TASK-0041, TASK-0042 and TASK-0036 **done**. TASK-0037 is now
+  the critical path — 0038/0039/0040 are mutually independent behind it,
+  and TASK-0043 sits behind 0040.
 - The second phase in a row planned from a **human-supplied analysis**
   rather than a backlog item. Eight of its claims were corrected before
   planning finished, against six in Phase 6. The three that reshaped the
@@ -230,7 +238,13 @@ any agent or human can understand, trust, and deploy.
   - ADR-0018 records the per-client agent mapping, the emission
     mechanism, and **explicitly** that agents have no `link` mode and
     why — with the further note that no freshness check is possible
-    (ADR-0009) and adding one would break every clone.
+    (ADR-0009) and adding one would break every clone. **Met
+    2026-09-15**, and it records two things the criterion did not
+    anticipate: the superset alternative is rejected on an **observed
+    safety failure** (an OpenCode `permission:` block is silently
+    discarded by Claude Code, leaving the denied tools in the pool), and
+    **five of eight capability terms are OpenCode-only**, making
+    `git-ops` and `shell-runner` OpenCode-only roles.
   - `agents/` is a real category: template, a normative schema in
     `authoring-guide.md` written **before** enforcement, `validate.sh`
     checks **observed failing** on malformed fixtures, a generated
@@ -245,7 +259,10 @@ any agent or human can understand, trust, and deploy.
     were produced *through* the loops, with the execution log recording
     where each loop's exit conditions actually fired (TASK-0046).
 - Known limitation, recorded at plan time: this phase adds two loops, one
-  skill, seven roles and a component category. **If the pilot does not
+  skill, **six** roles and a component category — `design-doc-writer` was
+  declined by TASK-0041, which found the loop gives it nothing to do, and
+  this line read "seven" until TASK-0036's session corrected it. **If the
+  pilot does not
   run, all of it is scaffolding** — and the phase would have diagnosed
   that exact pattern in `agent-tiers` while reproducing it. Third instance
   of the pattern `mcp-servers/_template/` established. Hence REVIEW-0008's

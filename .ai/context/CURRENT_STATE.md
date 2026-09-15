@@ -12,11 +12,14 @@ implement, test, review and document — plus making `agents/` a real
 component category. Seventeen artifacts written, zero components changed:
 TASK-0033…0046, ADR-0017…0019, B-014…B-017.
 
-**ADR-0019 is accepted (2026-09-15); ADR-0017 and ADR-0018 remain proposed**
-and blocked on their spikes. Accepting 0019 needed ratification rather than
-evidence — it *narrows a stated requirement*, which is the human's call.
-Ratification also caught a defect in the ADR's own text: it said "two
-clauses" while containing three, corrected in place rather than silently.
+**ADR-0018 and ADR-0019 are both accepted (2026-09-15); only ADR-0017
+remains proposed**, blocked on TASK-0034. Accepting 0019 needed
+ratification rather than evidence — it *narrows a stated requirement*,
+which is the human's call. Ratification also caught a defect in the ADR's
+own text: it said "two clauses" while containing three, corrected in place
+rather than silently. **0018 was the opposite case**: it needed evidence,
+got it from TASK-0036, and its mechanism survived while its reasoning did
+not (detail below).
 
 **TASK-0041 is done — S7's first implementation.** `loops/design-brief/` is
 a gated component: **seven** steps rather than the four planned, cap **3**
@@ -125,11 +128,43 @@ page, then found stated verbatim on the *config* page. **The brief named
 three pages; the fact was on a fourth.** A negative claim about
 documentation is a claim about where you looked.
 
-S7 now proceeds on two independent fronts: Phase 3's remaining task is
-`TASK-0043` (the roles), **still blocked** on Phase 2 via TASK-0040 →
-TASK-0037, but ADR-0018 is now ready to accept; and Phase 1's remaining
-spike is TASK-0034. **The critical path still runs through Phase 1**, since
-everything left in Phase 3 and 4 depends on ADR-0018 being accepted.
+**ADR-0018 is accepted (2026-09-15), and Phase 2 is unblocked.** Ratified
+on TASK-0036's evidence rather than on agreement: the mechanism it proposed
+survived, its *reasoning* did not. Four corrections were made in place
+(ADR-0019's precedent — a decision whose factual basis changed must show
+it), and **one new clause** was added, which is the substantive output:
+
+> **Clause 8 — the emitter refuses; it never degrades.** A capability term
+> declares which clients can enforce it. When a role declares a term a
+> target cannot enforce, emission for that target **fails loudly** rather
+> than dropping or weakening it. Silent degradation would reproduce the
+> observed breach *through* the emitter.
+
+Clause 8 also **settles `git-ops` and `shell-runner` as OpenCode-only
+roles**, rather than leaving TASK-0045 to meet the problem at
+implementation time and reach for a workaround. Both workarounds are
+rejected with reasons: a session-wide `permissions.deny` rule leaks one
+role's boundary into every agent in the session, and a `PreToolUse` hook
+puts enforcement in a second artifact the role file does not own. Either
+may return via a later ADR **with a worked example** — never inside an
+implementation task.
+
+**Two roadmap staleness items were found and fixed while propagating**, both
+instances of lesson 6 rather than new problems: the Phase 7 section still
+said ADR-0017…0019 were "all proposed" (two are now accepted), and still
+said "seven roles" after TASK-0041 declined `design-doc-writer` and
+established six. The phase now carries a decision-status line kept current
+in place. **That is the fourth and fifth instance of this class in a file
+whose own text records the first three** — still no mechanism, only a
+habit of checking.
+
+S7 now proceeds on two independent fronts. **The critical path is
+`TASK-0037`** (`agents/_template/` plus the normative schema), which
+0038/0039/0040 all sit behind and which now has an *enumerated* capability
+vocabulary with per-term client coverage rather than an invented one.
+`TASK-0043` remains behind TASK-0040. Phase 1's remaining spike is
+`TASK-0034`, still unblocked and independent; ADR-0017 stays proposed
+behind it.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at

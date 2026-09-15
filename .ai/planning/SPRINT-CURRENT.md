@@ -59,7 +59,7 @@ two vendors' current docs.** Three corrections matter most:
 | ADR-0017 | TASK-0034 | **proposed** | ai-toolbox owns `agent-tiers`. Mirrors ADR-0004 |
 | TASK-0035 | ADR-0017 | **planned** | Import to `skills/agent-tiers/`; resolve drift; bump version; symlink replaces the real dir |
 | TASK-0036 | — | **done** | *Spike.* Emission **confirmed on new evidence**: a superset file loads in Claude Code and silently drops an OpenCode `permission:` block, leaving Write/Edit/Bash in the pool. **5 of 8 capability terms are OpenCode-only**; `git-ops`/`shell-runner` unexpressible as CC subagents. 4 ADR-0018 rows corrected |
-| ADR-0018 | TASK-0036 | **proposed — ready to accept** | Per-capability portability; one source, per-client **emission**; emission forbids `link` mode. Needs: reasoning in decision 2 replaced, 4 rows corrected, and **one new clause — the emitter must refuse, not degrade, a term it cannot enforce on a target** |
+| ADR-0018 | TASK-0036 | **accepted** 2026-09-15 | Per-capability portability; one source, per-client **emission**; emission forbids `link` mode. Ratified on evidence: clause 2's reasoning replaced (safety, not syntax), 4 facts corrected, **new clause 8 — the emitter refuses, never degrades**, and `git-ops`/`shell-runner` recorded **OpenCode-only**. Unblocks TASK-0037, now the critical path |
 | TASK-0037 | ADR-0018 | **planned** | `agents/_template/` + normative schema in `authoring-guide.md`. **Definition before enforcement** |
 | TASK-0038 | TASK-0037 | **planned** | `validate.sh` agent checks, parsed not grepped |
 | TASK-0039 | TASK-0037 | **planned** | `sync-registry.sh`: `extract()` gains `agent`; one `emit_section` line |
