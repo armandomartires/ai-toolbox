@@ -82,6 +82,19 @@ accepted brief is the manager's last step. A role that exists to perform one
 mechanical write, in a topology where `subagent_depth: 1` already limits
 delegation, may be structure without benefit.
 
+**TASK-0041 has since answered this from the sequence side: it gives
+`design-doc-writer` nothing to do.** The manager writes the brief at step 4
+because it is the only role that has spoken to the human and holds the
+constraint list, and `git-ops` performs the step-7 commit. So the default is
+now **decline it**, and authoring it requires an independent reason this
+task must state. That makes the sprint's role count **six, not seven**.
+
+The landed loop also adds a role this brief did not forecast: **`git-ops`**
+is a Phase 3 dependency, not only a Phase 4 one. It is reconciled into
+`agents/` by TASK-0045, which sits *after* this task — so the design loop
+cannot be *executed* end to end until that lands. That is TASK-0046's
+ordering problem, not this task's, but it must not be discovered there.
+
 ### This is the first real instance of the category
 `mcp-servers/_template/` is this repo's reference case for plausible
 unexercised scaffolding (ADR-0010). Phase 2 built a template, a schema,
@@ -98,7 +111,7 @@ tasks, not to this one — but it is found here.
 
 | Artifact | Produced by | Expected state |
 |----------|-------------|----------------|
-| `loops/design-brief/loop.md` | TASK-0041 | `done`; the landed step list, naming each step's role by **function** |
+| `loops/design-brief/loop.md` | TASK-0041 | **`done`, 176 lines, seven steps.** Roles named: manager (**primary**), `ideator`, `critic`, and **`git-ops`** (reused from `agent-tiers`, delegated the step-7 commit). **`design-doc-writer` is not referenced anywhere** — see the open question below |
 | `skills/design-flow/` | TASK-0042 | `done`; the method per step, the critique's obligations, the distinctness requirement |
 | `.ai/decisions/0018-agent-portability-one-source-per-client-emission.md` | TASK-0033/0036 | Accepted; source path, abstract-profile requirement, the no-client-native-syntax rule |
 | `docs/development/authoring-guide.md` | TASK-0037 | Agents section: frontmatter rules with reasons, the enumerated capability vocabulary, the vendor-threshold note |

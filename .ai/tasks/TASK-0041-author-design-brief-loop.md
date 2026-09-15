@@ -229,42 +229,106 @@ spikes: it depends on no spike, and its only gate is met.
 
 ## Outputs / handover
 
-**Intended end state — this task has not run.** The table below is a plan.
-`validate.sh` requires this section non-empty for briefs ≥ 0020 and cannot
-distinguish an intention from a state (ADR-0012 Decision 3), so this
-sentence does it.
+**Written after the work. This task has run** — see the execution log.
 
-| Artifact | Intended end state |
-|----------|-------------------|
-| `loops/design-brief/loop.md` | The clarify→ideate→critique→converge sequence; every step with an expected output; a stated iteration cap with reasoning; acceptance as the terminating condition; every failure path bounded or escalating; the empty-critique case explicit |
-| The lock mechanism | **Decided and named** — the gap ADR-0019 deliberately left open is closed here, concretely |
-| `docs/registry.md` | Regenerated; Loops section gains a second row |
-| Roles | **Not authored.** Named by function only, so TASK-0043 is shaped by the sequence rather than the reverse |
-| `skills/design-flow/` | **Not authored.** Referenced as the method's owner; TASK-0042 supplies it |
+| Artifact | End state |
+|----------|-----------|
+| `loops/design-brief/loop.md` | 176 lines. **Seven** steps, not four: clarify (once) → ideate → critique → converge → **verify against constraints** → present for acceptance → lock (once). Every step states its expected output and its performer. Passes all five gate checks |
+| The iteration cap | **3**, and the unit is **one pass through steps 2–6**, stated explicitly. Reasoning recorded in the loop: consistent with both existing bounds, but for a *different reason* — those bound retries of a failing action, whereas a design iteration is progress. Three unaccepted rounds indicate **step 1's problem statement is wrong**, so the correct response is to re-open step 1 as new work, not iterate harder |
+| The lock mechanism | **Decided: frontmatter (`status: accepted`, `accepted_by`, `accepted_on`) plus a dedicated commit, and the commit is the lock.** The field records the decision; git records that it was made, by whom, and when. A field alone can be flipped by the next agent to open the file; a commit cannot be altered without a visible history rewrite, which `AGENTS.md` already gates. Closes the gap ADR-0019 clause 1.4 deliberately left open |
+| Role set | **Four, not three**: `manager` (primary), `ideator`, `critic`, and **`git-ops`** — reused from `skills/agent-tiers/`, not invented. `design-doc-writer` is **not referenced**; the manager writes the brief at step 4 |
+| `docs/registry.md` | Regenerated; Loops section has two rows (`design-brief`, `release-check`); no `_template` row |
+| Gate proofs | Three checks **observed failing** on deliberately broken copies (missing `## Exit conditions`, name mismatch, missing `description`), then restored to green |
+| `skills/design-flow/` | **Not authored.** Referenced as the method's owner at four points; TASK-0042 supplies it |
 
-**Next task starts here**: the design sequence and its convergence criterion
-are fixed and gated, so TASK-0042 can write the method the loop references
-and TASK-0043 can author roles against a known step list.
+**Next task starts here**: the design sequence, its cap, and its lock
+mechanism are fixed and gated. TASK-0042 writes the method the loop
+references at steps 1, 2, 3 and 4 — specifically the distinctness
+requirement (step 2), the critique obligations (step 3), and the brief's
+required contents including the three lock fields (step 4, step 7).
 
-Deviation to watch for: if the step-by-step read-back (step 8) finds a step
-that no agent can perform, the sequence changes and **TASK-0043's role set
-may change with it** — a four-role split is a forecast, not a requirement.
-Record any such change here, since TASK-0042 and TASK-0043 are scoped
-against the sequence as written.
+**Deviations from the plan, recorded because later briefs were scoped
+against the original:**
+
+1. **Seven steps, not four.** The plan forecast
+   clarify→ideate→critique→converge. Authoring added **step 5, verify the
+   brief against step 1's constraints**, and split **step 7, lock**, out of
+   converge. Step 5 exists because the brief is written *from the critique*,
+   and the critique evaluates candidates rather than the original
+   constraints — so constraint drift enters at exactly that seam and
+   nowhere else. TASK-0042's method sections should follow the seven steps,
+   not the four.
+
+2. **The read-back (step 8) found a real defect, as intended.** The first
+   draft had the **manager committing** at step 7. That would have given the
+   design manager its own commit capability, widening its blast radius and
+   creating a second owner of "who commits" — when `git-ops` already exists
+   as the guarded, narrow owner (no force-push, no hard-reset, no rebase,
+   `git push` always `ask`). Fixed by delegating: the manager decides *what*
+   to commit and why, `git-ops` decides the command. **This is the same
+   split `loops/project-build/` will use**, so TASK-0044 inherits a
+   consistent boundary rather than inventing one.
+
+3. **`design-doc-writer` is not referenced by this loop.** The manager owns
+   the brief file throughout — it is the only role that has spoken to the
+   human and holds the constraint list. **TASK-0043's open question about
+   whether that role earns its existence is now answered from the sequence
+   side: this loop gives it nothing to do.** TASK-0043 should decline it
+   unless it finds an independent reason, which makes `PLAN-0004`'s
+   seven-role count **six**.
+
+4. **`git-ops` is now a Phase 3 dependency, not only a Phase 4 one.**
+   TASK-0045 reconciles it into `agents/`, and TASK-0045 sits in Phase 4
+   after TASK-0043. So the design loop cannot be *executed* end to end until
+   `git-ops` exists as an emitted role — which affects TASK-0046's pilot
+   ordering, not this task. Recorded rather than resolved here.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-15
+- Agent: opencode (anthropic/claude-opus-5)
+- Actions: Re-read ADR-0019 (accepted, gate met), `loops/release-check/loop.md`
+  in full, `loops/_template/loop.md`, the authoring guide's Loops section,
+  and `validate.sh`'s loop check group (`:193-213`) to see exactly what is
+  enforced. Decided the iteration cap and its unit, and the lock mechanism.
+  Authored `loops/design-brief/loop.md`. Performed the step-by-step
+  executor read-back and fixed the defect it found. Proved three gate checks
+  fail on broken copies. Regenerated the registry.
+- Observations: Four findings, all recorded in Outputs / handover.
+  **(1)** The sequence needed **seven** steps rather than the forecast four
+  — a constraint-verification step (5) and a separate lock step (7). Step 5
+  earns its place: the brief is written from the critique, and the critique
+  evaluates candidates rather than the original constraints, so constraint
+  drift enters at that one seam.
+  **(2)** The read-back **found a real defect**, which is what it is for.
+  The draft had the manager committing at step 7, which would have given the
+  design manager its own commit capability and created a second owner of a
+  concern `git-ops` already owns under a guarded boundary. Delegating fixes
+  it and matches what `loops/project-build/` will do.
+  **(3)** `design-doc-writer` gets **nothing to do** in this sequence — the
+  manager owns the brief because it is the only role that has spoken to the
+  human. That answers TASK-0043's open question from the sequence side and
+  makes the sprint's role count six rather than seven.
+  **(4)** The cap's *unit* mattered more than its value. "3" is
+  unambiguous only once "one iteration = one pass through steps 2–6" is
+  stated; without it, a reader could count ideation rounds, critique rounds,
+  or full cycles and get three different caps.
+- Validation: `bash tests/validate.sh` → `validate.sh: OK`, and **three
+  checks observed failing** on deliberately broken copies before being
+  restored: `MISSING SECTION '## Exit conditions'`, `NAME MISMATCH: …
+  declares 'wrong-name' but directory is 'design-brief'`, and
+  `MISSING description`. `bash scripts/sync-registry.sh` → Loops section now
+  has two rows, `design-brief` and `release-check`, with no `_template` row
+  and no column-count defect. Backup taken to `/tmp/opencode/db-backup.md`
+  before the break-tests and restored from it afterwards.
+- Result: **done.** Every acceptance criterion met. The loop is a gated
+  component; the cap and the lock mechanism both have exactly one owner
+  (this file), as ADR-0019 clause 1.2 requires for the cap.
+- Commit: see below.
+- Push: see below.

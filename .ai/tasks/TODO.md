@@ -181,8 +181,15 @@ Phase 3 — the design half (the genuine capability gap):
       clauses, not the "two" the proposed text miscounted; corrected in place
       at ratification. **Unblocks TASK-0041 and TASK-0044**, the only S7
       tasks that depend on no spike)
-- [ ] TASK-0041 — `loops/design-brief/` — clarify→ideate→critique→converge,
-      capped, with the acceptance gate (needs ADR-0019)
+- [x] TASK-0041 — `loops/design-brief/` — clarify→ideate→critique→converge,
+      capped, with the acceptance gate (done — **seven** steps not four: a
+      constraint-verification step and a separate lock step earned their
+      place. Cap **3**, unit stated as one pass through steps 2–6. Lock =
+      frontmatter **plus a dedicated commit**, because a field alone can be
+      flipped by the next agent to open the file. The executor read-back
+      found the manager holding its own commit rights and delegated to
+      `git-ops`. **`design-doc-writer` gets nothing to do**, so the sprint's
+      role count is six, not seven)
 - [ ] TASK-0042 — `skills/design-flow/` — portable core + templates (needs
       TASK-0041)
 - [ ] TASK-0043 — Roles: `designer-manager` (**primary**), `ideator`,

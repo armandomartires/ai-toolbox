@@ -83,7 +83,7 @@ compares near-identical candidates and reports no meaningful differences.
 
 | Artifact | Produced by | Expected state |
 |----------|-------------|----------------|
-| `loops/design-brief/loop.md` | TASK-0041 | `done`; the step sequence, the iteration cap with its unit, the acceptance condition, and the **decided lock mechanism** |
+| `loops/design-brief/loop.md` | TASK-0041 | **`done`, 176 lines.** **Seven** steps, not the four this brief forecasts: clarify (once) → ideate → critique → converge → **verify against constraints** → present for acceptance → lock (once). Cap **3**, unit = one pass through steps 2–6. Lock = frontmatter (`status: accepted`, `accepted_by`, `accepted_on`) **plus a dedicated commit**. Roles: manager (primary), `ideator`, `critic`, `git-ops` |
 | `.ai/decisions/0019-design-convergence-and-the-autonomy-boundary.md` | TASK-0033 | Accepted; clause 1's convergence criterion, including the empty-critique rule |
 | `skills/project-workflow/` | TASK-0021 | `3.2.0`; the portable-core-plus-templates exemplar, terse `SKILL.md` + `templates/reference/` |
 | `skills/_template/` | pre-existing | `SKILL.md` + `assets/` + `references/` + `scripts/` — the shape to copy from |
@@ -93,25 +93,39 @@ compares near-identical candidates and reports no meaningful differences.
 | `.ai/decisions/0003-skill-frontmatter-schema.md` | pre-existing | Accepted; required `name`/`description`, optional `license`/`metadata`, semver |
 
 **Verify the expected state; don't assume it.** Read TASK-0041's loop file
-rather than this brief's description of it — in particular the **lock
-mechanism it actually chose** and whether its step list still matches the
-four-step clarify/ideate/critique/converge shape. TASK-0041's own handover
-warns its step list may have changed during the read-back.
+rather than this brief's description of it. **The forecast divergence
+happened**: the loop has **seven** steps, not four, so this brief's
+"four step methods" wording below is stale and the method must cover the
+seven. Two of the new steps need method content — **step 5**
+(verify the brief against step 1's constraints) and **step 7** (the three
+lock fields the brief template must carry). Step 6 (present for acceptance)
+and step 7's commit delegation are sequence, not method, and need none.
 
 ## Scope
 
 ### Included
 - `skills/design-flow/SKILL.md` — terse, portable, with ADR-0003-conformant
   frontmatter and `name` equal to the directory.
-- The method for each loop step:
-  - **Clarify** — what to establish before ideating, and what makes a
-    question worth asking the human versus assuming.
-  - **Ideate** — how to produce genuinely distinct alternatives, with a
-    stated **distinctness requirement**.
-  - **Critique** — what a critique is *obliged* to examine, so an empty
-    result is informative.
-  - **Converge** — how a single design is selected from critiqued
-    alternatives, and what the accepted brief must contain.
+- The method for each loop step that needs one (the loop has **seven**
+  steps; four need method content):
+  - **Clarify** (step 1) — what to establish before ideating, and what makes
+    a question worth asking the human versus assuming and recording as an
+    assumption.
+  - **Ideate** (step 2) — how to produce genuinely distinct alternatives,
+    with a stated **distinctness requirement**. The loop's exit conditions
+    treat a failure here as evidence the constraint set is over-specified,
+    so the requirement must be concrete enough to support that inference.
+  - **Critique** (step 3) — what a critique is *obliged* to examine, so an
+    empty result is informative. The loop requires an empty critique to
+    **state what was examined**; this skill supplies the list it states.
+  - **Converge** (step 4) — how a single design is selected, and what the
+    brief must contain: the winner, **the rejected alternatives with
+    reasons**, step 1's assumptions, and the three lock fields
+    (`status`, `accepted_by`, `accepted_on`) that step 7 fills in.
+  - Steps 5–7 (constraint verification, presentation, lock) are **sequence,
+    not method** — the loop owns them. Do not restate them; the only thing
+    this skill owes step 7 is that the brief template carries the three lock
+    fields so they exist to be set.
 - `skills/design-flow/templates/` — the brief template, and whatever
   per-project artifacts the method needs, carrying the copy-never-symlink
   rule.

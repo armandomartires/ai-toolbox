@@ -14,13 +14,36 @@ TASK-0033…0046, ADR-0017…0019, B-014…B-017.
 
 **ADR-0019 is accepted (2026-09-15); ADR-0017 and ADR-0018 remain proposed**
 and blocked on their spikes. Accepting 0019 needed ratification rather than
-evidence — it *narrows a stated requirement*, which is the human's call —
-and it **unblocks `TASK-0041` and `TASK-0044`, the only S7 tasks that depend
-on no spike.** So the sprint can now proceed along two independent fronts:
-Phase 3's first two tasks (the design loop, then its method) and Phase 1's
-two spikes. Ratification also caught a defect in the ADR's own text: it said
-"two clauses" while containing three, corrected in place rather than
-silently.
+evidence — it *narrows a stated requirement*, which is the human's call.
+Ratification also caught a defect in the ADR's own text: it said "two
+clauses" while containing three, corrected in place rather than silently.
+
+**TASK-0041 is done — S7's first implementation.** `loops/design-brief/` is
+a gated component: **seven** steps rather than the four planned, cap **3**
+with its unit stated as one pass through steps 2–6, and the lock mechanism
+ADR-0019 left open now decided as **frontmatter plus a dedicated commit** —
+the commit being the lock, because a frontmatter field alone can be flipped
+by the next agent to open the file. Three gate checks were **observed
+failing** on broken copies before the loop was trusted.
+
+Three findings from it that change downstream scope:
+- **The executor read-back earned its place.** The draft had the design
+  manager committing at step 7, which would have widened that manager's
+  blast radius and created a second owner of a concern `git-ops` already
+  owns under a guarded boundary. Delegating fixes it, and `TASK-0044`
+  inherits the same split rather than inventing one.
+- **`design-doc-writer` has nothing to do.** The manager owns the brief
+  because it is the only role that has spoken to the human. TASK-0043's open
+  question is answered from the sequence side, and the sprint's role count
+  is **six, not seven**.
+- **`git-ops` is a Phase 3 dependency, not only a Phase 4 one.** It is
+  reconciled into `agents/` by TASK-0045, which sits after TASK-0043, so the
+  design loop cannot be *executed* end to end until that lands — TASK-0046's
+  ordering problem, recorded rather than discovered there.
+
+S7 now proceeds on two independent fronts: Phase 3 continues with
+`TASK-0042` (the method the loop references), and Phase 1's two spikes
+remain unblocked and mutually independent.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at

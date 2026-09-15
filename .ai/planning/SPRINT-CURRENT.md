@@ -65,7 +65,7 @@ two vendors' current docs.** Three corrections matter most:
 | TASK-0039 | TASK-0037 | **planned** | `sync-registry.sh`: `extract()` gains `agent`; one `emit_section` line |
 | TASK-0040 | TASK-0037 | **planned** | `install.sh` emission + `CLIENTS` fourth column; 3 config snapshots gain an agents section |
 | ADR-0019 | — | **accepted** 2026-09-15 | Convergence is **human acceptance**; the autonomy boundary is a pre-merge gate; workflows rejected. Unblocks TASK-0041 and TASK-0044 |
-| TASK-0041 | ADR-0019 | **planned** | `loops/design-brief/` — clarify→ideate→critique→converge, capped, with the acceptance gate |
+| TASK-0041 | ADR-0019 | **done** | `loops/design-brief/` — **seven** steps, not four; cap 3 with its unit stated; lock = frontmatter **plus the commit**. Read-back caught the manager holding commit rights; delegated to `git-ops` |
 | TASK-0042 | TASK-0041 | **planned** | `skills/design-flow/` — portable core + per-project templates |
 | TASK-0043 | TASK-0040, TASK-0042 | **planned** | Roles: `designer-manager` (**primary**), `ideator`, `critic`, `design-doc-writer` |
 | TASK-0044 | ADR-0019, TASK-0035 | **planned** | `loops/project-build/` — from `bmad-workflow.md:8-38`, with the merge gate explicit |
