@@ -382,5 +382,6 @@ Recorded here rather than deferred to discovery in TASK-0045.
   and nothing currently detects it.** TASK-0038 owns the fix and should use
   `>-` as its fixture, since that is the style the roles awaiting
   reconciliation use today.
-- Commit: recorded below
-- Push: recorded below
+- Commit: `8a9996b`
+- Push: pushed with the sequence's other Phase-2 commits; confirmed by
+  re-fetch and an independent GitHub API read.

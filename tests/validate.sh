@@ -212,6 +212,210 @@ for f in loops/*/loop.md; do
   done
 done
 
+# Agents: the frontmatter rules docs/development/authoring-guide.md states
+# under "Agents", mirrored here so guide and gate cannot drift (ADR-0008).
+# Parsed with python3, never grepped: an agent body IS a system prompt and
+# may legitimately discuss `description:` or `permission:` in prose or an
+# example, so a grep would fail the first role whose prompt explains the
+# schema.
+#
+# Iterates DIRECTORIES, not agents/*/agent.md, so a role directory holding
+# a misnamed file is reported rather than silently skipped — the same rule
+# the handover check applies, because a renaming scheme must not be able to
+# disable a check.
+#
+# WHAT THIS PROVES: agents/<role>/agent.md parses, carries its required
+# keys, names a valid mode, and draws its capability profile from the
+# closed vocabulary the guide defines.
+#
+# WHAT THIS DOES NOT PROVE: that any emitted per-client agent file exists,
+# is current, or grants the permissions the profile intended. Emission
+# produces a copy whose freshness nothing here can verify, and ADR-0018
+# clause 4 forbids adding such a check: "anyone who later fixes this by
+# checking the deployed copy breaks every fresh clone and CI." Per ADR-0009,
+# this gate checks SOURCE COMPLETENESS only. Do not add a check that reads
+# ~/.claude/agents/ or ~/.config/opencode/agents/.
+#
+# NOT checked: any agent.md length cap or description byte limit. No budget
+# is defined in the authoring guide (which says so explicitly), so enforcing
+# one would make this gate the author of a requirement — ADR-0008 again.
+for d in agents/*/; do
+  d="${d%/}"
+  [ -d "$d" ] || continue
+  base=$(basename "$d")
+
+  # Report, never skip. A directory under agents/ that holds no agent.md is
+  # either a mistake or a rename that would disable this check.
+  if [ ! -f "$d/agent.md" ]; then
+    echo "MISSING agent.md: $d (found: $(ls -A "$d" 2>/dev/null | tr '\n' ' ' | sed 's/ $//'))"
+    fail=1
+    continue
+  fi
+
+  python3 - "$d/agent.md" "$base" <<'PY' || fail=1
+import re, sys
+
+path, dirname = sys.argv[1], sys.argv[2]
+with open(path, encoding="utf-8") as fh:
+    lines = fh.read().split("\n")
+
+bad = []
+
+# The closed capability vocabulary from the authoring guide's Agents
+# section. Closed on purpose: an unknown term is a term the emitter has no
+# mapping for, and ADR-0018 clause 8 requires emission to refuse rather
+# than silently drop it. A typo must fail here, not degrade there.
+VOCAB = {
+    "read-only", "no-delegation", "no-webfetch", "worktree-only",
+    "test-files-only", "bash-allowlist", "no-force-push",
+    "push-requires-confirmation", "webfetch-requires-confirmation",
+}
+MODES = {"primary", "subagent"}
+CLIENTS = {"claude-code", "opencode"}
+
+if not lines or lines[0].strip() != "---":
+    bad.append("frontmatter must open with '---' on line 1")
+    fm = []
+else:
+    try:
+        end = next(i for i, l in enumerate(lines[1:], 1) if l.strip() == "---")
+        fm = lines[1:end]
+        body = "\n".join(lines[end + 1:])
+    except StopIteration:
+        bad.append("frontmatter is not terminated by a closing '---'")
+        fm = []
+        body = ""
+if not fm:
+    body = ""
+
+
+def scalar(key):
+    """Value of a top-level key, plus how many lines it spans."""
+    for i, line in enumerate(fm):
+        m = re.match(r"^%s:(.*)$" % re.escape(key), line)
+        if not m:
+            continue
+        val = m.group(1).strip()
+        span = 1
+        for cont in fm[i + 1:]:
+            if cont.strip() and cont[0] in " \t" and not cont.strip().startswith("#"):
+                span += 1
+            else:
+                break
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+            val = val[1:-1]
+        return val, span
+    return None, 0
+
+
+def seq(key):
+    """Items of a top-level block sequence, or None if the key is absent."""
+    for i, line in enumerate(fm):
+        if not re.match(r"^%s:\s*$" % re.escape(key), line):
+            continue
+        items = []
+        for cont in fm[i + 1:]:
+            if not cont.strip() or cont.strip().startswith("#"):
+                break
+            if not cont[0] in " \t":
+                break
+            m = re.match(r"^\s+-\s+(.*)$", cont)
+            if not m:
+                break
+            items.append(m.group(1).strip().strip("\"'"))
+        return items
+    return None
+
+
+name, _ = scalar("name")
+if name is None:
+    bad.append("missing required key: name")
+elif not name:
+    bad.append("key 'name' is empty")
+elif not dirname.startswith("_template") and name != dirname:
+    # Templates are named _template*, so the rule cannot apply to them —
+    # the same carve-out the skill, MCP and loop checks already make.
+    bad.append("name '%s' does not match directory '%s'" % (name, dirname))
+
+desc, desc_span = scalar("description")
+if desc is None:
+    bad.append("missing required key: description")
+elif not desc:
+    bad.append("key 'description' is empty")
+elif desc_span > 1 or desc in (">", ">-", "|", "|-", ">+", "|+"):
+    # The registry renders description into a single table cell. A folded
+    # scalar reaches it as the literal sigil ">-" with the text dropped,
+    # and the row still has the right column count, so the registry
+    # integrity check cannot see it (observed in TASK-0039).
+    bad.append("description must be a single line, not a folded/block scalar")
+
+mode, _ = scalar("mode")
+if mode is None:
+    bad.append("missing required key: mode")
+elif mode not in MODES:
+    # Not inferred: OpenCode has an explicit mode field, Claude Code has
+    # none, so the emitter must be told rather than guess.
+    bad.append("mode '%s' is not one of: %s" % (mode, ", ".join(sorted(MODES))))
+
+caps = seq("capabilities")
+if caps is None:
+    bad.append("missing required key: capabilities")
+elif not caps:
+    bad.append("key 'capabilities' is empty")
+else:
+    for c in caps:
+        if c not in VOCAB:
+            bad.append("capability '%s' is not in the vocabulary (see "
+                       "authoring-guide.md 'Agents')" % c)
+
+clients = seq("clients")
+if clients is None:
+    bad.append("missing required key: clients")
+elif not clients:
+    bad.append("key 'clients' is empty")
+else:
+    for c in clients:
+        if c not in CLIENTS:
+            bad.append("client '%s' is not one of: %s"
+                       % (c, ", ".join(sorted(CLIENTS))))
+
+# metadata.version is optional, but must be semver when given, matching the
+# skill rule so the registry's version column stays comparable.
+for line in fm:
+    m = re.match(r"^\s+version:(.*)$", line)
+    if not m:
+        continue
+    v = m.group(1).strip().strip("\"'")
+    if not re.match(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$", v):
+        bad.append("metadata.version '%s' is not semver (MAJOR.MINOR.PATCH)" % v)
+    break
+
+if not body.strip():
+    bad.append("body is empty — the body is the system prompt")
+
+# Client-native syntax is forbidden in a role file (ADR-0018 clause 2). This
+# is the one rule whose violation silently defeats the whole one-source
+# mechanism: a `permission:` block reaches Claude Code, is parsed as an
+# unknown key, and is DISCARDED WITHOUT A WARNING, leaving the denied tools
+# in the agent's pool (observed by fixture in TASK-0036).
+#
+# Checked against FRONTMATTER KEYS ONLY, at line start. The body is a system
+# prompt and may legitimately name these keys while explaining why they are
+# forbidden — the template itself did exactly that during TASK-0037.
+for forbidden in ("permission", "disallowedTools", "tools", "permissionMode"):
+    for line in fm:
+        if re.match(r"^%s:" % re.escape(forbidden), line):
+            bad.append("forbidden client-native key '%s:' — capability "
+                       "boundaries go in 'capabilities' as abstract terms"
+                       % forbidden)
+            break
+
+for msg in bad:
+    print("INVALID AGENT: %s: %s" % (path, msg))
+sys.exit(1 if bad else 0)
+PY
+done
+
 # Every client scripts/install.sh can deploy to must have a wiring
 # snapshot, so a new client cannot be added to the script without one.
 # The client list is read from install.sh itself to keep them in sync.

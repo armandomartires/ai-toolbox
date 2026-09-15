@@ -183,8 +183,14 @@ Phase 2 — make `agents/` a real category (0037 strictly first; then
       by test that `validate.sh` returns exit 0 on a deliberately
       malformed agent file — the category is genuinely unpoliced, which is
       what TASK-0038 fixes)
-- [ ] TASK-0038 — `validate.sh` agent checks, parsed not grepped, each
-      **observed failing** on a fixture
+- [x] TASK-0038 — `validate.sh` agent checks, parsed not grepped, each
+      **observed failing** on a fixture (done — 17 rules, one fixture each,
+      plus a valid control so the group is proven not to fail
+      unconditionally. Closed TASK-0039's finding: folded `description`
+      now rejected two ways. The fixture harness was **unsound on its first
+      run** — every case violated the name↔directory rule as well as its
+      target, so the failures proved nothing; caught before recording.
+      654→606 ms)
 - [x] TASK-0039 — `sync-registry.sh`: `extract()` gains `agent`; one
       `emit_section` line (done — two lines plus a comment, as B-007's
       centralization intended. Proved the template skip is the exclusion by

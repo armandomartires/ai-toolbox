@@ -248,18 +248,194 @@ carries ("Tracked as unenforced until then"), and the status that made S6's
 TASK-0031 worth doing at all.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-15
+- Agent: opencode (claude-opus-5)
+
+#### Gate and baseline
+TASK-0037 confirmed landed: the guide's Agents section exists and
+`agents/_template/agent.md` is present. `tests/validate.sh` was **474
+lines** before this change, matching the brief's stated expectation.
+
+Baseline, three runs before any edit: **641 / 634 / 686 ms** (mean 654).
+
+#### Per-rule failure evidence — 17 rules, each observed failing
+
+The deliverable. Each fixture violates **exactly one** rule; the message
+quoted is the one the gate actually printed.
+
+| # | Rule violated | Observed message | Exit |
+|---|---|---|---|
+| 1 | No opening `---` | `frontmatter must open with '---' on line 1` | 1 |
+| 2 | Frontmatter unterminated | `frontmatter is not terminated by a closing '---'` | 1 |
+| 3 | `name` missing | `missing required key: name` | 1 |
+| 4 | `name` ≠ directory | `name 'not-the-directory' does not match directory '_fixture-probe'` | 1 |
+| 5 | `description` missing | `missing required key: description` | 1 |
+| 6 | **folded `description`** | `description must be a single line, not a folded/block scalar` | 1 |
+| 7 | `mode` missing | `missing required key: mode` | 1 |
+| 8 | `mode` invalid | `mode 'all' is not one of: primary, subagent` | 1 |
+| 9 | `capabilities` missing | `missing required key: capabilities` | 1 |
+| 10 | capability not in vocabulary | `capability 'can-do-anything' is not in the vocabulary (see authoring-guide.md 'Agents')` | 1 |
+| 11 | `clients` missing | `missing required key: clients` | 1 |
+| 12 | unknown client | `client 'lm-studio' is not one of: claude-code, opencode` | 1 |
+| 13 | non-semver version | `metadata.version '1.0' is not semver (MAJOR.MINOR.PATCH)` | 1 |
+| 14 | empty body | `body is empty — the body is the system prompt` | 1 |
+| 15 | raw `permission:` block | `forbidden client-native key 'permission:' — capability boundaries go in 'capabilities' as abstract terms` | 1 |
+| 16 | `tools:` key | `forbidden client-native key 'tools:' — …` | 1 |
+| 17 | misnamed file (`role.md`) | `MISSING agent.md: agents/_fixture-probe (found: role.md)` | 1 |
+| **18** | **CONTROL — fully valid** | *(no agent message)* | **0** |
+
+Case 18 is the control that makes the other 17 meaningful: without it, a
+group that failed unconditionally would look identical to a working one.
+
+**`agents/_template/` passes**, exempt from name↔directory only — verified
+by the gate returning 0 with the template as the sole occupant of
+`agents/`.
+
+#### The proof harness was wrong on its first run, and the contamination mattered
+
+**First run: cases 5–16 each emitted TWO messages** — their intended one
+*plus* `name 'fixture-probe' does not match directory '_fixture-probe'`,
+because the fixtures declared `name: fixture-probe` inside a directory
+called `_fixture-probe`.
+
+The gate failed in every case, so a careless reading would have recorded
+"17 for 17, all proven." **It would have been unsound**: a fixture
+violating two rules does not prove which check fired. The table above could
+have been produced entirely by the name-mismatch check.
+
+Fixed by renaming the fixtures to `_fixture-probe` so `name` matches its
+directory, then re-running. Every case now emits exactly one message.
+
+Cases 1 and 2 still cascade to `missing required key: name`, and that is
+**correct rather than contamination**: with no parseable frontmatter there
+is no `name` to find, so the second message is a consequence of the first
+defect, not a second defect.
+
+This is lesson 5's shape — *a test that clones for isolation may isolate
+itself from the change it verifies* — in a new variant: **a fixture meant
+to isolate one rule can violate several, and the gate's failure then proves
+nothing about the rule under test.** Recorded because the harness looked
+correct and its output looked like success.
+
+#### The parse-not-grep requirement, proved by the case that would break a grep
+
+The brief called grepping *"a correctness bug waiting for the first role
+whose prompt discusses frontmatter."* Tested directly: a fixture whose
+**body** contains a `permission:` block, `tools: Read, Grep`,
+`disallowedTools: Write`, `permissionMode: default` and a `description:`
+line — a plausible system prompt for a role that reviews agent files.
+
+`bash tests/validate.sh` → **`validate.sh: OK`, exit 0.**
+
+A grep-based check would have failed it. The forbidden-key check matches
+frontmatter lines only, and the frontmatter/body split comes from locating
+the closing `---`, not from scanning the whole file. **This case is the
+reason the check is 200 lines of Python instead of four `grep -q` calls.**
+
+#### No runtime dependency — verified by reading the added code
+
+The brief requires this be checked *"by reading the added code, not by it
+passing."* The group spans **204 lines**; scanned for every runtime-coupling
+pattern:
+
+`$HOME`, `os.environ`, `getenv`, `curl`, `wget`, `urllib`, `requests`,
+`command -v`, `git ls-files`, `[ -x`, `socket` — **all absent.**
+
+Two matches needed review rather than dismissal:
+- `~/` ×2 — both inside the `WHAT THIS DOES NOT PROVE` comment, which is
+  the *prohibition* on reading `~/.claude/agents/`.
+- `which ` ×1 — the English word in a prose comment.
+
+Neither is executable code. The group reads only `agents/*/` inside the
+repo, so it is offline and hermetic, and passes on a clean checkout.
+
+**No `[ -x ]` and no file-mode logic**, so the live
+`core.filemode=false` trap (which produced one of the two historical
+unfailable checks) is not reachable from this group.
+
+#### Runtime after: no measurable regression
+Three runs after: **609 / 643 / 567 ms** (mean 606), against a baseline
+mean of 654. Still **sub-second**, and within run-to-run noise — the
+`python3` process is per-directory and `agents/` currently holds one.
+
+Worth stating honestly: this is **one** agent directory. The cost is one
+interpreter start per role, so it scales linearly with role count. At six
+roles (TASK-0043 + TASK-0045) expect roughly five more starts. If the gate
+later approaches a second, the fix the brief suggests — folding the parse
+into an existing heredoc — is the right one. Recorded as a known scaling
+property rather than a problem now.
+
 - Actions:
+  1. Verified TASK-0037's artifacts; measured the baseline three times.
+  2. Read the skill group as the shape to follow; **reused its `scalar()`
+     helper pattern**, including the span detection that makes the folded
+     `description` check possible.
+  3. Wrote the group after Loops, matching component order; added a `seq()`
+     helper for block sequences (`capabilities`, `clients`), which the
+     skill group had no need for.
+  4. Added the `WHAT THIS PROVES` / `WHAT THIS DOES NOT PROVE` comment
+     naming the emitted-file gap and citing ADR-0018 clause 4 by its own
+     words, so a future reader meets the reasoning before writing a
+     freshness check.
+  5. Built an 18-case fixture harness; found and fixed its contamination;
+     re-ran.
+  6. Proved the body-prose false-positive case passes.
+  7. Audited the added code for runtime coupling.
+  8. Re-measured; removed all fixtures; confirmed `git status` clean.
+
 - Observations:
+  - **The vocabulary is enforced as a closed set**, which is what makes the
+    check worth having: an unknown term is one the emitter has no mapping
+    for, and ADR-0018 clause 8 requires emission to *refuse* rather than
+    silently drop. A typo now fails at commit rather than degrading at
+    emission. `capability 'can-do-anything'` was the fixture.
+  - **`permissionMode` was added to the forbidden list**, beyond the
+    brief's three (`permission:`, `disallowedTools`, `tools:`). It is
+    equally client-native and equally silent when discarded; excluding it
+    would have been an arbitrary gap.
+  - **`description` is checked two ways**: span > 1, and the value being a
+    bare block sigil (`>`, `>-`, `|`, `|-`, `>+`, `|+`). TASK-0039's
+    finding was that a folded description reaches the registry as the
+    literal `>-` with the text dropped, and the row's column count stays
+    valid so the registry-integrity check cannot see it. The sigil test
+    catches the case where the fold produces a one-token value.
+  - **Iterating directories rather than `agents/*/agent.md` is what makes
+    report-never-skip possible.** A glob over `agent.md` cannot report a
+    file that isn't there. The message names what *was* found
+    (`found: role.md`) so the fix is obvious.
+  - **No budget invented.** The group's header says so and names ADR-0008.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → **PASS** (`validate.sh: OK`, exit 0) with
+    only the template present. Observed **failing (exit 1)** on 17
+    single-rule fixtures and **passing** on the valid control and on the
+    body-prose case.
+  - `bash scripts/sync-registry.sh` → **no diff**; `git status` showed no
+    change to `docs/registry.md`. The agent kind arrived in TASK-0039 and
+    was already committed, so this task adds nothing to it.
+  - Runtime: 641/634/686 ms before, 609/643/567 ms after. Sub-second, no
+    regression.
+  - `git status` clean of `_fixture-*`; `agents/` holds only `_template/`
+    and `README.md`.
+
+- Result: **done.** All eleven acceptance criteria met. `agents/` is now
+  **enforced**, closing the gap TASK-0037 opened deliberately: the newest
+  component category is no longer the only unpoliced one. Every rule in the
+  guide's Agents table has a check, and every check was observed failing on
+  a fixture violating exactly that rule.
+
+  No rule in the guide turned out to be unstatically-checkable, so the
+  brief's "deviation to watch for" did not arise — with one boundary worth
+  naming: the check confirms a role *declares* a capability from the closed
+  vocabulary, and cannot confirm the emitter will honour it. That is
+  ADR-0018's accepted weakness, restated in the group's own comment rather
+  than left implicit.
+- Commit: recorded below
+- Push: recorded below
