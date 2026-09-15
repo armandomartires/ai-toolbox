@@ -119,4 +119,4 @@ through `install.sh`. That is intended. The fix is narrowing the role's
 `clients` list, never softening the refusal.
 
 - Result: Phase 2 complete. Commits `8a9996b` (0039), `e0e9d68` (0038) and
-  the TASK-0040 commit below; all pushed to `origin/master` and confirmed.
+  `36cab90` (0040); all pushed to `origin/master` and confirmed.

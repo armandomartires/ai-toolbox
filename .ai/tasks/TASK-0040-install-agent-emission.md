@@ -518,5 +518,5 @@ outside the repo needs removing to roll this task back today.
   document the refusal-vs-redirection difference, because refusing would
   have made all four existing roles OpenCode-only and left the Claude Code
   emitter dead on arrival.
-- Commit: recorded below
-- Push: recorded below
+- Commit: `36cab90`
+- Push: confirmed — see below
