@@ -185,8 +185,14 @@ Phase 2 — make `agents/` a real category (0037 strictly first; then
       what TASK-0038 fixes)
 - [ ] TASK-0038 — `validate.sh` agent checks, parsed not grepped, each
       **observed failing** on a fixture
-- [ ] TASK-0039 — `sync-registry.sh`: `extract()` gains `agent`; one
-      `emit_section` line
+- [x] TASK-0039 — `sync-registry.sh`: `extract()` gains `agent`; one
+      `emit_section` line (done — two lines plus a comment, as B-007's
+      centralization intended. Proved the template skip is the exclusion by
+      disabling it and watching all five templates appear; proved the
+      section populates with a temporary fixture rather than trusting an
+      empty header. **Finding handed to TASK-0038:** a folded
+      `description: >-` produces a valid-looking registry row containing
+      the literal `>-`, and nothing currently detects it)
 - [ ] TASK-0040 — `install.sh` emission + `CLIENTS` fourth column; 3 config
       snapshots gain an agents section
 

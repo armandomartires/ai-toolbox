@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Generate docs/registry.md — the index of every deployable component.
 #
-# One emit path serves every section. The three component kinds differ in
+# One emit path serves every section. The four component kinds differ in
 # only three ways: where their components live, how their name/description
 # are extracted (YAML frontmatter, TOML, or JSON), and whether a Shape
 # column applies. Everything common — the header, the template skip,
@@ -40,16 +40,17 @@ unquote() {
 
 # Print "name<TAB>description" for one component directory, or nothing if
 # the directory does not hold that kind of component.
-#   $1 = kind (skill|mcp|loop), $2 = component directory
+#   $1 = kind (skill|mcp|loop|agent), $2 = component directory
 extract() {
   local kind="$1" d="$2" f
   case "$kind" in
-    skill|loop)
-      # Both kinds carry YAML frontmatter with the same two keys; they
+    skill|loop|agent)
+      # All three kinds carry YAML frontmatter with the same two keys; they
       # differ only in filename.
       case "$kind" in
         skill) f="$d/SKILL.md" ;;
         loop)  f="$d/loop.md" ;;
+        agent) f="$d/agent.md" ;;
       esac
       [ -f "$f" ] || return 1
       printf '%s\t%s\n' \
@@ -121,5 +122,13 @@ emit_section() {
   emit_section "MCP Servers" mcp   mcp-servers shape
   echo
   emit_section "Loops"       loop  loops
+  echo
+  # Agents carry no Shape column: one shape only. A role's `mode`
+  # (primary/subagent) is arguably the most consequential fact about it,
+  # but it is *self-declared* frontmatter rather than derived from the
+  # directory's contents, and ADR-0005's Clarification is explicit that a
+  # self-declared field can contradict those contents while a derived one
+  # cannot. Declined deliberately (TASK-0039), not overlooked.
+  emit_section "Agents"      agent agents
 } > "$REG"
 echo "Registry written to $REG"

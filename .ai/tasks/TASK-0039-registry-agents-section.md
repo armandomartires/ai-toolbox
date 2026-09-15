@@ -216,18 +216,171 @@ relevant reasoning) and re-verify the per-section column-count check, since
 it derives its expectation from the header this task would have changed.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-15
+- Agent: opencode (claude-opus-5)
+
+#### The brief's line references were accurate
+Re-read `sync-registry.sh` before editing, as instructed. All cited lines
+still correct: `unquote()` `:32-39`, `extract()` `:44-82`, `emit_section()`
+`:87-112`, THE template skip `:103`, three `emit_section` calls `:119-123`.
+TASK-0037 touched neither the script nor the registry, so nothing had
+shifted.
+
+#### The change was two lines plus a comment, as the brief predicted
+- `extract()`: `skill|loop` → `skill|loop|agent`, plus
+  `agent) f="$d/agent.md" ;;` in the inner filename case. **No new
+  extractor and no duplicated iteration logic** — the brief's warning that
+  "if this task finds itself duplicating loop logic, it has misread the
+  file" did not trigger.
+- One `emit_section "Agents" agent agents` call, placed **last** to match
+  `AGENTS.md:54-55`'s Structure order (`skills`, `mcp-servers`, `loops`,
+  `prompts`, `agents`) — verified by reading that line rather than assumed.
+- The file header said "The three component kinds"; corrected to "four".
+  A one-word staleness that would otherwise have been true-when-written and
+  wrong-thereafter.
+
+**No Shape column and no Mode column.** Mode was declined deliberately, with
+the reasoning recorded *in the script* next to the call rather than only in
+this log, because that is where the next reader will be when they wonder:
+`mode` is self-declared frontmatter, and ADR-0005's Clarification holds that
+a self-declared field can contradict the directory's contents while a
+derived one cannot.
+
+#### Template exclusion proven by code path, not by the row's absence
+The brief required verifying the exclusion comes from **the central skip**.
+An absent row proves nothing on its own — it is equally consistent with
+`extract()` silently failing on the template.
+
+Two-part proof:
+1. `agents/_template/agent.md` **exists** (so `extract()` would succeed).
+2. The skip at `:103` was temporarily replaced with a no-op and the
+   generator re-run. **All five templates appeared**, including
+   `| template-agent | … | agents/_template |`.
+
+So that single line is what excludes it, and it covers the new kind with no
+per-section addition. Restored and confirmed **byte-identical by SHA-256**.
+B-007's centralization holds: the rule fixed three times before TASK-0011
+now extends to a fourth kind for free.
+
+#### The section is proven to populate — the task's likeliest silent failure
+No real role exists yet, so an Agents section containing only a header
+looks correct whether the extractor works or not. This is lesson 1's shape
+applied to a generator branch.
+
+A temporary `agents/_fixture-role/agent.md` was created and the generator
+re-run:
+
+```
+## Agents
+| Name | Description | Path |
+|------|-------------|------|
+| fixture-role | Temporary fixture proving the Agents section actually populates. | agents/_fixture-role |
+```
+
+Extraction, `unquote()`, sorting and path emission all work. Removed and
+regenerated; no fixture row survives and `git status` shows no
+`_fixture-*`.
+
+#### Integrity checks extend automatically — observed in both directions
+Not assumed from the per-section derivation. A malformed row was injected
+into the **new** section and `validate.sh` run:
+
+| Injected | Output | Exit |
+|---|---|---|
+| unescaped `\|` (6 cells) | `REGISTRY INTEGRITY: line 26 (Agents): 6 columns, header declares 5 — an unescaped '\|' in a description?` | **1** |
+| missing cell (4 cells) | `REGISTRY INTEGRITY: line 26 (Agents): 4 columns, header declares 5 — a missing cell, or a format change applied to the header but not the rows?` | **1** |
+
+Both name the section correctly and give the **direction-aware** hint. The
+per-section column derivation generalizes to a new section with no change,
+as designed.
+
+#### FINDING for TASK-0038: a folded description produces a valid-looking, meaningless row
+
+The brief flagged this as a risk and asked for the generator's behaviour to
+be *known rather than assumed*. Tested with the exact style `agent-tiers`
+uses today (`description: >-`):
+
+```
+| fixture-role | >- | agents/_fixture-role |
+```
+
+**The cell contains the literal string `>-`**, and — the part worth
+escalating — **`validate.sh` returns exit 0.** The row has the right number
+of columns, so the integrity check has nothing to object to. The
+description is simply gone.
+
+This is a **worse outcome than the brief anticipated.** It predicted "an
+empty or partial cell"; what actually happens is a *structurally valid*
+registry row carrying a YAML sigil instead of a description. No existing
+check can see it.
+
+It is not fixable here — this task must not touch `validate.sh`. Two facts
+that must stay consistent:
+- The guide (TASK-0037) already requires `description` to be **single
+  line**, with the reason stated as "it renders into one registry cell".
+- **TASK-0038 must therefore enforce single-line `description` for agents,
+  and its fixture proof should use `>-` specifically**, because that is the
+  style the roles TASK-0045 reconciles are written in *today*. If that check
+  is omitted, the guide's rule is unenforced and this row shape reaches the
+  registry silently.
+
+Recorded here rather than deferred to discovery in TASK-0045.
+
 - Actions:
+  1. Re-read the generator; confirmed every cited line reference.
+  2. Added `agent` to `extract()`'s frontmatter branch; mapped to
+     `agent.md`.
+  3. Added one `emit_section` call, last, per `AGENTS.md`'s order.
+  4. Corrected the header's "three kinds" to "four".
+  5. Regenerated; read the diff (4 inserted lines, all in the new section).
+  6. Proved the template skip is the exclusion by disabling it; restored
+     and hash-verified.
+  7. Proved both integrity-check directions fire on the new section.
+  8. Proved the section populates with a temporary fixture; removed it.
+  9. Tested the folded-description risk; recorded the finding above.
+
 - Observations:
+  - **The registry diff is exactly 4 lines** — `## Agents`, two header
+    rows, and the blank separator. The section is legitimately empty below
+    its header until TASK-0043 authors a role, which is the intended end
+    state rather than an incomplete one.
+  - **`_fixture-*` is not covered by the template skip**, which matches
+    `_template*` only. My fixture *did* appear in the registry while it
+    existed — by design here, since that was the proof — but it confirms a
+    real hazard: had this task run concurrently with TASK-0038 (whose brief
+    also creates `agents/_fixture-*/agent.md`), those fixtures would have
+    landed in a committed registry. The three Phase-2 tasks are
+    dependency-independent but **not** safely concurrent; sequencing them
+    was the right call and this is the concrete reason.
+  - **No `prompts/` section**, per B-016. The generator now handles four
+    kinds and `prompts/` remains outside the registry entirely, consistent
+    with it having no schema.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash scripts/sync-registry.sh` → ran; registry regenerated and
+    **committed in the same commit** as the script, as the brief requires.
+  - `bash tests/validate.sh` → **PASS** (`validate.sh: OK`, exit 0) on the
+    final state. Also observed **failing (exit 1)** twice on deliberately
+    malformed rows in the new section, and **passing (exit 0)** on the
+    folded-description row — the last being the finding, not a success.
+  - `git status` clean of `_fixture-*`; no fixture committed.
+  - Template exclusion verified by code path; restore hash-verified.
+
+- Result: **done.** All nine acceptance criteria met. The registry indexes
+  four component kinds; a role authored in TASK-0043 will appear with no
+  generator change. `tests/validate.sh` and `scripts/install.sh` untouched.
+
+  One finding handed forward rather than fixed here: **a folded
+  `description` yields a structurally valid registry row containing `>-`,
+  and nothing currently detects it.** TASK-0038 owns the fix and should use
+  `>-` as its fixture, since that is the style the roles awaiting
+  reconciliation use today.
+- Commit: recorded below
+- Push: recorded below
