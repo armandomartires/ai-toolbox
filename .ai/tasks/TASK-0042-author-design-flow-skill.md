@@ -346,5 +346,8 @@ the original:**
   Backup at `/tmp/opencode/df-backup.md`, restored after the break-tests.
 - Result: **done.** Every acceptance criterion met. Core 3354 B with 12.6 KB
   in `references/`; no budget invented, per ADR-0008.
-- Commit: see below.
-- Push: see below.
+- Commit: `ef4b6ce`
+- Push: **confirmed.** Pushed to `origin/master` (`fb9dec2..ef4b6ce`) using
+  basic auth with `GITHUB_TOKEN` from the environment — never in the remote
+  URL or a tracked file (ADR-0009). Verified by re-fetch:
+  `git log --oneline -1 origin/master` shows `ef4b6ce`.
