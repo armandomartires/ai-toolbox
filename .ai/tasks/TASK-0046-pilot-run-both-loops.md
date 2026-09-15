@@ -559,8 +559,15 @@ no genuine session gap was crossed. Recorded rather than claimed.
 - Result: **success.** Both loops executed end to end; both components
   produced through them; the design brief accepted and locked; the production
   loop stopped at the merge gate.
-- Commit: `8e1d1be` (brief lock), `1e07584` (gitignore), plus the components
-  and documentation commit recorded by `git-ops` at step 7.
+- Commit: **`31e0520`** — "Run the S7 pilot: author ansible-ops and
+  ansible-change through both loops" (15 files, +2084/−44), committed by
+  `git-ops` at step 7 with the pre-commit hook printing `validate.sh: OK`
+  and no `--no-verify`. Preceded by `8e1d1be` (the brief's lock, step 7 of the
+  design loop) and `1e07584` (gitignore for the pilot scratch).
+  `git status --short --branch` → `## master...origin/master [ahead 3]`.
+  **`git-ops` also corrected the caller**: the instruction said the skill held
+  9 files; it holds **8** (9 counting `loop.md`). Nothing was missing — the
+  count in the instruction was wrong, and the guarded role caught it.
 - Push: **awaited human authorization** — ADR-0019 clause 2.2. The loop
   stopped at the gate rather than pushing, which is the boundary
   demonstrated rather than asserted.
