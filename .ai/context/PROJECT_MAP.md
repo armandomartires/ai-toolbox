@@ -8,8 +8,14 @@
   per server dir. Either way, registered per client from `configs/`.
 - `loops/` — repeatable multi-step workflows (loop.md: trigger, steps,
   exit conditions); may invoke skills and MCP servers.
-- `prompts/`, `agents/` — prompt fragments and subagent role
-  definitions consumed by loops and clients.
+- `agents/` — role definitions, one dir per role (`agent.md`: identity,
+  `mode`, an **abstract** capability profile, `clients`, system prompt).
+  **Emitted per client, never symlinked** — the two clients' permission
+  models differ in semantics, so a per-client file is generated
+  (ADR-0018). Schema: `docs/development/authoring-guide.md` "Agents".
+- `prompts/` — prompt fragments consumed by loops and clients. Still a
+  declared category with **no schema, template or check** (ADR-0016);
+  deliberately not built out alongside `agents/` (B-016).
 - `configs/` — client wiring snapshots; source of truth stays in repo.
 - `docs/registry.md` — generated index; built by scripts/sync-registry.sh
   from SKILL.md frontmatter, pyproject.toml metadata, and

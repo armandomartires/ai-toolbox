@@ -259,18 +259,233 @@ outcome is a documented limitation of the abstraction, not a term quietly
 added that only one client honours.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-15
+- Agent: opencode (claude-opus-5)
+
+#### Step 1 gate — passed, verified rather than assumed
+Checked by reading the files, not by recalling having written them in the
+prior session:
+- ADR-0018 line 4: `**Accepted — 2026-09-15.**` ✔
+- TASK-0036 `- Status: done` ✔
+- TASK-0036 §6 `#### 6. Capability vocabulary for the four existing roles`
+  with an `| Abstract term |` table at L483 ✔
+
+#### The brief contradicted ADR-0018, and the ADR won
+
+**This is the task's most consequential finding, and it is a conflict in
+its own inputs.** The brief was written before the spike ran, and says
+twice that a one-client term is inadmissible:
+
+> L66: *"A term that maps to only one client **cannot be offered**"*
+> L214: *"The schema **must exclude** such terms"*
+
+ADR-0018 clause 8.3, written *after* the evidence, says the opposite: such
+a term **is** admitted, the role narrows its `clients` list, and the
+emitter refuses rather than degrades.
+
+**Following the brief would have produced a three-term vocabulary and
+silently discarded the safety boundaries of every existing role.** Five of
+the eight terms are OpenCode-only, and they are the five carrying the
+safety value — `bash-allowlist` alone is load-bearing in all four
+`agent-tiers` roles. A schema that cannot state `no-force-push` does not
+make `git-ops` portable; it makes `git-ops` undescribable.
+
+Resolved in favour of the ADR, because a decision ratified on observed
+evidence outranks a brief written on a prediction. The guide therefore
+states that a one-client term **is legal**, with two obligations attached
+(declare narrower `clients`; the emitter fails loudly). The brief's
+underlying concern is still honoured — its stated risk was *"a role that is
+silently weaker in one client than the author intended"* — but the control
+is clause 8's loud failure, not exclusion from the vocabulary.
+
+**Not escalated to the human**, because ADR-0018 is accepted and
+unambiguous on the point; this is a stale brief, not an open question. Had
+the ADR been silent I would have stopped.
+
+#### A ninth vocabulary term was missing, found by testing the schema against real roles
+
+TASK-0036's table has eight terms. Mapping the four `agent-tiers` roles
+onto them left **`qa-test`'s `webfetch: ask` unexpressible**: it is neither
+`webfetch: deny` (`no-webfetch`) nor absent. The spike's table recorded
+`no-webfetch` for three roles and did not notice the fourth used the `ask`
+state instead.
+
+Added **`webfetch-requires-confirmation`** as a ninth term, OpenCode-only,
+for the same structural reason as `push-requires-confirmation`: Claude Code
+has no `ask` state at all. Coverage after the addition, re-derived by
+script against the live files rather than by eye:
+
+| Role | Terms | Leftover boundary |
+|------|-------|-------------------|
+| `review` | read-only, no-delegation, no-webfetch, worktree-only, bash-allowlist | none |
+| `qa-test` | no-delegation, **webfetch-requires-confirmation**, worktree-only, test-files-only, bash-allowlist | none |
+| `git-ops` | read-only, no-delegation, no-webfetch, worktree-only, bash-allowlist, no-force-push, push-requires-confirmation | none |
+| `shell-runner` | read-only, no-delegation, no-webfetch, worktree-only, bash-allowlist | none |
+
+**All four roles are now fully expressible with no boundary dropped** —
+which is the acceptance criterion, and it needed a schema change to be
+true. Step 3 of the plan earned its place: the gap was invisible until the
+abstraction met four concrete files.
+
+#### `worktree-only` is not "maps both" and not "OpenCode only" — it is a semantic gap
+
+TASK-0036 marked it **OpenCode only** (*"no per-agent equivalent"*).
+Re-reading the fetched Claude Code page shows that is **wrong as stated**:
+`isolation: worktree` **is** a per-agent frontmatter field. But it is not
+the same guarantee:
+
+- OpenCode `external_directory: deny` — **refuses** tool calls touching
+  paths outside the working directory.
+- Claude Code `isolation: worktree` — **redirects** the agent into an
+  isolated *copy* of the repository, and checks its commands stay inside
+  it. The check covers the whole repository containing the launch
+  directory (as of v2.1.210).
+
+Confinement by refusal versus confinement by redirection. Both narrow
+blast radius; neither is a translation of the other. Recorded as
+**partial** in the guide rather than resolved, with the decision explicitly
+assigned to TASK-0040 — because **every one of the four roles declares this
+term**, so picking silently would affect all of them. This corrects a row
+in a spike that was itself correcting an ADR, two sessions running.
+
+#### `color` has a zero-value intersection, which is sharper than ADR-0018 says
+
+ADR-0018 says `model` and `color` *"overlap in name only."* Counted: Claude
+Code accepts `red, blue, green, yellow, purple, orange, pink, cyan`;
+OpenCode accepts hex or `primary, secondary, accent, success, warning,
+error, info`. **The intersection is empty — zero shared values.** So
+`color` is not merely lossy across clients, it is *never* transferable.
+Consequence for this task: `color` is **omitted from the schema
+entirely**. A key with no portable value has no place in a
+client-agnostic source, and adding it would guarantee an emitter special
+case on day one.
+
+#### The template caught its own trap
+
+Checking the template against the rule table mechanically (no gate exists
+yet) flagged `disallowedTools` **present** — in a prose sentence warning
+authors not to use it. Harmless to a client, but a naive TASK-0038 check
+that greps for the string would fail its own template, and the obvious
+"fix" would be an exemption that weakens the check. Reworded to describe
+the prohibition without spelling the key. **The template must be clean
+under the simplest possible implementation of the rule**, not merely
+technically compliant.
+
+#### Proof that a green gate means nothing here — observed, not asserted
+
+The brief requires noting that `validate.sh` green *"proves nothing about
+`agents/`."* Rather than assert it, it was **tested**: the template was
+replaced with a file carrying unparseable YAML, no frontmatter delimiters,
+an invalid `mode`, and a forbidden `permission:` block.
+
+`bash tests/validate.sh` → **`validate.sh: OK`, exit 0.**
+
+The gate does not see `agents/` at all. Restored from a backup and
+confirmed **byte-identical by SHA-256**, then re-validated. This is the
+mirror image of lesson 1: usually the risk is a check that cannot fail;
+here the point was confirming a check genuinely *is* absent, so TASK-0038's
+work is known to be necessary rather than presumed.
+
 - Actions:
-- Observations:
+  1. Verified the step-1 gate (three checks above).
+  2. Read all three existing `authoring-guide.md` sections; matched their
+     shape — a rule table with a **reason** embedded in every row.
+  3. Read the four live `agent-tiers` role files; derived their boundaries
+     by script.
+  4. Wrote the **Agents** section: emission/no-link framing, a **9**-row
+     frontmatter rule table, the 9-term capability vocabulary mapped to
+     both clients, the `worktree-only` semantic-gap subsection, the
+     forbidden-client-native-syntax rule, the no-budget statement, and the
+     15,000-token vendor threshold as a non-gated note.
+  5. Created `agents/_template/agent.md` conforming to the schema.
+  6. Rewrote `agents/README.md` (141 bytes → a pointer at the guide).
+  7. Checked the template against every rule mechanically; fixed the
+     `disallowedTools` trap.
+  8. Proved the gate does not cover `agents/`; restored and verified.
+  9. **Beyond the brief's file list**, two governance docs described the
+     old state and were corrected — found by grepping for `agents/` across
+     `AGENTS.md`, `README.md`, `PROJECT_MAP.md` and `GLOSSARY.md` rather
+     than trusting the brief's "likely files":
+     - `PROJECT_MAP.md:11` bundled `prompts/`, `agents/` as one
+       undifferentiated line. That was accurate while both were empty
+       READMEs and is not now: `agents/` has a schema, a template and an
+       emission rule; `prompts/` has none. Split into two entries, with
+       `prompts/`'s lack of a schema stated explicitly so the asymmetry is
+       deliberate rather than an oversight (B-016, ADR-0016).
+     - `GLOSSARY.md` defined Skill, MCP server and Loop but **not** Agent —
+       it appeared only inside the `Component` list. Added `Agent (role)`
+       and `Capability term`. `AGENTS.md:56` and `README.md:7` list
+       `agents/` as a category and needed no change.
+
+- Observations (beyond the findings above):
+  - **`mode` had to become a required field**, which the brief did not
+    name. Claude Code has no `mode` equivalent and infers primary-vs-
+    subagent from how an agent is invoked, while OpenCode has an explicit
+    field defaulting to `all`. An emitter cannot derive it, so the source
+    must carry it. ADR-0018's clause 1 lists
+    "primary-or-subagent" in the role contract, so this is implementing the
+    ADR rather than extending it.
+  - **`clients` had to become a required field too.** It is the mechanical
+    counterpart of clause 8.3: a role declaring an OpenCode-only term must
+    say it is OpenCode-only somewhere, and deriving that list from the
+    capability set would make the emitter silently decide a scoping
+    question. Declared, so the decision is visible in review.
+  - **`model` is a tier name, not a model ID.** Both from ADR-0018 clause 7
+     and from the spike's finding that OpenCode accepts a foreign model
+     value at *parse* time and fails only at *run* time — a class of error
+     `validate.sh` structurally cannot catch (ADR-0009).
+  - **No budget invented.** The one real external number (Claude Code's
+    15,000-token combined-description warning) is documented as a vendor
+    threshold with the explicit reason it is not gated: it is measured
+    across whatever roles that machine has installed, including ones this
+    repo never emitted, so this repo cannot compute it. Gating on an
+    unmeasurable number is the ADR-0008 error.
+  - **`docs/registry.md` did not change**, confirming nothing was done out
+    of order. Verified by SHA-256 before and after `sync-registry.sh`
+    rather than by reading a diff.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → **PASS**, output `validate.sh: OK`, exit 0.
+    **With the note the brief requires, now backed by a test rather than a
+    claim: this proves nothing about `agents/`** — the gate returns exit 0
+    on a deliberately malformed agent file (see above).
+  - `bash scripts/sync-registry.sh` → ran; **no diff**. `docs/registry.md`
+    SHA-256 identical before and after
+    (`8348837C…B57D9EE7`), as predicted, since no agent kind exists until
+    TASK-0039. Re-run after the governance-doc edits: still no diff, and
+    `git status` never listed `docs/registry.md`.
+  - Template checked against all **9** rule-table rows plus the three
+    forbidden keys: every applicable rule **PASS**, name↔directory exempt
+    by the rule's own text. (Log first said "10 rows" from estimation;
+    counted **9** — `File`, delimiters, `name`, `description`, `mode`,
+    `capabilities`, `clients`, `model`, `Body`. Third session running in
+    which a figure written from memory was wrong when counted, so every
+    count in this log was derived by script or grep.)
+  - Four `agent-tiers` roles mapped to the vocabulary by script: **no
+    leftover boundary in any of them.**
+
+- Result: **done.** All ten acceptance criteria met. `agents/` is now a
+  *defined* category: schema written before any enforcement (ADR-0008
+  order preserved — `validate.sh`, `sync-registry.sh` and `install.sh` are
+  untouched), template present and proven satisfiable against four real
+  roles, README reduced to a pointer so the guide is the single owner of
+  the rules. It holds **no real role**, as intended — defined, not
+  populated.
+
+  Three deviations from the brief, all recorded above rather than silently
+  taken: the brief's term-exclusion rule was **overridden by ADR-0018**;
+  a **ninth vocabulary term** was required; and `worktree-only` is
+  **partial**, not OpenCode-only, with its resolution assigned to
+  TASK-0040. The brief's own "deviation to watch for" anticipated a
+  boundary the schema could not express — one existed, and the honest
+  outcome it asked for (a documented limitation, not a quietly added
+  one-client term) is what the guide now carries.
+- Commit: recorded below
+- Push: recorded below

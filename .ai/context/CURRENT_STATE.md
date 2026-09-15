@@ -158,13 +158,58 @@ in place. **That is the fourth and fifth instance of this class in a file
 whose own text records the first three** — still no mechanism, only a
 habit of checking.
 
-S7 now proceeds on two independent fronts. **The critical path is
-`TASK-0037`** (`agents/_template/` plus the normative schema), which
-0038/0039/0040 all sit behind and which now has an *enumerated* capability
-vocabulary with per-term client coverage rather than an invented one.
-`TASK-0043` remains behind TASK-0040. Phase 1's remaining spike is
-`TASK-0034`, still unblocked and independent; ADR-0017 stays proposed
-behind it.
+**TASK-0037 is done — `agents/` is now a *defined* category.** The
+`authoring-guide.md` Agents section is its fourth component section: a
+9-row frontmatter rule table with a reason per row, a **9**-term capability
+vocabulary mapped to both clients, the forbidden-client-native-syntax rule,
+a no-budget statement, and Claude Code's 15,000-token description warning
+documented as a **vendor threshold, explicitly not gated** (this repo
+cannot measure it — it spans roles this repo never emitted). `validate.sh`,
+`sync-registry.sh` and `install.sh` are **untouched**, so ADR-0008's
+definition-before-enforcement order held.
+
+Four findings, the first of which nearly inverted the task:
+
+- **The brief contradicted ADR-0018, and the ADR won.** The brief (written
+  pre-spike) says twice that a term mapping to only one client *"cannot be
+  offered"* and *"must be excluded"*. ADR-0018 clause 8.3, written on the
+  evidence, says such a term **is** legal — the role narrows `clients` and
+  the emitter refuses rather than degrades. **Following the brief would
+  have produced a three-term vocabulary and silently discarded the safety
+  boundary of every existing role**, since `bash-allowlist` alone is
+  load-bearing in all four. Resolved for the ADR: a decision ratified on
+  observed evidence outranks a brief written on a prediction. Not
+  escalated, because the ADR is accepted and unambiguous.
+- **A ninth vocabulary term was missing, found only by testing the
+  abstraction against real files.** TASK-0036's table has eight;
+  `qa-test`'s `webfetch: ask` is neither `no-webfetch` nor absent. Added
+  `webfetch-requires-confirmation`. All four roles now map with **no
+  leftover boundary** — verified by script, not by eye.
+- **`worktree-only` is *partial*, not OpenCode-only.** The spike said "no
+  per-agent equivalent"; Claude Code does have `isolation: worktree`. But
+  it is a different guarantee — OpenCode **refuses** calls outside the
+  worktree, Claude Code **redirects** into an isolated *copy*. Recorded as
+  a semantic gap with the decision assigned to TASK-0040, because **all
+  four roles declare this term**, so choosing silently would affect every
+  one of them.
+- **`color` is dropped from the schema.** ADR-0018 called it "overlap in
+  name only"; counted, the value sets share **zero** members
+  (`red…cyan` vs hex-or-`primary…info`). A key with no portable value has
+  no place in a client-agnostic source.
+
+**A green gate here proves nothing about `agents/` — and that was
+*observed*, not asserted.** The template was replaced with unparseable
+YAML, no delimiters, an invalid `mode` and a forbidden `permission:` block;
+`validate.sh` returned **exit 0**. Restored and confirmed byte-identical by
+SHA-256. The inverse of lesson 1: the usual risk is a check that cannot
+fail, and here the point was proving a check is genuinely *absent*, so
+TASK-0038 is known-necessary rather than presumed so.
+
+S7 now proceeds on three independent fronts. **TASK-0038, TASK-0039 and
+TASK-0040 are all unblocked and mutually independent**; TASK-0043 sits
+behind TASK-0040, which now also owes the `worktree-only` decision. Phase
+1's remaining spike is `TASK-0034`, still unblocked; ADR-0017 stays
+proposed behind it.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at

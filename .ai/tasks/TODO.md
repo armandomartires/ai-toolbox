@@ -174,8 +174,15 @@ Phase 1 — reclaim, then decide (the two spikes are mutually independent):
 
 Phase 2 — make `agents/` a real category (0037 strictly first; then
 0038/0039/0040 are independent):
-- [ ] TASK-0037 — `agents/_template/` + normative schema in
+- [x] TASK-0037 — `agents/_template/` + normative schema in
       `authoring-guide.md`. **Definition before enforcement** (ADR-0008)
+      (done — 9-row rule table, **9**-term vocabulary. The brief's
+      "a one-client term cannot be offered" rule was **overridden by
+      ADR-0018 clause 8.3**: following it would have left a 3-term
+      vocabulary unable to state any real role's safety boundary. Proved
+      by test that `validate.sh` returns exit 0 on a deliberately
+      malformed agent file — the category is genuinely unpoliced, which is
+      what TASK-0038 fixes)
 - [ ] TASK-0038 — `validate.sh` agent checks, parsed not grepped, each
       **observed failing** on a fixture
 - [ ] TASK-0039 — `sync-registry.sh`: `extract()` gains `agent`; one

@@ -90,6 +90,132 @@ enforce rather than restating them. A loop that copies `AGENTS.md`'s rules
 creates a second owner of those rules, which will drift. See
 `loops/release-check/loop.md` for the worked example.
 
+## Agents
+An agent is a **role**: an identity, a purpose, a capability boundary and a
+system prompt. One directory per role, `agents/<role>/agent.md` is required;
+copy from `agents/_template/`.
+
+Agents are the only component category that is **emitted rather than
+linked**. `scripts/install.sh` deploys skills with `ln -sfn`, so one file
+serves every client. An agent file cannot work that way: the two clients'
+formats differ in name, syntax and semantics, so a per-client file is
+**generated** from `agent.md` (ADR-0018). There is no `link` mode and no
+`copy` mode for agents, and **no freshness check on the emitted copy is
+possible** — ADR-0009 forbids validating runtime presence, so the control
+is that emission is cheap, idempotent, and re-run. Do not add a check that
+inspects a deployed agent file; it would fail on every clean clone.
+
+The agent capability spans **Claude Code and OpenCode only**. LM Studio
+supplies models and performs no agentic work (ADR-0006).
+
+| Rule | Detail |
+|------|--------|
+| File | `agents/<role>/agent.md`, case-sensitive. One directory per role, because a role may later need `references/` beside it. |
+| Frontmatter delimiters | `---` on line 1, terminated by a closing `---`. Claude Code reads a file whose opening `---` is not line 1 as having no frontmatter and silently treats it as documentation. |
+| `name` | Required, non-empty, **must equal the directory name**. It determines the emitted filename and the Claude Code `name:` field, so a mismatch deploys a role the client cannot find. `_template*` is exempt from the equality rule only. |
+| `description` | Required, non-empty, **single line**. It renders into one registry cell, and it is also what each client shows the delegating model — a folded (`>`) or block (`\|`) scalar breaks the row. |
+| `mode` | Required. `primary` or `subagent`. Not inferred: OpenCode has an explicit `mode` field while Claude Code has none, so the emitter must be told rather than guess. An interactive role **must** be `primary` — Claude Code strips `AskUserQuestion` from every subagent regardless of its tool list, and OpenCode's default `subagent_depth: 1` stops a subagent spawning workers. |
+| `capabilities` | Required, non-empty list drawn **only** from the vocabulary below. This is the role's safety boundary, stated in abstract terms because the emitter has to translate it into two different permission models — a boundary written in one client's syntax cannot be translated into the other's, and is silently discarded rather than rejected. |
+| `clients` | Required. List of clients this role is emitted for: `claude-code`, `opencode`, or both. Declared rather than derived, because a role asking for a capability a client cannot enforce is a **scoping decision**, not something the emitter should silently resolve. |
+| `model` | *Optional.* A **tier name**, never a client-native model ID. The two clients' model formats are mutually invalid — OpenCode wants `provider/model-id`, Claude Code wants an alias, a full ID or `inherit` — and OpenCode accepts a foreign value at parse time and **fails only at run time**. Tier-to-model resolution belongs to the emitter. |
+| Body | Required, non-empty. Everything after the frontmatter is the system prompt, emitted verbatim to both clients. It is the one part of a role that is genuinely portable. |
+
+### Capability vocabulary
+A role declares **intent**; the emitter translates it into each client's
+mechanism. The vocabulary is fixed, and it is short: it is bounded by the
+weaker of two clients, not by either client's native expressiveness.
+
+| Term | Meaning | OpenCode | Claude Code |
+|------|---------|----------|-------------|
+| `read-only` | May read and search; may not create or modify files. | `edit: deny`, `write: deny` | omit `Write`, `Edit` from `tools` |
+| `no-delegation` | May not invoke other agents. | `task: deny` | omit `Agent` from `tools` |
+| `no-webfetch` | May not fetch network resources. | `webfetch: deny` | omit `WebFetch`, `WebSearch` from `tools` |
+| `worktree-only` | Confined to the project worktree. | `external_directory: deny` | **partial** — `isolation: worktree` gives an isolated *copy*, which is a different guarantee. See below. |
+| `test-files-only` | May edit test paths only. | `edit` glob map | **not per-agent** |
+| `bash-allowlist` | May run only named commands. | `bash` glob map | **not per-agent** |
+| `no-force-push` | May not force-push, hard-reset or rewrite history. | `bash` deny globs | **not per-agent** |
+| `push-requires-confirmation` | Push prompts rather than proceeding. | `bash: {"git push*": ask}` | **no `ask` state exists** |
+| `webfetch-requires-confirmation` | Network fetches prompt rather than proceeding. | `webfetch: ask` | **no `ask` state exists** |
+
+**Only the first three are enforceable in both clients.** The other six are
+enforceable in OpenCode only, and the reason is structural: Claude Code's
+`tools`/`disallowedTools` gate **whole tools**, so anything needing
+*intra-tool* granularity — which paths, which commands, or a third `ask`
+state between allow and deny — has no per-agent expression. A
+`disallowedTools` entry with a specifier such as `Bash(git push *)` removes
+the entire `Bash` tool, not the matching commands.
+
+A term that only one client can enforce is **still a legal term**. It is
+not excluded, because excluding it would mean a role could not state a
+boundary it genuinely has. Instead:
+
+- The role lists the term in `capabilities` **and** narrows `clients`
+  accordingly.
+- **The emitter refuses rather than degrades** (ADR-0018 clause 8): asked
+  to emit a role for a client that cannot enforce a declared term, it
+  **fails loudly**. It never drops the term, weakens it, or turns it into a
+  comment.
+
+That rule exists because the failure is otherwise invisible. A role
+declaring `read-only` through OpenCode's native `permission:` syntax
+**loads in Claude Code with `Write`, `Edit` and `Bash` still in its tool
+pool** — the block is parsed as an unknown key and discarded without a
+warning. Verified by fixture in TASK-0036. A file that says `deny` over an
+agent that can write is worse than a file that refused to emit.
+
+Consequently **`git-ops` and `shell-runner` are OpenCode-only roles**: both
+exist to enforce a command allowlist, which is `bash-allowlist`, which has
+no per-agent Claude Code expression.
+
+#### `worktree-only` is the one term with a semantic gap
+The two mechanisms are not the same guarantee, so it is marked *partial*
+rather than *maps both*. OpenCode's `external_directory: deny` **refuses
+tool calls touching paths outside the working directory**. Claude Code's
+`isolation: worktree` **gives the subagent an isolated copy of the
+repository** and checks that its commands stay inside it — confinement by
+redirection rather than refusal, and its check covers the whole repository
+containing the launch directory. Both narrow blast radius; neither is a
+drop-in translation of the other. TASK-0040 must decide explicitly whether
+`worktree-only` emits `isolation: worktree` for Claude Code or refuses the
+client, and record which — it is the term every existing role declares, so
+resolving it silently would affect all of them.
+
+### A role file must not contain client-native syntax
+A role file must **not** contain a `permission:` block, the string
+`disallowedTools`, or a `tools:` key. Any of them means the file has picked
+a client, which defeats the one-source mechanism the category is built on.
+
+`tools:` is the sharpest case and is worth its own warning: OpenCode types
+it as an object while Claude Code types it as a comma-separated string, so
+the same key is valid in both and means different things. A Claude
+Code-shaped `tools: Read, Grep, Glob` in a file OpenCode reads produces
+`Configuration is invalid`, and observed behaviour is that **one malformed
+file empties the entire agent list** rather than failing alone. It is also
+deprecated upstream in favour of `permission`.
+
+A role file must also **not** carry a `name:` field in the Claude Code
+sense of an identity that may differ from its filename. This repo's `name`
+means "equals the directory". In OpenCode a `name:` field silently
+**overrides** the filename; in Claude Code it is required. Reconciling the
+two is the emitter's job.
+
+### No size budget
+No line or byte budget for `agent.md` is defined, and none should be
+invented — the same treatment SKILL.md gets above, for the same reason
+(ADR-0008). Keep the system prompt as long as the role genuinely needs.
+To add a budget, define it here first, in bytes, with a rationale, then
+enforce it.
+
+One **vendor threshold** is worth knowing and is deliberately *not* a
+gated rule: Claude Code warns at startup when the combined `description`
+fields of its custom subagents exceed **15,000 tokens**, and advises moving
+detail into the system prompt, which loads only when that subagent runs.
+That is Anthropic's limit on their own client, measured across whatever
+that machine has installed — including roles this repo did not emit. This
+repo cannot compute it, so gating on it would be enforcing a number it
+cannot measure. Prefer short descriptions because the delegating model
+reads them, not because a check demands it.
+
 ## Versioning
 - Semver per component. Skills: `metadata.version` in SKILL.md
   frontmatter (see ADR-0003). Authored MCP servers: `pyproject.toml`.
