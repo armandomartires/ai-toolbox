@@ -260,18 +260,182 @@ ownership question resolves toward the loop being authoritative,
 this repo now owns and should be recorded as such rather than done silently.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-15
 - Updated: 2026-09-15
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-15
+- Agent: opencode (claude-opus-5)
+
+#### Two of this brief's stated dependencies no longer exist as written
+
+The brief says *"This task's real remaining dependency is TASK-0035 — read
+`bmad-workflow.md` at its path in this repo **after** the import."*
+
+**There was no import.** ADR-0017 was rejected and TASK-0035 cancelled
+(2026-09-15): `agent-tiers` stays with `opencode-customization`. So
+`bmad-workflow.md` was read **in place** at
+`~/AI_Workspaces/opencode-customization/opencode/skills/agent-tiers/templates/bmad/bmad-workflow.md`.
+
+**No drift-resolution content change to follow**, because there was no
+resolution to apply — the file is the same 53 lines, and every line
+reference in this brief (`:8-38` sequence, `:22-26` fix bound, `:32-34`
+review distinction, `:40-46` artifact contract) is **accurate against the
+landed file**. The brief's "deviation to watch for" therefore does not fire.
+
+Reading another repo's file as evidence is not a claim on it — S6's standing
+practice with `SIGMA-infrastructure`, and TASK-0034 verified this specific
+file readable in place before the dependency was dropped.
+
+#### The one substantive addition beyond translation: a `document` step
+
+`bmad-workflow.md`'s sequence has **seven numbered items and no
+documentation step**. ADR-0019 clause 2.1's autonomous list is *"implement,
+test, fix-loop, review and **document**"*.
+
+So the ADR requires a step the inherited sequence does not contain. Added as
+**step 6 (`build`)**, and **labelled in the loop itself** as the one addition
+rather than left to look like part of the original — otherwise a reader
+comparing the two files finds an unexplained discrepancy and cannot tell
+which is stale.
+
+#### The two-owners question, answered rather than left silent
+
+The brief required this and warned *"silence is the bad outcome."*
+
+**This loop is authoritative for the sequence** as a component of this repo:
+it is the gated artifact, its exit conditions are enforced by
+`validate.sh`, and it is what `loops/design-brief/` hands off to.
+`bmad-workflow.md` remains that skill's own context document, wired into two
+agents via `instructions`.
+
+**Neither of the brief's two suggested answers was available.** It offered
+*"the loop is authoritative and the skill's copy points at it"* or *"the
+skill's is authoritative and the loop is a thin wrapper"* — both assume this
+repo can edit the skill. **It cannot**: the skill lives in another repo whose
+owner decided to keep it (ADR-0017), and adding a pointer there would be a
+cross-repo write this repo has no standing to make.
+
+So the recorded answer is the third one: **two separate artifacts with one
+shared ancestor, neither updating the other, and the divergence risk accepted
+knowingly.** The loop states that explicitly, including that if they diverge,
+**this loop governs work in this repo** and the divergence is a finding to
+record rather than silently reconcile. That is weaker than one owner, and
+saying so is better than implying a synchronisation that cannot happen.
+
+#### The `release-check` tail overlap: referenced, with the caveat stated
+
+**Decision: reference it, do not restate it** — consistent with the
+link-don't-restate rule, and `release-check` genuinely does more at the tail
+(secret scan, registry regeneration, effect verification, and the
+prove-new-checks-bite step).
+
+**The caveat the brief demanded**, written into step 7: `release-check` is
+explicitly scoped to *this* repo and invokes `tests/validate.sh` and
+`scripts/sync-registry.sh` **by name**. In another project it is the
+*pattern*, not the procedure. Step 7 therefore stands alone as written, with
+`release-check` preferred *in this repo specifically*.
+
+#### Step 8 read-back as an executor — the constraint that had to be checked
+
+Walked every step against the roles' actual capabilities:
+
+| Step | Role | Needs | Available? |
+|---|---|---|---|
+| 1 plan | `plan` (built-in) | write a story artifact | yes |
+| 2 implement | `build` (built-in) | full edit | yes |
+| 3 test | `qa-test` | edit **test paths only** | yes — `test-files-only` |
+| 4 fix | `build` | edit app code | yes |
+| 5 review | `review` | read + report, no edit | yes — `read-only` |
+| 6 document | `build` | edit docs | yes |
+| 7 commit | `git-ops` | git, no push | yes — `bash-allowlist` |
+
+**The constraint that mattered: `subagent_depth: 1`.** A subagent cannot
+invoke another agent. Every subagent step (3, 5, 7) is invoked **by `build`,
+a primary** — never subagent-to-subagent. Verified against `agent-tiers`'
+bmad fragment, whose `build` allowlist contains exactly `qa-test`, `review`,
+`git-ops` (plus `shell-runner` and the read-only researchers). **The sequence
+is executable under the depth limit**; a version where `qa-test` invoked
+`build` to fix things would not be, and that is the natural way to write it
+wrong.
+
+`plan` and `build` are **built-in primaries configured by override, never
+markdown role files** — stated in the loop, because creating `agents/plan/`
+would replace OpenCode's tuned built-in prompt wholesale.
+
+#### The gate proven to cover this file
+Not assumed from a green run: `## Exit conditions` was renamed and
+`validate.sh` returned **`MISSING SECTION '## Exit conditions'`, exit 1**.
+Restored, hash-verified identical, green again.
+
 - Actions:
+  1. Re-read ADR-0019 clause 2's five sub-clauses (accepted, so a read for
+     content); confirmed clause 2.5's ambiguity distinction verbatim.
+  2. Read `bmad-workflow.md` in place — 53 lines, all brief line references
+     accurate.
+  3. Read `release-check/loop.md` (96 lines) for style; decided the overlap.
+  4. Authored the loop: 8 steps, each with role and expected output.
+  5. Wrote the exit conditions with **the two bounds deliberately
+     separated**, naming both failure modes of merging them.
+  6. Wrote the merge-gate statement and the ambiguity-stop.
+  7. Added the precedence line (`AGENTS.md` wins, then the ADR).
+  8. Read the loop back as an executor against the depth limit and each
+     role's capability.
+  9. Answered the two-owners question in the loop's own text.
+  10. Validated; regenerated the registry; proved the gate bites.
+
 - Observations:
+  - **A third bound was needed that no source states.** A `review` block
+    correctly does not consume the fix-cycle budget — but left purely at
+    that, the review path is **unbounded**: block → fix → block → forever.
+    `bmad-workflow.md` does not address it and neither does ADR-0019. Added:
+    if the **same finding** survives three review rounds, stop and escalate,
+    because that is a disagreement between `review` and `build` about what
+    the story requires and it is the human's to settle. **Keeping the two
+    bounds distinct is not sufficient on its own** — the brief's risk
+    section anticipated conflation, not the gap conflation was hiding.
+  - **The ambiguity condition is written with an explicit test**, because
+    clause 2.5 is the easiest thing here to read as "never stops": *"The test
+    is not 'is this hard?' but 'does the brief answer it?'"* A reader taking
+    the simpler reading gets a loop that confidently builds the wrong thing.
+  - **Success is stated as the intended terminus, not an early exit.** The
+    loop ends with work committed, unmerged and unpushed. Worth stating
+    positively — a reader who sees "stop" in a success condition may read it
+    as an abort.
+  - **No permission boundary is restated** — verified by grep: zero
+    occurrences of `permission:`, `disallowedTools`, `deny`, `allow:`. Seven
+    links to ADR-0019, four to `AGENTS.md`, one each to the three role
+    directories.
+  - **Steps 1 and 2 both trace to the brief.** Added a line that a plan
+    introducing a requirement the brief lacks is out of scope rather than an
+    improvement — the scope-creep path an autonomous stage makes cheap.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → **PASS** (`validate.sh: OK`, exit 0). Also
+    **observed failing** (exit 1, `MISSING SECTION '## Exit conditions'`) on a
+    deliberately renamed section, proving the gate covers this file.
+  - `bash scripts/sync-registry.sh` → Loops section now **three rows**:
+    `design-brief`, `project-build`, `release-check`.
+  - Frontmatter checked: `name: project-build` equals the directory,
+    `description` single-line, all three mandatory sections present.
+  - 218 lines. No size budget exists for loops and none was invented
+    (ADR-0008).
+
+- Result: **done.** All twelve acceptance criteria met. The production
+  sequence is a gated component with an explicit autonomy boundary.
+
+  Three things the brief did not forecast, all recorded above: the
+  `bmad-workflow.md` **import never happened** so the file was read in place;
+  ADR-0019 requires a **`document` step the inherited sequence lacks**, added
+  and labelled as the one addition; and the review path needed a **third
+  bound** that no source supplies, because separating the two known bounds
+  left it unbounded.
+
+  **Not authored here:** the three roles the loop names. `qa-test`, `review`
+  and `git-ops` are TASK-0045's, and **until they exist neither loop can
+  execute** — `loops/design-brief/` step 7 also delegates to `git-ops`.
+- Commit: recorded below
+- Push: recorded below

@@ -272,11 +272,15 @@ Phase 3 — the design half (the genuine capability gap):
       TASK-0037/0038/0040 in definition→enforcement→emission order)
 
 Phase 4 — the production half, owned here:
-- [ ] TASK-0044 — `loops/project-build/` — from `bmad-workflow.md:8-38`,
-      with the merge gate explicit (needs ADR-0019; **its TASK-0035
-      dependency is dropped** — TASK-0034 verified `bmad-workflow.md` is
-      readable in place at 53 lines with every cited section present, and the
-      dependency was for read access only)
+- [x] TASK-0044 — `loops/project-build/` — from `bmad-workflow.md:8-38`,
+      with the merge gate explicit (done — 8 steps, 218 lines, source read
+      **in place** since no import happened. Added a **`document` step**
+      ADR-0019 requires and the inherited sequence lacks, labelled as the one
+      addition. Added a **third bound** no source supplies: separating the
+      fix cap from the review path left the review path unbounded. The
+      two-owners question answered as *two artifacts, one ancestor, neither
+      updating the other* — the brief's two options both assumed this repo
+      can edit a skill in another repo, and it cannot)
 - [ ] TASK-0045 — **RESCOPED 2026-09-15**: ~~Reconcile~~ **author**
       `qa-test`/`review`/`git-ops` in `agents/`, with the installed
       `agent-tiers` copies as **read-only reference** (needs TASK-0040,

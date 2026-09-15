@@ -224,18 +224,21 @@ any agent or human can understand, trust, and deploy.
   `Rejected` ADR**, and it carries a 3-condition reopen trigger plus the one
   gap the rejection creates (no `{tier:}` resolver here).
 - Progress: TASK-0034, TASK-0036, TASK-0037, TASK-0038, TASK-0039,
-  TASK-0040, TASK-0041, TASK-0042 and **TASK-0043** done — nine of the
-  sprint's tasks. **Phases 1, 2 and 3 are complete.**
+  TASK-0040, TASK-0041, TASK-0042, TASK-0043 and **TASK-0044** done — ten of
+  the sprint's tasks. **Phases 1, 2, 3 and 4's loop half are complete**;
+  both loops exist as gated components.
   **Phase 1 closed with its reclamation withdrawn, not delivered**
   (ADR-0017 rejected): the spike meant to prepare the claim is what stopped
   it, which is the ordering principle earning its place rather than failing.
   **Phase 2's plumbing is no longer unexercised** — TASK-0043 authored three
   real roles through it: the gate passed on real content, the registry
   populated, and six client files were emitted and **inspected**.
-  Only **TASK-0044** (independent) and then **TASK-0045** remain before the
-  pilot. The design stage is complete and deployable but **still unrun**,
-  which is the standing caution below and REVIEW-0008's pre-committed
-  question.
+  Only **TASK-0045** remains before the pilot, and it is now the single
+  blocker: both loops name `qa-test`/`review`/`git-ops`, and
+  `design-brief`'s step 7 delegates its commit to `git-ops`, so **neither
+  loop can execute until those three roles exist**. Both are complete,
+  deployable and **still unrun** — the standing caution below and
+  REVIEW-0008's pre-committed question.
 - The second phase in a row planned from a **human-supplied analysis**
   rather than a backlog item. Eight of its claims were corrected before
   planning finished, against six in Phase 6. The three that reshaped the
@@ -287,7 +290,11 @@ any agent or human can understand, trust, and deploy.
     plumbing — TASK-0046.
   - `loops/design-brief/` and `loops/project-build/` both carry a bounded
     iteration count and an explicit escalation path in
-    `## Exit conditions` (TASK-0041, TASK-0044).
+    `## Exit conditions` (TASK-0041, TASK-0044). **Met 2026-09-15.**
+    `project-build` needed **three** bounds rather than two: the fix cap
+    (3 `qa-test` failures), the review path that deliberately does *not*
+    consume it, and — found while separating those — a bound on the review
+    path itself, which no source supplied and which was otherwise unbounded.
   - ADR-0019 records the autonomy boundary against the four `AGENTS.md`
     rules it collides with, and records dynamic workflows as rejected with
     the vendor's own constraint quoted.

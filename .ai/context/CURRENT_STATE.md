@@ -326,12 +326,48 @@ failure mode, now rejected by the gate. It is also the vocabulary's first
 **parameterised** term (`delegates_to`), and the first beyond the basic three
 that maps to *both* clients.
 
-S7 now proceeds on one front: **TASK-0044** (`loops/project-build/`), which
-is independent of everything above, then TASK-0045's three production roles.
-The design stage is **complete and deployable** — a gated loop, a documented
-method, and three emitted roles — but **still unrun**: TASK-0046's pilot is
-what REVIEW-0008's pre-committed question is about, and the loop's step 7
-cannot execute until TASK-0045 authors `git-ops`.
+**TASK-0044 is done — both loops now exist.** `loops/project-build/` is 218
+lines, 8 steps, derived from `agent-tiers`' `bmad-workflow.md` **read in
+place** (the import never happened — ADR-0017 rejected). Three findings the
+brief did not forecast:
+
+- **ADR-0019 requires a step the inherited sequence lacks.** Clause 2.1's
+  autonomous list names *document*; `bmad-workflow.md` has seven numbered
+  items and **zero** mentions of documentation (verified by grep). Added as
+  step 6 and **labelled in the loop as the one addition**, so a reader
+  comparing the two files finds an explanation rather than a discrepancy.
+- **Separating the two known bounds left a third one missing.** A `review`
+  block correctly does not consume the fix-cycle budget — but stated only
+  that way, the review path is **unbounded**: block → fix → block, forever.
+  Neither `bmad-workflow.md` nor ADR-0019 addresses it. Added: the **same
+  finding** surviving three review rounds stops and escalates, because that
+  is a `review`-vs-`build` disagreement about what the story requires. **The
+  brief anticipated conflating the two bounds; it did not anticipate the gap
+  conflation was hiding.**
+- **The two-owners question had no available answer from the brief's
+  options.** It offered "the loop is authoritative and the skill points at
+  it" or the reverse — **both assume this repo can edit the skill**, which
+  ADR-0017 settled it cannot. Recorded instead as **two artifacts with one
+  shared ancestor, neither updating the other**, with this loop governing
+  work in this repo and any divergence a finding to record. Weaker than one
+  owner, and stated as such rather than implying a sync that cannot happen.
+
+`release-check` is **referenced, not restated**, for the commit step — with
+the caveat that it is scoped to *this* repo and names
+`tests/validate.sh`/`sync-registry.sh` directly, so elsewhere it is the
+pattern rather than the procedure.
+
+The executor read-back confirmed the sequence is executable under
+`subagent_depth: 1`: every subagent step (test, review, commit) is invoked
+**by `build`, a primary** — never subagent-to-subagent, which is the natural
+way to write it wrong.
+
+**S7's remaining work is TASK-0045, then the pilot.** Both loops are gated
+components and **neither can execute yet**: `project-build` names `qa-test`,
+`review` and `git-ops`, and `design-brief`'s step 7 delegates its commit to
+`git-ops` — all three authored by TASK-0045. That task is now the single
+thing standing between the sprint and TASK-0046's pilot, which is what
+REVIEW-0008's pre-committed question is about.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at
