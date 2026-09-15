@@ -10,7 +10,17 @@ design stage that converges an idea into an accepted, locked brief, and a
 largely autonomous production stage that carries it through plan,
 implement, test, review and document — plus making `agents/` a real
 component category. Seventeen artifacts written, zero components changed:
-TASK-0033…0046, ADR-0017…0019 (all **proposed**), B-014…B-017.
+TASK-0033…0046, ADR-0017…0019, B-014…B-017.
+
+**ADR-0019 is accepted (2026-09-15); ADR-0017 and ADR-0018 remain proposed**
+and blocked on their spikes. Accepting 0019 needed ratification rather than
+evidence — it *narrows a stated requirement*, which is the human's call —
+and it **unblocks `TASK-0041` and `TASK-0044`, the only S7 tasks that depend
+on no spike.** So the sprint can now proceed along two independent fronts:
+Phase 3's first two tasks (the design loop, then its method) and Phase 1's
+two spikes. Ratification also caught a defect in the ADR's own text: it said
+"two clauses" while containing three, corrected in place rather than
+silently.
 
 **S6 is parked, not closed and not abandoned** (human decision,
 2026-09-15). Archived at

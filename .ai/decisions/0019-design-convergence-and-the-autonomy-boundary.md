@@ -1,14 +1,27 @@
 # ADR-0019 — Design convergence is human acceptance; autonomy stops at the merge gate
 
 ## Status
-**Proposed**, 2026-09-15. Opened by `PLAN-0004` (sprint S7).
+**Accepted — 2026-09-15.** Ratified by the human on the date it was
+proposed. Opened by `PLAN-0004` (sprint S7).
 
-**Not blocked on a spike.** Unlike ADR-0017 and ADR-0018, this decision
+**Not blocked on a spike**, unlike ADR-0017 and ADR-0018. This decision
 rests on rules already written in this repo and on one vendor constraint
-quoted from live documentation. It can be accepted as soon as the human
-ratifies its two clauses. It is `proposed` rather than `accepted` because
-it narrows a stated requirement, and narrowing a requirement is the
-human's call, not the agent's.
+quoted from live documentation, so it needed ratification rather than
+evidence. It was `proposed` rather than `accepted` at authoring time
+because it **narrows a stated requirement**, and narrowing a requirement is
+the human's call, not the agent's.
+
+**Correction made at ratification.** The proposed text said "Two clauses"
+in both this section and the Decision heading, while containing **three** —
+clause 3 (rejecting dynamic workflows) was added during drafting and the
+count was never updated. Corrected in place rather than silently, because a
+decision that miscounts its own clauses invites a reader to assume the third
+is commentary rather than normative. It is normative: clause 3 is the reason
+`loops/design-brief/` and `loops/project-build/` are built on portable
+primitives at all.
+
+This is lesson 7 in miniature — a claim decaying between being written and
+being acted on, inside a single document, over four days.
 
 ## Context
 
@@ -85,7 +98,7 @@ already carrying plumbing and enforcement in this repo.
 
 ## Decision
 
-To be ratified by the human. **Two clauses.**
+**Ratified 2026-09-15. Three clauses, all normative.**
 
 ### Clause 1 — Design convergence is explicit human acceptance, bounded
 
@@ -163,3 +176,32 @@ next reader will propose it again.
   criterion would get a placeholder — and a placeholder exit condition in a
   file the gate has marked green is precisely the "check that cannot fail"
   shape lesson 8 records this repo authoring twice while knowing better.
+
+## What ratification unblocks, and what it does not
+
+Recorded at ratification so the next session does not have to re-derive it.
+
+**Unblocked.** `TASK-0041` (`loops/design-brief/`) and `TASK-0044`
+(`loops/project-build/`) each open with a hard gate requiring this ADR to be
+`Accepted`; both gates are now satisfied. Neither task depends on a spike,
+so **`TASK-0041` is the first S7 task after `TASK-0033` that can start
+immediately** — ahead of Phase 1 and Phase 2 in the numbering, though not in
+the plan's phase order.
+
+**Still blocked, and deliberately.** `TASK-0043` (design roles) needs
+`TASK-0040`, which needs `TASK-0037`, which needs **ADR-0018** — still
+proposed and still blocked on `TASK-0036`. So the design *sequence* and its
+*method* can be authored now, while the *roles* that execute them cannot.
+That is the intended order: the loop is authored first so the roles are
+shaped by the sequence rather than the reverse.
+
+The practical consequence is that S7 can proceed along two independent
+fronts — Phase 3's first two tasks, and Phase 1's two spikes — which suits
+`ADR-0012`'s Decision 2: one task per session is the default, not a rule.
+
+**Not settled by this ADR, and named again because it is the likeliest thing
+to be assumed handled:** the **lock mechanism**. Clause 1.4 requires a
+brief to be locked; nothing here says what locked *is*. `TASK-0041` decides
+it concretely and `TASK-0042` builds the brief template around that
+decision. A reader who takes "locked" as self-evident will produce a loop
+whose terminating condition cannot be checked.

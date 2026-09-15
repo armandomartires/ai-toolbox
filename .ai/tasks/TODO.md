@@ -144,9 +144,9 @@ Notes on S6:
 
 ## Sprint S7 — Design and production agent loops (open)
 Planned by `.ai/planning/plans/PLAN-0004-design-and-production-agent-loops.md`;
-decisions ADR-0017…0019 (all **proposed**; 0017 and 0018 blocked on spikes,
-0019 awaiting ratification). Raised B-014…B-017. **Planning only so far — no
-implementation.** Sprint opened by TASK-0033.
+decisions ADR-0017…0019 (**0019 accepted 2026-09-15**; 0017 and 0018 still
+proposed and blocked on their spikes). Raised B-014…B-017. **Planning only
+so far — no implementation.** Sprint opened by TASK-0033.
 
 Phase 0:
 - [x] TASK-0033 — Park S6; open S7; add ROADMAP Phase 6 **and** 7; add the
@@ -176,8 +176,11 @@ Phase 2 — make `agents/` a real category (0037 strictly first; then
       snapshots gain an agents section
 
 Phase 3 — the design half (the genuine capability gap):
-- [ ] ADR-0019 — Convergence is **human acceptance**; autonomy stops at the
-      merge gate; dynamic workflows rejected
+- [x] ADR-0019 — Convergence is **human acceptance**; autonomy stops at the
+      merge gate; dynamic workflows rejected (**accepted 2026-09-15** — three
+      clauses, not the "two" the proposed text miscounted; corrected in place
+      at ratification. **Unblocks TASK-0041 and TASK-0044**, the only S7
+      tasks that depend on no spike)
 - [ ] TASK-0041 — `loops/design-brief/` — clarify→ideate→critique→converge,
       capped, with the acceptance gate (needs ADR-0019)
 - [ ] TASK-0042 — `skills/design-flow/` — portable core + templates (needs

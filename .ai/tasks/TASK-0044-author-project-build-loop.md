@@ -94,7 +94,7 @@ using it from a general loop needs a stated caveat.
 
 | Artifact | Produced by | Expected state |
 |----------|-------------|----------------|
-| `.ai/decisions/0019-design-convergence-and-the-autonomy-boundary.md` | TASK-0033 | **Accepted**; clause 2's five sub-clauses are this loop's exit-condition source |
+| `.ai/decisions/0019-design-convergence-and-the-autonomy-boundary.md` | TASK-0033 | **Accepted 2026-09-15** — gate satisfied. Clause 2's five sub-clauses are this loop's exit-condition source; clause 3 is why the loop uses portable primitives rather than a workflow |
 | `skills/agent-tiers/templates/bmad/bmad-workflow.md` | TASK-0035 | In this repo after the import; 53 lines; `:8-38` the sequence, `:22-26` the fix-loop bound, `:32-34` the review-rejection distinction, `:40-46` the artifact contract table |
 | `loops/release-check/loop.md` | TASK-0008 | 96 lines; the shape precedent and the tail-overlap question |
 | `loops/design-brief/loop.md` | TASK-0041 | `done`; the **lock mechanism** this loop's Trigger requires |
@@ -103,10 +103,12 @@ using it from a general loop needs a stated caveat.
 | `tests/validate.sh` | pre-existing | `:193-213` — `name`↔directory, single-line `description`, the three sections |
 | `AGENTS.md` | pre-existing | The definition of done, the destructive-change rule, the ambiguity policy — the four rules clause 2 reconciles against |
 
-**Verify the expected state; don't assume it.** Confirm ADR-0019 is
-`Accepted`, and read `bmad-workflow.md` **at its path in this repo** after
-TASK-0035's import — the drift resolution may have changed its content, and
-this brief's line references are to the pre-import file.
+**Verify the expected state; don't assume it.** ADR-0019 was accepted on
+2026-09-15, so that gate is **already satisfied**; re-read it for content
+anyway, since ratification corrected its clause count. **This task's real
+remaining dependency is TASK-0035** — read `bmad-workflow.md` at its path in
+this repo *after* the import, because the drift resolution may have changed
+its content and this brief's line references are to the pre-import file.
 
 ## Scope
 
@@ -148,7 +150,10 @@ this brief's line references are to the pre-import file.
 - `.ai/tasks/TASK-0044-author-project-build-loop.md` — this file
 
 ## Execution plan
-1. Confirm ADR-0019 is `Accepted`. **Stop and escalate if not.**
+1. Re-read ADR-0019 (accepted 2026-09-15) — gate met, so this is a read for
+   content. Clause 2's five sub-clauses are the exit-condition source;
+   clause 2.5's ambiguity distinction is the one most easily lost in
+   translation.
 2. Read `bmad-workflow.md` at its post-import path; note any content change
    from the drift resolution.
 3. Read `release-check/loop.md` for style, and decide the tail-overlap

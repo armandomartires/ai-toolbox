@@ -95,7 +95,7 @@ scheme, or a sprint concept.
 
 | Artifact | Produced by | Expected state |
 |----------|-------------|----------------|
-| `.ai/decisions/0019-design-convergence-and-the-autonomy-boundary.md` | TASK-0033 | **Accepted** by the human; clause 1 fixes the convergence criterion and defers the cap's value to this task |
+| `.ai/decisions/0019-design-convergence-and-the-autonomy-boundary.md` | TASK-0033 | **Accepted 2026-09-15** — gate satisfied. Three clauses (the proposed text miscounted them as two); clause 1 fixes the convergence criterion and clause 1.2 defers the cap's value to this task |
 | `loops/release-check/loop.md` | TASK-0008 | 96 lines; the shape precedent — numbered steps with expected outputs, retries bounded at 3, hard stops, escalate-without-retry, and the `AGENTS.md`-wins line |
 | `loops/_template/loop.md` | pre-existing | 17 lines; `## Trigger`, `## Steps`, `## Exit conditions` |
 | `docs/development/authoring-guide.md` | pre-existing | Loops section: the 5-element rule table, why exit conditions are the point, and the link-don't-restate rule |
@@ -103,11 +103,16 @@ scheme, or a sprint concept.
 | `tests/validate.sh` | pre-existing | `:193-213` enforces `name`↔directory, single-line `description`, and the three `## ` sections |
 | `.ai/decisions/0013-two-governance-frameworks.md` | pre-existing | Accepted; the two-frameworks divergence this loop must not extend to a third |
 
-**Verify the expected state; don't assume it.** Confirm ADR-0019 is
-`Accepted` rather than `Proposed` — its clause 1 is this loop's entire exit
-condition, and authoring against an unratified decision would put a
-placeholder in a file the gate marks green, which is the "check that cannot
-fail" shape in a different costume.
+**Verify the expected state; don't assume it.** ADR-0019 was accepted on
+2026-09-15, so this task's blocking gate is **already satisfied** — but
+re-read the file rather than trusting this row, because ratification
+corrected the ADR's own clause count and may have adjusted other wording.
+Clause 1 is this loop's entire exit condition; authoring against an
+unratified decision would put a placeholder in a file the gate marks green,
+which is the "check that cannot fail" shape in a different costume.
+
+**This is now the first S7 task that can start**, alongside the two Phase 1
+spikes: it depends on no spike, and its only gate is met.
 
 ## Scope
 
@@ -145,7 +150,10 @@ fail" shape in a different costume.
 - `.ai/tasks/TASK-0041-author-design-brief-loop.md` — this file
 
 ## Execution plan
-1. Confirm ADR-0019 is `Accepted`. **Stop and escalate if not.**
+1. Re-read ADR-0019 (accepted 2026-09-15) — the gate is met, so this step is
+   now a read for content rather than a stop condition. Note in particular
+   clause 1.2's deferral of the cap's value to this task, and clause 3,
+   which the proposed text had miscounted out of existence.
 2. Re-read `release-check/loop.md` in full for step-and-expected-output
    style, and the authoring guide's Loops rule table.
 3. Draft `## Steps`. For each step: which role, what it consumes, what it
