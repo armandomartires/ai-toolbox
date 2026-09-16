@@ -17,24 +17,48 @@
 > (`TASK-0046`) — the table below has been corrected, because it read
 > `planned` while both task files read `done`. That is the four-files-
 > disagree defect `REVIEW-0008` had to sweep across S7, found here on the
-> first read of this file. Remaining: `TASK-0026`, `TASK-0027`,
-> `TASK-0028`, `TASK-0031`, `TASK-0032`, the three ADR **bodies**, and
-> `REVIEW-0009`.
+> first read of this file. **Remaining as of 2026-09-16: `TASK-0026`,
+> `TASK-0031`, `TASK-0032`, ratification of the three ADRs, and a
+> checkpoint.** `TASK-0027`, `TASK-0028` and all three ADR bodies are
+> **done**. **The checkpoint is NOT `REVIEW-0009`** — that number is reserved
+> by S8's file; S6's takes the next free one.
 >
-> **All three ADRs are empty skeletons, not drafts.** Every `## Context`,
-> `## Decision` and `## Consequences` in ADR-0014/0015/0016 says "to be
-> written" or "to be completed". Human decision 2026-09-16: the bodies are
-> **written from spike evidence and left `Proposed`** for human
-> ratification. Do not self-accept them — and do not fill them from
-> `PLAN-0003`'s prose, which is how they reached this state.
+> **All three ADRs now have bodies; all three remain `Proposed`.** They were
+> skeletons until 2026-09-16 — every section reading "to be written". Per the
+> human decision they were written **from the spikes' observed evidence** and
+> **not** self-accepted, and deliberately not filled from `PLAN-0003`'s prose,
+> which is how they reached skeleton state. **Two were retitled because the
+> evidence contradicted their planned titles:**
 >
-> **`ADR-0015`'s intended clause 1 is already refuted** by the pilot: the
-> "portable core plus per-project `templates/`" mechanism fails because
-> `install.sh:105` symlinks a deployed skill into this repo's working tree,
-> so an operator filling in a shipped template would write one estate's
-> production facts into the portable component. The shipped skill chose
-> **derive, persist nothing** instead. Write the ADR against that evidence,
-> not against the plan's intention.
+> - **`ADR-0015`** — clause 1 is **formally reversed**. The "portable core
+>   plus per-project `templates/`" mechanism fails because `install.sh:105`
+>   symlinks a deployed skill into this repo's working tree, so an operator
+>   filling in a shipped template would write one estate's production facts
+>   into the portable component. Decision 1 is now **derive per change, never
+>   declared and never stored**, which is what the shipped skill already does.
+>   `templates/` survives for **copy-out** artifacts holding no estate facts
+>   (`change-record.md` is the worked example). **Its filename still names the
+>   rejected shape**, deliberately, per `ADR-0017`'s precedent — flagged in
+>   the ADR's own Status. Ratification is owed *specifically* on this clause:
+>   reversing an approved mechanism is substantive, not a restatement.
+> - **`ADR-0016`** — still **no category**, but the reasoning is **inverted**.
+>   The plan expected hooks not to work; `TASK-0028` found interception
+>   **works in both clients**. What declines the category is that the two
+>   clients **disagree on the tool's name** —
+>   `mcp__ansible__zen_of_ansible` (Claude Code, documented) vs
+>   `ansible_zen_of_ansible` (OpenCode, **observed live**) — so no portable
+>   artifact can even match the same string. The ADR must therefore read as a
+>   **declined** option, never an unavailable one.
+>
+> **Both spikes' results now bind `TASK-0031`:** its home is a custom
+> `ansible-lint` rule wired via `enable_list:`, and it **must ship a proof
+> that it fires**. `TASK-0027` observed that a custom rule outside the active
+> profile is **loaded, listed and never evaluated — at exit 0**. Without the
+> fires-proof this route is strictly worse than `pre-commit`, which fails
+> loudly. Two sibling silent-no-op modes are on the record for the same
+> reason: Claude Code's matcher needs its `.*` (`mcp__ansible` matches
+> nothing), and OpenCode under `experimental.codeMode` does not register MCP
+> tools individually at all.
 >
 > ## Four defects in this sprint's own remaining plan
 >
@@ -158,14 +182,14 @@ that matter most:
 | Task | Depends on | Status | What |
 |------|-----------|--------|------|
 | TASK-0026 | — | **planned** | Correct the `WORKSPACE_ROOT` blast-radius claim; disable `ansible_navigator` in 3 snippets; LM Studio → models-only |
-| TASK-0027 | — | **planned** | *Spike.* Lint the two real playbooks on a `/tmp/opencode/` copy; record what degraded; choose the guard's home |
-| TASK-0028 | — | **planned** | *Spike.* Can a Claude Code `PreToolUse` hook match `mcp__ansible__*`? OpenCode's equivalent? Non-blocking |
-| ADR-0014 | TASK-0027 | **proposed** | Accept and narrow the MCP surface; ADR-0010 stays closed |
-| ADR-0015 | TASK-0027 | **proposed** | Portable core + per-project templates; check+snapshot, not staging |
-| ADR-0016 | TASK-0028 | **proposed** | Hooks as a component category — expected "no" |
+| TASK-0027 | — | **done** | *Spike.* Lint the two real playbooks on a `/tmp/opencode/` copy; record what degraded; choose the guard's home. **Ran 2026-09-16: gate passes (0 failures / 53 rules / exit 0); guard = custom `ansible-lint` rule via `enable_list:`, conditional on a fires-proof** |
+| TASK-0028 | — | **done** | *Spike.* Can a Claude Code `PreToolUse` hook match `mcp__ansible__*`? OpenCode's equivalent? Non-blocking. **Ran 2026-09-16: YES in both — Claude Code documented, OpenCode observed live. The clients' MCP tool *names* are incompatible, which is what declines the category** |
+| ADR-0014 | TASK-0027 | **proposed** (body written) | Accept and narrow the MCP surface; ADR-0010 stays closed. **Body written 2026-09-16; ratification owed** |
+| ADR-0015 | TASK-0027 | **proposed** (body written, **retitled**) | ~~Portable core + per-project templates~~ → **derive per change, persist nothing**; check+snapshot, not staging. **Clause 1 reversed on evidence**; filename deliberately unchanged |
+| ADR-0016 | TASK-0028 | **proposed** (body written, **retitled**) | Hooks as a component category — ~~expected "no"~~ **declined, but because the clients disagree on the tool's *name*, not because interception fails; it works in both** |
 | TASK-0029 | ADR-0015 | **done** | `skills/ansible-ops/` — **delivered by S7's pilot (`TASK-0046`), 2026-09-15**, produced *through* S7's loops. Row corrected 2026-09-16 by `TASK-0052`: it read `planned` while the task file read `done` |
 | TASK-0030 | TASK-0029 | **done** | `loops/ansible-change/` — same, delivered by `TASK-0046`. Both ran under an **Option 2 waiver** (built from `PLAN-0003`'s F1–F7 evidence, ADR-0015 unratified), recorded in both task files |
-| TASK-0031 | ADR-0016, TASK-0027 | **planned** | The `gather_subset` guard + fixture proofs |
+| TASK-0031 | ADR-0016, TASK-0027 | **planned** — **both dependencies now cleared** | The `gather_subset` guard + **7** fixture proofs (raised from 5 by `TASK-0052`). Shape is fixed: a custom `ansible-lint` rule via `enable_list:`, **which must ship a proof that it fires** |
 | TASK-0032 | TASK-0029 | **planned** | Record the target-repo findings; state what was left alone |
 
 Order matters, and for the same reason it did in S5: ground truth before

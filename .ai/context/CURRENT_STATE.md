@@ -27,8 +27,9 @@ before doing any work**, so it gets no checkpoint — there is nothing to
 check. **B-019/B-020 stay `ready`**, by the same rule that held B-010…B-013
 `ready` through S6's park.
 
-**What is actually outstanding in S6:** `TASK-0026`, `0027`, `0028`, `0031`,
-`0032`, the three ADR **bodies**, and a checkpoint. Two things a cold reader
+**What is actually outstanding in S6:** **`TASK-0026`, `TASK-0031`,
+`TASK-0032`, ratification of the three ADRs, and a checkpoint.** Both spikes
+and all three ADR bodies are **done (2026-09-16)**. Three things a cold reader
 needs:
 
 - **TASK-0029/0030 are `done`, delivered by S7's pilot** — and the S6 sprint
@@ -36,15 +37,95 @@ needs:
   first read of the file**, which makes it the same four-files-disagree class
   `REVIEW-0008` had to sweep across S7, recurring immediately in the sprint
   that was un-parked. Corrected in the table rather than deferred.
-- **All three ADRs are empty skeletons, not drafts.** Every `## Context`,
-  `## Decision` and `## Consequences` in ADR-0014/0015/0016 says "to be
-  written" or "to be completed". Human decision 2026-09-16: bodies are
-  **written from spike evidence and left `Proposed`** for ratification —
-  and explicitly **not** filled from `PLAN-0003`'s prose, which is how they
-  reached this state. `ADR-0015`'s intended clause 1 is already refuted (see
-  the S6 section below).
+- **All three ADRs now have bodies, and all three remain `Proposed`.** They
+  were skeletons — every section reading "to be written" — until 2026-09-16.
+  Per the human decision they were written **from the spikes' observed
+  evidence**, explicitly **not** from `PLAN-0003`'s prose (which is how they
+  reached skeleton state), and ratification is left as the human act it is.
+  **Two had to be retitled because the evidence contradicted their planned
+  titles**, which is the real output of writing them:
+  - **`ADR-0015`** — *"portable core plus per-project templates"* → **derive
+    per change, persist nothing**. See the refutation below. `templates/`
+    survives for **copy-out** artifacts that hold no estate facts; what dies
+    is fill-in-place. Its *filename* still names the rejected shape,
+    deliberately, per `ADR-0017`'s precedent — so a reader arriving by
+    filename is reading the wrong name, and the ADR says so in its Status.
+  - **`ADR-0016`** — still *no category*, but **the reasoning is inverted**.
+    The plan expected hooks not to work. **They work in both clients.** What
+    declines the category is that the two clients **disagree on the tool's
+    name**, so no portable artifact can match the same string.
 - **`REVIEW-0009` is already reserved by S8's file.** S6's checkpoint must
   take the next free number rather than reusing it.
+
+### Both spikes inverted their own briefs, and each changed a decision
+
+**`TASK-0027` — the target repo's lint gate PASSES on real content, for the
+first time on record.** 0 failures, 0 warnings, exit 0, across **53 built-in
+rules** under `profile: production`. That gate had been live and **unproven**
+since S004.T007, whose config comments still claim no playbooks exist. Three
+findings that outlive the task:
+
+- **The first run failed (exit 2) and both failures were copy-artifacts** —
+  `ansible.cfg` names `vault_password_file = tools/vault_pass.sh`, which was
+  deliberately not copied. **Zero real rule violations.** The "4 of 6 files"
+  line is `ansible.cfg` and `ansible.log` being unknown-kind, not a skipped
+  playbook — checked, because a silently skipped playbook would have
+  invalidated the entire run.
+- **The fidelity limit has a second reason the brief did not have:** the clean
+  pass required **editing `ansible.cfg`**, so it describes a *different*
+  configuration from the one the repo commits. A clean `/tmp` result is not
+  evidence the target's own gate passes.
+- **`ansible-lint` writes `ansible.log` with no flag at all.** The brief
+  guarded against `--generate-ignore`; the real write needs nothing. Proven by
+  mtime — scratch log `2026-09-17 00:26`, SIGMA's own still
+  `2026-09-12 16:15`. **This is the copy-not-in-place decision vindicated by
+  evidence rather than by caution.**
+
+**`TASK-0028` — hook interception works in BOTH clients, which is the
+opposite of the expected answer and still yields "no category".** Claude Code
+is **documented-only** (`code.claude.com/docs/en/hooks`, fetched 2026-09-16:
+MCP tools appear as regular tools in `PreToolUse`, which *"Can block it"*).
+OpenCode was **observed live**, because its own docs show the hook blocking
+only the built-in `read` tool and are **silent** on MCP tools — so the
+installed bundle was read and then confirmed by a probe that intercepted and
+blocked a **read-only** tool. The observed ID was `ansible_zen_of_ansible`,
+matching the source reading exactly.
+
+**The deciding fact is that the identifier differs**:
+`mcp__ansible__zen_of_ansible` (Claude Code) vs `ansible_zen_of_ansible`
+(OpenCode), in two languages, with two blocking conventions and two config
+surfaces. A portable guard cannot express that — the incompatibility reaches
+**the string the guard must match**, which is deeper than the
+two-implementations problem `ADR-0016` anticipated.
+
+**Three independent mechanisms in this sprint can each be installed and
+inert, and that is the sprint's most transferable finding:**
+1. A custom `ansible-lint` rule outside the active profile and not in
+   `enable_list` is **loaded, listed, and never evaluated — at exit 0.**
+2. A Claude Code matcher missing its `.*` (`mcp__ansible`) **matches no
+   tool** while looking correct; the docs say so explicitly.
+3. OpenCode under `experimental.codeMode` does **not register MCP tools
+   individually**, so per-tool hooks never fire. Recorded as
+   **could-not-determine** for the naming in that mode rather than guessed.
+
+Each is this repo's most-repeated defect available as a one-line mistake.
+Hence the condition now attached to `TASK-0031`: **the guard must ship a
+proof that it fires**, not merely a proof that lint passes.
+
+**A method note worth keeping.** `TASK-0027`'s probe needed **four runs** to
+answer honestly. The first was silent, and silence alone reads as "custom
+rules do not work" — which would have forced the guard to `pre-commit` for no
+reason. `-L` showed it loaded (53→54) and `-c /dev/null` showed it firing,
+isolating the real cause. **The probe was deliberately written to fire on
+every play** so that silence could not be mistaken for success; a true no-op
+probe would have been unfalsifiable. Two failure modes can look identical in
+one run.
+
+The `TASK-0028` probe was **reverted and the revert verified two ways** (the
+plugins directory absent again as in its pre-state; the tool re-invoked in a
+fresh session and succeeding, with the probe log not growing).
+`~/.claude/settings.json` was never modified — SHA-256 identical before and
+after. No destructive tool was invoked in either client.
 
 ### Four defects were found in S6's own remaining plan before it resumed
 
@@ -1024,9 +1105,31 @@ may make **no claim resting on an observed lint result**, because
 the control venv, so that spike is now cheap to run — it was *not* the
 blocker the sprint assumed.
 
+> **Updated 2026-09-16: `TASK-0027` has now RUN, so that constraint is
+> lifted** — a claim resting on an observed lint result is now permissible,
+> and the observed result is **0 failures across 53 rules, exit 0**. The
+> "cheap to run" prediction held: it was one copy and two runs. **Both ADR
+> bodies are now written** and both still owe ratification. Note the venv's
+> location was *also* wrong in the row that recorded it — it is
+> `~/.venvs/sigma-ansible/`, not inside the target repo (`TASK-0052` D4).
+
 **ADR-0015's intended clause 1 is contradicted by evidence and must be
 *written* — not rewritten — before ratification** (verb corrected 2026-09-16
-by `REVIEW-0008`; see the two qualifications below). Its "portable core plus
+by `REVIEW-0008`; see the two qualifications below).
+
+> **DONE 2026-09-16: the body is now written, and clause 1 is formally
+> reversed** — the ADR's Decision 1 is *"estate-specific knowledge is derived
+> per change, never declared and never stored in the component"*, and the ADR
+> was **retitled** so its own title no longer asserts the rejected mechanism.
+> `templates/` survives for **copy-out** artifacts (qualification 2 below),
+> which is why the shipped `change-record.md` is untouched. **The filename
+> still names the rejected shape** — deliberately, per `ADR-0017`'s
+> precedent, and flagged in the ADR's own Status so a reader arriving by
+> filename is warned. Ratification is still owed, and is owed *specifically*
+> on this clause, since reversing an approved mechanism is a substantive
+> change rather than a restatement.
+
+Its "portable core plus
 per-project `templates/`" shape was marked *assumed* rather than hard, then
 **tested and found wrong**: `install.sh` deploys skills with `ln -sfn`, so a
 deployed skill is a symlink into this repo's working tree — an operator
@@ -1040,15 +1143,19 @@ failing contact with a file.
 about it** — both instances of the class this file already tracks, a claim
 about a file that decays from the file:
 
-1. **There is no body to rewrite. ADR-0015 is a skeleton**: `## Context`
-   says *"To be completed when this ADR is written"*, `## Decision` says
-   *"To be written. Intended shape:"*, `## Consequences` says *"To be
-   written. Expected:"*. `PLAN-0003` opened it as a placeholder and
-   `TASK-0027` — its stated dependency — is still `planned`. So the open
-   work is **writing** it against observed evidence, in that order:
-   TASK-0027 first, then the body, then ratification. **Filling the sections
-   in from the plan's prose is how it reached this state**, and ADR-0014 owes
-   the same against the same spike.
+1. ~~**There is no body to rewrite. ADR-0015 is a skeleton**~~ — **RESOLVED
+   2026-09-16, in exactly the order this item prescribed.** It said the open
+   work was *"TASK-0027 first, then the body, then ratification"*, and that
+   is what happened: the spike ran, then all three bodies were written from
+   its observed evidence, and ratification is left outstanding. When written,
+   `## Context` said *"To be completed when this ADR is written"*,
+   `## Decision` said *"To be written. Intended shape:"*, and
+   `## Consequences` said *"To be written. Expected:"*. **Its warning also
+   held**: *"filling the sections in from the plan's prose is how it reached
+   this state"* — so the bodies cite the spikes and name where a plan-time
+   claim did not survive. ADR-0014 owed the same against the same spike and
+   now has it. **A rare case in this file of a recorded prescription being
+   followed rather than rediscovered.**
 2. **"Contradicted" applies to clause 1's *mechanism*, not to `templates/`
    as such.** What is refuted is a consuming repo filling a shipped template
    with **estate facts**. What shipped holds none:

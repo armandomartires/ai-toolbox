@@ -163,8 +163,9 @@ any agent or human can understand, trust, and deploy.
   claims in this repo's own MCP wiring, narrow that server's blast radius,
   and ground it all in evidence read from a real Ansible repository
   without modifying it.
-- Planned by `PLAN-0003`; decisions ADR-0014…0016, all **proposed**, none
-  accepted. Sprint S6, tasks TASK-0026…0032. Raised B-010…B-013.
+- Planned by `PLAN-0003`; decisions ADR-0014…0016, all **proposed** with
+  **bodies written 2026-09-16**, none accepted. Sprint S6, tasks
+  TASK-0026…0032 plus TASK-0052. Raised B-010…B-013.
 - **This section was written on 2026-09-15, by TASK-0033, one sprint
   late.** The roadmap had no Phase 6 at all: S6 existed in
   `SPRINT-CURRENT.md`, `TODO.md`, `CURRENT_STATE.md` and `PLAN-0003`, but
@@ -199,15 +200,50 @@ any agent or human can understand, trust, and deploy.
   `.ai/planning/SPRINT-CURRENT.md`; **Phase 8 is re-queued.** Un-parking
   cost nothing for the same reason parking did — **S6 still has zero
   implementation of its own.**
-  - Outstanding: `TASK-0026`, `0027`, `0028`, `0031`, `0032`, the three ADR
-    **bodies**, and a checkpoint. `TASK-0029`/`0030` are **done, delivered
-    by Phase 7's pilot** — the sprint table said `planned` while both task
-    files said `done`, corrected on the first read (the
+  - Outstanding: **`TASK-0026`, `0031`, `0032`, ratification of the three
+    ADRs, and a checkpoint.** Both spikes (`TASK-0027`, `TASK-0028`) and all
+    three ADR bodies are **done, 2026-09-16**. `TASK-0029`/`0030` are
+    **done, delivered by Phase 7's pilot** — the sprint table said `planned`
+    while both task files said `done`, corrected on the first read (the
     four-files-disagree class `REVIEW-0008` swept for Phase 7).
-  - **ADR-0014/0015/0016 are empty skeletons, not drafts** — every section
-    says "to be written". Human decision 2026-09-16: bodies written from
-    spike evidence, left **`Proposed`** for ratification. **Not filled from
-    `PLAN-0003`'s prose** — that is how they reached this state.
+  - **ADR-0014/0015/0016 now have bodies; all three remain `Proposed`** and
+    await human ratification. Written from the spikes' observed evidence,
+    explicitly **not** filled from `PLAN-0003`'s prose — that is how they
+    reached skeleton state. **Two were retitled because the evidence
+    contradicted their planned titles**, which is the substantive output of
+    writing them at all:
+    - **`ADR-0015`**: "portable core plus per-project `templates/`" is
+      **refuted**. `install.sh:105` symlinks a deployed skill, so
+      fill-in-place would write one estate's production facts into the
+      portable component. The shipped skill chose **derive per change,
+      persist nothing**. `templates/` survives for **copy-out** artifacts
+      holding no estate facts. Its *filename* still names the rejected shape,
+      deliberately, per `ADR-0017`'s precedent.
+    - **`ADR-0016`**: still "no category", but **not** for the anticipated
+      reason. Hook interception **works in both clients** — the opposite of
+      the expected "no". What declines it is that the two clients
+      **disagree on the tool's name**
+      (`mcp__ansible__zen_of_ansible` vs `ansible_zen_of_ansible`), so no
+      portable artifact can even match the same string.
+  - **Both spikes inverted their own briefs, and each changed a downstream
+    decision:**
+    - `TASK-0027`: the target repo's gate **passes** on its two real
+      playbooks — 0 failures across **53 rules**, exit 0 — the first run
+      against real content since S004.T007 left it live and unproven. Guard's
+      home: a custom `ansible-lint` rule via `enable_list:`, **conditional on
+      a fires-proof**, because a rule outside the active profile is **loaded,
+      listed and never evaluated at exit 0**. The honest answer needed four
+      runs; the first was silent, which alone reads as "custom rules don't
+      work".
+    - `TASK-0028`: interception verified — Claude Code **documented-only**,
+      OpenCode **observed live** (a probe blocked `ansible_zen_of_ansible`,
+      then was reverted and the revert verified two ways). Recorded as
+      could-not-determine rather than guessed: OpenCode's naming under
+      `experimental.codeMode`, where per-tool hooks are not registered at all.
+  - **Three independent mechanisms in this phase can each be installed and
+    inert** — an `ansible-lint` rule outside its profile, a Claude Code
+    matcher missing its `.*`, and OpenCode under `experimental.codeMode`.
+    That is the phase's most transferable finding and it binds `TASK-0031`.
   - **`REVIEW-0009` is already reserved by Phase 8.** This phase's
     checkpoint must take the next free number.
   - B-010…B-013 stay **ready**; nothing was resolved by the transition.

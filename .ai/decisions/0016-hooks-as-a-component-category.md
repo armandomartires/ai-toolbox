@@ -1,106 +1,157 @@
-# ADR-0016 — Hooks as a component category: decide after evidence, expect no
+# ADR-0016 — Hooks as a component category: declined, because the clients disagree on the tool's name
 
 ## Status
 **Proposed**, 2026-09-14. Opened by `PLAN-0003` (sprint S6).
+**Body written 2026-09-16** against `TASK-0028`'s evidence, per the human
+decision of the same date: draft from spike evidence, leave `Proposed` for
+ratification. **Still owes ratification.**
 
-**Blocked on TASK-0028.** This ADR must not be written before that spike
-reports. The entire question rests on one unverified claim — whether a
-client hook can intercept an MCP tool call — and writing the decision
-first would be the TASK-0019 error repeated: a claim about external state
-asserted without verification, then restated with increasing confidence.
+Its blocking dependency is met: `TASK-0028` is **done**. The title changed
+when the body was written — it previously read *"decide after evidence, expect
+no"*. The expectation was met and **the reasoning behind it was refuted**, so
+the title now names the actual reason rather than the anticipated one.
 
 ## Context
 
-To be completed after TASK-0028. What is already established, and what is
-not:
+### The premise, and what the spike did to it
+This ADR rested on one unverified claim: whether a client hook can intercept
+an MCP tool call. The plan expected **no**, and expected that "no" to carry
+the decision. **Both halves of that turned out wrong in an instructive
+way — interception works in both clients, and the category is still
+declined.**
 
-### Established by reading this repo
-- **No hook or plugin concept exists anywhere.** Zero occurrences of
-  "plugin"; zero of `PreToolUse`, `PostToolUse`, `SessionStart`,
-  `UserPromptSubmit`; zero of `settings.json`. All 130 matches for "hook"
-  refer to the git pre-commit gate.
-- **No category plumbing exists.** `sync-registry.sh:114-124` has three
-  hardcoded sections; `install.sh:36-39` has one hardcoded skills-target
-  path per client with MCP print-only; `validate.sh` has roughly eight
-  hardcoded path patterns. A new top-level directory would be **silently
-  ignored** by all three *and* by CI's staleness check — invisible rather
+`TASK-0028` established, on 2026-09-16:
+
+- **Claude Code (DOCUMENTED-ONLY**, `code.claude.com/docs/en/hooks`, read
+  against installed `claude 2.1.246`): MCP tools *"appear as regular tools in
+  tool events"* — `PreToolUse`, `PostToolUse`, `PermissionRequest` and
+  others — and `PreToolUse` *"Can block it"* via
+  `hookSpecificOutput.permissionDecision: "deny"`. Naming is
+  `mcp__<server>__<tool>`.
+- **OpenCode (OBSERVED live**, `opencode 1.18.31`): `tool.execute.before`
+  fires for MCP tools, **before** the permission prompt, and a `throw`
+  blocks the call. A temporary probe plugin intercepted and blocked the
+  read-only `zen_of_ansible`, logging the tool ID as
+  **`ansible_zen_of_ansible`**. OpenCode's own documentation shows this hook
+  blocking only the built-in `read` tool and is **silent** on MCP tools, so
+  this was established by reading the installed bundle and then confirming it
+  live.
+
+So the capability exists in both. Had the spike stopped at *"can it
+intercept?"*, the evidence would have pointed **toward** a category.
+
+### The finding that actually decides it: the identifier differs
+Same capability, two irreconcilable schemes — both verified this session:
+
+| | Claude Code | OpenCode |
+|---|---|---|
+| Tool ID | `mcp__ansible__zen_of_ansible` | `ansible_zen_of_ansible` |
+| Construction | `mcp__` + server + `__` + tool | `sanitize(server) + "_" + sanitize(tool)` |
+| Mechanism | `PreToolUse` matcher in `settings.json` (JSON + shell) | `tool.execute.before` in a JS/TS plugin |
+| Blocks by | `permissionDecision: "deny"` | `throw new Error(...)` |
+| Config surface | `~/.claude/settings.json` | `~/.config/opencode/plugins/*.js` |
+
+**A single portable guard artifact cannot express this.** There is no shared
+identifier, no shared file format and no shared blocking convention — only a
+shared *concept*. `AGENTS.md` requires components be "portable across every
+client that supports its capability"; here the incompatibility reaches
+**the string the guard must match**, which is deeper than the
+two-implementations problem the plan anticipated.
+
+This is `ADR-0006`'s per-capability scoping again, and the same shape as
+`ADR-0018`'s finding for agent roles: the mechanism ports, the *safety
+expression* does not.
+
+### Two silent-no-op modes, both found while verifying
+Each is this repo's most-repeated defect available as a one-line mistake, and
+each would make a shipped guard appear installed while doing nothing:
+
+- **Claude Code:** the `.*` is **required**. Per the docs, a matcher like
+  `mcp__ansible` *"contains only exact-match characters, so it is compared as
+  an exact string and matches no tool"*. `mcp__ansible__.*` is correct;
+  `mcp__ansible` silently matches nothing while looking right.
+- **OpenCode:** under `experimental.codeMode`, MCP tools are **not
+  registered as individual tools at all**, so `tool.execute.before` does not
+  fire per MCP tool. Found in the installed bundle; the alternative code path
+  was not decompiled and is recorded as **could-not-determine**.
+
+### Established by reading this repo, and re-verified
+- **No hook or plugin concept exists here.** Zero occurrences of
+  `PreToolUse`, `PostToolUse`, `SessionStart`, `UserPromptSubmit` or
+  `settings.json`; all matches for "hook" refer to the git pre-commit gate.
+- **No category plumbing exists.** Re-verified 2026-09-16 (via `PLAN-0005`):
+  four hardcoded `emit_section` calls, four hardcoded `validate.sh` iteration
+  roots, a four-column `install.sh` `CLIENTS` table. **A new top-level
+  directory is silently ignored by all three and by CI** — invisible rather
   than loud.
-- **Precedent is poor.** `prompts/` and `agents/` are declared component
-  categories (`AGENTS.md`, `README.md`, ADR-0001, `GLOSSARY.md`) with
-  3-line stub READMEs and zero tooling. A declared category can exist
-  indefinitely with nothing behind it.
-- **Two implementations would be needed for one capability.** Claude Code
-  hooks are JSON configuration invoking shell commands; OpenCode's
-  equivalent is a TypeScript plugin. `AGENTS.md` requires components be
-  "portable across every client that supports its capability" — two
-  unrelated implementations is a genuine portability problem, not a
-  packaging detail.
+- **Precedent is poor.** `prompts/` is still a declared category with a
+  127-byte README and zero tooling. `agents/` was the same until S7 built it
+  out deliberately, which took four tasks. *A declared category can exist
+  indefinitely with nothing behind it.*
 - **`loops/` already is the runbook category, and it already has tooling.**
-  `validate.sh:193-213` enforces three mandatory sections;
-  `sync-registry.sh` emits a Loops section; `loops/release-check/loop.md`
-  is already a gated sequence with expected outputs, bounded retries, hard
-  stops, and escalate-without-retry for destructive actions. The sequencing
-  layer the source analysis attributes to hooks is substantially already
-  covered.
+  Mandatory exit conditions are enforced in `validate.sh`; the sequencing
+  layer the source analysis attributed to hooks is substantially covered.
 
-### Not established — TASK-0028's job
-- Whether a Claude Code `PreToolUse` hook can **match** a tool name of the
-  form `mcp__ansible__*`, and whether it can **block** rather than merely
-  observe.
-- Whether OpenCode has an equivalent pre-execution interception point at
-  all.
-- What each vendor's **current** documentation says. Not what is
-  remembered — versions change, and a recalled API is a stale claim.
-
-### The decisive counter-consideration
-The sprint's highest-value enforcement (TASK-0031, the `gather_subset`
-guard) is **static**: it reads YAML and decides. It therefore works as an
-`ansible-lint` rule, a `pre-commit` hook, or a standalone script in CI,
-with no dependence on client hook interception. The human decided on
-2026-09-14 that **the working guard beats the portable abstraction**.
-
-So even a positive answer from TASK-0028 does not automatically justify a
-category — it would only mean the option exists.
+### The decisive counter-consideration, unchanged
+S6's highest-value enforcement (`TASK-0031`) is **static**: it reads YAML and
+decides. `TASK-0027` confirmed its home — a custom `ansible-lint` rule, which
+runs in `pre-commit`, in CI, in an editor, **and** through the pinned MCP
+server's own `ansible_lint` tool. It never needed hook interception. The
+human decided on 2026-09-14 that **the working guard beats the portable
+abstraction**, and the evidence supports that.
 
 ## Decision
 
-To be written after TASK-0028 reports. **Expected: no new category.**
-
-If that is the outcome, the decision should state:
-1. The guard ships as a portable script plus documented wiring for
-   `pre-commit` and/or `ansible-lint -r … -R`.
-2. No `hooks/` directory is created, and no plumbing changes are made to
-   `install.sh`, `sync-registry.sh` or `validate.sh`.
-3. The reasoning — two client implementations, no plumbing, poor precedent
-   from `prompts/`/`agents/`, and `loops/` already covering the sequencing
-   layer — so the next reader does not re-raise it. B-009's lesson: an
-   item's title encodes an assumption, and roughly a third do not survive
-   contact with the files.
-
-If the outcome is **yes**, the decision must also settle:
-- The category's **name**. OpenCode calls its mechanism a plugin; naming a
-  category after one vendor's term for a capability the other implements
-  differently is how confusion starts.
-- Which client gets which implementation, and how a single logical guard
-  stays consistent across two.
-- That plumbing changes are **their own tasks**, with the human's
-  agreement, since they were scoped out at plan time.
+1. **No `hooks/` component category.** No such directory is created, and **no
+   plumbing changes** are made to `install.sh`, `sync-registry.sh` or
+   `validate.sh`.
+2. **The guard ships as a static `ansible-lint` custom rule** wired via
+   `enable_list:` in `.ansible-lint`, per `TASK-0027`'s recommendation —
+   **conditional on shipping a proof that the rule fires**, since a rule
+   outside the active profile is loaded, listed and never evaluated at exit 0.
+3. **The reason is recorded as the naming incompatibility, not as an absence
+   of capability.** Interception **is** available in both clients and is
+   **deliberately not taken up**. This ADR must be readable as a declined
+   option, never as an unavailable one — otherwise a future reader
+   re-discovers hooks and thinks the question is new.
+4. **If a category is ever created, it is not called `hooks/`.** OpenCode
+   calls the mechanism a *plugin*; Claude Code calls it a *hook* and *also*
+   uses "plugin" for a marketplace (`ADR-0021`). Both terms are
+   vendor-specific, and naming a category after one vendor's word for a
+   capability another implements differently is how confusion starts — the
+   trap this ADR predicted in words and `ADR-0021` later hit directly.
+5. **Reopen trigger, so this is a deferral rather than an orphan**
+   (lesson 9). Revisit only if **all three** hold: (a) a concrete need for
+   *runtime* MCP-call enforcement that a static check cannot meet; (b) a
+   named owner for two per-client implementations, accepting they share no
+   identifier; and (c) the category plumbing in Decision 1 becoming
+   parameterised rather than hardcoded. Anything less is per-client wiring
+   documented in `configs/`, not a component category.
 
 ## Consequences
 
-To be written. Expected:
-
-- **No category means no new surface to maintain**, and the guard still
-  ships. The capability is delivered; only the abstraction is declined.
-- **A negative result from TASK-0028 is a successful outcome**, not a
-  failure. It prevents building a category on a false premise — which is
-  precisely what this repo did *not* do with B-001 (closed as superseded
-  after scoping) and B-009 (closed on a false premise), and the discipline
-  worth preserving.
-- If the answer is yes and a category is still declined, that tension must
-  be recorded rather than hidden: the capability existed and was not
-  taken up, with the reason.
+- **No category means no new surface to maintain, and the guard still
+  ships.** The capability is delivered; only the abstraction is declined.
+- **The tension is recorded rather than hidden**, as this ADR's own draft
+  demanded: the capability existed, was verified, and was not taken up. A
+  future task wanting runtime enforcement has a **verified path per client**
+  and the naming table above as its starting evidence — and does not have to
+  re-run this spike.
+- **A negative result was expected and a positive one arrived, which changed
+  nothing about the outcome and everything about the reasoning.** Worth
+  keeping visible: the spike's value was not in confirming the guess but in
+  finding the *real* obstacle one layer down. Had it stopped at the
+  interception question it would have produced the wrong recommendation with
+  a satisfied feeling.
+- **Two silent-no-op modes are now on the record** (`.*`-required;
+  `experimental.codeMode`). Any future hook-based work must prove its hook
+  **fires** before trusting it — the same condition `TASK-0027` attached to
+  the `ansible-lint` route. Three independent mechanisms in this sprint can
+  each be installed and inert; that is the sprint's most transferable
+  finding.
 - **Whatever is decided, the guard must not be described as making Ansible
   execution safe.** It prevents one documented mechanism of one hazard, and
-  it is validated against syntax rather than against the hazard itself,
-  which is not reproducible on demand.
+  it is validated against syntax rather than against the hazard itself, which
+  is not reproducible on demand.
+- **Ratification still owed.** The evidence is in; declining an available
+  capability is a scope judgment and remains the human's call.

@@ -82,17 +82,37 @@ unratified), recorded in both task files. Their boxes are ticked below.
 **TASK-0031, the highest-value item, was not delivered by that pilot**;
 B-011 stays open.
 
-**Outstanding: TASK-0026, 0027, 0028, 0031, 0032, the three ADR bodies, and
-a checkpoint.** Two things a cold reader needs:
-- **All three ADRs are empty skeletons, not drafts** — every `## Context`,
-  `## Decision` and `## Consequences` says "to be written". Human decision
-  2026-09-16: bodies written from spike evidence, left **`Proposed`** for
-  ratification. **Do not fill them from `PLAN-0003`'s prose** — that is how
-  they reached this state. `ADR-0015`'s intended clause 1 is already
-  **refuted** by the pilot (`install.sh:105` symlinks a deployed skill, so
-  a filled-in template would write estate facts into a portable component).
+**Outstanding: TASK-0026, TASK-0031, TASK-0032, ratification of the three
+ADRs, and a checkpoint.** Both spikes and all three ADR bodies are **done**
+(2026-09-16). Two things a cold reader needs:
+- **All three ADRs now have bodies and all three are still `Proposed`** —
+  written from the spikes' observed evidence, per the human decision, and
+  **awaiting ratification, which is a human act**. Two were **retitled**
+  because the evidence contradicted their planned titles: `ADR-0015` (its
+  "portable core plus per-project templates" mechanism is **refuted** —
+  `install.sh:105` symlinks a deployed skill, so fill-in-place would write
+  one estate's facts into the portable component; the pilot chose **derive,
+  persist nothing**), and `ADR-0016` (declined, but **not** for the
+  anticipated reason — see below). `ADR-0015`'s *filename* still names the
+  rejected shape, deliberately, per `ADR-0017`'s precedent.
 - **`REVIEW-0009` is already reserved by S8.** S6's checkpoint takes the
   next free number.
+
+**The two spikes both inverted their own briefs' expectations** — recorded
+here because each changed a downstream decision:
+- **TASK-0027:** the target repo's gate **passes** on its two real playbooks
+  (0 failures across 53 rules, exit 0) — the first run against real content
+  since S004.T007. The guard's home is a **custom `ansible-lint` rule** wired
+  via `enable_list:`, **conditional on a fires-proof**: a custom rule outside
+  the active profile is **loaded, listed and never evaluated at exit 0**. The
+  answer needed four runs; the first was silent, which alone reads as "custom
+  rules don't work" and would have forced `pre-commit` for no reason.
+- **TASK-0028:** hook interception **works in both clients** — the opposite of
+  the expected "no" — and `ADR-0016` still declines a category, because the
+  two clients **disagree on the tool's name**
+  (`mcp__ansible__zen_of_ansible` vs `ansible_zen_of_ansible`, observed).
+  Claude Code is **documented-only**; OpenCode was **observed live** and then
+  the probe reverted, verified two ways.
 
 **Four defects were found in S6's own remaining plan before it resumed**
 (`TASK-0052`), all bearing on TASK-0031, all from opening the files the
@@ -114,16 +134,25 @@ the guard must classify — **the hazard was verified, the subject was not.**
 Phase 0 (independent of each other, may run in parallel):
 - [ ] TASK-0026 — Correct the `WORKSPACE_ROOT` blast-radius claim; disable
       `ansible_navigator` in 3 wiring snippets; LM Studio → models-only
-- [ ] TASK-0027 — *Spike.* Lint the two real playbooks on a `/tmp/opencode/`
-      copy; record what degraded; choose the guard's home
-- [ ] TASK-0028 — *Spike.* Can a Claude Code `PreToolUse` hook match
-      `mcp__ansible__*`? OpenCode's equivalent? Non-blocking
+- [x] TASK-0027 — *Spike.* Lint the two real playbooks on a `/tmp/opencode/`
+      copy; record what degraded; choose the guard's home (**done** — gate
+      passes, 0/53 violations; guard = custom `ansible-lint` rule via
+      `enable_list:`, conditional on a fires-proof)
+- [x] TASK-0028 — *Spike.* Can a Claude Code `PreToolUse` hook match
+      `mcp__ansible__*`? OpenCode's equivalent? Non-blocking (**done** —
+      **yes in both**, and the clients' MCP tool *names* are incompatible,
+      which is what declines the category)
 
-Phase 1 — decisions (each depends on its spike):
-- [ ] ADR-0014 — Accept and narrow the MCP surface (needs TASK-0027)
-- [ ] ADR-0015 — Portable core + templates; check+snapshot, not staging
-      (needs TASK-0027)
-- [ ] ADR-0016 — Hooks as a category, expected "no" (needs TASK-0028)
+Phase 1 — decisions (each depends on its spike). **All three bodies written
+2026-09-16; all three still `Proposed` and awaiting human ratification:**
+- [x] ADR-0014 — Accept and narrow the MCP surface (**body written**; adds
+      that a green MCP lint result is not evidence an estate's own rules ran)
+- [x] ADR-0015 — ~~Portable core + templates~~ → **derive per change, persist
+      nothing**; check+snapshot, not staging (**body written; retitled** —
+      clause 1's mechanism refuted by `install.sh:105`)
+- [x] ADR-0016 — Hooks as a category (**body written; retitled** — declined
+      because the clients disagree on the tool's *name*, not because
+      interception fails; it **works** in both)
 
 Phase 2 — instruct layer (ordered; the skill settles the vocabulary):
 - [x] TASK-0029 — `skills/ansible-ops/` (**done — delivered by S7's
@@ -140,7 +169,8 @@ Phase 3 — enforcement and record:
       deliberately left alone (needs TASK-0029)
 
 Sprint transition:
-- [ ] TASK-0052 — Un-park S6, re-queue S8, correct D1–D4 in TASK-0031
+- [x] TASK-0052 — Un-park S6, re-queue S8, correct D1–D4 in TASK-0031
+      (**done**, commit `d278c64`, pushed)
 
 **B-010…B-013 remain open and `ready`**, all raised by PLAN-0003 and all
 still scoped against the S6 task numbers above — through the park *and* the
