@@ -81,7 +81,10 @@
   after B-020) instead of `sed`/`python3 -` inline.
 
 ## Commit/push
-Recorded below at task end.
+`5a23a0d` — *Close sprint S7 with REVIEW-0008; promote S8*. 10 files,
++971/−430. Gated by `.githooks/pre-commit` (`validate.sh: OK` printed
+during the commit, so the hook is live rather than merely installed).
+Push confirmed below.
 
 ## Next action
 S8 is current. `TASK-0048` (the spike) runs first, by design — everything
