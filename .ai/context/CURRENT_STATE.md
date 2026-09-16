@@ -1,15 +1,116 @@
 # Current State
 
-Last updated 2026-09-16, after **sprint S7 was closed by `REVIEW-0008`
-(approve)** and **S8 was promoted to `SPRINT-CURRENT.md`** (below). Before
+Last updated 2026-09-16, after **S6 was un-parked and made current again**
+and **S8 was re-queued** (`TASK-0052`, below). Earlier the same day, sprint
+S7 was closed by `REVIEW-0008` (approve) and S8 was briefly promoted; before
 that, S8 was planned from a human request for three "plugins", and TASK-0047
 corrected the identity and capabilities of the third client.
 
-## S7 is CLOSED; S8 is now the current sprint
+## S6 is CURRENT again; S8 is re-queued
+
+**2026-09-16, `TASK-0052`.** Human decision, in answer to a direct question
+about how the parked sprint should re-enter: **finish S6 before S8.** S6 is
+restored to `.ai/planning/SPRINT-CURRENT.md`; S8 returns to
+`.ai/planning/sprints/SPRINT-S8-third-party-extensions.md`.
+
+**Both directions of the swap cost nothing, and for the same reason parking
+cost nothing:** S6 still has **zero implementation of its own**, and S8 had
+**zero components changed** (planning-only was its explicit instruction). No
+partial execution needed reconciling either way. Had either sprint been
+half-built this would have been expensive — the same observation TASK-0033
+made about the original park, now confirmed from the other side.
+
+**`Re-queued` is a third sprint state**, deliberately distinct: a *closed*
+sprint gets a `REVIEW-####` and resolves its items; a *parked* sprint keeps
+its artifacts `planned`/`proposed`; S8 was **promoted and then un-promoted
+before doing any work**, so it gets no checkpoint — there is nothing to
+check. **B-019/B-020 stay `ready`**, by the same rule that held B-010…B-013
+`ready` through S6's park.
+
+**What is actually outstanding in S6:** `TASK-0026`, `0027`, `0028`, `0031`,
+`0032`, the three ADR **bodies**, and a checkpoint. Two things a cold reader
+needs:
+
+- **TASK-0029/0030 are `done`, delivered by S7's pilot** — and the S6 sprint
+  table said `planned` while both task files said `done`. **Found on the
+  first read of the file**, which makes it the same four-files-disagree class
+  `REVIEW-0008` had to sweep across S7, recurring immediately in the sprint
+  that was un-parked. Corrected in the table rather than deferred.
+- **All three ADRs are empty skeletons, not drafts.** Every `## Context`,
+  `## Decision` and `## Consequences` in ADR-0014/0015/0016 says "to be
+  written" or "to be completed". Human decision 2026-09-16: bodies are
+  **written from spike evidence and left `Proposed`** for ratification —
+  and explicitly **not** filled from `PLAN-0003`'s prose, which is how they
+  reached this state. `ADR-0015`'s intended clause 1 is already refuted (see
+  the S6 section below).
+- **`REVIEW-0009` is already reserved by S8's file.** S6's checkpoint must
+  take the next free number rather than reusing it.
+
+### Four defects were found in S6's own remaining plan before it resumed
+
+All four by opening the files the briefs name — standing lesson 7 — and all
+four bearing on **TASK-0031**, the guard, which is the sprint's highest-value
+deliverable. They are recorded in `SPRINT-CURRENT.md`, the roadmap, `TODO.md`
+**and** corrected inside TASK-0031 itself, because a finding kept only in the
+log of the task that fixes it gets rediscovered rather than reused
+(`REVIEW-0008` finding 2).
+
+1. **D1 — the guard's target matching was designed against the wrong
+   thing.** TASK-0031 identified "PVE-class" hosts by **group name**
+   (`pve_cluster`/`pve_voting`, made configurable). But the estate's only
+   playbook that targets a PVE node uses `hosts: sigsrvpve1` — a **bare
+   hostname** (`capture_pve_baseline.yml:21`). Group-name matching classifies
+   it as *not* PVE-class and says nothing. Detection must resolve host→group
+   membership transitively through the inventory's nested `children:`.
+2. **D2 — a fixture that could not fail was an acceptance criterion, and
+   this is lesson 8's third instance.** "The two real playbooks → guard
+   **silent**" is satisfied by a correct guard *and* by a D1-afflicted guard
+   that recognises nothing at all, since both playbooks are
+   `gather_facts: false`. **Five green fixtures would have proven nothing
+   about the estate the guard exists for.** A sixth is now required — PVE
+   host by bare hostname, `gather_facts: true`, no exclusion → must **fail**
+   — and it is the only case that fails when D1 is present. Worth carrying
+   forward past Ansible entirely: **a fixture set can look complete and be
+   uniformly blind, because every case shares one wrong assumption.**
+3. **D3 — the `module_defaults` form was specified in a way that
+   over-accepts.** `capture_pve_baseline.yml:23` *has* a `module_defaults:`
+   block — scoped to `group/community.proxmox.proxmox` for API parameters,
+   with **no `ansible.builtin.setup` entry**. A guard matching the key rather
+   than a `setup`-scoped `gather_subset` passes dangerous code while
+   appearing to implement the second accepted form. Seventh fixture added.
+4. **D4 — `ansible-lint`'s recorded location was wrong.** TASK-0031's
+   Inputs row said "pre-existing (SIGMA venv)"; **there is no venv in
+   `SIGMA-infrastructure`.** It is at
+   `/home/armando.martires/.venvs/sigma-ansible/bin/ansible-lint`, **not on
+   `PATH`**. The version claim held — `26.8.0`, `ansible-core 2.20.8`,
+   confirmed by running it — while the location claim did not.
+
+**The common cause is the instructive part.** The plan was written from
+`ansible.cfg:21-48`, which is accurate, emphatic and detailed about the
+hazard, **without opening the playbook the guard must classify.**
+`ansible.cfg` describes the rule; the playbook is where the rule is applied.
+**The brief verified the hazard and never verified the subject** — a new
+shape of lesson 7, where the cited evidence was real and simply not the
+evidence the design needed.
+
+Also re-measured while verifying: TASK-0031's Inputs row describes
+`validate.sh` as "474 lines, ~0.37 s". It is **732 lines and ~1150 ms**. True
+when written, decayed twice over, and now corrected in place with
+`REVIEW-0008`'s warning attached — never time the gate on `/tmp` (ext4) and
+compare against `/mnt/c` (9p), which understates by ~40%.
+
+`SIGMA-infrastructure`'s `git status` was verified **clean** at the start of
+this session and nothing under it was written. That constraint bound while S6
+was parked and binds again now.
+
+## S7 is CLOSED; S8 was promoted, then re-queued
 
 **2026-09-16.** `REVIEW-0008` closed Phase 7 with **approve**, and S8 was
 promoted in the correct order — the review first, then the promotion. S7 is
 archived at `.ai/planning/sprints/SPRINT-S7-design-and-production-loops.md`.
+**S8's promotion was then reversed later the same day** by `TASK-0052`
+(re-queued, no work done); S7's closure is unaffected — it is closed either
+way, and the section below is the record of that closure.
 
 **The pre-committed question — *did anything get exercised?* — is answered
 YES, from artifacts rather than task logs.** That distinction was the point:
@@ -91,7 +192,14 @@ anyway, and the waiver that permitted it was recorded only in this file
 (finding 8b, below). **A review's follow-up list is itself a claim about
 files, and decays the same way.**
 
-## Sprint S8, planned and now current
+## Sprint S8, planned — briefly current, now re-queued
+
+> **Status corrected 2026-09-16 by `TASK-0052`:** this heading read *"planned
+> and now current"*. S8 is **re-queued** at
+> `sprints/SPRINT-S8-third-party-extensions.md` with all four briefs
+> unmodified and B-019/B-020 still `ready`. Everything below remains the
+> accurate record of what S8's planning found — none of which depends on its
+> scheduling.
 
 **2026-09-16.** A human asked for three third-party "plugins" — **ponytail,
 omniroute, graphify** — added to the toolbox and made cross-agent
@@ -205,8 +313,8 @@ new door.
 **TASK-0046 ran S7's pilot** (2026-09-15): both loops were executed end to
 end, producing `skills/ansible-ops/`
 and `loops/ansible-change/` plus an accepted, locked design brief. S7's five
-phases are complete and **exercised**; S6 remains parked, but its TASK-0029
-and TASK-0030 are now delivered.
+phases are complete and **exercised**; S6 was parked at the time of writing
+(**un-parked 2026-09-16**), and its TASK-0029 and TASK-0030 are delivered.
 
 ## The third client is Bionic, and two findings about it were false
 
@@ -250,7 +358,7 @@ Two things worth carrying forward:
    **in either direction**, which is the generalisation ADR-0006 was one
    step short of making.
 
-## Sprint S7, as executed — closed 2026-09-16; S6 is parked with zero implementation
+## Sprint S7, as executed — closed 2026-09-16; S6 was parked at the time (un-parked since)
 
 *(Everything below is S7's narrative as it was written during the sprint,
 kept as the record of how it went. The heading read "Sprint S7 is open"
@@ -710,13 +818,18 @@ deliberate class-wide sweep then verified **35 claims and found 12 false**.
 Nothing in `validate.sh` can catch this class — it checks frontmatter, never
 prose claims.
 
-**S6 is parked, not closed and not abandoned** (human decision,
-2026-09-15). Archived at
-`.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md` with a parking
-note. Its ten artifacts stay `planned`/`proposed` and B-010…B-013 stay
-**ready** — parking a sprint does not un-scope its backlog items. **Parking
-cost nothing precisely because nothing had been implemented**; the same
-decision one sprint later would have needed reconciliation.
+~~**S6 is parked, not closed and not abandoned**~~ — **SUPERSEDED
+2026-09-16: S6 is un-parked and current again** (`TASK-0052`; see this
+file's opening section). The park was a human decision on 2026-09-15 and
+held for one day. B-010…B-013 stayed **ready** throughout, since neither
+parking nor un-parking un-scopes a backlog item.
+
+The park's own reasoning is worth keeping, because **it was confirmed from
+the other side**: *"parking cost nothing precisely because nothing had been
+implemented; the same decision one sprint later would have needed
+reconciliation."* Un-parking cost nothing for exactly that reason, and
+re-queuing S8 cost nothing for the mirror reason — zero components changed
+there. **The prediction held in both directions.**
 
 **The second sprint in a row planned from a human-supplied analysis**, and
 **eight of its claims were corrected before planning finished** (against
@@ -878,10 +991,18 @@ already qualify behaviour by patch version in dozens of places. TASK-0036
 must **re-verify rather than cite `PLAN-0004`**, and every ADR records the
 date it read what it read.
 
-## Sprint S6, as planned and parked — still the plan of record
+## Sprint S6, as planned — un-parked 2026-09-16 and now the plan being executed
 
-Everything in this section remains accurate and unexecuted. It is the plan
-B-010…B-013 are still scoped against.
+**This section is still the plan of record, and as of 2026-09-16 it is the
+plan of the *current* sprint** rather than a parked one. Everything in it
+remains unexecuted apart from TASK-0029/0030 (delivered by S7's pilot), and
+it is the plan B-010…B-013 are scoped against.
+
+**Read it with the four `TASK-0052` defect corrections in hand** (D1–D4, in
+this file's opening section): the guard's target matching, its fixture set,
+its `module_defaults` rule and its `ansible-lint` path were all wrong in this
+plan as written. The narrative below is preserved as written; TASK-0031 itself
+carries the corrections.
 `PLAN-0003` opened Phase 6: an **instruct layer** for the `ansible` MCP
 server (skill + loop), a narrowing of that server's blast radius, and one
 real enforcement. Ten artifacts written, zero components changed:
@@ -1281,6 +1402,19 @@ breaking changes cannot land silently.
    that cites this very lesson, by an agent that had just restated it.
    The control is not knowing the rule — it is running the check against
    a deliberately broken input before trusting it.
+
+   **Third instance, and it was in a fixture set rather than a check
+   (TASK-0052, 2026-09-16).** TASK-0031 — the task written *specifically* to
+   avoid this failure, whose brief quotes this lesson and makes five observed
+   fixture results acceptance criteria rather than steps — specified five
+   fixtures that were **all satisfiable by a guard which classifies nothing
+   at all**, because every one of them assumed targets are named by group
+   while the estate's real playbook names a bare host. **Fixtures-first does
+   not help when every fixture shares the design's wrong assumption.** The
+   new refinement: a fixture set needs at least one case drawn from the
+   *real* subject rather than from the design's model of it. And note where
+   the guard was validated from — `ansible.cfg`'s prose, which was accurate
+   about the hazard and silent about the subject.
 9. **A decision that handles one item from a list of two, without saying why
    the second was left, produces an orphan rather than a deferral.**
    ADR-0004 quoted the other repo's roadmap naming **both**

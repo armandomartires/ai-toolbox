@@ -24,8 +24,9 @@
 | B-020 | `tests/smoke-mcp.sh` reports FAIL where the truth is an unmet precondition | medium | medium | B-019 (found while scoping it) | low | **ready** | S8 / TASK-0049. Found by reading `@sentropic/graphify`'s source, not by running anything: `src/serve.ts:188-195` has `createReloadingGraphStore` call `validateGraphFilePath`, then `console.error` + `process.exit(1)`, and `:896-897` defaults the graph path to `resolveGraphInputPath()`. So `graphify serve` with no `.graphify/graph.json` exits 1 without ever speaking MCP, and the smoke test — which launches from `launch.command` and asserts on an `initialize` reply — would call that a **FAIL**. Its own header insists three outcomes exist and that *"a SKIP is not a pass"*; this is **the mirror defect, a check lying in the other direction**, and it is latent for any future server with a state precondition, not only graphify. Fixing it edits a shared validated test file, so a human authorizes it (`PLAN-0005`, item 4). Either outcome is acceptable — precondition-aware SKIP, or a **visible** exclusion — but never a silent false FAIL |
 | B-021 | `qa-test` cannot run tests — the role's own description says it does | high | high | none | low | **ready** | Raised 2026-09-16 by REVIEW-0008, from the S7 pilot's most actionable finding. `agents/qa-test/agent.md:13-16` declares `bash_allow: git status*, git diff*, git log*`, which emits `bash: {"*": deny, …}` — so it cannot run `pytest`, `npm test` or `tests/validate.sh`, while `docs/registry.md` advertises it as *"Writes and **runs** tests … reports pass/fail evidence"*. **The role makes a false claim about itself**, which is precisely the class TASK-0046 diagnosed. The pilot observed the boundary working correctly (it refused to claim unobserved passes) — the defect is the **vocabulary**, not the role's behaviour. Needs a *decision*, not a widened allowlist: a test-command allowlist term, scoped per client under ADR-0018, in definition→enforcement→emission order (ADR-0008), as `delegation-allowlist` and `bash_allow` both were. **Do not resolve it by adding `bash: allow`** — that hands a test runner arbitrary shell and dissolves the boundary the role exists to have. Until it is fixed, the description overstates the role and should be read as aspirational |
 
-**Eight items are open — B-010…B-013 (S6, parked), B-018, B-019…B-020 (S8,
-raised 2026-09-16), and B-021 (raised 2026-09-16 by REVIEW-0008).
+**Eight items are open — B-010…B-013 (S6, **current** since 2026-09-16),
+B-018, B-019…B-020 (S8, **re-queued** 2026-09-16), and B-021 (raised
+2026-09-16 by REVIEW-0008).
 B-015…B-017 closed 2026-09-16** as **delivered by S7** — the portability
 decision (ADR-0018), the `agents/` category for `agents/` only, and the
 design stage. **B-014 closed 2026-09-15** as *decided, not implemented*:
@@ -81,12 +82,25 @@ the only one where
 the falsehood propagated into two ADRs and four tasks before a human caught
 it by noticing a product name.
 
-**B-010…B-013 stay `ready` even though S6 is parked.** Parking a sprint
-does not un-scope its backlog items: the items describe real gaps that are
-still real. Their "Ready when" column still names S6's task numbers, which
-remain the plan of record for them. Note that S7's pilot (TASK-0046)
-delivers B-010's two components by another route, while **B-011 — the
-highest-value item in either sprint — remains untouched.**
+**B-010…B-013 stayed `ready` through S6's park, and stay `ready` now S6 is
+current again** (un-parked 2026-09-16 by `TASK-0052`; **S8 is re-queued**).
+Neither a park nor a re-queue un-scopes a backlog item: the items describe
+real gaps that are still real. Their "Ready when" column still names S6's
+task numbers, which remain the plan of record for them. S7's pilot
+(TASK-0046) delivered B-010's two components by another route, while
+**B-011 — the highest-value item in either sprint — remains untouched.**
+
+**B-011's task has since been corrected in four places** (`TASK-0052`), and
+one correction changes what "done" means for this item: TASK-0031's original
+five fixtures were **all satisfiable by a guard that resolves no hostnames
+at all**, because the estate's one PVE playbook targets `sigsrvpve1` by bare
+hostname rather than by group. B-011 is not closed by a green fixture run —
+it is closed by fixture 6 (bare hostname, `gather_facts: true`) being
+**observed failing**.
+
+**B-019 and B-020 stay `ready` through S8's re-queue**, by the same rule.
+B-020 in particular is latent for **any** future stateful MCP server, so it
+outlives S8's scheduling regardless.
 
 B-014…B-017 were written after reading the artifacts, not before. Two of
 them are corrections to state **outside this repo**: B-014 describes a

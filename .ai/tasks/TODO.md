@@ -61,25 +61,55 @@ decisions in ADR-0012. Run in order — each depends on the one above.
       the two skills scaffold two different frameworks, differing nine
       ways; its premise of a shared convention was false (done)
 
-## Sprint S6 — Ansible agent guardrails (PARKED 2026-09-15)
+## Sprint S6 — Ansible agent guardrails (UN-PARKED 2026-09-16, CURRENT)
 Planned by `.ai/planning/plans/PLAN-0003-ansible-agent-guardrails.md`;
 decisions ADR-0014…0016 (all **proposed**, none accepted yet). Raised
-B-010…B-013. **Planning only — no implementation, ever.** Sprint opened by
-commit `9528d13`, pushed and confirmed.
+B-010…B-013. Sprint opened by commit `9528d13`, pushed and confirmed.
 
-**Parked by TASK-0033**, not closed and not abandoned. Human decision,
-2026-09-15; S7 opened instead. Archived at
-`.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md`. Every box
-below stays unchecked and B-010…B-013 stay **ready** — parking a sprint does
-not un-scope its backlog items. Parking cost nothing because nothing had
-been implemented.
+**Un-parked 2026-09-16 by `TASK-0052`; S6 now holds `SPRINT-CURRENT.md`.**
+Human decision: finish S6 before S8, which is **re-queued**. It had been
+parked by TASK-0033 on 2026-09-15 (human decision, S7 opened instead).
 
-**S7's pilot (TASK-0046) delivers TASK-0029 and TASK-0030** by producing
-`skills/ansible-ops/` and `loops/ansible-change/` *through* S7's new loops.
-Their disposition afterwards — closed as delivered-by-S7, rewritten, or left
-parked — is decided in TASK-0046's execution log, deliberately not
-pre-empted. **TASK-0031, the highest-value item, is not delivered by that
-pilot**; B-011 stays open.
+**Un-parking cost nothing for the same reason parking did: S6 still has
+zero implementation of its own.** The "Planning only — no implementation,
+ever" note that stood here was true of S6's own execution and is now
+retired, not because it was wrong but because the sprint is running.
+
+**TASK-0029 and TASK-0030 are `done`, delivered by S7's pilot
+(`TASK-0046`)** — produced *through* S7's loops on 2026-09-15, under an
+**Option 2 waiver** (built from `PLAN-0003`'s F1–F7 evidence with ADR-0015
+unratified), recorded in both task files. Their boxes are ticked below.
+**TASK-0031, the highest-value item, was not delivered by that pilot**;
+B-011 stays open.
+
+**Outstanding: TASK-0026, 0027, 0028, 0031, 0032, the three ADR bodies, and
+a checkpoint.** Two things a cold reader needs:
+- **All three ADRs are empty skeletons, not drafts** — every `## Context`,
+  `## Decision` and `## Consequences` says "to be written". Human decision
+  2026-09-16: bodies written from spike evidence, left **`Proposed`** for
+  ratification. **Do not fill them from `PLAN-0003`'s prose** — that is how
+  they reached this state. `ADR-0015`'s intended clause 1 is already
+  **refuted** by the pilot (`install.sh:105` symlinks a deployed skill, so
+  a filled-in template would write estate facts into a portable component).
+- **`REVIEW-0009` is already reserved by S8.** S6's checkpoint takes the
+  next free number.
+
+**Four defects were found in S6's own remaining plan before it resumed**
+(`TASK-0052`), all bearing on TASK-0031, all from opening the files the
+briefs name (lesson 7). **D1:** the guard matched PVE-class by group name,
+but the estate's one PVE playbook uses `hosts: sigsrvpve1`, a bare hostname
+— detection needs host→group resolution from the inventory. **D2:** the
+"two real playbooks → guard silent" criterion is satisfied equally by a
+correct guard and by a D1-afflicted one that classifies nothing, so **five
+green fixtures would have proven nothing** — lesson 8's third instance, in
+the fixture design of the task written to avoid it. **D3:** matching the
+`module_defaults` key rather than its `ansible.builtin.setup` entry
+over-accepts the real playbook, whose block is scoped to
+`group/community.proxmox.proxmox`. **D4:** `ansible-lint` is at
+`~/.venvs/sigma-ansible/bin/`, not in the target repo, and not on `PATH`
+(`26.8.0` / `ansible-core 2.20.8`, confirmed by running it). Common cause:
+the plan was written from `ansible.cfg`'s prose without opening the playbook
+the guard must classify — **the hazard was verified, the subject was not.**
 
 Phase 0 (independent of each other, may run in parallel):
 - [ ] TASK-0026 — Correct the `WORKSPACE_ROOT` blast-radius claim; disable
@@ -96,19 +126,29 @@ Phase 1 — decisions (each depends on its spike):
 - [ ] ADR-0016 — Hooks as a category, expected "no" (needs TASK-0028)
 
 Phase 2 — instruct layer (ordered; the skill settles the vocabulary):
-- [ ] TASK-0029 — `skills/ansible-ops/` (needs ADR-0015)
-- [ ] TASK-0030 — `loops/ansible-change/` (needs TASK-0029)
+- [x] TASK-0029 — `skills/ansible-ops/` (**done — delivered by S7's
+      TASK-0046, 2026-09-15, under the Option 2 waiver**)
+- [x] TASK-0030 — `loops/ansible-change/` (**done — same**)
 
 Phase 3 — enforcement and record:
-- [ ] TASK-0031 — The `gather_subset` guard + 5 fixture proofs (needs
-      ADR-0016, TASK-0027). **The sprint's highest-value item**
+- [ ] TASK-0031 — The `gather_subset` guard + **7** fixture proofs (needs
+      ADR-0016, TASK-0027). **The sprint's highest-value item.** Fixture
+      count raised from 5 by `TASK-0052`: fixture 6 (PVE host by **bare
+      hostname**, `gather_facts: true` → must fail) is the only case that
+      catches D1, and fixture 7 covers the `module_defaults` over-accept
 - [ ] TASK-0032 — Record the target-repo findings; state what was
       deliberately left alone (needs TASK-0029)
 
-**B-010…B-013 remain open and `ready`** despite the park, all raised by
-PLAN-0003 and all still scoped against the S6 task numbers above.
-B-001…B-009 remain closed. S7 raised B-014…B-017, so **eight items are open
-in total**.
+Sprint transition:
+- [ ] TASK-0052 — Un-park S6, re-queue S8, correct D1–D4 in TASK-0031
+
+**B-010…B-013 remain open and `ready`**, all raised by PLAN-0003 and all
+still scoped against the S6 task numbers above — through the park *and* the
+un-park, since neither a park nor a re-queue resolves a backlog item.
+B-001…B-009 remain closed. **The count in this block was true when written
+and has decayed**: B-014 closed and B-018, B-019, B-020, B-021 were raised
+since, so "eight items are open" is no longer the number. `BACKLOG.md` is
+the owner of that count — do not restate it here.
 
 Notes on S6:
 - The sprint began from a **human-supplied analysis**, not a backlog item —
@@ -139,8 +179,11 @@ Notes on S6:
   limitation was only stated at REVIEW-0007; this one is stated up front.
 - `SIGMA-infrastructure` is **read as evidence and never modified**
   (Option a). Its four stale claims and 42 unpushed commits are recorded by
-  TASK-0032 and fixed nowhere. **Still binding under S7** — parking does not
-  relax it.
+  TASK-0032 and fixed nowhere. **Still binding — it bound under S7 while S6
+  was parked, and binds again now S6 is current.** Neither parking nor
+  un-parking relaxes it. `git status` there was verified clean at the start
+  of the un-parking session and must be verified clean at the end of every
+  S6 task.
 
 ## Sprint S7 — Design and production agent loops (open)
 Planned by `.ai/planning/plans/PLAN-0004-design-and-production-agent-loops.md`.
@@ -320,16 +363,28 @@ Out of sprint — corrections found by inspection:
       Bionic's MCP support is *inferred, not verified*, with a GUI check
       left open in the runbook (done)
 
-## Sprint S8 — Third-party agent extensions (CURRENT since 2026-09-16)
+## Sprint S8 — Third-party agent extensions (RE-QUEUED 2026-09-16, not started)
 Planned by `.ai/planning/plans/PLAN-0005-third-party-agent-extensions.md`.
 Raised B-019, B-020. Decision: `ADR-0021` (**proposed**).
 
-**S8 holds `SPRINT-CURRENT.md`** since 2026-09-16, promoted after
-`REVIEW-0008` closed S7 (**approve**). The deviation recorded here
-previously — S8 parked in `planning/sprints/` because `REVIEW-0008` did not
-exist — was resolved in the correct order: review first, then promotion.
-That note also said S7 had **six** tasks; it had **13 done and 1
-cancelled**, one of four files that disagreed about the count.
+**S8 no longer holds `SPRINT-CURRENT.md`.** Re-queued 2026-09-16 by
+`TASK-0052` to `.ai/planning/sprints/SPRINT-S8-third-party-extensions.md`,
+because the human chose to **un-park S6 and finish it first**. It had been
+current since earlier the same day, promoted after `REVIEW-0008` closed S7
+(**approve**).
+
+**Re-queued is a third state, not parked and not closed:** promoted, then
+un-promoted **before any work**, so no checkpoint — there is nothing to
+check. All four briefs (`TASK-0048…0051`, all `planned`) and `PLAN-0005` are
+**unmodified**; **B-019/B-020 stay `ready`**. It cost nothing because zero
+components had changed, which was the planning-only instruction at the time.
+
+The deviation recorded here previously — S8 sitting in `planning/sprints/`
+because `REVIEW-0008` did not exist — was resolved in the correct order:
+review first, then promotion. That note also said S7 had **six** tasks; it
+had **13 done and 1 cancelled**, one of four files that disagreed about the
+count. **This block has now stated three different locations for the same
+file in one day**, which is the cost of recording a path in prose.
 
 **Two S7 findings bind this sprint:** `tests/validate.sh` is at ~1150 ms,
 past the sub-second property `AGENTS.md` treats as load-bearing (and timing

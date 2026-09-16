@@ -156,7 +156,7 @@ any agent or human can understand, trust, and deploy.
   keeps the gate and drops the read-order step keeps the part that found
   nothing.
 
-## Phase 6 — Ansible agent guardrails (parked 2026-09-15, not started)
+## Phase 6 — Ansible agent guardrails (UN-PARKED 2026-09-16, now current)
 - Objective: add the **instruct layer** the `ansible` MCP server has
   lacked since S1 — nothing tells an agent how or when to use it, what the
   estate's workflow is, or which actions need approval — correct two false
@@ -186,14 +186,54 @@ any agent or human can understand, trust, and deploy.
   - The `gather_subset`/`ansible_mounts` guard is **observed failing** on
     a broken fixture and on an ambiguous `hosts:` case, and observed
     silent on the two known-good playbooks (TASK-0031).
+    **Amended 2026-09-16 (D1/D2/D3):** this criterion as written is
+    insufficient — all three of its cases pass for a guard that resolves no
+    hostnames. It now additionally requires the guard **observed failing**
+    on a PVE node addressed by **bare hostname** with `gather_facts: true`,
+    and on a `module_defaults` block scoped to a non-`setup` target. Seven
+    fixtures, not five.
   - `SIGMA-infrastructure`'s `git status` byte-identical before and after
     (all tasks).
-- Status: **parked, not closed and not abandoned** (human decision,
-  2026-09-15, recorded in `PLAN-0004`). Archived at
-  `.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md` with a
-  parking note. All ten artifacts stay `planned`/`proposed`; B-010…B-013
-  stay **ready** — parking a sprint does not un-scope its backlog items.
-  Parking cost nothing precisely because nothing had been implemented.
+- Status: **UN-PARKED 2026-09-16 by `TASK-0052`; this phase is current
+  again** (human decision: finish S6 before S8). Restored to
+  `.ai/planning/SPRINT-CURRENT.md`; **Phase 8 is re-queued.** Un-parking
+  cost nothing for the same reason parking did — **S6 still has zero
+  implementation of its own.**
+  - Outstanding: `TASK-0026`, `0027`, `0028`, `0031`, `0032`, the three ADR
+    **bodies**, and a checkpoint. `TASK-0029`/`0030` are **done, delivered
+    by Phase 7's pilot** — the sprint table said `planned` while both task
+    files said `done`, corrected on the first read (the
+    four-files-disagree class `REVIEW-0008` swept for Phase 7).
+  - **ADR-0014/0015/0016 are empty skeletons, not drafts** — every section
+    says "to be written". Human decision 2026-09-16: bodies written from
+    spike evidence, left **`Proposed`** for ratification. **Not filled from
+    `PLAN-0003`'s prose** — that is how they reached this state.
+  - **`REVIEW-0009` is already reserved by Phase 8.** This phase's
+    checkpoint must take the next free number.
+  - B-010…B-013 stay **ready**; nothing was resolved by the transition.
+- **Four defects were found in this phase's own remaining plan before it
+  resumed** (`TASK-0052`), all bearing on the guard, all by opening the
+  files the briefs name (lesson 7):
+  - **D1:** the guard matched "PVE-class" by **group name**, but the
+    estate's one PVE playbook uses `hosts: sigsrvpve1` — a **bare
+    hostname**. Detection must resolve host→group membership from the
+    inventory.
+  - **D2:** the "two real playbooks → guard silent" acceptance criterion is
+    satisfied equally by a correct guard and by a D1-afflicted guard that
+    classifies nothing. **Five green fixtures would have proven nothing.** A
+    sixth is now required — PVE host by bare hostname, `gather_facts: true`
+    → must fail. **This is lesson 8's third instance**, and it was in the
+    fixture design of the task written to avoid it.
+  - **D3:** a `module_defaults` check matching the key rather than its
+    `ansible.builtin.setup` entry would have over-accepted the real
+    playbook, whose block is scoped to
+    `group/community.proxmox.proxmox`. Seventh fixture added.
+  - **D4:** `ansible-lint` is at `~/.venvs/sigma-ansible/bin/` and not on
+    `PATH` — there is no venv in the target repo. Version `26.8.0` /
+    `ansible-core 2.20.8` confirmed by running it.
+  - The common cause: the plan was written from `ansible.cfg`'s prose,
+    which is accurate about the hazard, **without opening the playbook the
+    guard must classify.** The hazard was verified; the subject was not.
 - **Phase 7 delivers two of this phase's artifacts.** `TASK-0046` produces
   `skills/ansible-ops/` and `loops/ansible-change/` *through* Phase 7's
   new design and build loops, as the pilot that proves those loops work.
@@ -334,7 +374,7 @@ any agent or human can understand, trust, and deploy.
   and `prompts/`: indefinitely. If the sprint shrinks, the honest cut is
   role reconciliation, never the plumbing and never the pilot.
 
-## Phase 8 — Third-party agent extensions (planned 2026-09-16, not started)
+## Phase 8 — Third-party agent extensions (RE-QUEUED 2026-09-16, not started)
 
 **This section was written at plan time, in the same change as
 `PLAN-0005`.** The roadmap has now had two phases go missing from it —
@@ -346,12 +386,26 @@ is a habit, not a mechanism, and it will fail the same way if the habit
 lapses.
 
 Planned by `.ai/planning/plans/PLAN-0005-third-party-agent-extensions.md`.
-Sprint file: **`.ai/planning/SPRINT-CURRENT.md`** — promoted 2026-09-16,
-after `REVIEW-0008` closed S7. This paragraph previously named a path in
-`sprints/` and explained that S8 was deliberately *not* current, because
-`REVIEW-0008` did not exist; it also said S7 had **six** tasks, which was
-false (13 done, 1 cancelled). Both corrected at closure rather than left as
-a dangling path and a wrong count.
+Sprint file: **`.ai/planning/sprints/SPRINT-S8-third-party-extensions.md`** —
+**re-queued there 2026-09-16 by `TASK-0052`**, because the human chose to
+un-park S6 and finish it first. It was briefly current after `REVIEW-0008`
+closed S7.
+
+**Re-queued is a third state, distinct from parked and closed:** this sprint
+was promoted and then un-promoted **before doing any work**, so it gets no
+checkpoint — there is nothing to check. All four briefs and `PLAN-0005` are
+**unmodified**, and **B-019/B-020 stay `ready`** (re-queuing does not
+un-scope a backlog item, the same rule that held B-010…B-013 through S6's
+park). Re-queuing cost nothing because zero components had changed.
+
+**This paragraph has now been wrong twice, in opposite directions**, which is
+worth more than the correction itself. It first named a `sprints/` path and
+said S8 was deliberately not current; then it named `SPRINT-CURRENT.md` after
+promotion; now it names `sprints/` again. It also once said S7 had **six**
+tasks (13 done, 1 cancelled). **A path recorded in prose is a claim that
+decays every time the thing moves** — and this file cannot detect that
+(`validate.sh` checks section presence, never whether a path assertion still
+resolves).
 
 **Decision status:** `ADR-0021` **proposed**. Ratification waits on
 TASK-0048's evidence, per the ordering S7 established.
