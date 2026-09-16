@@ -206,7 +206,7 @@ any agent or human can understand, trust, and deploy.
   answer to that, since producing a component through a loop at least
   exercises the loop.
 
-## Phase 7 — Design and production agent loops (in progress, opened 2026-09-15)
+## Phase 7 — Design and production agent loops (complete 2026-09-16)
 - Objective: build a two-stage agent system — an **interactive design
   stage** that converges a project idea into an accepted, locked brief,
   and a **largely autonomous production stage** that carries that brief
@@ -223,10 +223,23 @@ any agent or human can understand, trust, and deploy.
   **stays with `opencode-customization`**. It is this repo's **first
   `Rejected` ADR**, and it carries a 3-condition reopen trigger plus the one
   gap the rejection creates (no `{tier:}` resolver here).
-- Progress: TASK-0034, TASK-0036, TASK-0037, TASK-0038, TASK-0039,
-  TASK-0040, TASK-0041, TASK-0042, TASK-0043, TASK-0044 and **TASK-0045**
-  done — **eleven** of the sprint's tasks. **Phases 1–4 are complete**: two
-  loops and six roles, all gated, indexed and emitted.
+- **Closed by `REVIEW-0008` (approve), 2026-09-16.** All five phases
+  complete: **13 tasks done**, TASK-0035 cancelled. Commits
+  `9105246..ff212dd`. This line read *"eleven of the sprint's tasks"* until
+  closure — true when written, decayed by the two tasks that followed
+  (lesson 6 again, the **sixth** instance in this file's own history), and
+  it was one of three files disagreeing about the count. **The
+  pre-committed question is answered YES**: the pilot ran, and REVIEW-0008
+  re-verified it from artifacts rather than task logs — the gate rejects a
+  broken real role, the registry indexes six, nine files are emitted across
+  two clients with the three OpenCode-only roles **skipped** rather than
+  degraded, and the brief's lock is a dedicated commit.
+  **Three findings on the record:** `validate.sh` left its sub-second
+  budget (622→960 ms across S7 on like-for-like measurement, ~1150 ms at
+  review time); four tasks including the pilot left **no session record**;
+  and `qa-test` **cannot run tests**, now tracked as B-021.
+  **Phases 1–4 built** two loops and six roles, all gated, indexed and
+  emitted; **Phase 5 exercised all of it.**
   **Phase 1 closed with its reclamation withdrawn, not delivered**
   (ADR-0017 rejected): the spike meant to prepare the claim is what stopped
   it, which is the ordering principle earning its place rather than failing.
@@ -333,10 +346,12 @@ is a habit, not a mechanism, and it will fail the same way if the habit
 lapses.
 
 Planned by `.ai/planning/plans/PLAN-0005-third-party-agent-extensions.md`.
-Sprint file: `.ai/planning/sprints/SPRINT-S8-third-party-agent-extensions.md`
-— which is **not** `SPRINT-CURRENT.md`, deliberately, because S7's six
-tasks are `done` but `REVIEW-0008` does not exist. Promoting S8 would have
-closed a sprint without its checkpoint.
+Sprint file: **`.ai/planning/SPRINT-CURRENT.md`** — promoted 2026-09-16,
+after `REVIEW-0008` closed S7. This paragraph previously named a path in
+`sprints/` and explained that S8 was deliberately *not* current, because
+`REVIEW-0008` did not exist; it also said S7 had **six** tasks, which was
+false (13 done, 1 cancelled). Both corrected at closure rather than left as
+a dangling path and a wrong count.
 
 **Decision status:** `ADR-0021` **proposed**. Ratification waits on
 TASK-0048's evidence, per the ordering S7 established.
@@ -393,6 +408,23 @@ without vendoring, and without auto-installing anything.
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec
   evolution. Mitigations: configs/ snapshots, ADR-0002, spec templates.
+- **The commit gate has left its stated budget, and each phase pays a
+  little more.** `AGENTS.md` calls `tests/validate.sh` "fast, offline,
+  hermetic; keep it that way", and TASK-0038 measured rather than assumed —
+  606 ms. Phase 7 took it to **960 ms** and it is ~1150 ms today
+  (REVIEW-0008, like-for-like on the repo's filesystem). The scaling is
+  linear in component count, which is exactly what a component library
+  grows, so the next category-sized addition inherits no headroom. **A
+  measurement trap for whoever addresses it:** timing on `/tmp` (ext4) and
+  comparing against `/mnt/c` (9p DrvFs) understates by ~40% and will make a
+  regression look like an improvement.
+- **A sprint's status records decay faster than its artifacts.** Closing
+  Phase 7 found four files disagreeing about how many of its tasks were
+  done, a task table calling the sprint's own opening task `planned`, and
+  three backlog items still `ready` three tasks after being delivered. None
+  is catchable by `validate.sh`, which checks section presence and never
+  whether a status in one file matches the status in another. **Sweeping
+  the status columns is part of closing a sprint**, not an optional tidy.
 - **A phase can be executed without ever appearing on the roadmap.**
   Phase 6 ran a full planning cycle — a plan, ten artifacts, four backlog
   items, a sprint file, a commit — while this file went from Phase 5

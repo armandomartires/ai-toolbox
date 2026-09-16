@@ -1,10 +1,83 @@
 # Current State
 
-Last updated 2026-09-16, after **sprint S8 was planned from a human request
-for three "plugins"** (below). Before that, TASK-0047 corrected the identity
-and capabilities of the third client.
+Last updated 2026-09-16, after **sprint S7 was closed by `REVIEW-0008`
+(approve)** and **S8 was promoted to `SPRINT-CURRENT.md`** (below). Before
+that, S8 was planned from a human request for three "plugins", and TASK-0047
+corrected the identity and capabilities of the third client.
 
-## Sprint S8 is planned; nothing is implemented; S7 is still open
+## S7 is CLOSED; S8 is now the current sprint
+
+**2026-09-16.** `REVIEW-0008` closed Phase 7 with **approve**, and S8 was
+promoted in the correct order — the review first, then the promotion. S7 is
+archived at `.ai/planning/sprints/SPRINT-S7-design-and-production-loops.md`.
+
+**The pre-committed question — *did anything get exercised?* — is answered
+YES, from artifacts rather than task logs.** That distinction was the point:
+the gate rejects a deliberately broken real role (`critic` → `crtiic`, exit
+1, restored byte-identical); the registry indexes six roles; **nine files are
+emitted** across two clients with the three OpenCode-only roles **skipped
+rather than degraded**, so ADR-0018 clause 8 is observable in the filesystem;
+the brief's lock is a dedicated brief-only commit; and the pilot's checker
+exits 0 and 1 correctly on its own two fixtures. S7 is **not** the fourth
+instance of the scaffolding pattern it was written to avoid.
+
+**Three findings are on the record, and two of them are about this repo's
+own habits rather than about S7's components:**
+
+1. **The commit gate has left its stated budget.** `AGENTS.md` calls
+   `validate.sh` "fast, offline, hermetic; keep it that way" and TASK-0038
+   measured 606 ms rather than assuming. It is **960 ms at S7's end and
+   ~1150 ms today**. The regression is *growth* — linear in component count,
+   which is what a component library does — not a broken check. **A
+   measurement trap was found and is now recorded in the roadmap Risks:**
+   the first attempt timed a `/tmp` (ext4) worktree against the `/mnt/c` (9p
+   DrvFs) repo and got a reassuring 358 ms, which compared **filesystems,
+   not commits**. Re-run like-for-like, TASK-0038's baseline reproduces at
+   622 ms. An encouraging measurement is the one to distrust.
+2. **Four tasks left no session record** — TASK-0041, 0042, 0046, 0047,
+   including **the pilot**, the sprint's most consequential task. This is
+   the S6 defect recurring *inside the sprint that reconstructed it*, four
+   times rather than once. **Deliberately not reconstructed**: fabricating
+   four records a day later would invent the evidence the convention exists
+   to preserve. The generalisable part is that `INDEX.md` has 25 rows and
+   `.ai/sessions/` has 25 files, so **every available consistency check
+   passes** — a missing session is missing from both. Any future check must
+   compare task IDs against the `Tasks` column, never count rows.
+3. **`qa-test` cannot run tests, and nothing tracked it.** Re-verified from
+   the emitted file: `bash: {"*": deny, "git log*": allow, "git diff*":
+   allow, "git status*": allow}`, while `docs/registry.md` advertises it as
+   *"Writes and **runs** tests"*. **The role makes a false claim about
+   itself** — TASK-0046's own class, in shipped content. The pilot found it
+   and wrote it up accurately in three narrative files, and **none of that
+   put it where a future sprint would look**. Now **B-021**.
+
+**Closing the sprint found four files disagreeing about its own state**,
+which is finding 3's class turned on the governance layer: the sprint file
+called TASK-0033 (**the task that opened the sprint**) `planned` while its
+own file said `done`; this file said "all six S7 tasks are done" when
+**thirteen** were done and one cancelled; the roadmap said "eleven",
+true-when-written and decayed by the two tasks that followed; and
+**B-015/016/017 still read `ready` three tasks after S7 delivered them**,
+B-016 still asserting in the present tense that `agents/` had "no template,
+no schema, no `validate.sh` check, no registry section, no `install.sh`
+path" when all five had shipped. All fixed in the closing commit rather than
+deferred — a known-false status is not a follow-up. **`validate.sh` cannot
+catch any of it**: it checks section presence, never whether a status
+assertion in one file matches the status in another. Hence the new roadmap
+risk: **sweeping the status columns is part of closing a sprint.**
+
+**Two S7 items were deliberately left open rather than tidied:** ADR-0014
+and ADR-0015 remain `proposed` while `skills/ansible-ops/` ships under them,
+and **ADR-0015's text now contradicts that shipped component** — it still
+argues for the `templates/`-filled-by-the-consumer shape the pilot tested
+and rejected (`install.sh:105` symlinks a deployed skill into this working
+tree, so filling a shipped template writes one estate's production facts
+into the portable component). Both ADRs belong to **parked S6**, so
+rewriting them inside another sprint's closure would muddle ownership.
+Recorded as REVIEW-0008 follow-up 4 so the next reader of ADR-0015 is warned
+before citing it.
+
+## Sprint S8, planned and now current
 
 **2026-09-16.** A human asked for three third-party "plugins" — **ponytail,
 omniroute, graphify** — added to the toolbox and made cross-agent
@@ -88,12 +161,14 @@ repo forbids itself (emission writes role files only and never touches
 
 **Two structural things worth carrying forward:**
 
-1. **S7 is not closed, and S8 was deliberately not promoted.** All six S7
-   tasks are `done` but `REVIEW-0008` does not exist. Moving S8 into
-   `SPRINT-CURRENT.md` would have silently closed a sprint without its
-   checkpoint — so the S8 sprint file sits in `planning/sprints/` with the
-   deviation recorded in its own header, and the closure question is
-   escalated to the human rather than absorbed.
+1. ~~**S7 is not closed, and S8 was deliberately not promoted.**~~
+   **RESOLVED 2026-09-16 in the correct order:** `REVIEW-0008` was written
+   first, then S8 promoted. The escalation worked as intended — the
+   deviation was recorded in the S8 header rather than absorbed, and the
+   human's answer was to close S7 properly rather than skip the checkpoint.
+   **This item also carried a false count**: it said "all six S7 tasks are
+   `done`" when thirteen were done and one cancelled, which is why the
+   closure swept every status claim rather than trusting the narrative.
 2. **Two of three deliverables will be prose — the fourth instance of a
    class this repo has already diagnosed three times**
    (`mcp-servers/_template/` per ADR-0010; `agents/` and `prompts/` per
@@ -161,7 +236,11 @@ Two things worth carrying forward:
    **in either direction**, which is the generalisation ADR-0006 was one
    step short of making.
 
-## Sprint S7 is open; S6 is parked with zero implementation
+## Sprint S7, as executed — closed 2026-09-16; S6 is parked with zero implementation
+
+*(Everything below is S7's narrative as it was written during the sprint,
+kept as the record of how it went. The heading read "Sprint S7 is open"
+until `REVIEW-0008` closed it.)*
 
 `PLAN-0004` opened Phase 7: a **two-stage agent system** — an interactive
 design stage that converges an idea into an accepted, locked brief, and a

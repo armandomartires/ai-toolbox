@@ -320,15 +320,22 @@ Out of sprint — corrections found by inspection:
       Bionic's MCP support is *inferred, not verified*, with a GUI check
       left open in the runbook (done)
 
-## Sprint S8 — Third-party agent extensions (planned, NOT yet current)
+## Sprint S8 — Third-party agent extensions (CURRENT since 2026-09-16)
 Planned by `.ai/planning/plans/PLAN-0005-third-party-agent-extensions.md`.
 Raised B-019, B-020. Decision: `ADR-0021` (**proposed**).
 
-**`SPRINT-CURRENT.md` still holds S7**, deliberately: S7's six tasks are
-all `done` but `REVIEW-0008` does not exist, and promoting S8 would have
-closed a sprint without its checkpoint. The S8 sprint file therefore sits
-in `planning/sprints/` with that deviation recorded in its own header.
-Whether S7 closes first is a human decision (`PLAN-0005`, item 3).
+**S8 holds `SPRINT-CURRENT.md`** since 2026-09-16, promoted after
+`REVIEW-0008` closed S7 (**approve**). The deviation recorded here
+previously — S8 parked in `planning/sprints/` because `REVIEW-0008` did not
+exist — was resolved in the correct order: review first, then promotion.
+That note also said S7 had **six** tasks; it had **13 done and 1
+cancelled**, one of four files that disagreed about the count.
+
+**Two S7 findings bind this sprint:** `tests/validate.sh` is at ~1150 ms,
+past the sub-second property `AGENTS.md` treats as load-bearing (and timing
+it on `/tmp` ext4 rather than `/mnt/c` understates by ~40%); and a finding
+recorded only in a task log gets rediscovered rather than fixed (**B-021**),
+so `TASK-0048`'s findings belong in `BACKLOG.md`, not only in prose.
 
 Opened from a human request — *add ponytail, omniroute and graphify,
 cross-agent compatible if possible* — which makes it the **third sprint in
