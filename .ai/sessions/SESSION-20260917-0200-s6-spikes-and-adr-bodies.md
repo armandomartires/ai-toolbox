@@ -161,10 +161,19 @@ substantive rather than a restatement.
 
 **`TASK-0031`'s shape is now fully determined**, so it can start cold:
 - A custom `ansible-lint` rule, wired via `enable_list:` in `.ansible-lint`.
-- Written against the **installed** API — `create_matcherror(message=,
-  filename=, data=)`, per `rules/complexity.py`. My first probe guessed a
-  `lineno=` kwarg and was wrong; the API is stable enough to target but not
-  guessable.
+- Written against the **installed** API. The real signature is
+  `create_matcherror(message="", lineno=1, column=None, details="",
+  filename=None, tag="", transform_meta=None, data=None)` —
+  `rules/__init__.py:85-95`, which is the authority; a sibling rule's call
+  style shows only one valid form of several.
+  **CORRECTION (2026-09-16, while starting `TASK-0031`):** this bullet
+  originally said my first probe "guessed a `lineno=` kwarg and was wrong".
+  **That was false and is retracted** — `lineno` is a documented parameter and
+  the original call was valid, proven by re-running it. The probe's silence
+  had **one** cause (`profile: production` filtering an unlisted rule) and I
+  reported two, having changed two things at once and credited the wrong one.
+  Also retracted in `TASK-0027` (which carried it twice). It did **not** reach
+  `ADR-0014` or `ADR-0016` — checked by grep rather than assumed.
 - **Seven** fixtures, and it must **ship a proof the rule fires**. Fixture 6
   (PVE host by bare hostname, `gather_facts: true`) is the only case that
   fails if the guard resolves no hostnames.

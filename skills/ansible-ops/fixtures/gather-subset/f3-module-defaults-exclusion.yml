@@ -1,0 +1,20 @@
+---
+# FIXTURE 3 — MUST PASS.
+#
+# The SECOND accepted fix form, also quoted verbatim from the hazard's
+# documentation: `module_defaults` scoped to `ansible.builtin.setup`.
+#
+# A guard recognising only fixture 2's form would reject this — and this form
+# is explicitly endorsed by the estate's own configuration, so rejecting it
+# makes the guard an obstacle. Contrast fixture 7, which has a
+# `module_defaults:` block scoped to something else and must FAIL.
+- name: Gather facts with the exclusion via module_defaults (safe)
+  hosts: fixturepve2
+  gather_facts: true
+  module_defaults:
+    ansible.builtin.setup:
+      gather_subset: "!mounts"
+  tasks:
+    - name: Facts are available, minus the hazardous subset
+      ansible.builtin.debug:
+        var: ansible_hostname

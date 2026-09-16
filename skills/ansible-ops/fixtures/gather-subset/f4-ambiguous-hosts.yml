@@ -1,0 +1,30 @@
+---
+# FIXTURE 4 — MUST FAIL, AS AMBIGUOUS, with a message distinguishable from
+# fixture 1's.
+#
+# `hosts:` is a WILDCARD PATTERN. It is syntactically valid — so ansible-lint's
+# own `syntax-check` passes it — yet it cannot be resolved statically: whether
+# `fixturepve*` expands to include a hazard-class host depends on the inventory
+# at run time, and on which inventory is in use.
+#
+# The guard must say so and fail rather than pass silently. A play whose target
+# cannot be determined is exactly the play most likely to be doing something
+# unusual, and quietly ignoring what it cannot parse is the unfailable-check
+# trap in a new costume.
+#
+# An operator must be able to tell "you forgot the exclusion" (fixture 1) from
+# "I could not tell what this play targets" (this one). The harness asserts the
+# two messages do not overlap.
+#
+# WHY NOT A JINJA VARIABLE, WHICH WAS THIS FIXTURE'S FIRST FORM
+#   `hosts: "{{ target_group }}"` is the more obvious ambiguous case and it does
+#   NOT reach this rule. `ansible-lint` runs `syntax-check` first, which is
+#   UNSKIPPABLE (it refuses to appear in `skip_list` or `warn_list`), and it
+#   fails the file with `Error processing keyword 'hosts': 'target_group' is
+#   undefined` before any custom rule is evaluated. The play is still caught —
+#   just by a different rule, with a different message, and this guard never
+#   sees it. Recorded as the guard's ceiling in TASK-0031 rather than worked
+#   around: a genuinely undefined-variable target is somebody else's finding.
+- name: Gather facts against a wildcard pattern (unresolvable)
+  hosts: "fixturepve*"
+  gather_facts: true

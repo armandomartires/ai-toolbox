@@ -1,0 +1,16 @@
+---
+# FIXTURE 6 — MUST FAIL.
+#
+# The case that makes fixture 5 meaningful, added by TASK-0052 (defect D2).
+#
+# A PVE-class host addressed by BARE HOSTNAME, gathering facts, with no
+# exclusion. This is the shape the real estate actually uses
+# (`hosts: sigsrvpve1`), and it is the ONLY fixture that fails when the guard
+# resolves group names but not host membership.
+#
+# If this fixture passes silently, the guard is broken in the dangerous
+# direction AND fixtures 1-5 would all still be green. That is why it is an
+# acceptance criterion rather than an extra.
+- name: Gather facts against a PVE node named directly (hazardous)
+  hosts: fixturepve1
+  gather_facts: true

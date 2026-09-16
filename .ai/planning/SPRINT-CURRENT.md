@@ -17,11 +17,22 @@
 > (`TASK-0046`) — the table below has been corrected, because it read
 > `planned` while both task files read `done`. That is the four-files-
 > disagree defect `REVIEW-0008` had to sweep across S7, found here on the
-> first read of this file. **Remaining as of 2026-09-16: `TASK-0031`,
-> `TASK-0032`, ratification of the three ADRs, and a checkpoint.**
-> `TASK-0026`, `TASK-0027`, `TASK-0028` and all three ADR bodies are
-> **done** — and `TASK-0026` **closed B-012 and B-013**, the first S6 items
-> resolved by S6's own execution rather than by another sprint's route. **The checkpoint is NOT `REVIEW-0009`** — that number is reserved
+> first read of this file. **Remaining as of 2026-09-16: `TASK-0032`,
+> ratification of the three ADRs, and a checkpoint.** `TASK-0026`,
+> `TASK-0027`, `TASK-0028`, **`TASK-0031`** and all three ADR bodies are
+> **done**, and **three backlog items are closed by S6's own execution** —
+> B-012/B-013 (`TASK-0026`) and **B-011, the highest-value item in either
+> sprint (`TASK-0031`)**. B-010 alone remains, and its two components were
+> already delivered by S7's pilot.
+>
+> **The guard exists and is proven to fire**, which is the thing this sprint
+> was for. `skills/ansible-ops/scripts/gather_subset_guard.py` plus seven
+> fixtures plus `tests/gather-subset-guard.sh` (10 checks, PASS/FAIL/**SKIP**,
+> with a negative control that reproduces the silent-no-op trap). **The
+> decisive evidence is outside the fixture set**: the real playbook, flipped to
+> `gather_facts: true` in a `/tmp` copy, produced `MISSING EXCLUSION` naming
+> `sigsrvpve1` resolved through the real nested inventory — which is what makes
+> its silence on the unmodified file discriminating rather than inert. **The checkpoint is NOT `REVIEW-0009`** — that number is reserved
 > by S8's file; S6's takes the next free one.
 >
 > **All three ADRs now have bodies; all three remain `Proposed`.** They were
@@ -190,7 +201,7 @@ that matter most:
 | ADR-0016 | TASK-0028 | **proposed** (body written, **retitled**) | Hooks as a component category — ~~expected "no"~~ **declined, but because the clients disagree on the tool's *name*, not because interception fails; it works in both** |
 | TASK-0029 | ADR-0015 | **done** | `skills/ansible-ops/` — **delivered by S7's pilot (`TASK-0046`), 2026-09-15**, produced *through* S7's loops. Row corrected 2026-09-16 by `TASK-0052`: it read `planned` while the task file read `done` |
 | TASK-0030 | TASK-0029 | **done** | `loops/ansible-change/` — same, delivered by `TASK-0046`. Both ran under an **Option 2 waiver** (built from `PLAN-0003`'s F1–F7 evidence, ADR-0015 unratified), recorded in both task files |
-| TASK-0031 | ADR-0016, TASK-0027 | **planned** — **both dependencies now cleared** | The `gather_subset` guard + **7** fixture proofs (raised from 5 by `TASK-0052`). Shape is fixed: a custom `ansible-lint` rule via `enable_list:`, **which must ship a proof that it fires** |
+| TASK-0031 | ADR-0016, TASK-0027 | **done** | The `gather_subset` guard + **7** fixture proofs (raised from 5 by `TASK-0052`). **Delivered 2026-09-16; closes B-011.** A custom `ansible-lint` rule, **10/10** in `tests/gather-subset-guard.sh` including a negative control reproducing the `enable_list` silent-no-op trap. Fixture 6 **observed failing**, plus the *real* playbook flipped in a `/tmp` copy firing on `sigsrvpve1` resolved through the real inventory. Three defects found and fixed en route — including that **`TASK-0027`'s "declarative wiring" recommendation was wrong** |
 | TASK-0032 | TASK-0029 | **planned** | Record the target-repo findings; state what was left alone |
 
 Order matters, and for the same reason it did in S5: ground truth before

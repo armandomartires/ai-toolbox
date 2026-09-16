@@ -168,11 +168,21 @@ Phase 2 — instruct layer (ordered; the skill settles the vocabulary):
 - [x] TASK-0030 — `loops/ansible-change/` (**done — same**)
 
 Phase 3 — enforcement and record:
-- [ ] TASK-0031 — The `gather_subset` guard + **7** fixture proofs (needs
-      ADR-0016, TASK-0027). **The sprint's highest-value item.** Fixture
-      count raised from 5 by `TASK-0052`: fixture 6 (PVE host by **bare
-      hostname**, `gather_facts: true` → must fail) is the only case that
-      catches D1, and fixture 7 covers the `module_defaults` over-accept
+- [x] TASK-0031 — The `gather_subset` guard + **7** fixture proofs
+      (**done 2026-09-16; closes B-011**). **The sprint's highest-value item,
+      delivered.** A custom `ansible-lint` rule (`gather-subset-mounts`),
+      **10/10** in its own fires-proof (`tests/gather-subset-guard.sh`)
+      including a negative control that reproduces the `enable_list`
+      silent-no-op trap. Fixture 6 **observed failing**, and the *real*
+      playbook flipped to `gather_facts: true` in a `/tmp` copy produced
+      `MISSING EXCLUSION` naming `sigsrvpve1` resolved through the real
+      inventory — so the silence on the unmodified playbook is discriminating,
+      not inert. **Three defects found during execution, two of them mine:**
+      `TASK-0027`'s "declarative wiring" recommendation is **wrong** (per-rule
+      config in `.ansible-lint` is fatal for a custom rule → env vars);
+      fixture 4 could never reach the rule (`syntax-check` is unskippable);
+      and my harness matched the rule **ID**, which appears in ansible-lint's
+      error text, so four fixtures read as "fired" when nothing had run
 - [ ] TASK-0032 — Record the target-repo findings; state what was
       deliberately left alone (needs TASK-0029)
 

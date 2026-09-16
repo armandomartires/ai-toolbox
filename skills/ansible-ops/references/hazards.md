@@ -78,14 +78,45 @@ after the first connection reviews a hazard that has already happened. This
 is the whole reason the gate sequence in `SKILL.md` puts hazard-class review
 inside gate 1.
 
-## What this repository does not do
+## What this repository does and does not do
 
-**This repository ships NO enforcement of any hazard class, including
-class 1.**
+> **UPDATED 2026-09-16 (TASK-0031). The paragraph that stood here said this
+> repository ships "no guard, no hook, no wrapper, no linting rule" for any
+> hazard class. That is now FALSE for class 1** and has been replaced. It was
+> true when written; it became a false claim a component makes about itself —
+> the class `TASK-0046` diagnosed — the moment the guard landed. Recorded
+> rather than quietly overwritten, because the failure mode is the point.
 
-There is no guard, no hook, no wrapper, no linting rule, and no runtime
-check here that will stop a play from gathering facts against a hazard-class
-host. The requirement is **tracked and unenforced** — `B-011` remains open.
+**Class 1 now has enforcement available. No other class does.**
+
+`skills/ansible-ops/scripts/gather_subset_guard.py` is a custom
+`ansible-lint` rule (`gather-subset-mounts`) that refuses a play gathering
+facts against a hazard-class host without excluding `mounts`. It recognises
+both accepted forms — the `gather_subset: "!mounts"` play keyword and a
+`module_defaults` entry scoped to `ansible.builtin.setup` — resolves a **bare
+hostname** to its class through the inventory, and fails **loudly on an
+unresolvable target** rather than passing it. Wiring: `docs/operations/runbook.md`.
+
+**Four limits on that, each verified rather than assumed:**
+
+- **It proves a keyword is present, not that a node is safe.** The hazard is
+  not reproducible on demand, so the rule is validated against **syntax**.
+  Fixture proofs live in `fixtures/gather-subset/`; the harness is
+  `tests/gather-subset-guard.sh`.
+- **Nothing in this repository runs it**, deliberately. It lints *other*
+  repositories' content, and the mandatory gate must stay offline and hermetic
+  (ADR-0009). Adoption is the consuming repo's act.
+- **It can be installed and inert.** A custom rule absent from the active
+  profile and from `enable_list` is loaded, listed, and **never evaluated at
+  exit 0**. So a passing lint run is not evidence the rule ran — which is why
+  the wiring instructions treat `enable_list` as mandatory and the harness
+  keeps a negative control that reproduces the silence.
+- **It cannot see an undefined-variable target.** `hosts: "{{ undefined }}"`
+  is failed first by the unskippable built-in `syntax-check`, before any
+  custom rule is evaluated. That play is still caught, by a different rule
+  with a different message — but not by this guard.
+
+**Classes 2–6 remain unenforced**, and `B-011` covers class 1 only.
 
 Two further honest limits:
 

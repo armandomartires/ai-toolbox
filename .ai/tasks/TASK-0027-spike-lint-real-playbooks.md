@@ -231,11 +231,28 @@ it fires** — without that proof the route is strictly worse than
    evaluated, at exit 0**. That is this repo's unfailable-check defect
    reachable by a one-line config mistake, and it converts the
    recommendation into a *conditional* one.
-3. **My first probe used a wrong API signature** (`create_matcherror(...,
-   lineno=1)`), corrected against `rules/complexity.py`'s real
-   `(message, filename, data)` form. Recorded because it measures the
-   coupling cost the brief raised in the abstract: the API is stable enough
-   to target, **not guessable** — write against the installed source.
+3. ~~**My first probe used a wrong API signature**~~ — **THIS CLAIM WAS FALSE
+   AND IS RETRACTED (2026-09-16, found while starting `TASK-0031`).** I wrote
+   that `create_matcherror(..., lineno=1)` was invalid and had been corrected
+   to `rules/complexity.py`'s `(message, filename, data)` form.
+   `rules/__init__.py:85-95` gives the real signature —
+   `create_matcherror(message="", lineno=1, column=None, details="",
+   filename=None, tag="", transform_meta=None, data=None)` — so **`lineno` is
+   a documented parameter and the original call was valid.** Proven by
+   re-running a rule that uses the original form: it fired on both playbooks.
+   **The probe's silence had ONE cause — `profile: production` filtering an
+   unlisted rule — and I reported two.** I changed two things at once and
+   credited the fix to the wrong one.
+   **This is the exact defect class this repo tracks most, committed in the
+   log of a spike whose premise is that unverified beliefs must not enter an
+   ADR.** The surviving lesson is narrower and still useful: **write against
+   the installed source** (`rules/__init__.py`, not a sibling rule's call
+   style, which shows only one valid form of several).
+   **Spread, checked rather than assumed:** the false claim reached **two**
+   files — this brief (twice) and `SESSION-20260917-0200`. It did **not** reach
+   `ADR-0014` or `ADR-0016`, verified by grep; my first note about this
+   retraction said it had, which would have been a second unverified claim
+   inside the correction of the first.
 4. **The clean pass required editing `ansible.cfg`** (dropping
    `vault_password_file`), so it is a result about a *modified* config. That
    is a second, independent reason the run is not evidence about the repo's
@@ -382,12 +399,16 @@ it fires** — without that proof the route is strictly worse than
     `pre-commit` hook fires at commit time only and would **not** fire when
     an agent lints through MCP. Since S6's whole premise is guarding *agent*
     behaviour, that asymmetry is decisive.
-  - The counter-argument (coupling to a moving rule API) is **real and was
-    measured**: my first probe used a plausible `create_matcherror(...,
-    lineno=1)` signature and had to be corrected against
-    `rules/complexity.py`'s actual `(message, filename, data)` form. The API
-    is stable enough to target but not guessable — a guard must be written
-    against the installed source, and re-verified on upgrade.
+  - The counter-argument (coupling to a moving rule API) is **real but was
+    NOT measured here — see deviation 3, which retracts the measurement I
+    claimed.** `create_matcherror` accepts `message`, `lineno`, `column`,
+    `details`, `filename`, `tag`, `transform_meta` and `data`
+    (`rules/__init__.py:85-95`), and the form I called "wrong" was valid. So
+    this spike produced **no** evidence that the API is hard to target. The
+    coupling argument stands on its own terms — a custom rule subclasses an
+    upstream class and can break on upgrade — and a guard must be written
+    against the installed source and re-verified on upgrade. **What I cannot
+    claim is that I hit that cost.**
   - **Declarative wiring is the tiebreaker.** `enable_list:` in a committed
     `.ansible-lint` means adoption is one reviewable line, with no CLI
     wrapper for anyone to forget.

@@ -1,0 +1,21 @@
+---
+# FIXTURE 5b — MUST PASS (guard silent).
+#
+# Mirrors the real estate's `report_pve_baseline_drift.yml`: `hosts: localhost`.
+#
+# Deliberately STRONGER than the real file, which is `gather_facts: false`. Here
+# facts ARE gathered, with no exclusion — so the play is hazardous in every
+# respect except that its target is not in the hazard class. A guard that fires
+# on this one is over-broad: it would flag every localhost play in every repo
+# that wires it in, and get disabled.
+#
+# Unlike 5a, this fixture does discriminate: a guard that treats "cannot
+# confirm PVE-class" as "assume hazardous" fails here.
+- name: Report locally with facts gathered (safe — not a PVE target)
+  hosts: localhost
+  gather_facts: true
+  connection: local
+  tasks:
+    - name: Reads state written by an earlier play; touches no PVE node
+      ansible.builtin.debug:
+        msg: "localhost is not in the hazard class"

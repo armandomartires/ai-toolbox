@@ -27,9 +27,99 @@ before doing any work**, so it gets no checkpoint — there is nothing to
 check. **B-019/B-020 stay `ready`**, by the same rule that held B-010…B-013
 `ready` through S6's park.
 
-**What is actually outstanding in S6:** **`TASK-0031`, `TASK-0032`,
-ratification of the three ADRs, and a checkpoint.** `TASK-0026`, both spikes
-and all three ADR bodies are **done (2026-09-16)**.
+**What is actually outstanding in S6:** **`TASK-0032`, ratification of the
+three ADRs, and a checkpoint.** `TASK-0026`, both spikes, **`TASK-0031`** and
+all three ADR bodies are **done (2026-09-16)**. **All five of Phase 6's exit
+criteria are met**; what remains is judgment, not implementation.
+
+## S6's highest-value deliverable exists and is proven to fire
+
+**`TASK-0031` closed B-011** (2026-09-16). A rule written down in another
+repository's `ansible.cfg` as *"A code-review or CI check should confirm
+this… **Tracked as unenforced until then**"* is now mechanically checkable:
+`skills/ansible-ops/scripts/gather_subset_guard.py`, a custom `ansible-lint`
+rule (`gather-subset-mounts`) that refuses a play gathering facts against a
+hazard-class host without excluding `mounts`. It recognises **both** accepted
+forms, resolves a **bare hostname** to its class through nested inventory
+`children:`, and fails loudly on an unresolvable target with a **distinct**
+message.
+
+**Three S6 backlog items are now closed by S6's own execution** — B-012/B-013
+(`TASK-0026`) and B-011 (`TASK-0031`). **B-010 alone remains**, and its two
+components were already delivered by S7's pilot, so what is left for it is the
+checkpoint's judgment on whether that route counts.
+
+**The decisive evidence is outside the fixture set, and that was the whole
+point of `TASK-0052`'s D2.** Seven fixtures pass (10 checks including
+harness-level ones), but fixture 5's silence proves nothing on its own. So the
+guard was run against the **real** estate: silent on both actual playbooks,
+then — with `capture_pve_baseline.yml`'s `gather_facts: false` flipped to
+`true` **in a `/tmp` copy only** — it produced
+
+```
+gather-subset-mounts: MISSING EXCLUSION: this play gathers facts against
+hazard-class target 'sigsrvpve1' without excluding `mounts`.
+```
+
+resolving the real hostname through the real nested inventory
+(`pve_cluster` → `pve_voting` → `sigsrvpve1`). **That is what makes the silence
+on the unmodified playbook discriminating rather than inert.**
+`SIGMA-infrastructure` was never written to — verified after: `git status`
+empty, `HEAD` `d4e2dd1`, `[ahead 42]`, playbook still `gather_facts: false`.
+
+**Three defects were found during execution, two of them mine, and each
+changes something beyond this task:**
+
+1. **`TASK-0027`'s recommendation was WRONG on its own tiebreaker.** It called
+   `enable_list:`-plus-`rules:` config in `.ansible-lint` the "declarative
+   wiring tiebreaker". Per-rule configuration of a **custom** rule is a
+   **fatal** error: the config schema's `$defs.rule` sets
+   `additionalProperties: false` and permits only `exclude_paths`, so
+   `rules: {gather-subset-mounts: {...}}` yields *"Additional properties are
+   not allowed"* at **exit 3, nothing linted**. `AnsibleLintRule.get_config()`
+   exists, reads `options.rules[<id>]`, and **the schema forbids ever
+   populating it** — an API reachable only by an illegal config. Configuration
+   is by environment variable, and **the loss is recorded rather than hidden**:
+   rule config now lives outside the committed lint config, so it is not
+   reviewable alongside it. `enable_list` *is* legal, so enabling stays
+   declarative; only configuring cannot be.
+2. **Fixture 4 could never reach the rule it was written to exercise.**
+   `hosts: "{{ undefined }}"` is failed first by the built-in `syntax-check`,
+   which is **unskippable** (*"you cannot use it in 'skip_list' or
+   'warn_list'"*). Replaced with a **wildcard pattern**, which is
+   syntactically valid and still unresolvable. **The ambiguity branch was
+   unreachable by its own test case, and a passing suite would not have
+   revealed it** — the branch would simply never have run.
+3. **My fires-proof harness had the defect it was built to prevent.** It
+   matched the rule **ID**, which appears in `ansible-lint`'s *error* text
+   (`$.rules['gather-subset-mounts']`). With defect 1 active, four fixtures
+   were reported as *"fired but WRONG MESSAGE"* rather than *"did not fire"* —
+   **so a careless read concludes the rule works and merely words things
+   badly, when it had not run at all.** Fixed to match the rule's own messages,
+   plus a `config_ok` pre-flight that aborts if the config is rejected. This is
+   TASK-0042's lesson in a new place: **match on the check's own message, never
+   on a string that also appears in unrelated output.**
+
+**The guard ships with four limits stated in the artifact, not only here:** it
+proves a keyword is present, not that a node is safe (the hazard is not
+reproducible on demand); **nothing in this repo runs it**, deliberately, since
+it lints other repositories and the gate must stay hermetic (ADR-0009); it can
+be **installed and inert** without `enable_list`; and it cannot see an
+undefined-variable target. Classes 2–6 of `references/hazards.md` remain
+unenforced — B-011 covered class 1 only.
+
+**A shipped false claim was created and corrected in the same change.**
+`references/hazards.md` said *"This repository ships NO enforcement of any
+hazard class… no guard, no hook, no wrapper, no linting rule."* True when
+written; **false the moment the guard landed.** That is the
+self-describing-artifact class `TASK-0046` diagnosed, occurring in the sprint
+that delivered the guard. Replaced with what is now true, supersession visible.
+
+**The mandatory gate is unaffected, measured not assumed:** 1111 / 1108 /
+1073 ms on `/mnt/c` after the change, against `~1150 ms` recorded by
+`REVIEW-0008` before it. The guard and its harness sit **outside** the gate.
+Timed on `/mnt/c` deliberately — `/tmp` (ext4) understates by ~40% and would
+have compared filesystems rather than changes.
 
 **S6 now has real implementation, which changes one standing fact about it.**
 Un-parking was free because the sprint had built nothing; `TASK-0026` ends

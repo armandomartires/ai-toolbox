@@ -1,0 +1,14 @@
+---
+# FIXTURE 1 — MUST FAIL.
+#
+# The base hazardous case: a play targeting a PVE-class GROUP, gathering
+# facts, with no exclusion. Detected by group name alone, so this is the one
+# case a naive guard also catches — which is why it cannot be the only
+# negative fixture (see fixture 6).
+- name: Gather facts against the PVE cluster group (hazardous)
+  hosts: pve_cluster
+  gather_facts: true
+  tasks:
+    - name: Something harmless after the damage is already done
+      ansible.builtin.debug:
+        msg: "the hazard is the fact gathering above, not this task"

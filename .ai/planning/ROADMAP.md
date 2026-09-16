@@ -176,8 +176,10 @@ any agent or human can understand, trust, and deploy.
   mechanism was added then, and the omission repeated. Recorded rather
   than quietly backfilled.
 - Exit criteria — ~~none met; the sprint was parked before implementation
-  began~~ **four of five met as of 2026-09-16**; each is marked below.
-  Wording is otherwise as written on 2026-09-14:
+  began~~ **ALL FIVE met as of 2026-09-16**; each is marked below. Wording is
+  otherwise as written on 2026-09-14. **What remains for the phase is not an
+  exit criterion but a judgment**: ratifying the three ADRs and writing the
+  checkpoint.
   - **MET** — `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
     execution or system package installation (TASK-0026). It now carries a
     `workspace_root_bounds` key splitting `bounded` from `not_bounded` per
@@ -190,10 +192,17 @@ any agent or human can understand, trust, and deploy.
     repo cannot switch off a tool in the upstream server.
   - **MET** — `skills/ansible-ops/` and `loops/ansible-change/` exist and pass
     the gate (TASK-0029, TASK-0030) — delivered by Phase 7's pilot.
-  - **NOT MET — the one criterion still open.** The
+  - **MET 2026-09-16 (TASK-0031), including the amendment below.** The
     `gather_subset`/`ansible_mounts` guard is **observed failing** on
     a broken fixture and on an ambiguous `hosts:` case, and observed
     silent on the two known-good playbooks (TASK-0031).
+    **Met beyond the wording:** the *real* playbook was flipped to
+    `gather_facts: true` in a `/tmp` copy and the guard fired naming
+    `sigsrvpve1`, resolved through the real nested inventory — so the
+    silence on the unmodified playbook is discriminating rather than
+    inert, which is the gap D2 identified. A fires-proof ships
+    (`tests/gather-subset-guard.sh`, 10 checks) with a negative control
+    reproducing the `enable_list` silent-no-op trap.
     **Amended 2026-09-16 (D1/D2/D3):** this criterion as written is
     insufficient — all three of its cases pass for a guard that resolves no
     hostnames. It now additionally requires the guard **observed failing**
@@ -216,11 +225,20 @@ any agent or human can understand, trust, and deploy.
   longer true: `TASK-0026` is the phase's first real implementation, so a
   second park would now cost reconciliation. Recorded because the original
   parking note made exactly this prediction.
-  - Outstanding: **`TASK-0031`, `0032`, ratification of the three ADRs, and a
-    checkpoint.** `TASK-0026`, both spikes (`TASK-0027`, `TASK-0028`) and all
-    three ADR bodies are **done, 2026-09-16**. **`TASK-0026` closed B-012 and
-    B-013** — the first S6 items resolved by S6's own execution rather than by
-    another sprint's route — and found the false blast-radius claim in **six**
+  - Outstanding: **`TASK-0032`, ratification of the three ADRs, and a
+    checkpoint.** `TASK-0026`, both spikes (`TASK-0027`, `TASK-0028`),
+    **`TASK-0031`** and all three ADR bodies are **done, 2026-09-16**.
+    **Three backlog items closed by S6's own execution:** B-012/B-013
+    (`TASK-0026`) and **B-011 — the highest-value item in either sprint —
+    by `TASK-0031`**, whose guard is delivered *and proven to fire*. B-010
+    alone remains, its components already delivered by Phase 7's pilot.
+    **`TASK-0031` also falsified `TASK-0027`'s own recommendation**: per-rule
+    configuration in `.ansible-lint` is a **fatal** error for a custom rule
+    (`additionalProperties: false`, exit 3), so the "declarative wiring
+    tiebreaker" does not exist and configuration is by environment variable —
+    a recorded downgrade, since rule config now sits outside the committed
+    lint config. `TASK-0026` closed B-012/B-013 and found the false
+    blast-radius claim in **six**
     places rather than the four its brief predicted, the extras being
     `docs/operations/runbook.md` and a *lessons* list. It also **declined one
     of its own acceptance criteria**: the "LM Studio supplies models only"

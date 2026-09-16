@@ -1,0 +1,23 @@
+---
+# FIXTURE 7 — MUST FAIL.
+#
+# Added by TASK-0052 (defect D3).
+#
+# This play HAS a `module_defaults:` block, so a guard that checks for the
+# presence of that key rather than for a `gather_subset` under
+# `ansible.builtin.setup` will accept it — while facts are still gathered
+# unguarded.
+#
+# The scope here mirrors the real playbook's
+# (`group/community.proxmox.proxmox`, supplying API connection parameters),
+# which is exactly why the real playbook could not be used to test this: it is
+# `gather_facts: false`, so it is safe for a different reason and hides the
+# defect.
+- name: Facts gathered with module_defaults scoped to something else (hazardous)
+  hosts: pve_voting
+  gather_facts: true
+  module_defaults:
+    group/community.proxmox.proxmox:
+      api_host: "fixture.invalid"
+      api_user: "fixture@pve"
+      api_timeout: 30

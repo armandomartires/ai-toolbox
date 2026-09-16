@@ -12,7 +12,7 @@
 | B-008 | Unify `.ai/decisions/` file naming (`ADR-NNNN-*` vs `NNNN-*`) | low | low | none | low | **done** | TASK-0024 — 7 files renamed to `NNNN-*`; found `.ai/README.md` was prescribing the *old* scheme |
 | B-009 | `project-migration` scaffolds `ADR-NNNN-*.md`, diverging from `project-workflow`'s `NNNN-*` | low | low | none | low | **done** | TASK-0025 — closed as **decided, not implemented** (ADR-0013). Its premise was false: the skills scaffold two different frameworks, not one spelled two ways |
 | B-010 | No instruct layer for the `ansible` MCP server | high | high | none | medium | **ready** | S6 / TASK-0029, TASK-0030 — scoped by PLAN-0003 against a real Ansible repo before estimating; six claims in the source analysis were corrected first |
-| B-011 | A documented, statically checkable, unenforced Ansible safety rule | high | high | B-010 (shares the skill's vocabulary) | medium | **ready** | S6 / TASK-0031 — `gather_subset: "!mounts"`; the rule and its failure mode are already written down in the target repo, so nothing needs inventing. **Both blockers cleared 2026-09-16**: TASK-0027 is `done` (guard's home = a custom `ansible-lint` rule wired via `enable_list:`) and ADR-0016 has a body (**no `hooks/` category**). Two conditions now bind this item, and neither was in its original scope: (a) **it is not closed by a green fixture run** — TASK-0052's D1/D2 showed the original five fixtures were all satisfiable by a guard that resolves no hostnames, so closure requires **fixture 6** (PVE host by bare hostname, `gather_facts: true`) observed *failing*; and (b) the guard must ship a **fires-proof**, because TASK-0027 observed that a custom rule outside the active profile is loaded, listed and **never evaluated at exit 0**. Without (b) this route is strictly worse than `pre-commit` |
+| B-011 | A documented, statically checkable, unenforced Ansible safety rule | high | high | B-010 (shares the skill's vocabulary) | medium | **done** | **Closed 2026-09-16 by TASK-0031** — S6's highest-value deliverable. `skills/ansible-ops/scripts/gather_subset_guard.py` is a custom `ansible-lint` rule (`gather-subset-mounts`) recognising **both** accepted forms, resolving a **bare hostname** to its hazard class through nested inventory `children:`, and failing loudly on an unresolvable target with a distinct message. **Both closure conditions added by TASK-0052 were met, not waived:** (a) **fixture 6 observed failing**, and beyond it the *real* playbook was flipped to `gather_facts: true` in a `/tmp` copy and the guard named `sigsrvpve1` resolved through the real inventory — so the silence on the unmodified playbook is discriminating rather than inert; (b) the **fires-proof ships** as `tests/gather-subset-guard.sh` (10 checks, PASS/FAIL/SKIP) **including a negative control that reproduces the `enable_list` silent-no-op trap**. Three defects were found and fixed during execution, two of them mine: `TASK-0027`'s "declarative wiring" recommendation is **wrong** (per-rule config in `.ansible-lint` is a fatal error for a custom rule, so `get_config()` is unreachable — config is by env var); fixture 4 could never reach the rule (`syntax-check` is unskippable and fails an undefined-variable target first); and my harness matched the rule **ID**, which appears in ansible-lint's own error text, so four fixtures read as "fired" when the rule had not run. **Closed with four stated limits**, all in the artifact rather than only in the log: it proves a keyword not a safe node; nothing in this repo runs it (ADR-0009); it can be installed and inert without `enable_list`; and it cannot see an undefined-variable target. Classes 2–6 of `references/hazards.md` remain unenforced — this item covered class 1 only |
 | B-012 | `server.json` overstates `WORKSPACE_ROOT` as the blast radius | medium | medium | none | low | **done** | **Closed 2026-09-16 by TASK-0026.** False for `ansible_navigator` (remote infra) and `ade_setup_environment` (system packages). The manifest now carries a `workspace_root_bounds` key splitting `bounded` from `not_bounded` per tool. **The item's own scope was too small: it said "restated in all 3 wiring snippets", making four locations. There were six** — the fifth was `docs/operations/runbook.md:185`, telling an operator wiring up a live client that this *was* the blast radius, and the sixth was a *lessons* list in `configs/lm-studio-bionic/README.md:253`. Both were found by grepping for the phrase rather than by trusting the count. A final grep returns nothing outside `.ai/`. **Lesson 6's shape again — an item's own statement of a defect can under-count it** |
 | B-013 | `ansible_navigator` cannot express the safe workflow but can execute unsafely | high | high | none | low | **done** | **Closed 2026-09-16 by TASK-0026.** No inventory/limit/`--check`/`--diff` parameter exists (re-verified); disabled by default in all three wiring snippets with the reason, plus a `disabled_tools` key in the manifest. Human authorization 2026-09-14, **re-confirmed 2026-09-16** before the edit; `authorization.history` now shows the original five-tool grant *and* the narrowing, so the record reads as a human reducing scope rather than being quietly adjusted. **Closed with a stated limit: the disablement is ADVISORY.** This repo cannot switch off an upstream tool — every documented command still starts a server exposing all ten, and a user can re-enable it. What closed is the *default* exposure and the false description; `TASK-0028` separately found a real per-client enforcement route (OpenCode `tool.execute.before`) that `ADR-0016` **declined** as non-portable |
 | B-014 | ~~`agent-tiers` is unowned~~ — **premise false**; it is drifted and has never been switched on, but it **has an owner** | high | medium | none | medium | **CLOSED 2026-09-15 — decided, not implemented** | Closed by ADR-0017's **rejection** (human decision): `agent-tiers` stays with `opencode-customization`. The *item's premise* was the defect; the roles it wanted are authored fresh by TASK-0045 instead. S7 / TASK-0034 **done**. The "unowned" premise is **retracted**: `opencode-customization` kept it deliberately (commit `9bae137`, 2026-09-13, explicit user decision, stated reason, **unpulled reopen trigger**). This repo read ADR-0004's four-day-old quotation of that repo's *older* roadmap and never re-read the source after `S027` ran. Drift is fully characterised and benign: repo copy newer for **both** files from one commit, **no unique fix** on the installed side, all 4 model IDs still resolve. ADR-0017 is **blocked, not ready**; option 3 (take the four roles into `agents/`, leave the installer) recommended in TASK-0034's log |
@@ -24,11 +24,15 @@
 | B-020 | `tests/smoke-mcp.sh` reports FAIL where the truth is an unmet precondition | medium | medium | B-019 (found while scoping it) | low | **ready** | S8 / TASK-0049. Found by reading `@sentropic/graphify`'s source, not by running anything: `src/serve.ts:188-195` has `createReloadingGraphStore` call `validateGraphFilePath`, then `console.error` + `process.exit(1)`, and `:896-897` defaults the graph path to `resolveGraphInputPath()`. So `graphify serve` with no `.graphify/graph.json` exits 1 without ever speaking MCP, and the smoke test — which launches from `launch.command` and asserts on an `initialize` reply — would call that a **FAIL**. Its own header insists three outcomes exist and that *"a SKIP is not a pass"*; this is **the mirror defect, a check lying in the other direction**, and it is latent for any future server with a state precondition, not only graphify. Fixing it edits a shared validated test file, so a human authorizes it (`PLAN-0005`, item 4). Either outcome is acceptable — precondition-aware SKIP, or a **visible** exclusion — but never a silent false FAIL |
 | B-021 | `qa-test` cannot run tests — the role's own description says it does | high | high | none | low | **ready** | Raised 2026-09-16 by REVIEW-0008, from the S7 pilot's most actionable finding. `agents/qa-test/agent.md:13-16` declares `bash_allow: git status*, git diff*, git log*`, which emits `bash: {"*": deny, …}` — so it cannot run `pytest`, `npm test` or `tests/validate.sh`, while `docs/registry.md` advertises it as *"Writes and **runs** tests … reports pass/fail evidence"*. **The role makes a false claim about itself**, which is precisely the class TASK-0046 diagnosed. The pilot observed the boundary working correctly (it refused to claim unobserved passes) — the defect is the **vocabulary**, not the role's behaviour. Needs a *decision*, not a widened allowlist: a test-command allowlist term, scoped per client under ADR-0018, in definition→enforcement→emission order (ADR-0008), as `delegation-allowlist` and `bash_allow` both were. **Do not resolve it by adding `bash: allow`** — that hands a test runner arbitrary shell and dissolves the boundary the role exists to have. Until it is fixed, the description overstates the role and should be read as aspirational |
 
-**Six items are open — B-010 and B-011 (S6, **current** since 2026-09-16),
-B-018, B-019…B-020 (S8, **re-queued** 2026-09-16), and B-021 (raised
-2026-09-16 by REVIEW-0008). B-012 and B-013 closed 2026-09-16 by
-TASK-0026**; both were corrections to *this repo's own claims* rather than to
-a component, and B-012's own scope under-counted its defect by two locations.
+**Five items are open — B-010 (S6, **current** since 2026-09-16), B-018,
+B-019…B-020 (S8, **re-queued** 2026-09-16), and B-021 (raised 2026-09-16 by
+REVIEW-0008). Three S6 items closed 2026-09-16 by S6's own execution:**
+B-012 and B-013 by `TASK-0026`, and **B-011 — the highest-value item in either
+sprint — by `TASK-0031`**. B-012 and B-013 were corrections to *this repo's own
+claims* rather than to a component, and B-012's own scope under-counted its
+defect by two locations. **B-010 alone remains, and its two components were
+already delivered by S7's pilot**, so what is left is the checkpoint's judgment
+on whether that route counts.
 B-015…B-017 closed 2026-09-16** as **delivered by S7** — the portability
 decision (ADR-0018), the `agents/` category for `agents/` only, and the
 design stage. **B-014 closed 2026-09-15** as *decided, not implemented*:
@@ -84,24 +88,28 @@ the only one where
 the falsehood propagated into two ADRs and four tasks before a human caught
 it by noticing a product name.
 
-**B-010…B-013 stayed `ready` through S6's park, and B-010/B-011 stay `ready`
-now S6 is current again** (un-parked 2026-09-16 by `TASK-0052`; **S8 is
-re-queued**). Neither a park nor a re-queue un-scopes a backlog item: the
-items describe real gaps that are still real. Their "Ready when" column still
-names S6's task numbers, which remain the plan of record for them.
-**B-012 and B-013 are now closed** (TASK-0026, 2026-09-16), which is the
-first S6 item pair resolved by S6's own execution rather than by another
-sprint's route. S7's pilot
-(TASK-0046) delivered B-010's two components by another route, while
-**B-011 — the highest-value item in either sprint — remains untouched.**
+**B-010…B-013 stayed `ready` through S6's park; only B-010 is still `ready`
+now** (S6 un-parked 2026-09-16 by `TASK-0052`; **S8 is re-queued**). Neither a
+park nor a re-queue un-scopes a backlog item: the items describe real gaps that
+are still real. Their "Ready when" column still names S6's task numbers, which
+remain the plan of record for them.
+**B-011, B-012 and B-013 are now closed** (TASK-0031 and TASK-0026,
+2026-09-16) — the first S6 items resolved by S6's own execution rather than by
+another sprint's route. S7's pilot (TASK-0046) delivered B-010's two components
+by that other route, so **B-010 is the only S6 item left**, and what remains
+for it is the checkpoint's judgment on whether delivery-by-another-sprint
+counts.
 
-**B-011's task has since been corrected in four places** (`TASK-0052`), and
-one correction changes what "done" means for this item: TASK-0031's original
-five fixtures were **all satisfiable by a guard that resolves no hostnames
-at all**, because the estate's one PVE playbook targets `sigsrvpve1` by bare
-hostname rather than by group. B-011 is not closed by a green fixture run —
-it is closed by fixture 6 (bare hostname, `gather_facts: true`) being
-**observed failing**.
+**B-011's closure condition was met rather than waived, and that is the point
+worth carrying forward.** `TASK-0052` found that TASK-0031's original five
+fixtures were **all satisfiable by a guard that resolves no hostnames at
+all**, because the estate's one PVE playbook targets `sigsrvpve1` by bare
+hostname rather than by group. So the bar was raised: closure required
+**fixture 6** (bare hostname, `gather_facts: true`) **observed failing**. It
+was — and beyond it, the *real* playbook was flipped to `gather_facts: true`
+in a `/tmp` copy and the guard named `sigsrvpve1`, resolved through the real
+nested inventory. **That is what makes its silence on the unmodified playbook
+evidence rather than inertia.** A green fixture run would not have shown it.
 
 **B-019 and B-020 stay `ready` through S8's re-queue**, by the same rule.
 B-020 in particular is latent for **any** future stateful MCP server, so it

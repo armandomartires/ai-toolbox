@@ -110,6 +110,75 @@ Skills the repo does not own (e.g. `agent-tiers` under OpenCode) are never
 touched. Every client in `install.sh`'s list must have a
 `configs/<client>/README.md`; `tests/validate.sh` enforces the pairing.
 
+## Wiring the `gather_subset` guard into a consuming Ansible repository
+
+`skills/ansible-ops/scripts/gather_subset_guard.py` is a custom
+`ansible-lint` rule (`gather-subset-mounts`). It refuses a play that gathers
+facts against a hazard-class host without excluding `mounts`. **Nothing in
+`ai-toolbox` runs it** — it lints *other* repositories' Ansible content, and
+the mandatory gate must stay offline and hermetic (ADR-0009), so
+`ansible-lint` is deliberately not a dependency here.
+
+**Why a lint rule rather than a `pre-commit` hook** (TASK-0027): a custom rule
+runs wherever `ansible-lint` runs — `pre-commit`, CI, an editor, **and the
+pinned ansible MCP server's own lint tool**. A standalone hook fires at commit
+time only, so it would not see an agent linting through MCP, which is the case
+S6 exists to guard.
+
+### Steps
+
+**1. Copy the rule into a rules directory** in the consuming repo, e.g.
+`.ansible-lint-rules/gather_subset_guard.py`. It has no dependencies beyond
+`ansible-lint` itself and `PyYAML`.
+
+**2. Enable it in `.ansible-lint`. This is mandatory, not advisory:**
+
+```yaml
+profile: production
+rulesdir:
+  - .ansible-lint-rules
+enable_list:
+  - gather-subset-mounts
+```
+
+**Without `enable_list` the rule is loaded, listed by `-L`, and never
+evaluated — at exit 0.** Observed in TASK-0027 and reproduced as a negative
+control in `tests/gather-subset-guard.sh`. A lint run that passes is therefore
+**not** evidence the rule ran.
+
+**3. Configure it by environment variable, not in `.ansible-lint`:**
+
+```bash
+export GATHER_SUBSET_GUARD_HAZARD_GROUPS=pve_cluster
+export GATHER_SUBSET_GUARD_INVENTORY=inventory/production.yml
+```
+
+Both are comma-separated and optional; defaults are `pve_cluster` and a short
+list of common inventory paths. **A `rules:` block will not work** — the
+config schema's `$defs.rule` sets `additionalProperties: false` and permits
+only `exclude_paths`, so a custom key there is a **fatal** config error
+(exit 3, nothing linted). The `get_config()` API exists and the schema forbids
+reaching it. Consequence: rule configuration lives outside the committed lint
+config and is therefore not reviewable alongside it — an upstream constraint,
+not a choice.
+
+**4. Prove it fires before trusting it.** Run
+`tests/gather-subset-guard.sh` in *this* repo (manual; needs `ansible-lint`,
+reports PASS/FAIL/**SKIP** as three distinct outcomes). Then confirm in the
+consuming repo by temporarily flipping a known-safe play to
+`gather_facts: true` and checking the rule reports `MISSING EXCLUSION` naming
+that host. **Revert the flip.**
+
+### What it proves, and what it does not
+
+It proves a keyword is present in a play whose target resolves into a
+configured hazard group. **It does not prove a node cannot hang**: the hazard
+is an uninterruptible D-state stat on a wedged clustered filesystem, not
+reproducible on demand, so the rule is validated against **syntax**. It also
+does not see a play whose `hosts:` is an **undefined Jinja variable** — the
+unskippable built-in `syntax-check` fails the file first, so that case is
+caught by a different rule with a different message.
+
 ## Verifying an MCP server
 `tests/validate.sh` checks manifests **statically** — required keys, valid
 JSON, name/directory match, destructive capabilities carrying a granted
