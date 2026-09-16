@@ -68,14 +68,28 @@ risk: **sweeping the status columns is part of closing a sprint.**
 
 **Two S7 items were deliberately left open rather than tidied:** ADR-0014
 and ADR-0015 remain `proposed` while `skills/ansible-ops/` ships under them,
-and **ADR-0015's text now contradicts that shipped component** — it still
-argues for the `templates/`-filled-by-the-consumer shape the pilot tested
-and rejected (`install.sh:105` symlinks a deployed skill into this working
-tree, so filling a shipped template writes one estate's production facts
-into the portable component). Both ADRs belong to **parked S6**, so
-rewriting them inside another sprint's closure would muddle ownership.
-Recorded as REVIEW-0008 follow-up 4 so the next reader of ADR-0015 is warned
-before citing it.
+and **ADR-0015's one sketched clause is refuted** — it argues for the
+`templates/`-filled-by-the-consumer shape the pilot tested and rejected
+(`install.sh:105` symlinks a deployed skill into this working tree, so
+filling a shipped template writes one estate's production facts into the
+portable component). Both ADRs belong to **parked S6**, so writing them
+inside another sprint's closure would muddle ownership. Recorded as
+REVIEW-0008 follow-up 4 so the next reader of ADR-0015 is warned before
+citing it.
+
+**Reviewing that follow-up on 2026-09-16 found it was wrong twice, and the
+corrections are on the record rather than silent.** It said "rewritten" —
+but ADR-0015 has **no body to rewrite**: all three of its sections say *"to
+be written"*, and its dependency `TASK-0027` is still `planned`. And
+"contradicts a shipped component" overstated the scope: what is refuted is
+clause 1's *mechanism* (a consumer filling a template with estate facts),
+while the shipped `templates/change-record.md` holds no estate facts and says
+*"Copy this file to wherever your estate keeps records"* — copy-out, not
+fill-in-place. **The follow-up also missed a real defect that reviewing it
+found:** three S6 briefs record the ADR as `accepted`, two of them ran `done`
+anyway, and the waiver that permitted it was recorded only in this file
+(finding 8b, below). **A review's follow-up list is itself a claim about
+files, and decays the same way.**
 
 ## Sprint S8, planned and now current
 
@@ -889,16 +903,52 @@ may make **no claim resting on an observed lint result**, because
 the control venv, so that spike is now cheap to run — it was *not* the
 blocker the sprint assumed.
 
-**ADR-0015's intended clause 1 is now contradicted by evidence and must be
-rewritten before ratification.** Its "portable core plus per-project
-`templates/`" shape was marked *assumed* rather than hard, then **tested and
-found wrong**: `install.sh` deploys skills with `ln -sfn`, so a deployed
-skill is a symlink into this repo's working tree — an operator filling in a
-shipped `templates/estate-profile.md` would write one estate's production
-facts into the portable component. The pilot chose a **derived, persist
-nothing** shape instead. This is exactly what marking a constraint *assumed*
-was for, and it is the clearest instance yet of planning prose failing
-contact with a file.
+**ADR-0015's intended clause 1 is contradicted by evidence and must be
+*written* — not rewritten — before ratification** (verb corrected 2026-09-16
+by `REVIEW-0008`; see the two qualifications below). Its "portable core plus
+per-project `templates/`" shape was marked *assumed* rather than hard, then
+**tested and found wrong**: `install.sh` deploys skills with `ln -sfn`, so a
+deployed skill is a symlink into this repo's working tree — an operator
+filling in a shipped `templates/estate-profile.md` would write one estate's
+production facts into the portable component. The pilot chose a **derived,
+persist nothing** shape instead. This is exactly what marking a constraint
+*assumed* was for, and it is the clearest instance yet of planning prose
+failing contact with a file.
+
+**Two corrections from re-reading the ADR itself rather than these notes
+about it** — both instances of the class this file already tracks, a claim
+about a file that decays from the file:
+
+1. **There is no body to rewrite. ADR-0015 is a skeleton**: `## Context`
+   says *"To be completed when this ADR is written"*, `## Decision` says
+   *"To be written. Intended shape:"*, `## Consequences` says *"To be
+   written. Expected:"*. `PLAN-0003` opened it as a placeholder and
+   `TASK-0027` — its stated dependency — is still `planned`. So the open
+   work is **writing** it against observed evidence, in that order:
+   TASK-0027 first, then the body, then ratification. **Filling the sections
+   in from the plan's prose is how it reached this state**, and ADR-0014 owes
+   the same against the same spike.
+2. **"Contradicted" applies to clause 1's *mechanism*, not to `templates/`
+   as such.** What is refuted is a consuming repo filling a shipped template
+   with **estate facts**. What shipped holds none:
+   `skills/ansible-ops/templates/change-record.md` is nine placeholder
+   fields for a *per-change record*, and its line 30 reads *"Copy this file
+   to wherever your estate keeps records. **This skill does not say
+   where**."* Copy-out, not fill-in-place — so the directory survives and
+   only that clause's mechanism does not. Earlier wording here and in
+   REVIEW-0008 conflated the two.
+
+**Three S6 briefs record ADR-0015 as `accepted`, and two ran `done` with the
+precondition unmet** (`REVIEW-0008` finding 8b): `TASK-0029:93`,
+`TASK-0030:84`, `TASK-0032:84`. The rows sit under **"Expected state"**, so
+they are expectations rather than assertions — S5's handover contract working
+as designed — and TASK-0032 is still `planned`, so its expectation is
+legitimately forward-looking. But TASK-0029/0030 are `done`, and **the Option
+2 waiver was recorded only here, in this file**, not in the task files whose
+precondition it waived. A cold reader of TASK-0029 saw `done` above an unmet
+input with no explanation — a hole in the ADR-0012 invariant that a task be
+startable cold from its own file. **Both task files now carry the waiver**;
+the ADR statuses are untouched and stay S6's business.
 
 **F1, F2 and F5 were re-verified read-only on 2026-09-15** before being
 restated, per `PLAN-0003`'s own rule. All three hold: one inventory wired at

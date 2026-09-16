@@ -81,7 +81,7 @@ when verification disagrees with what Ansible reported. The last is the
 | `loops/_template/loop.md` | pre-existing | The scaffold; `name` must equal the directory |
 | `tests/validate.sh` | TASK-0008, TASK-0012 | `:193-213` loop checks: `name:`, `description:`, name==directory, and the three mandatory sections as exact `^## X$` headings |
 | `docs/development/authoring-guide.md` | pre-existing | `:69-91` the Loops section |
-| `ADR-0015` | this sprint | **accepted**; check+snapshot, not staging |
+| `ADR-0015` | this sprint | **accepted**; check+snapshot, not staging — **NOT MET: still `proposed`, waived by Option 2** (see the note below) |
 | `PLAN-0003` finding F1 | this session | Written; no staging inventory exists or can |
 | SIGMA `AGENTS.md` Change safety | pre-existing, read-only | The snapshot discipline this loop operationalises. **Read, never modified** |
 
@@ -89,6 +89,20 @@ when verification disagrees with what Ansible reported. The last is the
 first: if the skill's invariant names are still moving, the loop ends up
 referencing headings that then change — the exact failure S5 sequenced its
 tasks to avoid.
+
+> **And one expectation was never met, yet the task ran.** Added 2026-09-16
+> by `REVIEW-0008` finding 8b. `ADR-0015` is still **`proposed`**, not
+> accepted. This task was executed anyway by **human decision (Option 2,
+> 2026-09-15)** — built from `PLAN-0003`'s recorded F1–F7 evidence rather
+> than from a ratified ADR — and delivered by S7's `TASK-0046` pilot.
+>
+> The instruction directly above is the right one and was **not** followed
+> for that row, because the human waived it rather than the task ignoring
+> it. **The waiver lived only in `.ai/context/CURRENT_STATE.md`** until this
+> note, which left this file showing `done` above an unmet precondition. The
+> part of ADR-0015 the loop relies on — check+snapshot rather than staging
+> promotion (`PLAN-0003` F1: no staging inventory exists or can) — rests on
+> that recorded evidence, not on the ADR.
 
 ## Scope
 

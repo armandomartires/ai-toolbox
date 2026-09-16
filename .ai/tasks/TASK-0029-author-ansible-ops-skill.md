@@ -88,12 +88,38 @@ guide first, in bytes, with a rationale.
 
 ## Inputs
 
+> **WAIVED, and the task ran anyway — read this before trusting the first
+> two rows.** Added 2026-09-16 by `REVIEW-0008` finding 8b.
+>
+> This table's **"Expected state"** column is what the task expected, not
+> what it got. The `ADR-0014`/`ADR-0015` rows below say **accepted**; both
+> are still **`proposed`**, and both still are today.
+>
+> The task was executed regardless, by **human decision (Option 2,
+> 2026-09-15)**: the components were built from `PLAN-0003`'s recorded F1–F7
+> evidence instead of from ratified ADRs. The binding consequence was that
+> the design could make **no claim resting on an observed lint result**,
+> because `TASK-0027` is unrun.
+>
+> **The waiver lived only in `.ai/context/CURRENT_STATE.md`** until this
+> note, so a cold reader of this file saw `done` above an unmet precondition
+> with nothing explaining it — a hole in the ADR-0012 invariant that a task
+> be startable cold from its own file. Step 1 of the Plan below ("Confirm
+> ADR-0014 and ADR-0015 are accepted") was therefore **never satisfiable**
+> as written; it is left unedited as the record of what was expected.
+>
+> Also corrected by REVIEW-0008: ADR-0015's *intended* clause 1 (a consuming
+> repo fills a shipped `templates/` with estate facts) is **refuted** — a
+> deployed skill is a symlink into this repo (`install.sh:105`). What shipped
+> is a copy-out per-change record holding no estate facts, so `templates/`
+> itself survives; only that clause's mechanism does not.
+
 | Artifact | Produced by | Expected state |
 |----------|-------------|----------------|
-| `ADR-0015` | this sprint | **accepted**; records portable-core-plus-templates and check+snapshot-not-staging |
-| `ADR-0014` | this sprint | **accepted**; records the accepted MCP surface, so the skill does not reference absent tools |
-| TASK-0026 | this sprint | **done**; `ansible_navigator` disabled, so the skill's "identify inventory and limit" invariant does not contradict an enabled tool lacking those parameters |
-| TASK-0027 | this sprint | **done**; observed lint behaviour under `profile: production`, so lint claims rest on evidence |
+| `ADR-0015` | this sprint | **accepted**; records portable-core-plus-templates and check+snapshot-not-staging — **NOT MET: still `proposed`, waived by Option 2, and its intended clause 1 is refuted** |
+| `ADR-0014` | this sprint | **accepted**; records the accepted MCP surface, so the skill does not reference absent tools — **NOT MET: still `proposed`, waived by Option 2** |
+| TASK-0026 | this sprint | **done**; `ansible_navigator` disabled, so the skill's "identify inventory and limit" invariant does not contradict an enabled tool lacking those parameters — **NOT MET: still `planned`** (B-013 stays open) |
+| TASK-0027 | this sprint | **done**; observed lint behaviour under `profile: production`, so lint claims rest on evidence — **NOT MET: still `planned`**, which is why the shipped skill may make no claim resting on an observed lint result |
 | `skills/_template/` | pre-existing | `SKILL.md` + `assets/`, `references/`, `scripts/` — the shape to copy from |
 | `skills/project-workflow/` | TASK-0003, TASK-0020…0022 | `metadata.version: 3.2.0`; the `SKILL.md`-plus-`templates/` pattern to mirror |
 | `docs/development/authoring-guide.md` | pre-existing | `:8-15` frontmatter rules; `:17-21` no size budget; `:4` no README.md inside skill folders |
@@ -284,6 +310,15 @@ evidence — read these before citing this brief again:**
    portable component. The shipped design **derives per-estate facts and
    persists none**. **ADR-0015 must be rewritten before ratification**, not
    merely cited.
+   **Corrected 2026-09-16 by `REVIEW-0008` (the finding stands; two words in
+   it do not):** *"rewritten"* is wrong — ADR-0015 has **no body to
+   rewrite**, since all three of its sections say *"to be written"* and its
+   dependency `TASK-0027` is `planned`. It must be **written**, spike first.
+   And the rejection is of clause 1's *mechanism* — a consumer filling a
+   template with **estate facts** — not of `templates/` itself: what shipped
+   is `templates/change-record.md`, a per-change record holding no estate
+   facts, which says *"Copy this file to wherever your estate keeps
+   records."*
 2. **No claim rests on an observed lint result.** `TASK-0027` is still unrun
    (human decision: Option 2), so `lint_run` records only *that* lint ran.
 

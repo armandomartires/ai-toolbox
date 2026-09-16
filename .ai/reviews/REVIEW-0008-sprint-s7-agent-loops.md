@@ -150,26 +150,63 @@ the deployed file, not merely in the source. Worth preserving the *method*:
 both were found by set-differencing `key=action` pairs against the reference
 roles, and **both would have passed a read-through**.
 
-**8. ADR-0014 and ADR-0015 are still `proposed`, and ADR-0015 now
-contradicts a shipped component.** S6's decision to build from recorded
-evidence left both owing ratification; the pilot then shipped
-`skills/ansible-ops/` under them. ADR-0015's text still argues for
-"`templates/` carries blank forms the consuming repo fills in" (`:25`,
-`:80`, `:109`) — the shape the pilot **tested and found wrong**, because
+**8. ADR-0014 and ADR-0015 are still `proposed`, and ADR-0015's *intended*
+clause 1 is refuted by the component now shipping under it.** S6's decision
+to build from recorded evidence (Option 2) left both owing ratification; the
+pilot then shipped `skills/ansible-ops/`. ADR-0015's intended shape is
+"`templates/` carries blank forms the consuming repo fills in" (`:25`, `:80`,
+`:109`) — which the pilot **tested and found wrong**, because
 `install.sh:105` symlinks a deployed skill into this working tree, so an
 operator filling a shipped template writes one estate's production facts
-into the portable component. The shipped skill correctly uses the derived,
-persist-nothing shape (`SKILL.md:24`: *"derived per change, never declared
-and never stored"*).
+into the portable component. The shipped skill uses the derived,
+persist-nothing shape instead (`SKILL.md:23`: *"derived per change, never
+declared and never stored"*).
 
-So the ADR of record for a shipped component describes a rejected design.
-`CURRENT_STATE.md` already says clause 1 "must be rewritten, not cited",
-which is the right disposition — but it is a note in a narrative file, not a
-change to the ADR, and `ansible-ops` is shipping meanwhile. **Out of S7's
-scope** (both ADRs are S6's, parked) and left as a follow-up rather than
-rewritten here, because rewriting a parked sprint's ADR inside another
-sprint's closure is how ownership gets muddled. Recorded so the next reader
-of ADR-0015 is warned before citing it.
+**Corrected 2026-09-16, on re-reading the ADR rather than the notes about
+it** (this finding and follow-up 4 were both wrong in the same way, and the
+correction is shown rather than made silently):
+
+- **"Rewritten" was the wrong verb: there is no body to rewrite.** ADR-0015
+  is a **skeleton**. `## Context` says *"To be completed when this ADR is
+  written"*; `## Decision` says *"To be written. Intended shape:"*;
+  `## Consequences` says *"To be written. Expected:"*. PLAN-0003 opened it
+  as a placeholder and TASK-0027 — its stated dependency — is still
+  `planned`. The task is to **write** it against evidence, which is why it
+  cannot be done outside S6.
+- **"Contradicts a shipped component" overstates it.** What is refuted is
+  clause 1's *mechanism* — a consuming repo filling a shipped template with
+  **estate facts** (inventory names, escalation model, snapshot procedure).
+  The shipped `templates/change-record.md` holds **no estate facts**: it is
+  nine placeholder fields for a *per-change record*, and its line 30 says
+  *"Copy this file to wherever your estate keeps records. **This skill does
+  not say where**."* That is copy-out, not fill-in-place. So the existence
+  of `templates/` is **not** refuted, only the shape clause 1 wanted. The
+  original wording conflated the two.
+
+So the ADR of record for a shipped component is an unwritten skeleton whose
+one sketched clause is known wrong. **Out of S7's scope** (both ADRs are
+S6's, parked) and left as a follow-up, because writing a parked sprint's ADR
+from inside another sprint's closure — without the spike it depends on — is
+how ownership gets muddled and how ADR-0015 reached this state to begin with.
+
+**8b. Three S6 task briefs record ADR-0015 as `accepted`, and two of them
+are `done` with that precondition never met.** Found while correcting the
+above. `TASK-0029:93`, `TASK-0030:84` and `TASK-0032:84` all carry
+*"`ADR-0015` | this sprint | **accepted**"*.
+
+The mitigation is real and worth crediting: those rows sit in `## Inputs`
+under the column **"Expected state"**, so they are expectations rather than
+assertions, and `TASK-0029:161` makes verifying them step 1 — S5's handover
+contract working as designed.
+
+But **TASK-0029 and TASK-0030 are marked `done`** (delivered by the S7
+pilot) with that expectation still unmet, because the human waived it via
+Option 2. **The waiver is recorded in `CURRENT_STATE.md:883`, not in the
+task files whose precondition it waived** — so a cold reader of TASK-0029
+sees `done` above an unmet input and nothing explaining why. That is a hole
+in exactly the invariant ADR-0012 exists to protect (a task startable cold
+from its own file plus the two index files). Fixed by noting the waiver in
+both task files; the ADRs themselves stay S6's business.
 
 **9. No fabricated verification.** Three places where the honest record was
 available and cheaper: the filesystem confound in finding 2 is reported
@@ -251,11 +288,22 @@ recording a known-false status.
    file-count proves nothing about coverage**, because a missing session is
    missing from both. Any future check should compare task IDs against the
    `Tasks` column, not count rows.
-4. **ADR-0015 must be rewritten before it is next cited** (finding 8). Its
-   `templates/` shape is contradicted by `install.sh:105` and by the
-   component now shipping under it. ADR-0014 also still owes ratification.
-   Both are S6's, parked — so this belongs to whatever unparks S6, not to a
-   convenience fix.
+4. **ADR-0015 must be *written* — not rewritten — before it is next cited**
+   (finding 8, corrected 2026-09-16). It is a skeleton: all three of its
+   `## Context`, `## Decision` and `## Consequences` sections say *"to be
+   written"*, and its dependency `TASK-0027` is still `planned`. Its one
+   sketched clause (a consuming repo fills a shipped `templates/` with estate
+   facts) is refuted by `install.sh:105`. **This belongs to whatever unparks
+   S6, and the order matters**: TASK-0027 first — `ansible-lint 26.8.0` is
+   already present in the control venv, so the spike is cheap — then the ADR
+   bodies against observed evidence, then ratification. ADR-0014 owes the
+   same and depends on the same spike. **Writing either body without its
+   evidence is how ADR-0015 reached this state**, so do not close this by
+   filling the sections in from the plan's prose.
+   **Done for the record, 2026-09-16:** finding 8's own wording corrected,
+   the Option 2 waiver noted in TASK-0029/0030 (finding 8b), and
+   `CURRENT_STATE.md` brought into line. **No ADR body was written and no
+   status changed** — that is the part that is still open.
 5. **B-011 / TASK-0031 remains the highest-value undelivered item** from
    S6: the `gather_subset: "!mounts"` rule is documented and statically
    checkable, and still unenforced. The shipped `ansible-ops` skill states
