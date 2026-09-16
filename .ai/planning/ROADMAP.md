@@ -225,13 +225,18 @@ any agent or human can understand, trust, and deploy.
   longer true: `TASK-0026` is the phase's first real implementation, so a
   second park would now cost reconciliation. Recorded because the original
   parking note made exactly this prediction.
-  - Outstanding: **`TASK-0032`, ratification of the three ADRs, and a
-    checkpoint.** `TASK-0026`, both spikes (`TASK-0027`, `TASK-0028`),
-    **`TASK-0031`** and all three ADR bodies are **done, 2026-09-16**.
+  - Outstanding: **ratification of the three ADRs, and a checkpoint** — both
+    judgment rather than implementation. **All seven S6 tasks are done as of
+    2026-09-16**: `TASK-0026`, both spikes (`0027`, `0028`), `0031`, `0032`,
+    plus `0029`/`0030` delivered by Phase 7's pilot; and all three ADR bodies
+    are written.
     **Three backlog items closed by S6's own execution:** B-012/B-013
     (`TASK-0026`) and **B-011 — the highest-value item in either sprint —
-    by `TASK-0031`**, whose guard is delivered *and proven to fire*. B-010
-    alone remains, its components already delivered by Phase 7's pilot.
+    by `TASK-0031`**, whose guard is delivered *and proven to fire*. **B-010 is
+    closed too**, by Phase 7's pilot, so **all four of this phase's backlog
+    items are now closed** — the first fully-cleared slice in this repo. B-010
+    is closed **with its limitation stated**: components authored *from* the
+    target estate, never executed *in* it.
     **`TASK-0031` also falsified `TASK-0027`'s own recommendation**: per-rule
     configuration in `.ansible-lint` is a **fatal** error for a custom rule
     (`additionalProperties: false`, exit 3), so the "declarative wiring
@@ -287,7 +292,9 @@ any agent or human can understand, trust, and deploy.
     That is the phase's most transferable finding and it binds `TASK-0031`.
   - **`REVIEW-0009` is already reserved by Phase 8.** This phase's
     checkpoint must take the next free number.
-  - B-010…B-013 stay **ready**; nothing was resolved by the transition.
+  - B-010…B-013 stayed **ready** through the transition — nothing was resolved
+    by it. **All four have since been closed** by the phase's execution (and,
+    for B-010, by Phase 7's pilot).
 - **Four defects were found in this phase's own remaining plan before it
   resumed** (`TASK-0052`), all bearing on the guard, all by opening the
   files the briefs name (lesson 7):

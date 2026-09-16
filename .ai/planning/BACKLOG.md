@@ -11,7 +11,7 @@
 | B-007 | De-duplicate sync-registry.sh per-section loops (or assert no `_template*` row) | medium | medium | none | low | **done** | TASK-0011 — did both |
 | B-008 | Unify `.ai/decisions/` file naming (`ADR-NNNN-*` vs `NNNN-*`) | low | low | none | low | **done** | TASK-0024 — 7 files renamed to `NNNN-*`; found `.ai/README.md` was prescribing the *old* scheme |
 | B-009 | `project-migration` scaffolds `ADR-NNNN-*.md`, diverging from `project-workflow`'s `NNNN-*` | low | low | none | low | **done** | TASK-0025 — closed as **decided, not implemented** (ADR-0013). Its premise was false: the skills scaffold two different frameworks, not one spelled two ways |
-| B-010 | No instruct layer for the `ansible` MCP server | high | high | none | medium | **ready** | S6 / TASK-0029, TASK-0030 — scoped by PLAN-0003 against a real Ansible repo before estimating; six claims in the source analysis were corrected first |
+| B-010 | No instruct layer for the `ansible` MCP server | high | high | none | medium | **done** | **Closed 2026-09-16.** Its two components — `skills/ansible-ops/` and `loops/ansible-change/` — were **delivered by S7's pilot (`TASK-0046`, 2026-09-15)** under an Option 2 waiver, so this item was resolved *by another sprint's route* while S6 was parked. Scoped by PLAN-0003 against a real Ansible repo before estimating; six claims in the source analysis were corrected first. **Closed with the limitation stated rather than hidden** (see `TASK-0032` / `CURRENT_STATE.md`): under Option (a) the skill was authored **from** the target estate and **never executed in it**, so it carries the same status as `mcp-servers/_template/` — *treat as unexercised scaffolding*. What *was* exercised is the pair of loops that produced it, which is a different claim; and `TASK-0031`'s guard is the one S6 deliverable validated against real playbook content. **The gap this item named is filled; whether it is filled *well* is not something a backlog row can assert**, and the checkpoint should judge it |
 | B-011 | A documented, statically checkable, unenforced Ansible safety rule | high | high | B-010 (shares the skill's vocabulary) | medium | **done** | **Closed 2026-09-16 by TASK-0031** — S6's highest-value deliverable. `skills/ansible-ops/scripts/gather_subset_guard.py` is a custom `ansible-lint` rule (`gather-subset-mounts`) recognising **both** accepted forms, resolving a **bare hostname** to its hazard class through nested inventory `children:`, and failing loudly on an unresolvable target with a distinct message. **Both closure conditions added by TASK-0052 were met, not waived:** (a) **fixture 6 observed failing**, and beyond it the *real* playbook was flipped to `gather_facts: true` in a `/tmp` copy and the guard named `sigsrvpve1` resolved through the real inventory — so the silence on the unmodified playbook is discriminating rather than inert; (b) the **fires-proof ships** as `tests/gather-subset-guard.sh` (10 checks, PASS/FAIL/SKIP) **including a negative control that reproduces the `enable_list` silent-no-op trap**. Three defects were found and fixed during execution, two of them mine: `TASK-0027`'s "declarative wiring" recommendation is **wrong** (per-rule config in `.ansible-lint` is a fatal error for a custom rule, so `get_config()` is unreachable — config is by env var); fixture 4 could never reach the rule (`syntax-check` is unskippable and fails an undefined-variable target first); and my harness matched the rule **ID**, which appears in ansible-lint's own error text, so four fixtures read as "fired" when the rule had not run. **Closed with four stated limits**, all in the artifact rather than only in the log: it proves a keyword not a safe node; nothing in this repo runs it (ADR-0009); it can be installed and inert without `enable_list`; and it cannot see an undefined-variable target. Classes 2–6 of `references/hazards.md` remain unenforced — this item covered class 1 only |
 | B-012 | `server.json` overstates `WORKSPACE_ROOT` as the blast radius | medium | medium | none | low | **done** | **Closed 2026-09-16 by TASK-0026.** False for `ansible_navigator` (remote infra) and `ade_setup_environment` (system packages). The manifest now carries a `workspace_root_bounds` key splitting `bounded` from `not_bounded` per tool. **The item's own scope was too small: it said "restated in all 3 wiring snippets", making four locations. There were six** — the fifth was `docs/operations/runbook.md:185`, telling an operator wiring up a live client that this *was* the blast radius, and the sixth was a *lessons* list in `configs/lm-studio-bionic/README.md:253`. Both were found by grepping for the phrase rather than by trusting the count. A final grep returns nothing outside `.ai/`. **Lesson 6's shape again — an item's own statement of a defect can under-count it** |
 | B-013 | `ansible_navigator` cannot express the safe workflow but can execute unsafely | high | high | none | low | **done** | **Closed 2026-09-16 by TASK-0026.** No inventory/limit/`--check`/`--diff` parameter exists (re-verified); disabled by default in all three wiring snippets with the reason, plus a `disabled_tools` key in the manifest. Human authorization 2026-09-14, **re-confirmed 2026-09-16** before the edit; `authorization.history` now shows the original five-tool grant *and* the narrowing, so the record reads as a human reducing scope rather than being quietly adjusted. **Closed with a stated limit: the disablement is ADVISORY.** This repo cannot switch off an upstream tool — every documented command still starts a server exposing all ten, and a user can re-enable it. What closed is the *default* exposure and the false description; `TASK-0028` separately found a real per-client enforcement route (OpenCode `tool.execute.before`) that `ADR-0016` **declined** as non-portable |
@@ -24,15 +24,24 @@
 | B-020 | `tests/smoke-mcp.sh` reports FAIL where the truth is an unmet precondition | medium | medium | B-019 (found while scoping it) | low | **ready** | S8 / TASK-0049. Found by reading `@sentropic/graphify`'s source, not by running anything: `src/serve.ts:188-195` has `createReloadingGraphStore` call `validateGraphFilePath`, then `console.error` + `process.exit(1)`, and `:896-897` defaults the graph path to `resolveGraphInputPath()`. So `graphify serve` with no `.graphify/graph.json` exits 1 without ever speaking MCP, and the smoke test — which launches from `launch.command` and asserts on an `initialize` reply — would call that a **FAIL**. Its own header insists three outcomes exist and that *"a SKIP is not a pass"*; this is **the mirror defect, a check lying in the other direction**, and it is latent for any future server with a state precondition, not only graphify. Fixing it edits a shared validated test file, so a human authorizes it (`PLAN-0005`, item 4). Either outcome is acceptable — precondition-aware SKIP, or a **visible** exclusion — but never a silent false FAIL |
 | B-021 | `qa-test` cannot run tests — the role's own description says it does | high | high | none | low | **ready** | Raised 2026-09-16 by REVIEW-0008, from the S7 pilot's most actionable finding. `agents/qa-test/agent.md:13-16` declares `bash_allow: git status*, git diff*, git log*`, which emits `bash: {"*": deny, …}` — so it cannot run `pytest`, `npm test` or `tests/validate.sh`, while `docs/registry.md` advertises it as *"Writes and **runs** tests … reports pass/fail evidence"*. **The role makes a false claim about itself**, which is precisely the class TASK-0046 diagnosed. The pilot observed the boundary working correctly (it refused to claim unobserved passes) — the defect is the **vocabulary**, not the role's behaviour. Needs a *decision*, not a widened allowlist: a test-command allowlist term, scoped per client under ADR-0018, in definition→enforcement→emission order (ADR-0008), as `delegation-allowlist` and `bash_allow` both were. **Do not resolve it by adding `bash: allow`** — that hands a test runner arbitrary shell and dissolves the boundary the role exists to have. Until it is fixed, the description overstates the role and should be read as aspirational |
 
-**Five items are open — B-010 (S6, **current** since 2026-09-16), B-018,
-B-019…B-020 (S8, **re-queued** 2026-09-16), and B-021 (raised 2026-09-16 by
-REVIEW-0008). Three S6 items closed 2026-09-16 by S6's own execution:**
-B-012 and B-013 by `TASK-0026`, and **B-011 — the highest-value item in either
-sprint — by `TASK-0031`**. B-012 and B-013 were corrections to *this repo's own
-claims* rather than to a component, and B-012's own scope under-counted its
-defect by two locations. **B-010 alone remains, and its two components were
-already delivered by S7's pilot**, so what is left is the checkpoint's judgment
-on whether that route counts.
+**Four items are open — B-018, B-019…B-020 (S8, **re-queued** 2026-09-16), and
+B-021 (raised 2026-09-16 by REVIEW-0008). ALL FOUR S6 items are now closed**,
+which is the first time this repo has cleared a sprint's entire backlog slice:
+B-012 and B-013 by `TASK-0026`, **B-011 — the highest-value item in either
+sprint — by `TASK-0031`**, and **B-010 by S7's pilot** (delivered while S6 was
+parked, so by another sprint's route).
+
+Three things worth keeping visible about that:
+- B-012 and B-013 were corrections to **this repo's own claims** rather than to
+  a component, and **B-012's own scope under-counted its defect by two
+  locations** — it said four, there were six.
+- **B-011 was closed on a raised bar, not the original one.** `TASK-0052` found
+  its five planned fixtures were all satisfiable by a guard that resolves no
+  hostnames, so closure required fixture 6 observed *failing* plus a
+  fires-proof. Both were delivered.
+- **B-010 is closed with its limitation stated**: the components exist and were
+  never executed in the estate they were authored from. A closed item is not a
+  claim of quality, and the checkpoint should judge that separately.
 B-015…B-017 closed 2026-09-16** as **delivered by S7** — the portability
 decision (ADR-0018), the `agents/` category for `agents/` only, and the
 design stage. **B-014 closed 2026-09-15** as *decided, not implemented*:
@@ -88,17 +97,16 @@ the only one where
 the falsehood propagated into two ADRs and four tasks before a human caught
 it by noticing a product name.
 
-**B-010…B-013 stayed `ready` through S6's park; only B-010 is still `ready`
-now** (S6 un-parked 2026-09-16 by `TASK-0052`; **S8 is re-queued**). Neither a
-park nor a re-queue un-scopes a backlog item: the items describe real gaps that
-are still real. Their "Ready when" column still names S6's task numbers, which
-remain the plan of record for them.
-**B-011, B-012 and B-013 are now closed** (TASK-0031 and TASK-0026,
-2026-09-16) — the first S6 items resolved by S6's own execution rather than by
-another sprint's route. S7's pilot (TASK-0046) delivered B-010's two components
-by that other route, so **B-010 is the only S6 item left**, and what remains
-for it is the checkpoint's judgment on whether delivery-by-another-sprint
-counts.
+**B-010…B-013 stayed `ready` through S6's park, and all four are now closed**
+(S6 un-parked 2026-09-16 by `TASK-0052`; **S8 is re-queued**). Neither a park
+nor a re-queue un-scopes a backlog item: while parked, the items described real
+gaps that were still real, and their "Ready when" column kept naming S6's task
+numbers because those remained the plan of record.
+
+**B-011, B-012 and B-013 were closed by S6's own execution** (`TASK-0031` and
+`TASK-0026`, 2026-09-16); **B-010 by S7's pilot**, which delivered its two
+components while S6 was parked. So the slice was cleared by two different
+routes, and only B-010's route is the kind a checkpoint should question.
 
 **B-011's closure condition was met rather than waived, and that is the point
 worth carrying forward.** `TASK-0052` found that TASK-0031's original five

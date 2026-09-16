@@ -183,8 +183,15 @@ Phase 3 — enforcement and record:
       fixture 4 could never reach the rule (`syntax-check` is unskippable);
       and my harness matched the rule **ID**, which appears in ansible-lint's
       error text, so four fixtures read as "fired" when nothing had run
-- [ ] TASK-0032 — Record the target-repo findings; state what was
-      deliberately left alone (needs TASK-0029)
+- [x] TASK-0032 — Record the target-repo findings; state what was
+      deliberately left alone (**done 2026-09-16**). F1–F4 all recorded in
+      `CURRENT_STATE.md` — **not** with the skill, because `ADR-0015` forbids
+      storing estate facts in a symlink-deployed component, which is where the
+      brief suggested putting them. **Two citations had drifted**: `ci.yml`'s
+      "no GitHub remote" is now *half* false (three remotes exist; `origin` is
+      still a local path). **And the "42 unpushed commits" repeated in three
+      files needed qualifying — it is 42 against a local-path `origin` and
+      *8* against both real remotes**
 
 Sprint transition:
 - [x] TASK-0052 — Un-park S6, re-queue S8, correct D1–D4 in TASK-0031

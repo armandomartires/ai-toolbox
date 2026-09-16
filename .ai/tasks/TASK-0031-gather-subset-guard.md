@@ -518,5 +518,9 @@ reason to restore the broken matcher.**
   `ansible.cfg` as *"Tracked as unenforced until then"* is now mechanically
   checkable by any repo that wires it in, with its own fires-proof, and with
   its four limits stated in the artifact rather than only in this log.
-- Commit:
-- Push:
+- Commit: `ba59062` — one logical change: the rule, seven fixtures plus a
+  fixture inventory, the fires-proof harness, the wiring procedure, the
+  hazards.md correction, and the governance updates closing B-011. The
+  pre-commit hook ran the gate and passed.
+- Push: **confirmed.** `a969867..ba59062 master -> master`, verified by
+  `git fetch` + `git log origin/master` showing `ba59062` at the tip.

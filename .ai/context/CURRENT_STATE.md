@@ -32,6 +32,146 @@ three ADRs, and a checkpoint.** `TASK-0026`, both spikes, **`TASK-0031`** and
 all three ADR bodies are **done (2026-09-16)**. **All five of Phase 6's exit
 criteria are met**; what remains is judgment, not implementation.
 
+## The target-repo evidence trail, and what was deliberately left alone
+
+**`TASK-0032`, 2026-09-16. Every citation below was re-opened and re-read
+before being restated**, per this repo's standing lesson that planning prose is
+a hypothesis about files. Two claims had drifted and are corrected here rather
+than repeated.
+
+**Why this lives here and not with the skill.** One owner per fact.
+`skills/ansible-ops/` holds **no estate specifics by design** — `ADR-0015`'s
+decision is *derive per change, never declared and never stored*, so putting
+one estate's facts into the portable component is the exact mechanism that ADR
+rejects. These are observations about **another repository**, so the durable
+home is this file. The skill links to the reasoning; it does not restate the
+evidence.
+
+### F1 — There is no staging inventory, and there cannot be one
+One inventory, wired at `SIGMA-infrastructure/ansible.cfg:8`
+(`inventory = inventory/production.yml`); `inventory/` contains
+`production.yml` and `group_vars/` only. One 6-node PVE cluster at 3-of-4
+quorum with no verified margin; one DC holding all seven FSMO roles.
+`.github/workflows/ci.yml` records the deliberate corollary: CI has no route to
+the estate and no credentials. **The source analysis's central worked example —
+`--check --diff -l staging`, then `-l staging`, then production — is
+unimplementable there.** This is the sprint's most consequential correction:
+building from the source text would have produced a runbook gating on an
+inventory that does not exist. Verified 2026-09-16.
+
+### F2 — A documented, statically checkable hazard that was enforced by nothing
+`ansible.cfg:19-49`, verbatim in capitals: `ansible.builtin.setup`'s default
+fact gathering collects `ansible_mounts`, which stats every mount including
+`/etc/pve`; on a node with wedged pmxcfs that is *"the exact uninterruptible
+FUSE hang"* and **`timeout` cannot kill an uninterruptible D-state wait**. Both
+attempted global fixes fail, verified empirically *there*: `gather_subset` is
+**rejected** as an unknown `[defaults]` key, and **silently ignored** in
+`group_vars`. It is a play keyword and a per-module argument only. The file
+concludes: *"A code-review or CI check should confirm this before that playbook
+is trusted against a live node. **Tracked as unenforced until then.**"*
+
+**No longer unenforced, as of `TASK-0031`** — see the guard section below. The
+rule is available to that repo; **it is not installed there** (Option (a)).
+
+### F3 — Four stale claims, all re-verified, TWO OF THEM NOW WORSE THAN RECORDED
+Left unfixed by decision (below). Re-read 2026-09-16:
+
+1. **`.ansible-lint:3-4`** — *"This workspace has no playbooks/roles yet"*.
+   **False**: two playbooks exist. Since `profile: production` is set and
+   `playbooks/` is not excluded, the config has been live and unproven.
+2. **`.pre-commit-config.yaml:41-43`** — *"No playbooks/roles exist yet… this
+   hook activates itself the day the first one is added; harmless no-op until
+   then."* **False by the same fact.** The line number in `PLAN-0003` was `:42`
+   and the comment spans `:41-43`; close enough to be the same claim, recorded
+   for precision.
+3. **`ci.yml:11-13`** — *"There is currently no GitHub remote for this repo
+   (origin is a local path)"*. **Now false in a sharper way than recorded.**
+   `git remote -v` shows **three** remotes: `github` →
+   `github.com/armandomartires/SIGMA-infrastructure.git`, `gitlab` → an
+   internal GitLab, and `origin` → still a **local path**
+   (`/mnt/c/.../SIGMA-infrastructure`). So the parenthetical about `origin` is
+   *still true* while the headline claim is false — a half-decayed claim, which
+   is harder to notice than a wholly false one.
+4. **`requirements.yml:3-5`** — documents reinstallation in
+   **PowerShell/Windows** syntax (`$env:ANSIBLE_COLLECTIONS_PATH`,
+   `.venv\Scripts\ansible-galaxy.exe`) after that repo moved administration to
+   Linux. Confirmed present and unchanged.
+
+**Also `ci.yml:42-45`** repeats the no-playbooks claim, making it the **third**
+file asserting it — consistent with `PLAN-0003`'s note but worth stating as a
+count.
+
+### F4 — Its `ansible-lint` gate had never had content to lint. It does now, and it PASSES
+Established by `TASK-0027`: **0 failures, 0 warnings, exit 0** across **53
+built-in rules** under `profile: production`. **With the fidelity limit stated
+where the observation is** — that result came from a `/tmp` copy whose
+`ansible.cfg` had `vault_password_file` removed, so it describes a *modified*
+configuration and is **not** evidence that the repo's own gate passes with
+vault configured. Both `group_vars/*/vault.yml` files are present and
+`$ANSIBLE_VAULT`-encrypted; neither was decrypted or copied.
+
+### The unpushed commits — the count depends on which remote, which the brief did not say
+`PLAN-0003` and `TASK-0032` both say "42 unpushed commits". Measured
+2026-09-16:
+
+| Remote | Commits ahead |
+|---|---|
+| `origin` (a **local path**) | **42** |
+| `github` | **8** |
+| `gitlab` | **8** |
+
+So *"42 unpushed"* is true only against a local-path `origin`; against both
+real remotes it is **8**. The larger number is the more alarming one and it is
+the one that was recorded. **A count is not a fact until you name what it
+counts against.**
+
+### All of it was left alone BY DECISION — whose, when, and why
+**Human decision, 2026-09-14, Option (a)**, recorded in `PLAN-0003`'s "Human
+decisions required" table and restated in the S6 sprint file: `ai-toolbox`
+ships portable components; `SIGMA-infrastructure` is **read as evidence and
+never modified**. Its four stale claims are recorded here and **fixed nowhere**;
+its commits are neither pushed nor rebased.
+
+The reasoning is **ownership, not indifference**. That repo runs the
+`project-workflow` framework (`S###_Sprint.T###_Task`), with its own
+`AGENTS.md`, its own pre-commit gate, its own CI and its own task conventions.
+Editing it from this sprint would put one change under two governance regimes
+with no single owner. `AGENTS.md` also requires explicit authorization for
+anything destructive, and rebasing another repo's unpushed history is exactly
+that.
+
+**Adoption and repair there are that repo's own sprint to open.** No task brief
+for it is created here — authoring one would both violate its naming convention
+and presume its sprint planning, which is the ownership this sprint declined.
+
+**Recorded because an unrecorded gap is indistinguishable from an unnoticed
+one.** That asymmetry is the whole reason this section exists.
+
+### The limitation, in the same register as `mcp-servers/_template/`
+**Under Option (a), `skills/ansible-ops/` was authored *from* the target repo
+and has never been executed *in* it.** It therefore carries the same status
+this file already assigns to `mcp-servers/_template/`: **treat it as
+unexercised scaffolding.** Two honest qualifications:
+
+- `TASK-0046` exercised the **loops that produced it**, which is a different
+  claim from exercising the skill against a live estate.
+- **`TASK-0031`'s guard is the one S6 deliverable validated against real
+  content** — the actual playbooks and the actual inventory, read-only. That is
+  why it, and not the skill, is the sprint's strongest artifact.
+
+Stated at plan time rather than at checkpoint, which was deliberate: S5's
+equivalent limitation surfaced only in its review.
+
+### Target repo verified untouched, output recorded
+`git status --short` → **empty**, before and after every S6 task.
+`git status -sb` → `## master...origin/master [ahead 42]`. `HEAD` → `d4e2dd1`
+*("Record actual commit hashes in task briefs and sprint table")*.
+`playbooks/capture_pve_baseline.yml:22` → still `gather_facts: false`.
+`ansible.log` mtime → still `2026-09-12 16:15:01`, which matters because
+**`ansible-lint` writes that file with no flag** (`TASK-0027` finding 4) — an
+in-place lint run would have modified the repo. Every mutation this sprint
+performed was in a `/tmp/opencode/` copy.
+
 ## S6's highest-value deliverable exists and is proven to fire
 
 **`TASK-0031` closed B-011** (2026-09-16). A rule written down in another
@@ -1431,9 +1571,14 @@ file layout:
   TASK-0024, closing B-008), matching the `project-workflow` convention
   this repo publishes. The *identifier* remains `ADR-NNNN` in every H1 and
   throughout prose — only filenames changed.
-- **B-001…B-009 are all closed; eight items are open** — B-010…B-013 (S6,
-  still `ready` despite the park), B-015…B-017 (S7), and **B-018** (Bionic
-  skills deployment, raised by TASK-0047; B-014 closed 2026-09-15).
+- ~~**B-001…B-009 are all closed; eight items are open**~~ — **this count was
+  true when written and has decayed twice; `BACKLOG.md` is the owner, so do not
+  restate a number here.** As of 2026-09-16: **B-001…B-013 are all closed** —
+  S6's entire slice, the first fully-cleared sprint slice in this repo
+  (B-010 by S7's pilot; B-011/B-012/B-013 by S6's own execution). B-015…B-017
+  closed by S7. **Four remain open: B-018** (Bionic skills deployment, raised by
+  TASK-0047), **B-019/B-020** (S8, re-queued) and **B-021** (raised by
+  REVIEW-0008). B-014 closed 2026-09-15.
   **B-005's stated reason is retracted** by ADR-0020 — it closed on the
   false "no Agent Skills target" premise, though its *action* was correct.
   B-009 closed by

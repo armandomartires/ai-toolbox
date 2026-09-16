@@ -17,13 +17,20 @@
 > (`TASK-0046`) — the table below has been corrected, because it read
 > `planned` while both task files read `done`. That is the four-files-
 > disagree defect `REVIEW-0008` had to sweep across S7, found here on the
-> first read of this file. **Remaining as of 2026-09-16: `TASK-0032`,
-> ratification of the three ADRs, and a checkpoint.** `TASK-0026`,
-> `TASK-0027`, `TASK-0028`, **`TASK-0031`** and all three ADR bodies are
-> **done**, and **three backlog items are closed by S6's own execution** —
-> B-012/B-013 (`TASK-0026`) and **B-011, the highest-value item in either
-> sprint (`TASK-0031`)**. B-010 alone remains, and its two components were
-> already delivered by S7's pilot.
+> first read of this file. **ALL SEVEN TASKS ARE NOW DONE. Remaining:
+> ratification of the three ADRs, and a checkpoint** — both judgment, not
+> implementation. `TASK-0026`, `0027`, `0028`, `0031`, `0032` and all three ADR
+> bodies are **done**; `0029`/`0030` were delivered by S7's pilot. **Three
+> backlog items closed by S6's own execution** — B-012/B-013 (`TASK-0026`) and
+> **B-011, the highest-value item in either sprint (`TASK-0031`)**. **B-010 is
+> also closed**, by S7's pilot, which delivered its two components while S6 was
+> parked — **so all four of S6's backlog items are now closed**, the first time
+> a sprint's entire slice has been cleared here. Only B-010's route is the kind
+> a checkpoint should question, and it is closed **with its limitation stated**:
+> the components were authored *from* the target estate and never executed *in*
+> it.
+>
+> **All five of Phase 6's exit criteria are met** (see `ROADMAP.md`).
 >
 > **The guard exists and is proven to fire**, which is the thing this sprint
 > was for. `skills/ansible-ops/scripts/gather_subset_guard.py` plus seven
@@ -202,7 +209,7 @@ that matter most:
 | TASK-0029 | ADR-0015 | **done** | `skills/ansible-ops/` — **delivered by S7's pilot (`TASK-0046`), 2026-09-15**, produced *through* S7's loops. Row corrected 2026-09-16 by `TASK-0052`: it read `planned` while the task file read `done` |
 | TASK-0030 | TASK-0029 | **done** | `loops/ansible-change/` — same, delivered by `TASK-0046`. Both ran under an **Option 2 waiver** (built from `PLAN-0003`'s F1–F7 evidence, ADR-0015 unratified), recorded in both task files |
 | TASK-0031 | ADR-0016, TASK-0027 | **done** | The `gather_subset` guard + **7** fixture proofs (raised from 5 by `TASK-0052`). **Delivered 2026-09-16; closes B-011.** A custom `ansible-lint` rule, **10/10** in `tests/gather-subset-guard.sh` including a negative control reproducing the `enable_list` silent-no-op trap. Fixture 6 **observed failing**, plus the *real* playbook flipped in a `/tmp` copy firing on `sigsrvpve1` resolved through the real inventory. Three defects found and fixed en route — including that **`TASK-0027`'s "declarative wiring" recommendation was wrong** |
-| TASK-0032 | TASK-0029 | **planned** | Record the target-repo findings; state what was left alone |
+| TASK-0032 | TASK-0029 | **done** | Record the target-repo findings; state what was left alone. **Done 2026-09-16.** F1–F4 recorded in `CURRENT_STATE.md` — **not** with the skill, because `ADR-0015` forbids estate facts in a symlink-deployed component, which is where this brief suggested putting them. **Two citations had drifted** (`ci.yml`'s "no GitHub remote" is now *half* false), and **the "42 unpushed commits" repeated in three files is 42 only against a local-path `origin` — it is 8 against both real remotes** |
 
 Order matters, and for the same reason it did in S5: ground truth before
 decisions, decisions before the canonical shape, enforcement last.
