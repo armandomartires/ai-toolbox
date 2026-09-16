@@ -335,5 +335,16 @@ wrong `ansible-lint` path.
   verified at session start; only reads performed there.
 - Result: **Done.** S6 is current with a corrected plan; S8 is re-queued with
   its content unrescoped; six backlog items still `ready`.
-- Commit:
-- Push:
+- Commit: `d278c64` — one logical change, governance files only. The
+  pre-commit hook ran `validate.sh` and passed (`validate.sh: OK`), so the
+  gate was exercised by the commit itself rather than only beforehand.
+  Verified before committing: S8's body is **byte-identical** to its previous
+  content apart from the one struck header claim (`diff` on the two bodies
+  reported no differences), S6's body is identical apart from the two
+  corrected table rows, and `TASK-0048…0051` plus `PLAN-0005` show **no diff
+  at all**.
+- Push: **confirmed.** `111a931..d278c64 master -> master`, verified by
+  `git fetch` + `git log origin/master` showing `d278c64` at the tip — not
+  by trusting the push output. `GITHUB_TOKEN` supplied via an ephemeral
+  credential helper; `git remote -v` re-checked afterwards and is still
+  token-free.
