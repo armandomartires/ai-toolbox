@@ -181,11 +181,20 @@ left the placeholder in place and the server connected and enumerated every
 tool regardless. **Nothing in the connection validates this value** — the
 handshake and tool listing never touch the filesystem.
 
-Use an **absolute** path to a real project directory. This is the server's
-blast radius: it executes playbooks (`ansible_navigator`), installs OS
-packages (`ade_setup_environment`), and rewrites files in place
-(`ansible_lint --fix`). Never `$HOME`, never `/`. Verify the path exists
-before continuing:
+Use an **absolute** path to a real project directory. Never `$HOME`, never
+`/`.
+
+**`WORKSPACE_ROOT` bounds filesystem reach only — it is not the server's
+whole blast radius.** Corrected by `TASK-0026`; this file was the **fifth**
+place repeating the overstatement, and the brief that fixed it had only
+predicted four. It bounds `ansible_lint --fix` and
+`create_ansible_projects`. It does **not** bound `ade_setup_environment`,
+which installs OS packages **system-wide**, nor `ansible_navigator`, which
+executes playbooks against **remote managed infrastructure** — and
+`ansible_navigator` is **disabled by default** (`TASK-0026`), so it should
+not be enabled in the `mcp.json` this procedure writes.
+
+Verify the path exists before continuing:
 
 ```
 ls -d /your/chosen/workspace     # must succeed

@@ -130,14 +130,39 @@ Windows-side; WSL has no `~/.lmstudio`.
 
 ### ansible (external — `mcp-servers/ansible/server.json`)
 
-> **Destructive capabilities.** Executes playbooks against real inventory
-> (`ansible_navigator`), installs OS packages (`ade_setup_environment`),
-> builds container images (`define_and_build_execution_env`), rewrites
-> playbooks in place (`ansible_lint` with `fix: true`), scaffolds
-> directories (`create_ansible_projects`). Authorized in
+> **Destructive capabilities.** Installs OS packages
+> (`ade_setup_environment`), builds container images
+> (`define_and_build_execution_env`), rewrites playbooks in place
+> (`ansible_lint` with `fix: true`), scaffolds directories
+> (`create_ansible_projects`). Authorized in
 > `.ai/tasks/TASK-0007-port-ansible-mcp-server.md` (2026-09-13) and shipped
-> enabled. `WORKSPACE_ROOT` is the blast radius — set it to the project
-> directory, never `$HOME` or `/`.
+> enabled.
+>
+> **`ansible_navigator` is DISABLED by default** (human decision 2026-09-14,
+> re-confirmed 2026-09-16; `TASK-0026`). **Do not enable it.** It executes
+> playbooks against real inventory, and its parameters are `userMessage`,
+> `filePath`, `mode`, `environment`, `disableExecutionEnvironment` — **no
+> inventory, no limit, no `--check`, no `--diff`**. So it cannot preview a
+> change or scope a run, while it *can* change production. Use the control
+> venv's own `ansible-playbook`, which does everything this tool does and
+> everything it cannot.
+>
+> **This is advisory, not enforced — and least enforceable here.** Nothing in
+> this repo can switch a tool off in the upstream server, and this client is
+> configured by hand through a GUI-adjacent JSON file with no hook or plugin
+> mechanism this repo has verified. The config below starts a server exposing
+> all ten tools. What this section reduces is *default* exposure, by telling
+> you not to enable it.
+>
+> **`WORKSPACE_ROOT` bounds filesystem reach only — it is not the blast
+> radius for every tool.** It bounds `ansible_lint --fix`,
+> `create_ansible_projects` and `define_and_build_execution_env`'s file
+> writes. It does **not** bound `ansible_navigator`, which reaches **remote
+> managed infrastructure**, nor `ade_setup_environment`, which installs OS
+> packages **system-wide**. Set it to the project directory, never `$HOME`
+> or `/`. **This client is where that trap was actually sprung:** the live
+> `mcp.json` carried the literal placeholder path and everything connected
+> anyway (see the verification section below).
 
 ```json
 {
@@ -250,9 +275,13 @@ The lesson worth keeping:
 
 - Connection success is **not** evidence that `WORKSPACE_ROOT` is valid.
   Nothing in the handshake or tool enumeration touches the filesystem.
-- `WORKSPACE_ROOT` is the blast radius for `ansible_navigator`,
-  `ade_setup_environment`, and `ansible_lint --fix`. An invalid value fails
-  at the moment a destructive tool runs, which is the worst time to find out.
+- `WORKSPACE_ROOT` bounds **filesystem** reach — `ansible_lint --fix` and
+  `create_ansible_projects`. An invalid value fails at the moment a
+  destructive tool runs, which is the worst time to find out.
+  **Corrected by `TASK-0026`:** this bullet previously named
+  `ansible_navigator` and `ade_setup_environment` as bounded by it. They are
+  not — the first reaches remote infrastructure, the second installs packages
+  system-wide. An invalid `WORKSPACE_ROOT` would not have contained either.
 - The guidance above was already correct ("use an absolute path", "never
   `$HOME` or `/`") and was still pasted past. Prose was not the fix; the
   placeholder is now an implausible sentinel so an unedited paste is

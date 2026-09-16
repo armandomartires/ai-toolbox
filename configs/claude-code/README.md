@@ -84,14 +84,37 @@ claude mcp add --scope user --transport stdio <name> -- <command>
 
 ### ansible (external — `mcp-servers/ansible/server.json`)
 
-> **Destructive capabilities.** Executes playbooks against real inventory
-> (`ansible_navigator`), installs OS packages (`ade_setup_environment`),
-> builds container images (`define_and_build_execution_env`), rewrites
-> playbooks in place (`ansible_lint` with `fix: true`), scaffolds
-> directories (`create_ansible_projects`). Authorized in
+> **Destructive capabilities.** Installs OS packages
+> (`ade_setup_environment`), builds container images
+> (`define_and_build_execution_env`), rewrites playbooks in place
+> (`ansible_lint` with `fix: true`), scaffolds directories
+> (`create_ansible_projects`). Authorized in
 > `.ai/tasks/TASK-0007-port-ansible-mcp-server.md` (2026-09-13) and shipped
-> enabled. `WORKSPACE_ROOT` is the blast radius — set it to the project
-> directory, never `$HOME` or `/`.
+> enabled.
+>
+> **`ansible_navigator` is DISABLED by default** (human decision 2026-09-14,
+> re-confirmed 2026-09-16; `TASK-0026`). **Do not enable it.** It executes
+> playbooks against real inventory, and its parameters are `userMessage`,
+> `filePath`, `mode`, `environment`, `disableExecutionEnvironment` — **no
+> inventory, no limit, no `--check`, no `--diff`**. So it cannot preview a
+> change or scope a run, while it *can* change production. Use the control
+> venv's own `ansible-playbook`, which does everything this tool does and
+> everything it cannot.
+>
+> **This is advisory, not enforced.** Nothing in this repo can switch a tool
+> off in the upstream server: the command below starts a server that exposes
+> all ten tools, and you can re-enable `ansible_navigator` in your own client
+> config at any time. What this section reduces is *default* exposure, by
+> telling you not to.
+>
+> **`WORKSPACE_ROOT` bounds filesystem reach only — it is not the blast
+> radius for every tool.** It bounds `ansible_lint --fix`,
+> `create_ansible_projects` and `define_and_build_execution_env`'s file
+> writes. It does **not** bound `ansible_navigator`, which reaches **remote
+> managed infrastructure**, nor `ade_setup_environment`, which installs OS
+> packages **system-wide**. Set it to the project directory, never `$HOME`
+> or `/` — and note that nothing in the MCP handshake validates the value
+> (`TASK-0017`).
 
 ```bash
 claude mcp add --scope local ansible \

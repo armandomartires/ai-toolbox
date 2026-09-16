@@ -27,10 +27,66 @@ before doing any work**, so it gets no checkpoint — there is nothing to
 check. **B-019/B-020 stay `ready`**, by the same rule that held B-010…B-013
 `ready` through S6's park.
 
-**What is actually outstanding in S6:** **`TASK-0026`, `TASK-0031`,
-`TASK-0032`, ratification of the three ADRs, and a checkpoint.** Both spikes
-and all three ADR bodies are **done (2026-09-16)**. Three things a cold reader
-needs:
+**What is actually outstanding in S6:** **`TASK-0031`, `TASK-0032`,
+ratification of the three ADRs, and a checkpoint.** `TASK-0026`, both spikes
+and all three ADR bodies are **done (2026-09-16)**.
+
+**S6 now has real implementation, which changes one standing fact about it.**
+Un-parking was free because the sprint had built nothing; `TASK-0026` ends
+that. A second park would now cost reconciliation — worth recording, because
+the original parking note predicted exactly this (*"the same decision one
+sprint later would have needed reconciliation"*), and the prediction has now
+been confirmed from **both** directions.
+
+**`TASK-0026` closed B-012 and B-013 — the first S6 items resolved by S6's
+own execution** rather than by another sprint's route. Four findings, three of
+which are about this repo's own habits:
+
+- **The false blast-radius claim was in SIX places, not the four the brief
+  predicted.** `server.json`, three `configs/*/README.md`, **plus
+  `docs/operations/runbook.md:185`** — which told an operator wiring up a live
+  client that `WORKSPACE_ROOT` *was* the server's blast radius — **plus a
+  *lessons* list** at `configs/lm-studio-bionic/README.md:253`, i.e. the two
+  most quotable places to be wrong. The brief listed the runbook only as
+  "check, do not assume", so **the brief's own count of the defect was an
+  instance of the defect.** Found by grepping the sentence; a final grep now
+  returns nothing outside `.ai/`. Nothing in `validate.sh` could see any of
+  it.
+- **Three of the brief's Inputs rows were stale, and one named a file that no
+  longer exists.** `configs/lm-studio/README.md` is now
+  `configs/lm-studio-bionic/README.md` (renamed by `TASK-0047`), and **all
+  four** line-number claims were wrong — the files had grown by 47, 64 and 125
+  lines, and `validate.sh` from 474 to 732. The brief's own instruction to
+  re-read before editing is what caught it, which is lesson 7 working as
+  designed rather than being rediscovered.
+- **One acceptance criterion was deliberately DECLINED, not met.** The brief
+  required stating that the third client "supplies models only and performs no
+  agentic work". That exact sentence was **already in the file and already
+  removed as false** by `TASK-0047`/`ADR-0020` — the client is **Bionic**, and
+  it ships subagent identifiers, sessions and a permissions store. **Executing
+  the criterion would have restored a known-false claim on a superseded
+  decision's authority.** Marked complete-as-declined with the reason, the
+  same resolution `TASK-0037` used when a brief contradicted an accepted ADR.
+- **The authorization narrowing is recorded so it cannot read as a
+  widening.** `authorization` keeps `granted: true` (the gate requires it) and
+  gains a `history` array: the original **five-tool** grant of 2026-09-13,
+  then the 2026-09-14 narrowing to four, with the entry stating in words that
+  it *reduces* the grant. The original is not erased. **The gate's
+  authorization check was observed failing** on a deliberately broken manifest
+  (exit 1, correct message) and restored **byte-identically by SHA-256** — it
+  had never been seen to fail against this manifest before.
+
+**One limit stated plainly in all three snippets: the disablement is
+advisory.** This repo cannot switch off a tool in the upstream server. Every
+documented command still starts a server exposing all ten tools, and a user
+can re-enable `ansible_navigator` at any time. What was reduced is *default*
+exposure plus a false description. The OpenCode snippet additionally names the
+**real** enforcement route `TASK-0028` found (`tool.execute.before`, tool ID
+`ansible_ansible_navigator`) and records that this repo ships no such plugin
+and **declined** to (`ADR-0016`) — so a reader wanting enforcement learns the
+route and its limits rather than assuming the repo supplied one.
+
+Three things a cold reader needs:
 
 - **TASK-0029/0030 are `done`, delivered by S7's pilot** — and the S6 sprint
   table said `planned` while both task files said `done`. **Found on the
@@ -1432,8 +1488,16 @@ enforced by `validate.sh`; its launch command is version-pinned so upstream
 breaking changes cannot land silently.
 
 ## Environment notes (re-verified 2026-09-13)
-- ansible MCP connects, 10 tools. proxmox still lacks `numpy` for its
-  router; obsidian's desktop app still isn't running.
+- ansible MCP connects, 10 tools. **The count is unchanged and deliberately
+  so** (`TASK-0026`, 2026-09-16): `ansible_navigator` is now **disabled by
+  default** in all three wiring snippets, but this repo cannot switch off an
+  upstream tool — the server still *exposes* ten. **A tool count is not a
+  posture.** The destructive-tool *grant* is now four, not five. `TASK-0028`
+  confirmed on the same date that `ansible_navigator` is still reachable in a
+  live session, which is what the snippets now warn against rather than
+  prevent.
+  proxmox still lacks `numpy` for its router; obsidian's desktop app still
+  isn't running.
 - Upstream ansible declares `node>=24.0` while this machine runs node
   v22.23.2 — npm warns `EBADENGINE` and it works, because `engines` is
   advisory unless `engine-strict` is set. If that changes, ansible launches

@@ -175,16 +175,23 @@ any agent or human can understand, trust, and deploy.
   finding 6: **the lesson needed a mechanism, not more prose.** No
   mechanism was added then, and the omission repeated. Recorded rather
   than quietly backfilled.
-- Exit criteria — **none met; the sprint was parked before implementation
-  began**, so every criterion below is as written on 2026-09-14:
-  - `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
-    execution or system package installation (TASK-0026).
-  - `ansible_navigator` disabled in all three wiring snippets with the
-    reason, and `authorization` re-recorded for the narrowed set
-    (TASK-0026).
-  - `skills/ansible-ops/` and `loops/ansible-change/` exist and pass the
-    gate (TASK-0029, TASK-0030).
-  - The `gather_subset`/`ansible_mounts` guard is **observed failing** on
+- Exit criteria — ~~none met; the sprint was parked before implementation
+  began~~ **four of five met as of 2026-09-16**; each is marked below.
+  Wording is otherwise as written on 2026-09-14:
+  - **MET** — `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
+    execution or system package installation (TASK-0026). It now carries a
+    `workspace_root_bounds` key splitting `bounded` from `not_bounded` per
+    tool. **The criterion named only `server.json`; the claim was in six
+    places**, including this repo's own operations runbook.
+  - **MET** — `ansible_navigator` disabled in all three wiring snippets with
+    the reason, and `authorization` re-recorded for the narrowed set
+    (TASK-0026), as a `history` array preserving the original five-tool
+    grant. **With a stated limit: the disablement is advisory**, since this
+    repo cannot switch off a tool in the upstream server.
+  - **MET** — `skills/ansible-ops/` and `loops/ansible-change/` exist and pass
+    the gate (TASK-0029, TASK-0030) — delivered by Phase 7's pilot.
+  - **NOT MET — the one criterion still open.** The
+    `gather_subset`/`ansible_mounts` guard is **observed failing** on
     a broken fixture and on an ambiguous `hosts:` case, and observed
     silent on the two known-good playbooks (TASK-0031).
     **Amended 2026-09-16 (D1/D2/D3):** this criterion as written is
@@ -193,16 +200,32 @@ any agent or human can understand, trust, and deploy.
     on a PVE node addressed by **bare hostname** with `gather_facts: true`,
     and on a `module_defaults` block scoped to a non-`setup` target. Seven
     fixtures, not five.
-  - `SIGMA-infrastructure`'s `git status` byte-identical before and after
-    (all tasks).
+  - **MET SO FAR** — `SIGMA-infrastructure`'s `git status` byte-identical
+    before and after (all tasks). Verified at every task boundary on
+    2026-09-16: empty both times, `HEAD` `d4e2dd1`, `[ahead 42]` unchanged,
+    and its `ansible.log` mtime still `2026-09-12 16:15:01`. **`TASK-0027`
+    found the real risk was not what the brief guarded against**:
+    `ansible-lint` writes `ansible.log` into its working directory with no
+    flag at all, so an in-place lint run would have written to the target
+    repo. The copy-not-in-place decision is what prevented it.
 - Status: **UN-PARKED 2026-09-16 by `TASK-0052`; this phase is current
   again** (human decision: finish S6 before S8). Restored to
   `.ai/planning/SPRINT-CURRENT.md`; **Phase 8 is re-queued.** Un-parking
-  cost nothing for the same reason parking did — **S6 still has zero
-  implementation of its own.**
-  - Outstanding: **`TASK-0026`, `0031`, `0032`, ratification of the three
-    ADRs, and a checkpoint.** Both spikes (`TASK-0027`, `TASK-0028`) and all
-    three ADR bodies are **done, 2026-09-16**. `TASK-0029`/`0030` are
+  cost nothing for the same reason parking did — **S6 had zero
+  implementation of its own at the moment it was un-parked.** That is no
+  longer true: `TASK-0026` is the phase's first real implementation, so a
+  second park would now cost reconciliation. Recorded because the original
+  parking note made exactly this prediction.
+  - Outstanding: **`TASK-0031`, `0032`, ratification of the three ADRs, and a
+    checkpoint.** `TASK-0026`, both spikes (`TASK-0027`, `TASK-0028`) and all
+    three ADR bodies are **done, 2026-09-16**. **`TASK-0026` closed B-012 and
+    B-013** — the first S6 items resolved by S6's own execution rather than by
+    another sprint's route — and found the false blast-radius claim in **six**
+    places rather than the four its brief predicted, the extras being
+    `docs/operations/runbook.md` and a *lessons* list. It also **declined one
+    of its own acceptance criteria**: the "LM Studio supplies models only"
+    statement is refuted by `ADR-0020`, so re-adding it would have restored a
+    known-false claim. `TASK-0029`/`0030` are
     **done, delivered by Phase 7's pilot** — the sprint table said `planned`
     while both task files said `done`, corrected on the first read (the
     four-files-disagree class `REVIEW-0008` swept for Phase 7).

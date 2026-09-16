@@ -17,10 +17,11 @@
 > (`TASK-0046`) — the table below has been corrected, because it read
 > `planned` while both task files read `done`. That is the four-files-
 > disagree defect `REVIEW-0008` had to sweep across S7, found here on the
-> first read of this file. **Remaining as of 2026-09-16: `TASK-0026`,
-> `TASK-0031`, `TASK-0032`, ratification of the three ADRs, and a
-> checkpoint.** `TASK-0027`, `TASK-0028` and all three ADR bodies are
-> **done**. **The checkpoint is NOT `REVIEW-0009`** — that number is reserved
+> first read of this file. **Remaining as of 2026-09-16: `TASK-0031`,
+> `TASK-0032`, ratification of the three ADRs, and a checkpoint.**
+> `TASK-0026`, `TASK-0027`, `TASK-0028` and all three ADR bodies are
+> **done** — and `TASK-0026` **closed B-012 and B-013**, the first S6 items
+> resolved by S6's own execution rather than by another sprint's route. **The checkpoint is NOT `REVIEW-0009`** — that number is reserved
 > by S8's file; S6's takes the next free one.
 >
 > **All three ADRs now have bodies; all three remain `Proposed`.** They were
@@ -181,7 +182,7 @@ that matter most:
 
 | Task | Depends on | Status | What |
 |------|-----------|--------|------|
-| TASK-0026 | — | **planned** | Correct the `WORKSPACE_ROOT` blast-radius claim; disable `ansible_navigator` in 3 snippets; LM Studio → models-only |
+| TASK-0026 | — | **done** | Correct the `WORKSPACE_ROOT` blast-radius claim; disable `ansible_navigator` in 3 snippets; ~~LM Studio → models-only~~. **Done 2026-09-16; closes B-012 and B-013.** The false claim was in **six** places, not four (the extras: `docs/operations/runbook.md` and a *lessons* list). **Models-only deliberately not done — `ADR-0020` refuted it.** `authorization.history` now shows the original five-tool grant *and* the narrowing; gate **observed failing** on a broken authorization block, then restored byte-identically |
 | TASK-0027 | — | **done** | *Spike.* Lint the two real playbooks on a `/tmp/opencode/` copy; record what degraded; choose the guard's home. **Ran 2026-09-16: gate passes (0 failures / 53 rules / exit 0); guard = custom `ansible-lint` rule via `enable_list:`, conditional on a fires-proof** |
 | TASK-0028 | — | **done** | *Spike.* Can a Claude Code `PreToolUse` hook match `mcp__ansible__*`? OpenCode's equivalent? Non-blocking. **Ran 2026-09-16: YES in both — Claude Code documented, OpenCode observed live. The clients' MCP tool *names* are incompatible, which is what declines the category** |
 | ADR-0014 | TASK-0027 | **proposed** (body written) | Accept and narrow the MCP surface; ADR-0010 stays closed. **Body written 2026-09-16; ratification owed** |

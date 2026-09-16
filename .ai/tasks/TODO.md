@@ -132,8 +132,16 @@ the plan was written from `ansible.cfg`'s prose without opening the playbook
 the guard must classify — **the hazard was verified, the subject was not.**
 
 Phase 0 (independent of each other, may run in parallel):
-- [ ] TASK-0026 — Correct the `WORKSPACE_ROOT` blast-radius claim; disable
-      `ansible_navigator` in 3 wiring snippets; LM Studio → models-only
+- [x] TASK-0026 — Correct the `WORKSPACE_ROOT` blast-radius claim; disable
+      `ansible_navigator` in 3 wiring snippets; ~~LM Studio → models-only~~
+      (**done 2026-09-16; B-012 and B-013 closed**). The false claim was in
+      **six** places, not the four the brief predicted — the extras were
+      `docs/operations/runbook.md` and a *lessons* list. **The models-only
+      item was deliberately NOT done**: `ADR-0020` refuted it, so re-adding it
+      would have restored a known-false claim. Authorization re-recorded with
+      a `history` array showing the original five-tool grant *and* the
+      narrowing; the gate was **observed failing** on a broken authorization
+      block, then restored byte-identically
 - [x] TASK-0027 — *Spike.* Lint the two real playbooks on a `/tmp/opencode/`
       copy; record what degraded; choose the guard's home (**done** — gate
       passes, 0/53 violations; guard = custom `ansible-lint` rule via
