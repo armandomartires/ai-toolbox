@@ -86,8 +86,50 @@
 during the commit, so the hook is live rather than merely installed).
 Push confirmed below.
 
+## Addendum — reviewing follow-up 4 (same session, after the push)
+
+The human asked for follow-up 4 to be reviewed. **Reading the ADR instead of
+the notes about it found the follow-up wrong twice, plus one defect it had
+missed.** Committed as `1f7e316`, pushed and confirmed.
+
+- **"Rewritten" is the wrong verb.** ADR-0015 has no body: `## Context`,
+  `## Decision` and `## Consequences` all say *"to be written"*, and its
+  dependency `TASK-0027` is `planned`. It must be **written**, spike first —
+  which is precisely why it cannot be done outside S6.
+- **"Contradicts a shipped component" overstated the scope.** Refuted is
+  clause 1's *mechanism* (a consumer filling a template with estate facts).
+  `skills/ansible-ops/templates/change-record.md` holds no estate facts and
+  says at line 30 *"Copy this file to wherever your estate keeps records"* —
+  copy-out, not fill-in-place. `templates/` itself survives.
+- **The defect the follow-up missed:** `TASK-0029:93`, `TASK-0030:84` and
+  `TASK-0032:84` all record ADR-0015 as **accepted**; it is `proposed`. The
+  rows sit under **"Expected state"** and TASK-0032 is still `planned`, so
+  those are expectations working as S5 designed. But TASK-0029/0030 are
+  **`done` with the precondition unmet**, and the Option 2 waiver that
+  permitted it was recorded **only in `CURRENT_STATE.md`** — so a cold reader
+  of either task file saw `done` above an unmet input with no explanation.
+  Both now carry the waiver.
+
+**Method note worth keeping:** the follow-up list of a review is itself a
+set of claims about files, and it decays exactly like any other. Both errors
+came from writing the follow-up against notes (`CURRENT_STATE.md`'s "must be
+rewritten") rather than against the artifact. **The same class the review's
+own finding 4 was about**, committed inside the review that documented it.
+
+Nothing was decided: **no ADR body written, no status changed, no component
+touched.** The dated execution logs (TASK-0029's log, TASK-0046's, the S7
+sprint archive) keep their original wording with a correction appended, since
+a dated record should not be silently rewritten.
+
 ## Next action
 S8 is current. `TASK-0048` (the spike) runs first, by design — everything
 else in S8 rests on vendor documentation, two pieces of which already
 contradict their own source. Its findings must land in `BACKLOG.md`, not
 only in prose (B-021's lesson).
+
+**Still open from REVIEW-0008 follow-up 4, and deliberately so:** ADR-0014
+and ADR-0015 remain `proposed` with unwritten bodies. Order for whoever
+unparks S6: `TASK-0027` (cheap — `ansible-lint 26.8.0` is already in the
+control venv), then both bodies against observed evidence, then ratify. **Do
+not fill the sections in from `PLAN-0003`'s prose**; that is how ADR-0015
+reached this state.
