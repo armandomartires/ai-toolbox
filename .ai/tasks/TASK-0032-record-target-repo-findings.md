@@ -344,5 +344,8 @@ meet, the skill being unexercised.
   **left alone by a named human decision** rather than as oversights; and the
   unexercised-skill limitation is stated in the same register this file already
   uses for `mcp-servers/_template/`.
-- Commit:
-- Push:
+- Commit: `9a19627` — one logical change: the evidence record, the left-alone
+  record, the limitation, and the governance updates closing B-010. The
+  pre-commit hook ran the gate and passed.
+- Push: **confirmed.** `ba59062..9a19627 master -> master`, verified by
+  `git fetch` + `git log origin/master` showing `9a19627` at the tip.
