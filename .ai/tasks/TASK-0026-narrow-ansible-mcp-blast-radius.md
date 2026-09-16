@@ -352,5 +352,8 @@ tool has no such parameters. `TASK-0031` is the remaining implementation, and
   accurate in all six places, `ansible_navigator` is disabled by default with
   the reason stated per client, and the authorization record shows a human
   *reducing* a grant rather than the record being quietly adjusted.
-- Commit:
-- Push:
+- Commit: `94d727d` — one logical change: the manifest, three wiring
+  snippets, the runbook, and the governance updates that close B-012/B-013.
+  The pre-commit hook ran the gate and passed.
+- Push: **confirmed.** `8217221..94d727d master -> master`, verified by
+  `git fetch` + `git log origin/master` showing `94d727d` at the tip.

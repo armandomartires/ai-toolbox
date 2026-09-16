@@ -406,5 +406,8 @@ it fires** — without that proof the route is strictly worse than
   observed: the target's gate passes on real content (with a stated fidelity
   limit), and the guard's home is decided on evidence — a custom
   `ansible-lint` rule, conditional on a fires-proof.
-- Commit:
-- Push:
+- Commit: `ce05bf7` — shared with `TASK-0028`, since both are evidence-only
+  spikes with no component change and neither is independently revertible in
+  a meaningful sense. The pre-commit hook ran the gate and passed.
+- Push: **confirmed.** `d278c64..ce05bf7 master -> master`, verified by
+  `git fetch` + `git log origin/master`, not by trusting the push output.

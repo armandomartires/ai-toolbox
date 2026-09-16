@@ -386,5 +386,8 @@ custom rule per TASK-0027, with no plumbing changes.
 - Result: **Done.** Both clients' interception capability is established —
   Claude Code documented-only, OpenCode observed — and ADR-0016's answer is
   **no category**, on stronger evidence than the plan anticipated.
-- Commit:
-- Push:
+- Commit: `ce05bf7` — shared with `TASK-0027` (both evidence-only spikes, no
+  component change). `ADR-0016`'s body, which this spike unblocked, landed
+  separately in `8217221`.
+- Push: **confirmed.** `d278c64..ce05bf7 master -> master`, verified by
+  `git fetch` + `git log origin/master`.
