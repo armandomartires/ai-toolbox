@@ -2,17 +2,25 @@
 
 ## Skills
 SKILL.md is required, case-sensitive. No README.md inside skill folders.
-`tests/validate.sh` enforces every frontmatter rule below, so the guide and
-the gate cannot drift apart (ADR-0008).
+`tests/validate.sh` enforces the **Gated** column below. Rows marked *no* are
+conventions a reader must uphold; nothing checks them.
 
-| Rule | Detail |
-|------|--------|
-| Frontmatter delimiters | `---` on line 1, terminated by a closing `---`. |
-| `name` | Required, non-empty, and **must equal the directory name** — it determines the install path, so a mismatch deploys to somewhere no client looks. `_template*` directories are exempt from the equality rule only. |
-| `description` | Required, non-empty, **single line**. It renders into one registry table cell; a folded (`>`) or block (`|`) scalar breaks that row. |
-| `license` | Optional, but non-empty if present. A `license:` claim should be backed by a repo `LICENSE` file. |
-| `metadata.author` | Optional. |
-| `metadata.version` | Optional; semver when present (`MAJOR.MINOR.PATCH`, optional pre-release/build). See Versioning below. |
+The column replaced the sentence *"enforces every frontmatter rule below, so
+the guide and the gate cannot drift apart"*, which was false in both halves:
+the `LICENSE`-file half of the `license` row is unchecked, and a promise that
+two files "cannot drift" is exactly the construction TASK-0046 logged as a
+false structural claim (its **B3**). Marking each row is what keeps the guide
+checkable against the gate.
+
+| Rule | Detail | Gated |
+|------|--------|-------|
+| Frontmatter delimiters | `---` on line 1, terminated by a closing `---`. | **yes** |
+| `name` | Required, non-empty, and **must equal the directory name** — it determines the install path, so a mismatch deploys to somewhere no client looks. `_template*` directories are exempt from the equality rule only. | **yes** |
+| `description` | Required, non-empty, **single line**. It renders into one registry table cell; a folded (`>`) or block (`|`) scalar breaks that row — including a bare sigil like `>-`, which reaches the registry as the sigil with the text dropped. | **yes** |
+| `license` | Optional, but non-empty if present. | **yes** |
+| `license` backed by a repo `LICENSE` file | A `license:` claim should be backed by a real `LICENSE`. | **no** — convention only; `validate.sh` never reads `LICENSE` |
+| `metadata.author` | Optional. | not applicable |
+| `metadata.version` | Optional; semver when present (`MAJOR.MINOR.PATCH`, optional pre-release/build). See Versioning below. | **yes**, when present |
 
 - Keep SKILL.md lean; push detail into `references/`. This is a judgment
   call, **not** a machine-checked limit — no line or byte budget for
@@ -68,16 +76,25 @@ human authorization in the task file.
 
 ## Loops
 A loop is a repeatable multi-step agent workflow. `loop.md` is required;
-copy from `loops/_template/`. `tests/validate.sh` enforces every element
-below.
+copy from `loops/_template/`. `tests/validate.sh` enforces the **Gated**
+column below — and only that column.
 
-| Element | Rule |
-|---------|------|
-| Frontmatter `name` | Required. Must match the directory name. |
-| Frontmatter `description` | Required. One line — drives the registry and loop selection. |
-| `## Trigger` | Required. What starts the loop, and what it is *not* for. |
-| `## Steps` | Required. Numbered, each stating its expected output, so a step can be judged done or not done. |
-| `## Exit conditions` | Required. Both the success path *and* the failure paths, each failure carrying a retry bound or an escalation. |
+The Gated column exists because this sentence previously read *"enforces
+every element below"*, which was false: the gate checks that the three
+headings are present, not that `## Steps` are numbered or that each failure
+path carries a bound. That is the same defect class TASK-0046 found twelve
+times inside `skills/ansible-ops/` — **a claim an artifact makes about its
+own structure that the artifact falsifies** — occurring here, in the guide
+that governs the gate. Marking each row is how the claim stays checkable
+against `tests/validate.sh` instead of decaying again.
+
+| Element | Rule | Gated |
+|---------|------|-------|
+| Frontmatter `name` | Required. Must match the directory name. | **yes** |
+| Frontmatter `description` | Required. One line — drives the registry and loop selection. A folded or block scalar (`>-`, `\|`) is rejected: it reaches the registry as the bare sigil with the text dropped, and the row's column count stays valid, so the registry check cannot see it. | **yes** |
+| `## Trigger` | Required. What starts the loop, and what it is *not* for. | presence only |
+| `## Steps` | Required. Numbered, each stating its expected output, so a step can be judged done or not done. | presence only — **numbering and expected outputs are not checked** |
+| `## Exit conditions` | Required. Both the success path *and* the failure paths, each failure carrying a retry bound or an escalation. | presence only — **the bound and the escalation are not checked** |
 
 Exit conditions are the point. A loop without them is an unbounded
 instruction — the shape that has an agent retrying the same failing action
@@ -89,6 +106,64 @@ Loops state sequence and exit conditions; they **link** to the rules they
 enforce rather than restating them. A loop that copies `AGENTS.md`'s rules
 creates a second owner of those rules, which will drift. See
 `loops/release-check/loop.md` for the worked example.
+
+## Claims a component makes about its own wiring
+
+**The rule applies to every component category. The gate enforces it for
+`skills/*/scripts/*` only** — the file type the defect occurred in, and the
+only one where "is this run?" is a meaningful question, because only a
+script can be run. Prose in `SKILL.md`, `loop.md`, `agent.md`,
+`references/` and `templates/` is **not** checked, and neither is
+`mcp-servers/`. Defined here first so the gate enforces a requirement
+rather than authoring one (ADR-0008).
+
+TASK-0046's pilot found **twelve false claims** in one new skill, each an
+assertion about the artifact's own structure that the artifact falsified.
+The worst was a script header stating it *"is run from
+`tests/validate.sh`"* when **nothing in the repository ran it** — an
+artifact claiming to be enforced while being inert. Five review rounds each
+caught a different instance by reading, because nothing mechanical could.
+
+Most of that class is **not** mechanically decidable. "Every gate maps to a
+field", "so it cannot drift" and "never restated" are claims about meaning,
+and a check that pattern-matches prose for meaning fires on correct text and
+gets deleted. This guide does not pretend the gate closes them. One subset
+is decidable:
+
+> **The rule.** If a script claims that a **named runner in this
+> repository** executes it, that runner must actually reference the script's
+> path. The gated runners are `tests/validate.sh`, `.githooks/pre-commit`,
+> and any `scripts/*.sh`.
+
+Write a wiring claim in one of two forms, so the claim's polarity is
+unambiguous to a reader *and* to the gate:
+
+- **Positive** — "run from `tests/validate.sh`", "invoked by
+  `.githooks/pre-commit`". The named runner must contain the path of the
+  file making the claim. If it does not, the gate fails.
+- **Negative** — prefix with `NOT`, `never`, or `Nothing`: "**NOT** run
+  from `tests/validate.sh`", "**Nothing** in this repository runs this
+  script". Negative claims are exempt, because they assert absence and the
+  absence is what the gate would otherwise verify.
+
+Two further exemptions exist so the check does not fire on correct text:
+**discussion** of a claim ("Example of a bad claim: …", "would be false",
+"do not write …") and a claim **inside quotes**, which is being shown rather
+than made. Both were added after a comment explaining this very rule tripped
+the check.
+
+**The ceiling, stated plainly:** a false claim phrased to look like
+discussion passes. Judging polarity from prose has that limit, which is why
+the rest of the class — claims about totality, ownership and drift — is left
+to review rather than pattern-matched. An unwired script is **not** a defect;
+`skills/ansible-ops/scripts/` ships one deliberately, because the mandatory
+gate must stay offline and hermetic (ADR-0007). Claiming to be wired when you
+are not **is** the defect.
+
+An unwired script is **not** a defect — `skills/ansible-ops/scripts/`
+ships one deliberately, since the mandatory gate must stay offline and
+hermetic (ADR-0007) and a record checker validates *another* repo's files.
+Claiming to be wired when you are not **is** the defect.
 
 ## Agents
 An agent is a **role**: an identity, a purpose, a capability boundary and a

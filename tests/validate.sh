@@ -83,6 +83,15 @@ elif desc_span > 1:
     # The registry renders description into a single table cell; a folded
     # or block scalar breaks that row.
     bad.append("description spans %d lines — must be a single line" % desc_span)
+elif desc in (">", ">-", ">+", "|", "|-", "|+"):
+    # A one-token fold reaches the registry as the literal sigil with the
+    # text DROPPED, and the row still has the right column count — so the
+    # registry integrity check cannot see it. Observed in TASK-0039 against
+    # `description: >-`, fixed for agents by TASK-0038, and left live for
+    # skills and loops until now: the span test above cannot catch it,
+    # because the value occupies one line.
+    bad.append("description is the bare block sigil %r — the registry would "
+               "render the sigil and drop the text" % desc)
 
 lic, _ = scalar("license")
 if lic is not None and not lic:
@@ -200,6 +209,35 @@ for f in loops/*/loop.md; do
   name=$(awk '/^name:/{sub(/^name: */,"");print;exit}' "$f")
   [ -n "$name" ] || { echo "MISSING name: $f"; fail=1; }
   grep -q '^description:' "$f" || { echo "MISSING description: $f"; fail=1; }
+  # The registry renders description into one cell, exactly as for skills and
+  # agents. This was the weakest description test in the file — presence only,
+  # so a folded scalar or an empty value passed. Same defect TASK-0039 found.
+  ldesc=$(awk '/^description:/{sub(/^description: */,"");print;exit}' "$f")
+  # Strip one layer of matching quotes, so `description: ""` and
+  # `description: '>-'` are judged on their content rather than their
+  # punctuation. The skills check does this via its scalar() helper; doing it
+  # here too is what keeps the two categories' rules actually identical.
+  case "$ldesc" in
+    \"*\") ldesc=${ldesc#\"}; ldesc=${ldesc%\"} ;;
+    \'*\') ldesc=${ldesc#\'}; ldesc=${ldesc%\'} ;;
+  esac
+  # A following indented, non-comment line is a YAML continuation, so the
+  # value is not a single line. The registry renders it into one cell.
+  ldesc_next=$(awk '/^description:/{getline nxt; print nxt; exit}' "$f")
+  case "$ldesc_next" in
+    [' 	']*)
+      case "$(printf '%s' "$ldesc_next" | sed 's/^[ \t]*//')" in
+        ""|'#'*) ;;   # blank or comment ends the value
+        *) echo "MULTILINE description: $f — description must be a single line, so the registry renders it into one cell"
+           fail=1 ;;
+      esac ;;
+  esac
+  case "$ldesc" in
+    "") echo "EMPTY description: $f"; fail=1 ;;
+    ">"|">-"|">+"|"|"|"|-"|"|+")
+      echo "FOLDED description: $f declares the bare block sigil '$ldesc' — the registry would render the sigil and drop the text"
+      fail=1 ;;
+  esac
   case "$base" in
     _template*) ;;   # templates are named _template*, so cannot match
     *) [ -z "$name" ] || [ "$name" = "$base" ] || {
@@ -211,6 +249,138 @@ for f in loops/*/loop.md; do
       echo "MISSING SECTION '## ${section}': $f"; fail=1; }
   done
 done
+
+# Wiring claims in shipped scripts. A script that claims a named runner in
+# THIS repository executes it must actually be referenced by that runner. The
+# rule is defined in docs/development/authoring-guide.md under "Claims a
+# component makes about its own wiring", written there first so this gate
+# enforces a requirement rather than authoring one (ADR-0008).
+#
+# WHY THIS EXISTS: TASK-0046 found twelve false claims in one new skill, each
+# an assertion about the artifact's own structure that the artifact falsified.
+# The worst (W1) was a script header stating it "is run from
+# tests/validate.sh" when NOTHING in the repo ran it — an artifact claiming
+# to be enforced while inert. Five review rounds each found a different
+# instance by reading; nothing mechanical could.
+#
+# SCOPE: skills/*/scripts/* only — the file type W1 occurred in, and the only
+# one where "is this run?" is a meaningful question, because only a script can
+# be run. An earlier version of this check also scanned SKILL.md, loop.md and
+# agent.md and was VACUOUS for all three: it tested whether the runner's text
+# contained the claiming file's path or basename, and validate.sh legitimately
+# contains the strings "skills/*/SKILL.md", "loops/*/loop.md" and
+# "agents/*/agent.md" in its own loop headers — so every .md claim auto-passed.
+# Verified by injecting a false claim into a SKILL.md and watching the gate
+# return 0. A check that cannot fail is worse than no check, because it is
+# still trusted.
+#
+# WHAT THIS PROVES: that a positive wiring claim in a shipped script names a
+# runner whose text contains that script's path.
+# WHAT IT DOES NOT PROVE: that the runner invokes it usefully, on the right
+# input, or at the right time. Nothing about .md prose — including
+# templates/change-record.md, where two of the twelve false claims lived. And
+# nothing about the REST of the class: "every gate maps to a field", "so it
+# cannot drift" and "never restated" are not mechanically decidable. Do not
+# extend this by pattern-matching prose for meaning; a check that guesses
+# fires on correct text and gets deleted.
+#
+# THREE EXEMPTIONS, each verified necessary against a real false positive:
+#   1. Negative claims — "NOT run from tests/validate.sh", "Nothing in this
+#      repository runs this script". They assert an ABSENCE, which is what the
+#      positive branch would otherwise verify.
+#   2. Discussion — "Example of a bad claim: ...", "would be false",
+#      "do not write". Observed firing on a comment that explained the rule,
+#      which is the fires-on-correct-text failure mode that gets a check
+#      deleted rather than fixed.
+#   3. Quoted claims — an odd number of quotes before the runner path means
+#      the claim is being shown, not made.
+# The exemptions are why this check is worth having; they are also its ceiling.
+# A false claim phrased to look like discussion passes. That is the accepted
+# limit of judging polarity from prose, and the reason the rest of the class
+# is left to reading rather than pattern-matched here.
+#
+# An unwired script is not a defect (skills/ansible-ops/ ships one
+# deliberately — the mandatory gate must stay offline and hermetic, ADR-0007);
+# claiming to be wired when you are not is the defect.
+#
+# COST, measured rather than assumed. This pass alone: ~43 ms, scanning the
+# 3 shipped scripts. All three checks added by this change, end to end on a
+# native filesystem: 476 ms baseline -> ~540 ms. The gate stays sub-second
+# where ADR-0009 measured it (0.366 s) and on any native checkout.
+#
+# On a /mnt/c WSL working copy the whole gate runs ~920 ms BEFORE this change
+# and ~1000 ms after — the Windows filesystem bridge, not this pass, is the
+# cause. Measure on a native path before concluding a check is expensive, and
+# do not delete checks to buy back time the filesystem is spending.
+python3 - <<'PY' || fail=1
+import glob, os, re, sys
+
+# A claim that some named runner executes this file. Captures the runner path
+# and the words around it, so polarity can be judged.
+CLAIM = re.compile(
+    r"(?P<lead>[^.\n]{0,80}?)"
+    r"\b(?:run|runs|invoked|invokes|executed|executes|called|calls)\b"
+    r"(?P<mid>[^.\n]{0,40}?)"
+    r"`(?P<runner>tests/validate\.sh|\.githooks/pre-commit"
+    r"|scripts/[A-Za-z0-9_.\-]+\.sh)`"
+)
+# Polarity markers. A negative claim asserts absence and needs no check.
+NEG = re.compile(r"\b(?:not|never|nothing|no|neither|nor|without|cannot|"
+                 r"can't|unwired|un-wired)\b", re.I)
+# Text that is TALKING ABOUT wiring claims rather than making one. Verified
+# necessary: a comment reading `Example of a bad claim: writing "run from
+# tests/validate.sh" when nothing does` fired this check, which is the
+# fires-on-correct-text failure mode that gets a check deleted. A quoted or
+# hypothetical claim is discussion, so it is exempt.
+DISCUSSION = re.compile(r"\b(?:example|e\.g\.|counter-?example|hypothetic|"
+                        r"claim(?:s|ed|ing)?\s+that|wrongly|falsely|"
+                        r"incorrectly|would be|do not write|don't write|"
+                        r"instead of|rather than)\b", re.I)
+
+runner_cache = {}
+
+
+def runner_text(path):
+    if path not in runner_cache:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                runner_cache[path] = fh.read()
+        except OSError:
+            runner_cache[path] = None
+    return runner_cache[path]
+
+
+bad = []
+for path in sorted(glob.glob("skills/*/scripts/*")):
+    if "_template" in path or not os.path.isfile(path):
+        continue
+    with open(path, encoding="utf-8") as fh:
+        body = fh.read()
+    for n, line in enumerate(body.split("\n"), 1):
+        for m in CLAIM.finditer(line):
+            context = m.group("lead") + " " + m.group("mid")
+            if NEG.search(context) or DISCUSSION.search(line):
+                continue
+            # A claim inside a quoted string is being shown, not made.
+            before = line[:m.start("runner")]
+            if before.count('"') % 2 == 1 or before.count("'") % 2 == 1:
+                continue
+            rp = m.group("runner")
+            text = runner_text(rp)
+            if text is None:
+                bad.append("%s:%d claims it is run from %s, which does not "
+                           "exist" % (path, n, rp))
+            elif path not in text:
+                # Full path only. A basename test would be satisfied by the
+                # runner merely mentioning a glob that happens to match.
+                bad.append("%s:%d claims it is run from %s, but that file "
+                           "never references it — write 'NOT run from %s' if "
+                           "it is deliberately unwired" % (path, n, rp, rp))
+
+for msg in bad:
+    print("FALSE WIRING CLAIM: %s" % msg)
+sys.exit(1 if bad else 0)
+PY
 
 # Agents: the frontmatter rules docs/development/authoring-guide.md states
 # under "Agents", mirrored here so guide and gate cannot drift (ADR-0008).
