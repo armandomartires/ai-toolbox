@@ -321,6 +321,75 @@ any agent or human can understand, trust, and deploy.
   and `prompts/`: indefinitely. If the sprint shrinks, the honest cut is
   role reconciliation, never the plumbing and never the pilot.
 
+## Phase 8 — Third-party agent extensions (planned 2026-09-16, not started)
+
+**This section was written at plan time, in the same change as
+`PLAN-0005`.** The roadmap has now had two phases go missing from it —
+Phase 5 was left reading "in progress" after completion (caught by
+REVIEW-0007), and Phase 6 ran an entire planning cycle while this file
+skipped from Phase 5 straight to Risks (caught by S7's planning). Both were
+diagnosed as needing a *mechanism*; none was added, and it recurred. This
+is a habit, not a mechanism, and it will fail the same way if the habit
+lapses.
+
+Planned by `.ai/planning/plans/PLAN-0005-third-party-agent-extensions.md`.
+Sprint file: `.ai/planning/sprints/SPRINT-S8-third-party-agent-extensions.md`
+— which is **not** `SPRINT-CURRENT.md`, deliberately, because S7's six
+tasks are `done` but `REVIEW-0008` does not exist. Promoting S8 would have
+closed a sprint without its checkpoint.
+
+**Decision status:** `ADR-0021` **proposed**. Ratification waits on
+TASK-0048's evidence, per the ordering S7 established.
+
+### Goal
+
+Place three human-requested third-party extensions in the category each one
+actually belongs to, cross-client where a client genuinely supports the
+capability — without a new component category, without plumbing changes,
+without vendoring, and without auto-installing anything.
+
+- **graphify** → `mcp-servers/graphify/server.json`. The only one of the
+  three that becomes a real, pinned, indexed component.
+- **ponytail** → per-client wiring in `configs/*/README.md`.
+- **omniroute** → **out of the component layer** (human decision,
+  2026-09-16); one entry in a new `docs/development/third-party-tools.md`.
+
+### Exit criteria
+- `ADR-0021` ratified or rejected **on evidence**, not on agreement.
+- No `plugins/` directory; no new-category plumbing in `install.sh`,
+  `sync-registry.sh` or `validate.sh`.
+- Nothing vendored into `skills/`, `agents/`, `loops/` or `mcp-servers/`
+  from any of the three.
+- graphify's manifest pinned, gate-valid, and **observed failing** when
+  deliberately broken.
+- `smoke-mcp.sh` returns PASS or SKIP for graphify — never a FAIL caused by
+  an unmet precondition — with the corrected outcome *observed*.
+- Every capability claim labelled *vendor doc* or *observed on <date>,
+  <version>*.
+- The placement rule findable in the authoring guide, linking to the ADR
+  rather than restating it.
+
+### Notes
+- **The premise needed correcting before it could be built — the third
+  sprint in a row.** The request named three things with one word;
+  "plugin" turned out to name three unrelated mechanisms. ADR-0006's
+  per-capability scoping applies directly.
+- **Two upstream claims were falsified before the sprint began**, both by
+  reading source rather than READMEs: graphify's README contradicts its
+  own `src/cli.ts` about OpenCode, and `src/serve.ts:188-195` shows
+  `graphify serve` exiting 1 without a pre-existing graph. Hence the spike
+  runs first, and hence a spike that finds nothing should be read as weak
+  rather than reassuring.
+- **Two of three deliverables are prose.** Fourth instance of the class
+  `mcp-servers/_template/` established (ADR-0010) and `agents/`/`prompts/`
+  repeated (ADR-0016). Ordering is the only defence: the spike makes the
+  prose *verified* rather than transcribed. **If the sprint shrinks, cut a
+  product, never the spike.**
+- **The sprint also found a latent defect in this repo's own harness**
+  (B-020), not in a third party: `smoke-mcp.sh` cannot distinguish an unmet
+  precondition from a protocol failure, which affects any future server
+  with state requirements.
+
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec
   evolution. Mitigations: configs/ snapshots, ADR-0002, spec templates.

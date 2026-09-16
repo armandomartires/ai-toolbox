@@ -20,12 +20,31 @@
 | B-016 | `agents/` and `prompts/` are declared component categories with nothing behind them | medium | medium | B-015 (the schema depends on the portability decision) | low | **ready** | S7 / TASK-0037…0040 for `agents/` only — 141-byte and 127-byte READMEs, no template, no schema, no `validate.sh` check, no registry section, no `install.sh` path. `prompts/` is deliberately left out of scope |
 | B-017 | No design stage exists — `plan` writes specs but never ideates or critiques | high | high | B-014 (closed — roles now authored by TASK-0045), B-016 (roles need enforcement) | medium | **ready** | S7 / ADR-0019, TASK-0041…0043 — `bmad-workflow.md:14-16` has `plan` write a story/spec directly, with no alternatives generated, no adversarial review, and **no convergence criterion**. The genuine capability gap |
 | B-018 | Deploy skills to Bionic — its Agent Skills target exists and is unused | medium | medium | none | medium | **ready** | TASK-0047 / ADR-0020 corrected the premise: the target is `~/.lmstudio/skills/` (global) and `<project>/.agents/skills/` (project), **not** the `hub/skills/` cache the repo checked for two sprints. Needs a design decision, not just code: global installs are approval-gated (`skill-management/SKILL.md:31` — "DO NOT edit global skills directly", routed through a user-prompting `skill.install` tool), which `install.sh` cannot drive non-interactively. Project skills *are* plain writable files. So the real question is whether a per-project target belongs in a global installer at all, or whether Bionic needs a separate path. Frontmatter is already compatible (Bionic ignores unknown keys) |
+| B-019 | Three requested third-party "plugins" have no home, and "plugin" is not one capability | medium | medium | none | low | **ready** | S8 / `ADR-0021`, TASK-0048…0051. Raised from a human request (2026-09-16), not from inspection. The item's own title carries the defect: **"plugin" names three unrelated mechanisms** — ponytail is an npm entry in OpenCode but a *marketplace install plus two Node lifecycle hooks* in Claude Code; omniroute is a provider plugin in OpenCode but *a base URL* in Claude Code; graphify is a plugin in neither sense, being a CLI that generates each platform's integration. So there is no portable capability to abstract, and ADR-0016's declined-category reasoning applies (its three plumbing findings **re-verified 2026-09-16**). Resolution is per-category placement, not a `plugins/` directory: graphify → `mcp-servers/` external shape, ponytail → `configs/*/README.md`, omniroute → out of the component layer by human decision. **Not ready-when-convenient**: TASK-0048 must run first, because everything currently known is vendor documentation and two of those documents already contradict their own source |
+| B-020 | `tests/smoke-mcp.sh` reports FAIL where the truth is an unmet precondition | medium | medium | B-019 (found while scoping it) | low | **ready** | S8 / TASK-0049. Found by reading `@sentropic/graphify`'s source, not by running anything: `src/serve.ts:188-195` has `createReloadingGraphStore` call `validateGraphFilePath`, then `console.error` + `process.exit(1)`, and `:896-897` defaults the graph path to `resolveGraphInputPath()`. So `graphify serve` with no `.graphify/graph.json` exits 1 without ever speaking MCP, and the smoke test — which launches from `launch.command` and asserts on an `initialize` reply — would call that a **FAIL**. Its own header insists three outcomes exist and that *"a SKIP is not a pass"*; this is **the mirror defect, a check lying in the other direction**, and it is latent for any future server with a state precondition, not only graphify. Fixing it edits a shared validated test file, so a human authorizes it (`PLAN-0005`, item 4). Either outcome is acceptable — precondition-aware SKIP, or a **visible** exclusion — but never a silent false FAIL |
 
-**Eight items are open — B-010…B-013 (S6, parked), B-015…B-017 (S7), and
-B-018. B-014 closed 2026-09-15** as *decided, not implemented*: ADR-0017
-rejected, so `agent-tiers` stays with `opencode-customization`. That makes
-**two** items closed on a false premise (B-009 and now B-014) out of
-fourteen — see the lesson-2 note in `CURRENT_STATE.md`.
+**Ten items are open — B-010…B-013 (S6, parked), B-015…B-017 (S7), B-018,
+and B-019…B-020 (S8, raised 2026-09-16). B-014 closed 2026-09-15** as
+*decided, not implemented*: ADR-0017 rejected, so `agent-tiers` stays with
+`opencode-customization`. That makes **two** items closed on a false premise
+(B-009 and now B-014) out of twenty — see the lesson-2 note in
+`CURRENT_STATE.md`.
+
+This count was rewritten rather than annotated. The first draft of the S8
+entries left the old "Eight items are open" paragraph standing underneath a
+new "Ten items" line, which would have made this file state its own total
+twice with different numbers — the drift class `CURRENT_STATE.md` records
+five instances of, appearing here in the act of documenting it. Correct the
+count in place; never stack a correction on top of a stale claim.
+
+**B-019 is the first item raised from a direct human request** rather than
+from a plan, an inspection or a review. Its shape is worth noting: the
+request named three things with one word, and **the word was the
+assumption that did not survive** — which is B-009's lesson (an item's
+title encodes an assumption) arriving through a new door. **B-020 is the
+second consecutive item found by reading a third party's source rather than
+its documentation**, and it describes a defect in *this* repo's test
+harness, not in the third party.
 
 B-014…B-017 were raised by `PLAN-0004`. **B-001…B-009 remain closed.**
 
@@ -35,7 +54,9 @@ ADR-0006* — and its premise was false. The target existed the whole time;
 the repo checked a cache directory and generalised. B-005 stays closed
 because its *action* (re-scope the Phase 2 exit criterion) was correct and
 is done, but its stated reason is retracted by ADR-0020. That is now
-**three** of eighteen items touching a false premise, and the only one where
+**three** of twenty items touching a false premise (four, counting B-019 —
+whose premise was the *word* "plugin" rather than a claim about a file), and
+the only one where
 the falsehood propagated into two ADRs and four tasks before a human caught
 it by noticing a product name.
 

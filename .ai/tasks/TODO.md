@@ -320,6 +320,67 @@ Out of sprint — corrections found by inspection:
       Bionic's MCP support is *inferred, not verified*, with a GUI check
       left open in the runbook (done)
 
+## Sprint S8 — Third-party agent extensions (planned, NOT yet current)
+Planned by `.ai/planning/plans/PLAN-0005-third-party-agent-extensions.md`.
+Raised B-019, B-020. Decision: `ADR-0021` (**proposed**).
+
+**`SPRINT-CURRENT.md` still holds S7**, deliberately: S7's six tasks are
+all `done` but `REVIEW-0008` does not exist, and promoting S8 would have
+closed a sprint without its checkpoint. The S8 sprint file therefore sits
+in `planning/sprints/` with that deviation recorded in its own header.
+Whether S7 closes first is a human decision (`PLAN-0005`, item 3).
+
+Opened from a human request — *add ponytail, omniroute and graphify,
+cross-agent compatible if possible* — which makes it the **third sprint in
+a row started from a human-supplied premise, and the third where the
+premise needed correcting first**. The correction: "plugin" named three
+unrelated mechanisms, so there is no portable capability to abstract.
+
+Scope, after the human narrowed it on 2026-09-16: **graphify** becomes a
+real pinned component; **ponytail** becomes per-client documentation;
+**omniroute is out of the component layer** and gets one entry in a new
+third-party-tools document.
+
+- [ ] TASK-0048 — **Spike, runs first.** Verify both products on this
+      machine: graphify's real OpenCode surface (its README and its
+      `src/cli.ts` **disagree**), whether `graphify serve` can start
+      without a graph (`src/serve.ts:188-195` says no), and whether
+      ponytail loads from an npm `plugin` entry given its `main` points
+      into `./.opencode/plugins/`. Writes no component files
+- [ ] TASK-0049 — `mcp-servers/graphify/server.json`, pinned exactly;
+      registry regenerated; **the smoke-test precondition decided** — an
+      unbuilt graph would make `smoke-mcp.sh` report FAIL where the truth
+      is SKIP, the mirror of the defect its own header guards against
+- [ ] TASK-0050 — ponytail wiring in all three `configs/*/README.md`, one
+      mechanism per client; Bionic **unverified** (B-018 referenced, not
+      restated); the state files upstream leaves outside its plugin
+      directory listed, since nothing here prunes them
+- [ ] TASK-0051 — `ADR-0021`'s placement rule into the authoring guide
+      (**linking** to the reasoning, never restating it) plus
+      `docs/development/third-party-tools.md` with omniroute
+- [ ] REVIEW-0009 — Checkpoint. Question pre-committed: *did the spike
+      change anything, or did it rubber-stamp the vendor READMEs?*
+
+Notes on S8:
+- **No new component category, no plumbing, nothing vendored, nothing
+  auto-installed.** ADR-0016 declined a `hooks/` category and its three
+  plumbing findings were **re-verified 2026-09-16**: four hardcoded
+  `emit_section` calls, four hardcoded `validate.sh` roots, a four-column
+  `install.sh` table. A new top-level directory is still silently ignored
+  by all three and by CI.
+- **ponytail cannot be an MCP server, on a checkable fact.** Upstream ships
+  `ponytail-mcp/`, which would have been the portable answer — but it is
+  `"private": true` and unpublished (npm → *Not found*, 2026-09-16), so
+  ADR-0005's external shape has no `launch.command` to record.
+- **Two upstream claims were falsified before the sprint began**, both by
+  reading source instead of READMEs. That is why the spike is first, and
+  why a spike that finds nothing should be read as weak rather than
+  reassuring.
+- **Two of three deliverables are prose** — the fourth instance of the
+  class `mcp-servers/_template/` established and `agents/`/`prompts/`
+  repeated. The only defence is ordering. **If the sprint shrinks, cut a
+  product, never the spike.**
+
 Notes on S7:
 - **The second sprint in a row planned from a human-supplied analysis.**
   Eight of its claims were corrected before planning finished, against six

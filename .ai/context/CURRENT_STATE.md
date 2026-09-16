@@ -1,8 +1,120 @@
 # Current State
 
-Last updated 2026-09-15, after **TASK-0047 corrected the identity and
-capabilities of the third client** (below). Before that, TASK-0046 ran S7's
-pilot: both loops were executed end to end, producing `skills/ansible-ops/`
+Last updated 2026-09-16, after **sprint S8 was planned from a human request
+for three "plugins"** (below). Before that, TASK-0047 corrected the identity
+and capabilities of the third client.
+
+## Sprint S8 is planned; nothing is implemented; S7 is still open
+
+**2026-09-16.** A human asked for three third-party "plugins" — **ponytail,
+omniroute, graphify** — added to the toolbox and made cross-agent
+compatible if possible. Seven artifacts written, **zero components
+changed** (planning was the explicit instruction): `ADR-0021` (proposed),
+`PLAN-0005`, `TASK-0048…0051`, `SPRINT-S8`, `B-019`, `B-020`.
+
+**The request's central word was the wrong abstraction, and that is the
+finding the sprint is built around.** "Plugin" names three unrelated
+mechanisms, verified from npm metadata and upstream *source* on 2026-09-16
+against `opencode 1.18.31` and `claude 2.1.246`:
+
+| | OpenCode | Claude Code |
+|---|---|---|
+| ponytail | npm `plugin` entry (`main` → `./.opencode/plugins/ponytail.mjs`) | plugin **marketplace** + two Node lifecycle hooks |
+| omniroute | provider plugin needing a running daemon + API key | **not a plugin** — an OpenAI-compatible base URL |
+| graphify | a generated plugin file *or* `AGENTS.md` — **README and source disagree** | `CLAUDE.md` section + `PreToolUse` hook |
+
+So there is no portable "plugin" capability to abstract, and ADR-0006's
+per-capability scoping applies unchanged. **No `plugins/` category**:
+ADR-0016 declined one for hooks, and its three plumbing claims were
+**re-verified rather than cited** (four hardcoded `emit_section` calls, four
+hardcoded `validate.sh` iteration roots, a four-column `install.sh`
+`CLIENTS` table) — a new top-level directory is *still* silently ignored by
+all three and by CI. ADR-0016 had also predicted this sprint's exact trap in
+words: naming a category after one vendor's term for a capability another
+implements differently.
+
+Placement instead follows what each thing **is**: graphify →
+`mcp-servers/graphify/server.json` (ADR-0005 external shape); ponytail →
+`configs/*/README.md`; **omniroute → out of the component layer entirely**
+(human decision), documented once as an optional tool.
+
+**Two upstream claims were falsified before the sprint started, both by
+reading source instead of READMEs.** This is the S7 lesson (*a
+doc-confirmed field is not an installed field*) arriving one sprint later
+against different vendors:
+
+- **graphify's README contradicts graphify's own `src/cli.ts`.** The README
+  lists OpenCode among platforms with no hook point that fall back to
+  `AGENTS.md`; the source defines
+  `OPENCODE_PLUGIN_ENTRY = ".opencode/plugins/graphify.js"` plus a plugin
+  template that hooks bash calls. Neither is evidence of installed
+  behaviour, so it is assigned to `TASK-0048` rather than settled by
+  picking the more convincing document.
+- **`graphify serve` cannot start without an existing graph, and that
+  breaks this repo's own test harness.** `src/serve.ts:188-195` —
+  `createReloadingGraphStore` calls `validateGraphFilePath`, then
+  `console.error` and `process.exit(1)`; `:896-897` defaults the path. So
+  `tests/smoke-mcp.sh` would report **FAIL** where the truth is
+  *precondition unmet* → **SKIP**. That script's own header insists three
+  outcomes exist and that *"a SKIP is not a pass"* — this is **the mirror
+  defect, a check lying in the other direction**. Raised as **B-020**
+  because it is latent for **any** future server with a state
+  precondition, not only graphify.
+
+**ponytail's portable option exists and is unusable, on a checkable fact.**
+Upstream ships `ponytail-mcp/`, which would have fit ADR-0005's external
+shape exactly — the ruleset as an MCP prompt plus a read-only tool. But its
+`package.json` says `"private": true` and `registry.npmjs.org/ponytail-mcp`
+returns **404**. With nothing published there is no `launch.command`, so
+the shape's premise fails and ponytail is documentation only. The reason is
+re-checkable in one command, which is the point.
+
+**Vendoring was refused for a mechanical reason, not taste.**
+`install.sh:105` deploys skills with `ln -sfn`, so vendored copies of
+ponytail's six skills would be symlinks into this repo's working tree,
+making this repo maintainer-of-record for independently-shipping upstream
+content. That is ADR-0004's three-copies problem, and the *same* mechanism
+that invalidated ADR-0015's "portable core plus per-project templates"
+shape in S6.
+
+**omniroute's exclusion is the human's call and also the correct one**, so
+`ADR-0021` records why rather than only that. It is a gateway *service* — a
+daemon on `:20128`, an API key, a dashboard — that replaces where inference
+comes from rather than extending an agent's behaviour. It also has the
+widest blast radius of the three: its OpenCode plugin's `mcpAutoEmit`
+option **writes an `mcp.*` entry into the client config**, a mutation this
+repo forbids itself (emission writes role files only and never touches
+`opencode.jsonc`).
+
+**Two structural things worth carrying forward:**
+
+1. **S7 is not closed, and S8 was deliberately not promoted.** All six S7
+   tasks are `done` but `REVIEW-0008` does not exist. Moving S8 into
+   `SPRINT-CURRENT.md` would have silently closed a sprint without its
+   checkpoint — so the S8 sprint file sits in `planning/sprints/` with the
+   deviation recorded in its own header, and the closure question is
+   escalated to the human rather than absorbed.
+2. **Two of three deliverables will be prose — the fourth instance of a
+   class this repo has already diagnosed three times**
+   (`mcp-servers/_template/` per ADR-0010; `agents/` and `prompts/` per
+   ADR-0016; S7 about itself). Ordering is the only defence: `TASK-0048`
+   runs **first** so the prose describes observed behaviour. Stated in the
+   plan, the sprint file and the roadmap, with `REVIEW-0009`'s question
+   pre-committed: *did the spike change anything, or did it rubber-stamp
+   the vendor READMEs?* Since two README/source discrepancies were found
+   **before** the spike began, a spike reporting zero findings should be
+   read as weak rather than reassuring.
+
+**B-019 is the first backlog item raised from a direct human request**
+rather than from a plan, inspection or review — and its title carried the
+defect, since "plugin" was the assumption that did not survive. That is
+B-009's lesson (an item's title encodes an assumption) arriving through a
+new door.
+
+## S7's pilot ran, and both loops were exercised
+
+**TASK-0046 ran S7's pilot** (2026-09-15): both loops were executed end to
+end, producing `skills/ansible-ops/`
 and `loops/ansible-change/` plus an accepted, locked design brief. S7's five
 phases are complete and **exercised**; S6 remains parked, but its TASK-0029
 and TASK-0030 are now delivered.
