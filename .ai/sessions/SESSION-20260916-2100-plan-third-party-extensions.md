@@ -128,7 +128,20 @@
     Annotating a superseded number leaves two owners of one fact, which is
     what AGENTS.md's one-owner rule exists to prevent.
 
-- Commit/push: (pending — planning artifacts only; no component changed)
+- Commit/push: **`75f8984`** — "Plan sprint S8: third-party extensions are
+  wired, not vendored". 13 files, all under `.ai/`, +2124/-10. Pre-commit
+  hook ran `validate.sh` → OK. **Pushed to `origin/master` and confirmed by
+  re-fetch**: `origin/master` and `HEAD` both at
+  `75f898466848770e7451a4880affa56c0227e73b`; working tree clean;
+  `git remote -v` verified token-free (the token was supplied through a
+  one-shot credential helper, never written to a tracked file or the remote
+  URL).
+
+  Note: the push carried **two** commits, because `fd23f6a` ("Close the
+  decidable subset of the false-structural-claim class") was already
+  committed-but-unpushed when this session began. It is prior work, not
+  this session's — recorded here so the remote's two-commit advance is
+  explicable rather than looking like this commit was split.
 
 - Next action: Human to (a) ratify or reject `ADR-0021` after `TASK-0048`
   reports, (b) decide whether S7 closes with `REVIEW-0008` before S8
