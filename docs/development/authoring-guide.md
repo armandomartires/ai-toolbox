@@ -406,10 +406,11 @@ integration surfaces are in
 [`ADR-0021`](../../.ai/decisions/0021-third-party-extensions-are-wired-not-vendored.md)
 — read it before arguing with the table, and do not restate it here.
 
-> **`ADR-0021` is `Proposed`, not `Accepted`, as of 2026-09-23.** The rule
-> above is followed in this repo today and has two worked examples behind
-> it, but it has not been ratified. Recorded because a normative guide
-> should not present a pending decision as settled.
+> **`ADR-0021` was ratified 2026-09-23** and is `Accepted`. The rule above is
+> settled. Note that ratification covers the decision's clauses, not its
+> context: two of the ADR's own predictions about these products were
+> falsified by the spike that tested them, and are preserved in the file as
+> written.
 
 ## Versioning
 - Semver per component. Skills: `metadata.version` in SKILL.md

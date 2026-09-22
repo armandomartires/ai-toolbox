@@ -512,7 +512,33 @@ third-party-tools document.
       own artifacts.** Verdict: **approve the work; the review cannot close
       the sprint** — `ADR-0021` is still `Proposed` and `PLAN-0005`'s first
       criterion requires a *human* to ratify or reject it. Ratification
-      packet is in the review. **S8 stays current until then.**)
+      packet is in the review. ~~**S8 stays current until then.**~~
+      *(Resolved the same day — see TASK-0068 below.)*)
+- [x] TASK-0068 — Ratify `ADR-0021`; close S8 on `REVIEW-0009`
+      (done 2026-09-23. **The human ratified as written**, declining three
+      alternatives including the clause-5 tightening `REVIEW-0009` proposed —
+      so that stays an open follow-up rather than a silent amendment.
+      `ADR-0021` is **Accepted — 2026-09-23**, with its two *falsified*
+      Context claims preserved as written, because they are the evidence
+      that the spike was load-bearing. S8 archived to
+      `.ai/planning/sprints/SPRINT-S8-third-party-extensions.md`; `B-019`
+      closed, so **S8 cleared its own backlog slice**. **No sprint was
+      promoted** — S9/S10 exist as plans (`PLAN-0006`) but are queued, and
+      S9 is gated on `ADR-0022` — so `SPRINT-CURRENT.md` now states plainly
+      that no sprint is open and lists what is outstanding.)
+
+## Post-S8 (no sprint open)
+
+Opening the next sprint is a human decision. **S9 and S10 are planned**
+(`PLAN-0006` — unattended task runs) and queued in `.ai/planning/sprints/`;
+S9 is gated on `ADR-0022`, which is `Proposed` and blocked on its own two
+spikes. The outstanding queue lives in `.ai/planning/SPRINT-CURRENT.md`:
+three `ready` backlog items (**B-018**, **B-021**, **B-023**), four
+`REVIEW-0009` follow-ups, and two inherited from `REVIEW-0010`.
+
+**Task numbering:** `PLAN-0006` reserves **TASK-0055…TASK-0067** for S9/S10.
+This closure took **TASK-0068** to avoid the collision; the next free number
+is **TASK-0069**.
 
 Notes on S8:
 - **No new component category, no plumbing, nothing vendored, nothing

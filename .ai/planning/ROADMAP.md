@@ -464,7 +464,54 @@ any agent or human can understand, trust, and deploy.
   and `prompts/`: indefinitely. If the sprint shrinks, the honest cut is
   role reconciliation, never the plumbing and never the pilot.
 
-## Phase 8 — Third-party agent extensions (CURRENT 2026-09-22, not started)
+## Phase 8 — Third-party agent extensions (COMPLETE 2026-09-23)
+
+> **Closed 2026-09-23 on `REVIEW-0009`, with `ADR-0021` ratified as
+> written.** Archived at
+> `.ai/planning/sprints/SPRINT-S8-third-party-extensions.md` — **the path
+> this section predicted**, which matters because the paragraph below has
+> been wrong twice in opposite directions about where the file lives.
+> Archiving to exactly that path makes the prediction true instead of adding
+> a third correction.
+>
+> **All seven exit criteria met. Four are mechanically verifiable**, not
+> asserted from a log:
+>
+> | Exit criterion | Evidence |
+> |---|---|
+> | `ADR-0021` ratified or rejected **on evidence** | **Ratified as written, 2026-09-23**, after `TASK-0048` overturned two of its three falsifiable claims. Ratification covers the Decision clauses; the falsified Context claims stay as written |
+> | No `plugins/` directory; no new-category plumbing | **Mechanical:** no such directory exists, and `git diff feba3e0..HEAD -- scripts/install.sh scripts/sync-registry.sh tests/validate.sh` is **empty** |
+> | Nothing vendored | **Mechanical:** the same diff over `skills/ agents/ loops/ prompts/` is **empty** |
+> | graphify's manifest pinned, gate-valid, **observed failing** when broken | **Mechanical:** three deliberate breaks each produced their specific message; restore md5-verified |
+> | `smoke-mcp.sh` returns PASS or SKIP for graphify, corrected outcome **observed** | **Both observed** — SKIP in the shipped state, PASS with a graph present. And the verification found `B-022` |
+> | Every capability claim labelled *vendor doc* or *observed* | Done across three `configs/` sections and `third-party-tools.md`. `REVIEW-0009` finding 2 notes the label's limit: it records provenance, not which artifact |
+> | Placement rule findable in the authoring guide, linking not restating | `docs/development/authoring-guide.md`, `## Placing a third-party extension` |
+>
+> **Backlog:** `B-019` and `B-020` closed — the sprint cleared its own
+> slice, the second phase to do so. It also raised **and closed** `B-022`
+> inside one task, and left `B-023` behind.
+>
+> **The prose-heavy outcome predicted at plan time did materialise** — two
+> of three deliverables are documentation, the fourth instance of that
+> pattern. The defence pre-committed against it (*"the honest cut is a
+> product, never the spike"*) was **never exercised**, because nothing had
+> to be cut. Recorded as an untested commitment rather than a vindicated
+> one.
+>
+> **No Phase 9 section exists in this file yet**, and `SPRINT-CURRENT.md`
+> holds an explicit no-sprint-open state rather than a closed sprint.
+> **S9 and S10 do exist as plans** — `PLAN-0006` (unattended task runs)
+> produced `sprints/SPRINT-S9-unattended-runs.md` and
+> `sprints/SPRINT-S10-unattended-bindings.md`, both queued. S9 rests on
+> `ADR-0022`, which is `Proposed` and blocked on its own two spikes, so
+> promoting it is a human decision. **Whoever promotes it adds the Phase 9
+> section here in the same change** — this file has had two phases go
+> missing after the fact, and adding one now, ahead of the promotion, would
+> be the third variation of the same defect rather than a fix for it.
+
+*Everything below is the section as written at plan time.*
+
+### Phase 8 as planned (CURRENT 2026-09-22, not started)
 
 **This section was written at plan time, in the same change as
 `PLAN-0005`.** The roadmap has now had two phases go missing from it —

@@ -1,12 +1,55 @@
 # Current State
 
-Last updated 2026-09-23. **S8 is complete as work and open as a sprint.**
+Last updated 2026-09-23. **Sprint S8 is CLOSED and no sprint is open.**
+
 All four briefs ran — `TASK-0048` (spike), `TASK-0049` (graphify as a
 component, plus two `smoke-mcp.sh` fixes), `TASK-0050` (ponytail per
-client), `TASK-0051` (the placement rule and `third-party-tools.md`) — and
-`REVIEW-0009` is written. **Closure is blocked on one human act: ratifying
-or rejecting `ADR-0021`.** Before the sprint: S6's closure with S8 promoted
-to current (`TASK-0054`).
+client), `TASK-0051` (the placement rule and `third-party-tools.md`).
+`REVIEW-0009` approved the work and named one blocker; the human **ratified
+`ADR-0021` as written** the same day, and `TASK-0068` closed the sprint.
+Before it: S6's closure with S8 promoted to current (`TASK-0054`).
+
+## S8 closed; `ADR-0021` Accepted; nothing is scheduled next
+
+**`TASK-0068`, 2026-09-23.** `ADR-0021` is **Accepted — 2026-09-23**,
+ratified **as written**. Three alternatives were offered and declined:
+tightening clause 5, rejecting (as `ADR-0017` was), and holding.
+
+**Ratification covers the Decision clauses, not the Context.** `TASK-0048`
+overturned two of this ADR's three falsifiable claims, and those claims are
+**left exactly as written** — rewriting them would erase the evidence that
+the spike was load-bearing. An ADR is a dated record, not a live status
+page.
+
+**One clause carries an open question.** `REVIEW-0009`'s finding 2 showed
+clause 5's provenance label records *how* a claim was obtained but not
+*which artifact it describes*. The amendment was offered at ratification and
+**not taken**, so it stays a follow-up — reopening it now means amending an
+`Accepted` ADR.
+
+**S8 cleared its own backlog slice** (B-019 and B-020), the second sprint to
+do so after S6 — while also raising *and closing* B-022 inside one task and
+leaving B-023 behind. All seven roadmap exit criteria are met, **four of
+them mechanically**: no `plugins/` directory, the three scripts
+byte-identical across the whole sprint, nothing vendored, and the manifest
+observed failing when deliberately broken.
+
+**Nothing was promoted to replace S8.** `ROADMAP.md` has no Phase 9 section,
+and while **S9 and S10 exist as plans** (`PLAN-0006` — unattended task runs,
+written concurrently with this closure) both are queued in `sprints/`, and S9
+is gated on `ADR-0022`, which is `Proposed` and blocked on its own two
+spikes. `SPRINT-CURRENT.md` now says that explicitly and carries the
+outstanding queue — three `ready` backlog
+items (**B-018**, **B-021**, **B-023**), four `REVIEW-0009` follow-ups and
+two inherited from `REVIEW-0010`. Leaving a closed sprint in that file would
+be the false-present-tense defect `REVIEW-0008` had to sweep across four
+files.
+
+**One prediction came true and is worth keeping visible:** two of three
+deliverables were prose, the fourth instance of that pattern — and the
+defence pre-committed against it (*"the honest cut is a product, never the
+spike"*) was **never exercised**, because nothing had to be cut. It is
+carried forward as an untested commitment, not a vindicated one.
 
 ## REVIEW-0009: approve the work, cannot close the sprint
 

@@ -2,14 +2,42 @@
 
 ## Status
 
-**Proposed**, 2026-09-16. Opened by `PLAN-0005` (sprint S8).
+**Accepted — 2026-09-23**, ratified by the human **as written**, in answer to
+`REVIEW-0009`'s clause-by-clause ratification packet. Three alternatives were
+offered and declined: ratifying with clause 5 tightened, rejecting (as
+`ADR-0017` was), and holding.
 
-**Not blocked.** Unlike ADR-0016 this decision rests on facts already
-observed rather than on an unverified claim: the three products' integration
-surfaces were read from npm metadata and upstream *source* during planning
-(evidence below, with dates). What it does **not** yet rest on is any
-behaviour observed on this machine — that is `TASK-0048`'s job, and this ADR
-names in advance which of its clauses that spike could falsify.
+**What ratification does and does not cover.** It accepts the six **Decision**
+clauses, every one of which was executed and four of which are mechanically
+verifiable — no `plugins/` directory exists, `scripts/install.sh`,
+`scripts/sync-registry.sh` and `tests/validate.sh` are byte-identical across
+the whole sprint, and nothing was vendored.
+
+**It does not make the Context section below correct.** `TASK-0048` tested
+this ADR's three falsifiable claims and **overturned two of them** — claim 1
+falsified, claim 2 refuted, claim 3 confirmed. Those claims and their dated
+notes are **left exactly as written**. Rewriting them to match what was
+found would erase the sprint's main evidence that the spike was load-bearing,
+and this file is a dated record rather than a live status page (`ADR-0006`'s
+annotation, applied here).
+
+**One clause has an open question against it.** `REVIEW-0009`'s finding 2
+showed that clause 5's provenance label records *how* a claim was obtained
+but not *which artifact it describes* — a gap that let a hook count read from
+one client's file propagate as a fact about another. Tightening clause 5 to
+cite the source file was offered at ratification and **not** taken, so it
+remains an open follow-up rather than a silent amendment.
+
+> **Superseded status note, 2026-09-16 → 2026-09-23.** This block previously
+> read *"**Proposed**, 2026-09-16. Opened by `PLAN-0005` (sprint S8). **Not
+> blocked.** Unlike ADR-0016 this decision rests on facts already observed
+> rather than on an unverified claim: the three products' integration surfaces
+> were read from npm metadata and upstream source during planning… What it
+> does not yet rest on is any behaviour observed on this machine — that is
+> `TASK-0048`'s job, and this ADR names in advance which of its clauses that
+> spike could falsify."* Preserved because the prediction it makes about
+> itself came true, and naming falsifiable claims in advance is the practice
+> worth keeping visible.
 
 ## Context
 
