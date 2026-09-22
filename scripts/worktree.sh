@@ -105,8 +105,14 @@ case "$cmd" in
 
     # Uncommitted or unlanded work is the thing worth refusing over. Report
     # it and stop; --force is the caller's explicit decision, not a default.
+    #
+    # "Unlanded" means commits unique to THIS branch - reachable from it and
+    # from neither master nor origin/master. Comparing against origin/master
+    # alone reports a false positive: a fresh worktree inherits whatever the
+    # main checkout has not pushed yet, which is not this session's work and
+    # not this session's problem. Observed while verifying TASK-0070.
     dirty=$(cd "$path" && git status --porcelain | wc -l)
-    ahead=$(git rev-list --count "origin/master..$branch" 2>/dev/null || echo 0)
+    ahead=$(git rev-list --count "$branch" --not master origin/master 2>/dev/null || echo 0)
     if [ "$dirty" -ne 0 ] || [ "$ahead" -ne 0 ]; then
       echo "worktree.sh: REFUSING to remove $path" >&2
       [ "$dirty" -ne 0 ] && echo "  $dirty uncommitted change(s)" >&2

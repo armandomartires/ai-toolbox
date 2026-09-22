@@ -162,26 +162,27 @@ No component is added; `docs/registry.md` is not expected to change.
 
 ## Acceptance criteria
 
-- [ ] `scripts/worktree.sh` creates, lists and removes a worktree, is
+- [x] `scripts/worktree.sh` creates, lists and removes a worktree, is
       idempotent, and refuses a path inside the repo.
-- [ ] Worktrees are siblings of the repo, and the main checkout still holds
+- [x] Worktrees are siblings of the repo, and the main checkout still holds
       `master`.
-- [ ] `git ls-files -s` reports `100755` for each documented entry point.
-- [ ] `tests/validate.sh` runs **as a bare path** in a worktree on a POSIX
-      filesystem — the case that returns 126 today.
-- [ ] The pre-commit gate was **observed refusing** an invalid commit inside
+- [x] `git ls-files -s` reports `100755` for each documented entry point.
+- [x] `tests/validate.sh` runs **as a bare path** in a worktree on a POSIX
+      filesystem — **observed `OK`, exit 0**, where the identical invocation
+      returned 126 before the mode fix.
+- [x] The pre-commit gate was **observed refusing** an invalid commit inside
       a worktree, with `HEAD` unmoved.
-- [ ] The runbook documents create / work / land / remove, including the
+- [x] The runbook documents create / work / land / remove, including the
       `git push origin HEAD:master` landing step.
-- [ ] `ADR-0023` exists and is `Proposed`, not `Accepted`.
-- [ ] Neither live session's work was moved, reverted or committed.
-- [ ] `tests/validate.sh` passes.
+- [x] `ADR-0023` exists and is `Proposed`, not `Accepted`.
+- [x] Neither live session's work was moved, reverted or committed.
+- [x] `tests/validate.sh` passes.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh — expected not required; run as a control.
-- [ ] A deliberate gate failure inside a worktree, observed.
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh — expected not required; run as a control.
+- [x] A deliberate gate failure inside a worktree, observed.
 
 ## Risks and rollback
 
@@ -203,8 +204,6 @@ No component is added; `docs/registry.md` is not expected to change.
 
 ## Outputs / handover
 
-*Intended* end state — this section is completed after the work.
-
 | Artifact | End state |
 |----------|-----------|
 | `scripts/worktree.sh` | New; add/list/remove, idempotent, refuses nesting |
@@ -221,7 +220,7 @@ Whether that needs anything beyond documentation is a judgment call, and
 
 ## Status
 
-- Status: in_progress
+- Status: done
 - Owner: agent
 - Created: 2026-09-23
 - Updated: 2026-09-23
@@ -232,9 +231,108 @@ Whether that needs anything beyond documentation is a judgment call, and
 
 - Date: 2026-09-23
 - Agent: Claude Opus 5 (1M context)
-- Actions:
-- Observations:
-- Validation:
-- Result:
+
+#### The gate fires inside a worktree — observed refusing, not merely passing
+
+The load-bearing question. A worktree whose gate silently does not run is
+**worse than no worktree**, because it looks identical to a working one.
+`core.hooksPath` is `.githooks`, shared config, resolved inside each
+worktree. Tested by committing a deliberately invalid skill:
+
+```
+INVALID SKILL: skills/zz-bad/SKILL.md: name 'not-the-dirname' does not match directory 'zz-bad'
+pre-commit: validation FAILED - commit refused.
+commit exit: 1    HEAD: c39a6d6 (unmoved)
+```
+
+Reproduced on **both** filesystems — ext4 and `/mnt/c`. A passing gate would
+have proved nothing; a refusing one proves the hook is wired.
+
+#### Every script was mode 644, and only `/mnt/c` hid it
+
+`git ls-files -s` reported **`100644` for every `.sh` and `.py` entry point**;
+only `.githooks/pre-commit` was `100755`. Two things hid it for the repo's
+entire life:
+
+- `/mnt/c` is DrvFs and reports every file `0777` regardless of the recorded
+  mode — which is also why `core.filemode` is `false` here.
+- The hook (`.githooks/pre-commit:22`) and CI
+  (`.github/workflows/validate.yml:41`) both run **`bash tests/validate.sh`**,
+  never the bare path.
+
+On a worktree on ext4, `./tests/validate.sh` returned **`Permission denied`,
+exit 126** — while **every command in `AGENTS.md`'s Commands section is
+written as a bare path**. So the documented interface was broken on every
+POSIX checkout: any Linux clone, any container, any CI checkout that did not
+use `bash`.
+
+Fixed with `git update-index --chmod=+x` on the six documented entry points.
+A working-tree `chmod` would have been invisible while `core.filemode` is
+`false` — the fix has to go through the index. Verified with
+`git ls-files -s`, not `ls`, because `ls` cannot tell the truth on `/mnt/c`.
+
+After the fix, the same ext4 invocation returns **`validate.sh: OK`, exit 0**,
+recorded mode `100755`, on-disk `-rwxr-xr-x`.
+
+**Skill-internal scripts were deliberately left `100644`** — they are invoked
+by their skill, not documented as commands, and widening the change would
+have made a mode sweep out of a targeted fix.
+
+#### How this was found, and the third instance of one trap
+
+It surfaced from an implausible number: a timing run of the gate in an ext4
+worktree reported **2 ms**. That is not a fast gate, it is a gate that never
+ran. Same shape as `REVIEW-0009` finding 5, and the **third** time in this
+session that an implausibly fast measurement turned out to be a command
+exiting 126. Nothing flags it; only implausibility does.
+
+#### A false positive in `remove`, found by running it
+
+First implementation compared `origin/master..$branch`. A **freshly created**
+worktree then reported *"1 commit(s) not yet on origin/master"* and refused
+removal — for a branch with no commits of its own. The commit was the main
+checkout's own unpushed `master`, inherited at creation: not this session's
+work, and not this session's problem.
+
+Corrected to count commits reachable from the branch and from **neither**
+`master` nor `origin/master`:
+
+```
+git rev-list --count "$branch" --not master origin/master
+```
+
+Re-verified both directions: a worktree with no unique commits removes
+cleanly; one carrying a real commit is refused with the count. **Found only
+by running the refusal path** — the happy path looked fine.
+
+#### This task landed through the workflow it documents
+
+Rather than asserting the landing flow works, the second half of this task
+was done **in the `maint` worktree** and landed with
+`git fetch && git rebase origin/master && git push origin HEAD:master`. That
+exercises `ADR-0023`'s falsifiable claim 2 on a real change, and avoided the
+absurdity of committing a "do not work in the main checkout" decision from
+the main checkout.
+
+The main checkout's uncommitted copy of the `remove` fix was reverted with
+`git checkout --` after the patch was saved, so the change exists in exactly
+one place.
+
+#### Two worktrees exist, and the other session was not touched
+
+`s9` and `maint`, both on `/mnt/c` as siblings at
+`../ai-toolbox-worktrees/`. Nothing belonging to the concurrent S9/S10
+session was moved, staged, reverted or committed; its work was already
+committed as `48d64c9` before this task began.
+
+**`s9` was removed and recreated during testing** of the refusal path — it
+carries no work, so this cost nothing. Recorded because the name suggests
+otherwise.
+
+- Validation: `tests/validate.sh` → **OK** (main checkout and both
+  worktrees). `scripts/sync-registry.sh` → `docs/registry.md` unchanged, as
+  forecast. Gate observed **refusing** inside a worktree on both filesystems.
+- Result: **done.** All nine acceptance criteria met. Two findings beyond the
+  brief: the repo-wide mode defect, and the `remove` false positive.
 - Commit:
 - Push:
