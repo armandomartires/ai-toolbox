@@ -222,7 +222,7 @@ Status, per client — the two are **not** interchangeable (ADR-0020):
 | App | Status |
 |---|---|
 | Classic LM Studio 0.4.24 | **passed** 2026-09-13 (TASK-0017), `qwen3.8 27b` enumerated the tools |
-| **Bionic 1.1.1+5** | **open — never run.** Bionic reading `~/.lmstudio/mcp.json` is inferred from the shared data root, not verified |
+| **Bionic 1.1.3+5** | **open — never run.** Bionic reading `~/.lmstudio/mcp.json` is inferred from the shared data root, not verified. Version re-read 2026-09-22; was 1.1.1+5 at `TASK-0047` |
 
 **Run this against Bionic.** It is the outstanding human action from
 TASK-0047. Both apps may be installed simultaneously (Bionic at
@@ -239,10 +239,18 @@ one config, so from WSL the file is at
 `ansible` block from `configs/lm-studio-bionic/README.md` — copy it from
 there rather than retyping, so the pinned version stays correct.
 
+**This step is not optional any more.** As of 2026-09-22 that file is
+`{"mcpServers": {}}` — an app wrote the config empty on 2026-09-17, cause
+unestablished (`TASK-0053`; evidence in the client snapshot). Earlier runs of
+this procedure could skip step 1 because the entry was already there. This
+one cannot.
+
 If the entry does not appear in Bionic, check whether Bionic has begun
-reading `ng-mcp.json` instead: both binaries contain that string literal,
-and it is dormant as of 2026-09-15. Finding it live is a real result —
-record it in `configs/lm-studio-bionic/README.md`.
+reading `ng-mcp.json` instead: both binaries contain that string literal.
+`configs/lm-studio-bionic/README.md` owns its current status — still absent
+from disk at the last check, but a `ng-mcp-managed-oauth` credential
+directory has since appeared beside it. Finding `ng-mcp.json` live is a real
+result — record it there.
 
 **2. Replace `WORKSPACE_ROOT` before starting the app.** A separate step
 because skipping it is not hypothetical: the first run of this procedure

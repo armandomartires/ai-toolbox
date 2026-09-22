@@ -1,10 +1,56 @@
 # Current State
 
-Last updated 2026-09-16, after **S6 was un-parked and made current again**
-and **S8 was re-queued** (`TASK-0052`, below). Earlier the same day, sprint
-S7 was closed by `REVIEW-0008` (approve) and S8 was briefly promoted; before
-that, S8 was planned from a human request for three "plugins", and TASK-0047
-corrected the identity and capabilities of the third client.
+Last updated 2026-09-22, after **the Bionic client snapshot was corrected
+for two drifted observations** (`TASK-0053`, below). Before that, on
+2026-09-16, **S6 was un-parked and made current again** and **S8 was
+re-queued** (`TASK-0052`). Earlier the same day, sprint S7 was closed by
+`REVIEW-0008` (approve) and S8 was briefly promoted; before that, S8 was
+planned from a human request for three "plugins", and TASK-0047 corrected the
+identity and capabilities of the third client.
+
+## The Bionic snapshot drifted, and the stamp is what caught it
+
+**`TASK-0053`, 2026-09-22.** Documentation-only. `configs/lm-studio-bionic/README.md`
+had two observations that no longer matched the machine:
+
+1. **Version: stale.** Recorded 1.1.1+5 (observed 2026-09-15); installed is
+   **1.1.3+5**. The app updated itself.
+2. **`~/.lmstudio/mcp.json`: wrong, in the present tense.** Recorded as
+   "holding the `ansible` entry with a real `WORKSPACE_ROOT`". It is
+   `{"mcpServers": {}}`, and has been since **2026-09-17 20:00**.
+
+**Nothing in this repo cleared that file.** `mcp.json` and
+`credentials/mcp-oauth` were written within the same tenth of a second, and
+the app's own `last-synced-mcp-state.json` agrees the config is empty — an
+application writing its own state. **The cause is recorded as
+unestablished.** The one candidate with a matching date is the 1.1.3 upgrade
+("organization-managed MCPs" in its changelog), and it is written down as a
+hypothesis, not a finding.
+
+**Also new, and ADR-0020 could not have seen it:**
+`~/.lmstudio/credentials/ng-mcp-managed-oauth/` was created **2026-09-16
+01:17**, the day after that ADR. `ng-mcp.json` itself is still absent from
+disk, so the dormancy claim holds — but a *managed* credential channel
+appearing on a machine whose app then emptied its MCP config is exactly what
+the runbook tells the next reader to watch for.
+
+**`ADR-0020`, `ADR-0006` and `TASK-0047` were deliberately left byte-identical.**
+That was an acceptance criterion, not an oversight. This repo settled the
+principle in ADR-0006's own annotation — *"an ADR is a dated record rather
+than a live status page"* — and ADR-0020 had already accepted this exact risk
+for itself: *"Every observation here is version-stamped, and the paths may
+move. The mitigation is the stamp, not a promise of stability."* Correcting
+the ADR would have destroyed the evidence that the drift happened. The live
+snapshot in `configs/` is the file whose job is to be current, so it is the
+one that moved.
+
+**The generalisation worth keeping:** ADR-0020's closing note said no gate in
+this repo can test a claim about a third-party client, and that the defence
+is version-stamped observations a later reader can re-check cheaply. This is
+the first time that defence was exercised. It worked — and it cost one task,
+against two false statements that had been live for five and seven days
+respectively. **The GUI verification and B-018 are both still open**, and
+Bionic's MCP status is **still inferred, not verified**, at any version.
 
 ## S6 is CURRENT again; S8 is re-queued
 
@@ -712,7 +758,8 @@ found**, not because the client is inert (ADR-0018 clause 6 re-grounded).
 Two things worth carrying forward:
 
 1. **Classic LM Studio 0.4.24 is still installed** at
-   `C:\Program Files\LM Studio\`, alongside Bionic 1.1.1+5. They are modelled
+   `C:\Program Files\LM Studio\`, alongside Bionic 1.1.1+5 (**1.1.3+5 as of
+   2026-09-22, `TASK-0053`**). They are modelled
    as one `configs/` entry by human decision, and the 2026-09-13 UI
    verification is credited to **classic**, where it was earned. Bionic is
    marked unverified rather than inheriting a pass it never took.
@@ -1561,7 +1608,8 @@ file layout:
   in its own UI (not merely at handshake level).
   **Amended 2026-09-15 (TASK-0047, ADR-0020):** the third client is
   **classic LM Studio 0.4.24**, which is what that UI check actually
-  exercised. The client this repo now targets is **Bionic 1.1.1+5**, a
+  exercised. The client this repo now targets is **Bionic 1.1.1+5**
+  (**1.1.3+5 as of 2026-09-22, `TASK-0053`**), a
   separate app installed alongside it, and Bionic is **unverified** — it
   almost certainly shares `~/.lmstudio/mcp.json`, but that is an inference
   and the GUI check is an open human action.

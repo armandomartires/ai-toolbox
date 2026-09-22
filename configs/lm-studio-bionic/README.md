@@ -8,14 +8,23 @@ any disagreement: `mcp-servers/*/server.json` for MCP servers.
 
 Bionic is a **separate application** from the classic LM Studio local-LLM
 desktop app, and it is LM Studio's own product.
-`~/AppData/Local/Programs/Bionic/resources/app/package.json`, observed
-2026-09-15:
+`~/AppData/Local/Programs/Bionic/resources/app/package.json`, re-read
+2026-09-22:
 
 ```json
 { "name": "lm-studio", "productName": "Bionic",
-  "desktopName": "ai.elementlabs.bionic", "version": "1.1.1+5",
+  "desktopName": "ai.elementlabs.bionic", "version": "1.1.3+5",
   "author": { "name": "LM Studio <team@lmstudio.ai>", "url": "https://lmstudio.ai" } }
 ```
+
+**Version drift, recorded rather than smoothed over.** `TASK-0047` observed
+**1.1.1+5** here on 2026-09-15; the app has updated itself since. `ADR-0020`
+still says 1.1.1+5 **on purpose** — it is a dated record, not a live status
+page, and this is precisely the risk it accepted for itself: *"Every
+observation here is version-stamped, and the paths may move. The mitigation
+is the stamp, not a promise of stability"* (`ADR-0020:207-210`). The stamp is
+what made this cheap to catch. Re-read this block before trusting any
+version-specific claim below.
 
 It has its own binary (`Bionic.exe`), its own Electron profile
 (`AppData/Roaming/Bionic/`), its own update feed
@@ -36,12 +45,12 @@ that choice rather than rediscover the fact.
 
 | | |
 |---|---|
-| Client | Bionic 1.1.1+5 (LM Studio) |
+| Client | Bionic **1.1.3+5** (LM Studio) — re-read 2026-09-22; was 1.1.1+5 at `TASK-0047` |
 | Skills target | `~/.lmstudio/skills/` (global) · `<project>/.agents/skills/` (project) |
 | Skills deployment | **not automated** — global installs are approval-gated (see below); Bionic is not in `scripts/install.sh` |
 | Agents target | none documented as of 2026-09-15 — Bionic has subagents, but no user-authored agent-role directory was found |
-| MCP config | `~/.lmstudio/mcp.json` |
-| Verified (MCP) | classic LM Studio 0.4.24: **fully verified** 2026-09-13 (TASK-0006, TASK-0017). **Bionic 1.1.1: not verified** — see below |
+| MCP config | `~/.lmstudio/mcp.json` — **currently `{"mcpServers": {}}`**, re-read 2026-09-22; see below |
+| Verified (MCP) | classic LM Studio 0.4.24: **fully verified** 2026-09-13 (TASK-0006, TASK-0017). **Bionic: not verified at any version** — neither 1.1.1+5 nor 1.1.3+5 — see below |
 
 ## Skills — supported, but not auto-deployed
 
@@ -215,17 +224,64 @@ Studio 0.4.24 is installed on the same machine. They are credited to
 classic, not to Bionic. Nothing in this repo has verified the ansible server
 inside **Bionic**.
 
-What is known, observed 2026-09-15:
+What is known. The structural facts were observed 2026-09-15 and re-checked
+2026-09-22; the **contents** changed in between and are corrected below.
 
-- Only one MCP config exists: `~/.lmstudio/mcp.json`, holding the `ansible`
-  entry with a real `WORKSPACE_ROOT`. Bionic has no `mcp.json` of its own
-  and keeps no MCP state under `~/.lmstudio/apps/bionic/.internal/`.
+- Only one MCP config exists: `~/.lmstudio/mcp.json`. Bionic has no
+  `mcp.json` of its own and keeps no MCP state under
+  `~/.lmstudio/apps/bionic/.internal/`. **Still true** (re-checked
+  2026-09-22).
 - Both binaries contain exactly one `'mcp.json'` string literal, and both
-  also contain a `ng-mcp.json` literal — a next-generation path that is
-  **dormant on this machine**. The credential directories date it:
-  `~/.lmstudio/credentials/ng-mcp-oauth` is empty and untouched since
-  2026-07-22, while `credentials/mcp-oauth` was written 2026-09-13
-  21:53:06 — the same second as `mcp.json` itself.
+  also contain a `ng-mcp.json` literal — a next-generation path. **No
+  `ng-mcp.json` exists on disk** (re-verified 2026-09-22), so it remains
+  dormant, but the picture around it has moved — see the managed-credentials
+  note below.
+
+**Corrected 2026-09-22 — the live `mcp.json` is empty.** This file
+previously recorded, in the present tense, that `~/.lmstudio/mcp.json` held
+the `ansible` entry with a real `WORKSPACE_ROOT`. It does not:
+
+| Artifact | mtime | Contents |
+|---|---|---|
+| `~/.lmstudio/mcp.json` | 2026-09-17 20:00:29.567 | `{"mcpServers": {}}` |
+| `~/.lmstudio/credentials/mcp-oauth/` | 2026-09-17 20:00:29.663 | empty |
+| `~/.lmstudio/.internal/last-synced-mcp-state.json` | — | `{"mcpServers": {}}` |
+| `~/.lmstudio/mcp.json.bak` | 2026-09-13 15:27 | `{"mcpServers": {}}` |
+
+**Nothing in this repo did this.** `TASK-0047:184` put touching the live
+`~/.lmstudio/mcp.json` out of scope, and nothing since has claimed it.
+`mcp.json` and `credentials/mcp-oauth` were written **within the same tenth
+of a second**, and the app's own `last-synced-mcp-state.json` agrees the
+config is empty. That is an application writing its own state, not a hand
+edit — the same inference shape this section already used on 2026-09-13,
+running the other way.
+
+**The cause is not established, and is not guessed at here.** One candidate
+has a matching date: the 1.1.1+5 → 1.1.3+5 upgrade, whose changelog entry
+names *organization-managed MCPs*. That is a hypothesis with a coincident
+timestamp, not a finding. Establishing it needs the GUI and a human.
+
+Two consequences worth stating:
+
+- **The runbook's step 1 is now load-bearing.** "Back it up first, then paste
+  the `ansible` block" is no longer a precaution against an entry that is
+  already present — the file is empty, so the GUI verification below cannot
+  begin without it.
+- **This does not weaken the inference that Bionic reads this file.** An
+  empty config is evidence in neither direction. The status is unchanged:
+  inferred, not verified.
+
+**A managed-credentials directory appeared after ADR-0020 was written.**
+`~/.lmstudio/credentials/ng-mcp-managed-oauth/` exists, created **2026-09-16
+01:17** — the day after `ADR-0020`, which is why that ADR names only
+`ng-mcp-oauth`. It is empty. `ng-mcp-oauth` is also still empty and still
+untouched since 2026-07-22, while `credentials/mcp-oauth` now carries the
+2026-09-17 mtime above rather than its original 2026-09-13 21:53:06.
+
+A *second*, managed credential channel appearing on a machine whose app then
+cleared its MCP config is the "finding it live is a real result" case the
+runbook already tells the next reader to watch for. Recorded here; not acted
+on.
 
 So Bionic almost certainly reads `~/.lmstudio/mcp.json`. That is a **strong
 inference from a shared data root and a dormant alternative, not a
