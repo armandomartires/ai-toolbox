@@ -206,5 +206,9 @@ unexercised against a live estate). Three backlog items are `ready`:
 - Result: **done.** S8 closed on `REVIEW-0009`. No clause amended; the
   clause-5 question stays open as a follow-up, which is what ratifying *as
   written* means.
-- Commit:
-- Push:
+- Commit: `9e6a840` — "Ratify ADR-0021 as written; close S8 on
+  REVIEW-0009". Pre-commit hook ran `tests/validate.sh` → OK. **Nine paths
+  staged explicitly by name**, never `git add -A`, so the concurrent
+  session's six files stayed untracked.
+- Push: **confirmed** to `origin` (`c559e28..9e6a840`); branch in sync,
+  `git remote -v` token-free.
