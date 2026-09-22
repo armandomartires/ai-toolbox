@@ -335,5 +335,12 @@ than decided here.
   the follow-up's framing was wrong: fifteen occurrences, one defect, and
   that defect was a **safety claim understating its own hazard** rather than
   the version number the follow-up named.
-- Commit:
-- Push:
+- Commit: `231bd54` — "Re-verify the gather_subset hazard under 2.21.4; fix
+  two gate-cost claims". Pre-commit hook ran `tests/validate.sh` → OK.
+  **Four paths, via `git commit -m … -- <paths>`.** The separation worked:
+  the concurrent session's sixteen files landed independently as `48d64c9`
+  ("[docs] Plan an unattended-run harness"), and this commit touched none of
+  them. That commit carries this task's `CURRENT_STATE.md` correction, as
+  anticipated above.
+- Push: **confirmed** to `origin` (`48d64c9..231bd54`); branch in sync,
+  `git remote -v` token-free.
