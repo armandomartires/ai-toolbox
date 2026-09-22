@@ -356,5 +356,7 @@ the server itself checks rather than something looser.
   row: the decision, observable in `git status` rather than asserted.
 - Result: **done.** All eleven acceptance criteria met. Two additive
   deviations, both recorded above.
-- Commit:
-- Push:
+- Commit: `1c5cabf` — "Move the placement rule into the guide; document
+  omniroute". Pre-commit hook ran `tests/validate.sh` → OK.
+- Push: **confirmed** to `origin` (`4ddfd48..1c5cabf`); branch in sync,
+  `git remote -v` token-free.
