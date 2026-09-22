@@ -256,6 +256,7 @@ one. The `bash_allow` sibling item raised here stays `ready` and unscheduled.
     `agents/` shows only the intended `qa-test` modification
 - Result: **done.** `B-021` closed on the route the item itself specified.
   `B-027` raised for the `bash_allow` sibling hazard the asymmetry creates.
-- Commit: *pending — recorded in the follow-up commit, the same shape as
-  TASK-0069 and TASK-0070*
-- Push: *pending*
+- Commit: `490cb9f` — *Add a test-allowlist capability term so qa-test can run
+  tests*. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `0e154be..490cb9f`. `git remote -v`
+  re-checked after the push and is token-free.
