@@ -52,6 +52,9 @@ services, secrets.
 - Run a Python server: `cd mcp-servers/<name> && uv run <name>`. External
   servers: `scripts/install.sh` prints the launch command from the
   manifest; per-client wiring is in `configs/*/README.md`.
+- Session isolation: `scripts/worktree.sh add|list|remove <name>` — one
+  git worktree per concurrent agent session (ADR-0023). Procedure,
+  including how work lands on `master`: `docs/operations/runbook.md`.
 
 ## Structure
 Component layer: `skills/`, `mcp-servers/`, `loops/`, `prompts/`,
@@ -63,6 +66,12 @@ Details: `docs/development/`, runbook: `docs/operations/`.
 - Before changes: check `git status`, branch, remote, uncommitted changes.
 - One task = one commit; never include unrelated changes.
 - Never delete or overwrite human changes without authorization.
+- **Two agent sessions must never share this checkout.** A git index has no
+  locking between sessions, so the failure mode is one session committing
+  another's half-finished work — which no gate here can detect, because it
+  produces a *green* commit. Each concurrent session takes its own worktree
+  and lands by rebase (ADR-0023, **`Proposed`**; runbook has the steps).
+  Observed twice on 2026-09-23 before the decision existed.
 - Every project has a local git repository. A remote (GitHub, GitLab) is
   recommended but not mandatory (ADR-0007). **This repo now has one:**
   `origin` → `armandomartires/ai-toolbox` (private), added by TASK-0015

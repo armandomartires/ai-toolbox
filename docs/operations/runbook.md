@@ -101,6 +101,79 @@ Two places check this, deliberately:
 reason: on this mount `[ -x ]` can never fail, making it a check incapable
 of detecting its own failure case.
 
+## One worktree per agent session
+
+**Two agent sessions must never share this checkout.** A git index is a
+single mutable resource with no locking between sessions, so the failure mode
+is not a merge conflict — it is **one session committing another's
+half-finished work**, which no gate here can detect. It has happened: see
+`ADR-0023` for the two occurrences and the decision.
+
+The main checkout stays on `master` and is the **integration tree**. Each
+session works in its own worktree on its own branch.
+
+```bash
+scripts/worktree.sh add s9        # create (or report) a session worktree
+scripts/worktree.sh list          # every worktree, main checkout marked
+scripts/worktree.sh remove s9     # refuses if work would be lost
+```
+
+Worktrees are created as **siblings** of the repo, in
+`../ai-toolbox-worktrees/<name>`, on branch `agent/<name>`. Never put one
+inside the repo: `tests/validate.sh` and `scripts/sync-registry.sh` glob
+component directories and `git status` would see the nested tree.
+
+### Landing work
+
+Git refuses to check out the same branch in two worktrees, so a session
+cannot commit on `master` directly. It lands instead:
+
+```bash
+git fetch origin
+git rebase origin/master          # replay this session's commits on top
+git push origin HEAD:master       # land them; master stays linear
+```
+
+**This preserves `AGENTS.md`'s "one task = one commit" rule.** `master` still
+receives one commit per task, still linear, still gated — the only added step
+is the rebase. A rejected push means `master` moved; rebase again. There is no
+PR or review step, deliberately (`ADR-0007` keeps this repo trunk-based).
+
+Then remove the worktree. These are for isolation, not for parallel
+development, so they should be short-lived:
+
+```bash
+scripts/worktree.sh remove s9
+```
+
+`remove` refuses while the worktree has uncommitted changes or commits not
+yet on `origin/master`, and says which.
+
+### The gate runs in a worktree — verify it, don't assume it
+
+`core.hooksPath` is `.githooks`, shared across worktrees and resolved inside
+each, so `.githooks/pre-commit` runs there and **refuses a bad commit**
+exactly as it does here. `worktree.sh add` reports the gate's state for the
+new worktree and says so when it is not runnable as a bare path.
+
+> **Why `worktree.sh` tests the gate by running it rather than with `-x`:**
+> on `/mnt/c` (DrvFs) every file reports mode `0777` regardless of what git
+> records, so `-x` cannot tell the truth here. `core.filemode` is `false` for
+> the same reason. Until 2026-09-23 every script in this repo was recorded
+> `100644`, which nothing noticed because the hook and CI both invoke
+> `bash tests/validate.sh` — but a worktree on a real Linux filesystem got
+> `Permission denied`, exit 126. Fixed by `TASK-0070` with
+> `git update-index --chmod=+x`; a plain `chmod` is invisible while
+> `core.filemode` is `false`.
+
+### A worktree on the Linux filesystem is roughly twice as fast
+
+The gate costs about 570 ms on a native filesystem and about 1000 ms on a
+`/mnt/c` checkout — the Windows filesystem bridge, not the checks
+(`tests/validate.sh:306-314` owns those numbers). Placing a worktree under
+`~/` instead of `/mnt/c` halves that, at the cost of the tree not being
+visible to Windows tools. Both work; pick per session.
+
 ## Skill deployment targets
 | Client | Skills target | Deployed by install.sh |
 |--------|---------------|------------------------|
