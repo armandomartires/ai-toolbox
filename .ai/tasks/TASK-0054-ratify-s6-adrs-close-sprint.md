@@ -180,5 +180,7 @@ two-day one.
   `Proposed`, B-018…B-021 still `ready`, dated records byte-identical.
 - Result: **done.** All eight acceptance criteria met. Documentation and
   planning state only; no component, script or gate changed.
-- Commit: recorded in the follow-up commit
-- Push: recorded in the follow-up commit
+- Commit: `3f513d7` — "Ratify ADR-0014/0015/0016; close S6 on REVIEW-0010;
+  promote S8". Pre-commit hook ran `tests/validate.sh` → OK.
+- Push: **confirmed** — `6db95f4..3f513d7  master -> master` to `origin`.
+  Branch in sync; `git remote -v` token-free.
