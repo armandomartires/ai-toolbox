@@ -57,7 +57,11 @@ runs before every commit and blocks a failing one.
   failure.
 - Hooks are tracked in `.githooks/`, not `.git/hooks/`, so they are
   version-controlled and survive a fresh clone. `.git/` is not.
-- The hook runs **only** `validate.sh` (offline, sub-second).
+- The hook runs **only** `validate.sh` — offline, and sub-second *on a
+  native filesystem* (~570 ms). On a `/mnt/c` WSL checkout expect ~1000 ms:
+  the Windows filesystem bridge, not the checks. `validate.sh`'s own cost
+  comment owns these numbers and explains why you should measure on a
+  native path before concluding a check is expensive.
   `tests/smoke-mcp.sh` must never be added: it fetches upstream packages
   and would make every commit slow and offline-hostile.
 - **Removing the hook takes two steps.** `git revert` of the commit that

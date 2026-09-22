@@ -7,7 +7,9 @@
 #
 # This is NOT part of tests/validate.sh and must not be folded into it:
 # validate.sh is the mandatory gate in AGENTS.md's Definition of done and
-# is fast, offline and hermetic (~0.4s). This script needs the network,
+# is fast, offline and hermetic (~570 ms on a native filesystem, ~1000 ms
+# on a /mnt/c WSL checkout - see validate.sh's own cost comment, which is
+# the owner of those numbers). This script needs the network,
 # because `npx -y` / `uvx` fetch upstream packages, and takes tens of
 # seconds. Making the mandatory gate network-dependent would make every
 # task's validation slow and flaky for reasons unrelated to the repo's
@@ -37,7 +39,7 @@ while [ $# -gt 0 ]; do
     --server=*) WANT_SERVER="${1#*=}" ;;
     --timeout)   shift; TIMEOUT="${1:-90}" ;;
     --timeout=*) TIMEOUT="${1#*=}" ;;
-    -h|--help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift

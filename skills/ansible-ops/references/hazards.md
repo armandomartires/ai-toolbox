@@ -50,15 +50,44 @@ because the mechanism is what transfers.
 
 **The fix that does not work.** The obvious global remedy — restricting fact
 collection estate-wide via a `gather_subset` setting in the configuration
-file's `[defaults]` section — **does not exist**. In `ansible-core 2.20.8`,
-`gather_subset` is **rejected as an unknown `[defaults]` key**, and set in
-`group_vars` it is **silently ignored**. It is a **play keyword and a
-per-module argument only.** There is no global mechanism.
+file's `[defaults]` section — **does not exist**. It is a **play keyword and
+a per-module argument only.** There is no global mechanism: `ansible-config
+list` defines no `gather_subset` setting at all, only `DEFAULT_GATHERING`.
 
-"Silently ignored" is the part that matters: an estate can carry a
-`group_vars` entry that reads exactly like a fleet-wide guard, produce no
-error, and provide no protection. The absence of a warning is not evidence
-the setting took effect.
+**Both ways of writing it down fail, and both fail silently at run time.**
+Re-verified against `ansible-core 2.21.4` on 2026-09-23:
+
+| Where you write it | What a playbook run does |
+|---|---|
+| `ansible.cfg` → `[defaults] gather_subset` | Runs, **exit 0, no error and no warning**, and mounts are still collected |
+| `group_vars` → `gather_subset` | Runs, **no error and no warning**, and mounts are still collected |
+
+In both cases `ansible_mounts` was still gathered despite `!all,!min`.
+
+> **This is worse than an earlier version of this file stated.** It recorded
+> the `ansible.cfg` route as *"rejected as an unknown `[defaults]` key"* under
+> `ansible-core 2.20.8` — which would at least have told you. At run time
+> under 2.21.4 it does not: the setting is as silent as the `group_vars` one.
+> Corrected by re-running both halves rather than by re-dating the old claim
+> (`TASK-0069`).
+
+**The silence is the hazard.** An estate can carry an `ansible.cfg` stanza
+*or* a `group_vars` entry that reads exactly like a fleet-wide guard, produce
+no error, and provide no protection. **The absence of a warning is not
+evidence the setting took effect** — and there is no run-time signal that
+would tell you otherwise.
+
+**One opt-in check does report it**, and it is worth wiring into review
+because nothing runs it for you:
+
+```bash
+ansible-config validate --format ini
+# [ERROR]: Found unknown key 'gather_subset' in section 'defaults' in 'ansible.cfg'
+```
+
+It catches the `ansible.cfg` spelling only. **No equivalent exists for the
+`group_vars` spelling**, which is the one an estate is more likely to write,
+so this narrows the blind spot rather than closing it.
 
 **What therefore has to happen per play.** Because the mechanism is
 play-keyword and module-argument scoped:
