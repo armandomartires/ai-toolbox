@@ -2,8 +2,42 @@
 
 Last updated 2026-09-23. **Sprint S8 is CLOSED. No sprint is open, and S9/S10
 are planned but not promoted.** Since then: `TASK-0069` (stale-claims sweep),
-`TASK-0070` (a worktree per agent session) and `TASK-0071` (the
-`test-allowlist` term, closing `B-021`).
+`TASK-0070` (a worktree per agent session), `TASK-0071` (the
+`test-allowlist` term, closing `B-021`) and `TASK-0072` (Bionic project
+skills, closing `B-018`).
+
+## Skills deploy to Bionic projects; Bionic's global target stays manual
+
+**`TASK-0072`, 2026-09-23.** `scripts/install.sh --client lm-studio-bionic
+--bionic-project DIR` writes `DIR/.agents/skills/`, in `link` or `copy`,
+idempotently, under the same overwrite policy as every other client. **A run
+without the flag touches no Bionic path** — observed, not assumed.
+
+**The global target is not automated, and that is the closure rather than
+what is left.** Bionic routes global installs through an approval-gated
+`skill.install` prompt (*"DO NOT edit global skills directly"*), which a
+non-interactive installer cannot drive; writing `~/.lmstudio/skills/` anyway
+would circumvent a vendor control rather than support the client. No script
+here writes it.
+
+**A second, independent reason, found while closing it: `$HOME` is the wrong
+home.** `~/.lmstudio/` **does not exist** at the WSL `$HOME`; the real,
+empty directory is at `/mnt/c/Users/<user>/.lmstudio/skills/`, the Windows
+home. Every `CLIENTS` row is built from `${HOME}`, so a global Bionic row
+written the obvious way would point where Bionic never looks — **and would
+succeed**, creating an empty directory nothing reads. This is why
+`--bionic-project` takes an explicit path instead of deriving one, and why
+`configs/lm-studio-bionic/README.md`'s "exists and is empty on this machine"
+needed a which-home qualifier.
+
+**Bionic is still not in the `CLIENTS` table**, so `validate.sh`'s
+client-pairing parse still sees exactly two clients. Every row there is a
+`$HOME`-global target the script probes for existence; a per-project target
+has no such location, so a row would have had to invent one.
+
+**Not verified, and not claimed: that Bionic *loads* a skill deployed this
+way.** Files observed landing at the vendor-documented path; the client was
+not run. A human verification step of the `TASK-0016`/`0017` shape.
 
 ## The capability vocabulary has eleven terms, and `qa-test` can run tests
 

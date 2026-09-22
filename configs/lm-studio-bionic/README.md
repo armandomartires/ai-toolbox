@@ -47,12 +47,12 @@ that choice rather than rediscover the fact.
 |---|---|
 | Client | Bionic **1.1.3+5** (LM Studio) — re-read 2026-09-22; was 1.1.1+5 at `TASK-0047` |
 | Skills target | `~/.lmstudio/skills/` (global) · `<project>/.agents/skills/` (project) |
-| Skills deployment | **not automated** — global installs are approval-gated (see below); Bionic is not in `scripts/install.sh` |
+| Skills deployment | **project: automated** — `scripts/install.sh --client lm-studio-bionic --bionic-project DIR` writes `DIR/.agents/skills/`. **Global: manual, deliberately** — approval-gated by the vendor, never written by any script here (`TASK-0072`, closing `B-018`) |
 | Agents target | none documented as of 2026-09-15 — Bionic has subagents, but no user-authored agent-role directory was found |
 | MCP config | `~/.lmstudio/mcp.json` — **currently `{"mcpServers": {}}`**, re-read 2026-09-22; see below |
 | Verified (MCP) | classic LM Studio 0.4.24: **fully verified** 2026-09-13 (TASK-0006, TASK-0017). **Bionic: not verified at any version** — neither 1.1.1+5 nor 1.1.3+5 — see below |
 
-## Skills — supported, but not auto-deployed
+## Skills — project skills are deployed; global skills are not
 
 **This supersedes ADR-0006's finding that this client has no Agent Skills
 target.** It does. ADR-0020 records the correction; the short version is
@@ -70,10 +70,24 @@ Bionic documents the real paths itself, in a bundled skill at
 
 So:
 
-- **Global skills** — `~/.lmstudio/skills/<skill-name>/SKILL.md`. Exists and
-  is empty on this machine. The same file notes a rare legacy location for
-  very old installations, `~/.cache/lm-studio/skills`.
+- **Global skills** — `~/.lmstudio/skills/<skill-name>/SKILL.md`. The same
+  file notes a rare legacy location for very old installations,
+  `~/.cache/lm-studio/skills`.
 - **Project skills** — `<project-folder>/.agents/skills/<skill-name>/SKILL.md`.
+
+> **Which `~` — and this bit matters.** The global directory exists and is
+> empty, but at **`/mnt/c/Users/<user>/.lmstudio/skills/`**, the *Windows*
+> home. This repo is developed in WSL, where `$HOME` is
+> `/home/<user>` and **`~/.lmstudio` does not exist at all** (both observed
+> 2026-09-23, `TASK-0072`). `scripts/install.sh` builds every `CLIENTS` row
+> from `${HOME}`, so a global Bionic row written the obvious way would point
+> at a path that is not Bionic's, on the very machine this repo is developed
+> on — and it would *succeed*, creating an empty directory nothing reads.
+> That is an independent reason the global half is not automated, separate
+> from the approval gate, and it is why `--bionic-project` takes an explicit
+> directory rather than deriving one. This file previously said the
+> directory "exists and is empty on this machine" without saying which home;
+> that reads as false from inside WSL.
 
 Bionic's frontmatter schema, from the same source: `name` (required,
 kebab-case, 1-63 chars, no leading/trailing/consecutive hyphens),
@@ -81,25 +95,51 @@ kebab-case, 1-63 chars, no leading/trailing/consecutive hyphens),
 gates — `disable-model-invocation` and `user-invocable`. Unknown fields are
 ignored, so this repo's skills are schema-compatible.
 
-### Why `install.sh` still does not deploy here
+### The two halves are deployed differently, and the asymmetry is the vendor's
 
-Not because the target is missing — because the vendor forbids writing to it
-directly. `skill-management/SKILL.md:31`:
+**`TASK-0072` closed `B-018` by automating one half and deliberately not the
+other.** The split is not a matter of effort remaining.
+
+**Project skills — automated.** `.agents/skills/` holds ordinary writable
+files, so:
+
+```bash
+scripts/install.sh --client lm-studio-bionic --bionic-project /path/to/project
+```
+
+writes `/path/to/project/.agents/skills/<skill>/`, honouring `link` (default)
+or `copy` and the same overwrite policy as every other client: a target is
+replaced only when this repo owns a skill of that name, and replacing a real
+directory is announced. Re-running is idempotent. **A run without
+`--bionic-project` touches no Bionic path at all** — the flag is the only way
+in, because the caller is the only honest source of where their project is.
+
+**Global skills — manual, and not a gap.** Not because the target is missing;
+because the vendor forbids writing it directly. `skill-management/SKILL.md:31`:
 
 > "DO NOT edit global skills directly. If you need to install a new skill,
 > you must prepare it in the scratchpad and then use the following tools to
 > install it."
 
-Global installs go through a `skill.install` tool call that prompts the user
-for approval. That is incompatible with `install.sh`'s symlink-or-copy
-model, which is non-interactive and idempotent by design. Project skills
-under `.agents/skills/` *are* ordinary files and could be written directly.
+Global installs go through a `skill.install` tool call that **prompts the
+user** for approval. `install.sh` is non-interactive and idempotent by
+design, so it cannot drive that gate — and a script that wrote
+`~/.lmstudio/skills/` anyway would be working around a vendor control rather
+than supporting the client. **No script in this repo writes that path**;
+install those by hand through Bionic's own tooling.
 
-Wiring that up is a real option, not a dead end, and is tracked as a
-backlog item rather than assumed here. Until it exists, Bionic stays absent
-from `install.sh`'s client list and therefore exempt from the
-`configs/<client>/README.md` pairing `tests/validate.sh` enforces for
-deployable clients — it keeps this snapshot anyway.
+**Bionic is still not in `install.sh`'s `CLIENTS` table**, and therefore
+still exempt from the `configs/<client>/README.md` pairing `tests/validate.sh`
+enforces — it keeps this snapshot anyway. Every row of that table is a
+*global* target under `$HOME` that the script probes and skips when absent;
+a per-project target has no such location, so a row would have had to invent
+one. `--client lm-studio-bionic` is accepted for *filtering* only.
+
+**Not verified: that Bionic loads a skill deployed this way.** The files are
+observed landing at the documented path; whether the client reads them has
+not been tested, and `ADR-0020` clause 6 forbids inferring it — *"directory
+name inference is not evidence, in either direction."* That is a human
+verification step, the same shape as `TASK-0016`/`TASK-0017`.
 
 ## Agents — Bionic is agentic; no user-authored role directory found
 

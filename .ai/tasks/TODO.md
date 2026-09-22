@@ -544,9 +544,12 @@ spikes. The outstanding queue lives in `.ai/planning/SPRINT-CURRENT.md`.
       Raised **B-027** (the `bash_allow` sibling hazard) and corrected the
       authoring guide's claim about **`shell-runner`, a role that has never
       existed** (done)
+- [x] TASK-0072 — **B-018**: `install.sh --bionic-project DIR` deploys skills
+      to Bionic's **project** target. The global target stays manual — it is
+      approval-gated, *and* `$HOME` in WSL is not the home Bionic uses (done)
 
-**Backlog after TASK-0071:** `B-021` is closed. Unscheduled and unclaimed:
-**B-018**, **B-023**, **B-027**. Ready but already scoped into S9 briefs:
+**Backlog after TASK-0072:** `B-018` and `B-021` are closed. Unscheduled and
+unclaimed: **B-023**, **B-027**. Ready but already scoped into S9 briefs:
 **B-024** (`TASK-0059`), **B-026** (`TASK-0060`). Waiting on a second
 instance rather than on a planner: **B-025**.
 
