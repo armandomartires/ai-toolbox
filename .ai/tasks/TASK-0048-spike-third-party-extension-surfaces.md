@@ -206,38 +206,202 @@ belongs in Outputs as a finding.
 
 ## Outputs / handover
 
-*Intended* end state — this task has not run, so the rows below describe an
-intention, not a state.
-
 | Artifact | End state |
 |----------|-----------|
-| `.ai/tasks/TASK-0048-*.md` | Execution log carrying Q1–Q3 (and Q4 if reached), each answer version-stamped and dated; every out-of-repo path listed; the revert verified |
-| `ADR-0021` | Unchanged by this task, but its three falsifiable claims each marked confirmed / corrected / untested in **this** log, ready for a human to ratify or reject |
-| `.ai/context/CURRENT_STATE.md` | A paragraph recording what the spike found, including any vendor claim it falsified |
-| The machine | Restored to its pre-task state, verified against backups; any upstream leftover that could not be removed is named |
-| Components | **Deliberately unchanged.** No manifest, no wiring snippet, no registry row |
+| `.ai/tasks/TASK-0048-*.md` | This log. **Q1, Q2, Q3 answered; Q4 answered by package inspection rather than by install**, stated as such. Every out-of-repo path listed; revert verified by md5 |
+| `ADR-0021` | **Unchanged.** Its three falsifiable claims are marked below: **1 falsified (and then some), 2 refuted, 3 confirmed** |
+| `.ai/context/CURRENT_STATE.md` | Records what the spike found, including the two vendor/plan claims it overturned |
+| The machine | **Restored and verified** — `opencode.jsonc` md5 `36d0ed60…` and `settings.json` md5 `1db56080…` both identical to backups. **Zero residue**: no `~/.config/ponytail`, no `~/.claude/.ponytail-active`, no `~/.graphify`, no `~/.cache/opencode/node_modules`, no global npm install of either package |
+| Components | **Unchanged**, as forecast. No manifest, no wiring snippet, no registry row |
 
-**Next task starts here**: `TASK-0049` picks up from a recorded answer to
-Q2 — whether `graphify serve` can be smoke-tested at all — and `TASK-0050`
-from the answers to Q1, Q3 and Q4. Record any deviation from this plan
-here; both downstream tasks were scoped against it.
+**Next task starts here**: **`TASK-0049` does not simplify** — claim 3 is
+confirmed, `graphify serve` exits 1 without a graph, so B-020's smoke-test
+precondition problem is real and still needs deciding. **`TASK-0050` gains
+scope**: both products are multi-surface, so `configs/opencode/README.md`
+must describe more than one mechanism per product, and clause 2's
+"rows are not exclusive" consequence is now triggered by *both*, not just
+graphify.
+
+**Deviations from the Plan — three, all recorded rather than smoothed:**
+
+1. **Q1 needed no mutation of a live config and no `--platform` flag.** The
+   CLI exposes a dedicated `graphify opencode install` subcommand whose own
+   `--help` states the answer. Confirmed empirically in a throwaway git repo
+   with `--project`.
+2. **Q3's planned method could not answer it, and the control proves why.**
+   Adding the plugin entry and starting OpenCode — the brief's step 4 — was
+   run twice (`opencode serve`, then `opencode debug startup`), with the
+   entry temporarily in the **live** `opencode.jsonc` and restored both
+   times. Neither produced a single plugin log line **for ponytail or for
+   the pre-existing `opencode-arcade-hub`**, and `~/.cache/opencode/node_modules`
+   stayed absent. A known-good plugin logging nothing is the control that
+   makes the silence uninformative, so the question was answered a different
+   way — see Q3.
+3. **Q4 was answered by reading the published package, not by installing
+   into Claude Code.** Cheaper and lower-risk than a marketplace install,
+   and sufficient for what `TASK-0050` needs. Marked as a package-level
+   answer, not an observed-install one.
 
 ## Status
 
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-16
-- Updated: 2026-09-16
+- Updated: 2026-09-22
 
 ## Execution log
 
 ### Attempt 1
 
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-22
+- Agent: Claude Opus 5 (1M context)
+
+#### Versions, recorded before anything was installed
+
+| Thing | Observed 2026-09-22 | Brief expected |
+|---|---|---|
+| `opencode --version` | **1.18.31** | 1.18.31 ✓ |
+| `claude --version` | **2.1.246 (Claude Code)** | 2.1.246 ✓ |
+| `node` / `npm` | **v22.23.2** / 10.9.8 | ≥20 ✓ |
+| `bun` | **absent from PATH** | not stated |
+| `@dietrichgebert/ponytail` latest | **4.10.0** | 4.10.0 ✓ |
+| `@sentropic/graphify` latest | **0.18.0** | not stated |
+
+**One Inputs row had drifted.** The brief expected
+`~/.claude/settings.json` to be `{"theme":"dark"}`. It actually carries six
+keys (`model`, `modelSettings`, `theme`, `remoteControlAtStartup`,
+`inputNeededNotifEnabled`, `agentPushNotifEnabled`). Backed up regardless;
+noted because the brief's own instruction is to verify, not assume.
+
+#### Q1 — graphify / OpenCode: **plugin, `AGENTS.md`, config *and* a skill — four surfaces**
+
+The README-vs-source contradiction is settled **in favour of the source**,
+by the vendor's own CLI help:
+
+> `graphify opencode install` — *"Write graphify section to AGENTS.md +
+> tool.execute.before plugin"*
+
+Confirmed empirically in a throwaway git repo (`graphify opencode install
+--project`, exit 0). Four things were written, not two:
+
+```
+  skill installed  ->  .opencode/skills/graphify/SKILL.md
+Preview: graphify opencode install will touch:
+  writes:
+  - /tmp/t48-q1-project/AGENTS.md
+  - /tmp/t48-q1-project/.opencode/plugins/graphify.js
+  - /tmp/t48-q1-project/.opencode/opencode.json
+  hooks/config:
+  - .opencode/opencode.json: tool.execute.before graphify plugin
+```
+
+**The tool's own preview under-reports what it writes.** The skill
+(`.opencode/skills/graphify/SKILL.md` plus `.graphify_version`) was written
+*before* the preview printed and is **absent from the preview's `writes:`
+list**. A reader trusting `printMutationPreview` would miss an installed
+Agent Skill.
+
+Two further observations, neither asked for:
+
+- **The plugin is a `tool.execute.before` hook that prepends an `echo` to
+  every `bash` command** once `.graphify/graph.json` exists. That is the
+  same interception mechanism `ADR-0016` studied, observed live in a second
+  product — independent corroboration that OpenCode interception works.
+- **It merges; it does not clobber.** Run against a project that already had
+  `.opencode/opencode.json` with a `$schema`, a populated `plugin` array and
+  an `mcp` block, it **appended** to `plugin` and preserved `$schema` and
+  `mcp` intact, and **appended** its section to a non-empty `AGENTS.md`. It
+  does reformat the JSON, which will show as diff noise.
+- The installed `SKILL.md` carries a non-spec `trigger: /graphify` frontmatter
+  key alongside `name`/`description`. Harmless — OpenCode ignores unknown
+  keys — but it is not in this repo's ADR-0003 schema.
+
+#### Q2 — `graphify serve` with no graph: **exit 1**, verbatim
+
+Run in an empty directory with no `.graphify/`:
+
+```
+EXIT CODE: 1
+stdout: (empty)
+stderr: error: Graph base directory does not exist: /tmp/t48-q2-emptydir/.graphify. Run the graphify skill first to build the graph (for Codex: $graphify .).
+```
+
+It created nothing. **The `serve.ts:188-195` reading in the brief and
+`ADR-0021` is confirmed**, though the message is about the *base directory*
+rather than the graph file. **B-020 stands**: `tests/smoke-mcp.sh` would call
+this FAIL when the truth is an unmet precondition.
+
+#### Q3 — ponytail from an npm `plugin` entry: **it resolves. The brief's concern is refuted**
+
+The planned method failed to answer this either way, and **the control is
+what proves the silence uninformative** — see deviation 2 above. Answered
+instead at the level the risk actually lives:
+
+- The published tarball **does ship** `package/.opencode/plugins/ponytail.mjs`
+  — the file `main` and both `exports` point at. Dotfile directories inside a
+  package tarball are not excluded.
+- A real `npm install @dietrichgebert/ponytail@4.10.0` followed by a dynamic
+  `import()` — which is what OpenCode's npm-plugin loading does — returned:
+
+```
+IMPORT OK. named exports: default
+```
+
+So **ponytail has a working OpenCode entry point.** Stated precisely: this is
+**package-resolution evidence, not an observed in-client load**. The stronger
+claim was not obtainable non-interactively and is not made.
+
+#### Q4 — ponytail / Claude Code: answered from the package, not from an install
+
+Ponytail is a **four-surface extension**, like graphify:
+
+| Surface | Contents |
+|---|---|
+| OpenCode commands | `.opencode/command/*.md` — **6** (`ponytail`, `-audit`, `-debt`, `-gain`, `-help`, `-review`) |
+| OpenCode plugins | `.opencode/plugins/ponytail.mjs`, `ponytail-frontmatter.cjs` |
+| Agent Skills | `skills/*/SKILL.md` — **6**, frontmatter `name` + `description`, **schema-compatible with ADR-0003** |
+| Client hooks | `hooks/{claude-codex,copilot,cursor,qoder}-hooks.json` + node scripts + a PowerShell statusline |
+
+Its Claude Code hook shape, read from `hooks/copilot-hooks.json`:
+`sessionStart` and `userPromptSubmitted`, each a `command` hook running
+`node "${PLUGIN_ROOT}/hooks/…"` with `timeoutSec: 5`, with parallel `bash`
+and `powershell` forms. It also ships `pi-extension/`, `.qoder/`,
+`.qoder-plugin/` and its own `AGENTS.md`.
+
+#### `ADR-0021`'s three falsifiable claims
+
+| # | Verdict | What it means |
+|---|---|---|
+| 1 — graphify's OpenCode integration is a real plugin | **FALSIFIED, and further than the claim contemplated** | It is plugin **and** `AGENTS.md` **and** project config **and** an Agent Skill. Clause 2's "rows are not exclusive" consequence fires, and graphify occupies more than the two rows the claim imagined |
+| 2 — ponytail does not load from an npm entry | **REFUTED** | It resolves and imports. Clause 6's honesty requirement is **not** triggered in the feared direction; there is a working surface to print |
+| 3 — `graphify serve` starts without a graph | **CONFIRMED (i.e. it does not start)** | The smoke-test problem does **not** evaporate. `TASK-0049` does not simplify and B-020 stays real |
+
+**Two of three went against the plan's expectations**, which is the outcome
+the spike existed to produce.
+
+#### Every out-of-repo path touched
+
+| Path | What happened |
+|---|---|
+| `~/.config/opencode/opencode.jsonc` | **Modified twice**, ponytail added to the `plugin` array; **restored both times** via an `EXIT` trap. Final md5 `36d0ed608d1f806677a3d63cad75356e` = baseline |
+| `~/.claude/settings.json` | **Read and backed up only. Never modified.** md5 `1db56080eb769d046d946ef9016a0403` = baseline |
+| `~/.claude/plugins/` | **Untouched** — no marketplace install was performed |
+| `/tmp/t48-*` (6 throwaway dirs) | Created and **deleted** |
+| `~/.npm/_cacache` | Populated by `npx`/`npm install`, as any npm use does. Not reverted; this is npm's shared cache, not product state |
+| `~/.cache/opencode/node_modules` | **Never created** — OpenCode never fetched either plugin |
+| `~/.config/ponytail`, `~/.claude/.ponytail-active`, `~/.graphify` | **Never created** |
+
+**Revert verified by comparison, not asserted**: `diff -q` against both
+backups reported identical, and both md5s match the baseline recorded before
+any change.
+
+- Validation: `tests/validate.sh` → **OK**. `scripts/sync-registry.sh`
+  **deliberately not run** — no component changed, which the brief names as
+  the correct outcome. **No component file in this repo was touched**; the
+  only repo files changed are this log and `CURRENT_STATE.md`, both forecast.
+- Result: **done.** Q1, Q2, Q3 answered from observation; Q4 answered from
+  the published package and labelled as such. All nine acceptance criteria
+  met, with the Q3 criterion met by a different method than planned and the
+  substitution recorded.
+- Commit: recorded in the follow-up commit
+- Push: recorded in the follow-up commit

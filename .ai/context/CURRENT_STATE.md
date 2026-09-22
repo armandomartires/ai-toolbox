@@ -1,7 +1,50 @@
 # Current State
 
-Last updated 2026-09-22, after **sprint S6 was closed and S8 promoted to
-current** (`TASK-0054`). Earlier the same day, **S6's checkpoint was written
+Last updated 2026-09-22, after **S8's first brief ran** (`TASK-0048`, the
+third-party extension spike) and, before it, **sprint S6 was closed and S8
+promoted to current** (`TASK-0054`).
+
+## S8 is under way: the spike overturned two of three expectations
+
+**`TASK-0048`, 2026-09-22.** Spike — findings, not components. **No
+component file changed**, as forecast, and the machine was restored and
+**verified by md5** against backups taken first.
+
+**Both products are multi-surface, and that is the headline.** graphify's
+`opencode install` writes **four** things — `AGENTS.md`, a
+`tool.execute.before` plugin, a project `opencode.json` entry, **and an Agent
+Skill**. ponytail ships **six** OpenCode commands, two plugins, **six Agent
+Skills**, and hook manifests for four clients. `ADR-0021`'s clause 2 says a
+third-party extension is placed by *what it is*; the spike's answer is that
+each of these is several things at once, so its "rows are not exclusive"
+consequence fires for **both** products rather than just graphify.
+
+**`ADR-0021`'s three falsifiable claims: 1 falsified, 2 refuted, 3
+confirmed.** Two of three went against the plan — which is what the spike
+existed to produce.
+
+- **graphify's OpenCode integration is a real plugin**, not the `AGENTS.md`
+  its README claims. The source reading was right and the README wrong.
+- **ponytail does load from an npm entry.** The feared blocker — `main`
+  pointing into `./.opencode/plugins/` — is not one: the file ships and
+  `import()` succeeds. Recorded precisely as **package-resolution evidence,
+  not an observed in-client load**.
+- **`graphify serve` exits 1 with no graph**, verbatim message recorded. So
+  **B-020 stands** and `TASK-0049` does not simplify.
+
+**Two findings nobody asked for.** graphify's own install preview
+**under-reports what it writes** — the Agent Skill it installs is absent from
+its `writes:` list. And graphify **merges rather than clobbers** an existing
+project config, preserving `$schema`, `mcp` and a populated `plugin` array.
+
+**A method note worth keeping.** The brief's plan for Q3 — add the plugin
+entry, start OpenCode, read the log — could not answer it: neither
+`opencode serve` nor `opencode debug startup` loaded plugins at startup.
+**The control is what made that honest**: the pre-existing, working
+`opencode-arcade-hub` plugin logged nothing either, so the silence was
+uninformative rather than a negative result. The question was answered at
+package level instead, and the substitution is recorded rather than papered
+over. Earlier the same day, **S6's checkpoint was written
 as `REVIEW-0010`** and **the Bionic client snapshot was corrected for two
 drifted observations** (`TASK-0053`). All three below.
 
