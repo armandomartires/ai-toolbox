@@ -179,7 +179,9 @@ any agent or human can understand, trust, and deploy.
   began~~ **ALL FIVE met as of 2026-09-16**; each is marked below. Wording is
   otherwise as written on 2026-09-14. **What remains for the phase is not an
   exit criterion but a judgment**: ratifying the three ADRs and writing the
-  checkpoint.
+  checkpoint. **The checkpoint is written — `REVIEW-0010`, 2026-09-22,
+  verdict approve, closure blocked on ratification. Ratification is now the
+  only outstanding item in Phase 6.**
   - **MET** — `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
     execution or system package installation (TASK-0026). It now carries a
     `workspace_root_bounds` key splitting `bounded` from `not_bounded` per

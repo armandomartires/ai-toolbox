@@ -1,7 +1,58 @@
 # Current State
 
-Last updated 2026-09-22, after **the Bionic client snapshot was corrected
-for two drifted observations** (`TASK-0053`, below). Before that, on
+Last updated 2026-09-22, after **S6's checkpoint was written as
+`REVIEW-0010`** and, earlier the same day, **the Bionic client snapshot was
+corrected for two drifted observations** (`TASK-0053`, both below).
+
+## S6 has its checkpoint; only ratification is outstanding
+
+**`REVIEW-0010`, 2026-09-22.** Verdict **approve**, with closure explicitly
+**blocked on an act the review cannot perform**: ADR-0014, ADR-0015 and
+ADR-0016 are still `Proposed`, and ADR-0014 states it plainly — *"What
+remains is a human act, not more evidence."* Every ratification in this repo
+is recorded as a human decision, so an agent accepting them would
+manufacture the one signature the convention exists to require. **S6 stays
+current.** The review carries a **ratification packet** summarising what
+accepting each ADR commits the human to, with ADR-0015's reversed clause 1
+flagged as the one most needing a human.
+
+**The headline finding was not predicted by anyone: S6's evidence base is no
+longer re-checkable at the commit it was read from.** Exit criterion 5
+records `SIGMA-infrastructure` at `HEAD` `d4e2dd1`, `[ahead 42]`, with
+`ansible.log` mtime 2026-09-12. Today that path is at `95b6966` **dated
+2026-09-06**, has no remote, no `ansible.log`, and a reflog ending
+2026-09-06 — while `d4e2dd1` exists as an object on no branch. A checkout
+cannot have been at a 09-12 commit on 09-16 with a reflog ending 09-06, so
+**the working copy S6 read is not the one at that path today**. The cause is
+recorded as undeterminable read-only, not guessed at.
+
+**The constraint held** — that tree is clean, and nothing suggests this repo
+modified it. What broke is re-verifiability, not the rule.
+
+**Two things absorbed the blow, one of them by accident:**
+
+1. **The guard is insulated.** `tests/gather-subset-guard.sh` uses its own
+   fixtures and its own `inventory.yml`; it never reads the target repo.
+   Re-run 2026-09-22: **10/10 PASS**, on a toolchain that has itself moved
+   (`ansible-core` 2.20.8 → **2.21.4**, recorded in nine files).
+2. **`TASK-0032` recorded F1–F4 here rather than as pointers** — and did so
+   for an unrelated reason (ADR-0015 forbids estate facts in a
+   symlink-deployed component). That choice is what preserved S6's evidence.
+   **A decision taken for one reason turned out to be load-bearing for
+   another.** The cheap generalisation: a citation into a repo you do not
+   control is a pointer that can dangle, so record the fact, not the
+   coordinates.
+
+**Three external-evidence drifts inside one week** — Bionic, `ansible-core`,
+and the target repo — every one caught because the original observation
+carried a version, a hash or a timestamp. **The defence works; its trigger
+does not exist.** All three were found by someone happening to re-read the
+file. Whether this repo wants a scheduled re-check is now a live follow-up,
+and recording "no, by choice" closes it as legitimately as building one.
+
+**Still open and untouched by this checkpoint:** the gate's undecided budget
+(`REVIEW-0008` follow-up 1, measured **971/1040/1245 ms** against a
+sub-second claim — its second checkpoint unactioned), and B-018…B-021. Before that, on
 2026-09-16, **S6 was un-parked and made current again** and **S8 was
 re-queued** (`TASK-0052`). Earlier the same day, sprint S7 was closed by
 `REVIEW-0008` (approve) and S8 was briefly promoted; before that, S8 was

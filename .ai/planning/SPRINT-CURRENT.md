@@ -19,7 +19,22 @@
 > disagree defect `REVIEW-0008` had to sweep across S7, found here on the
 > first read of this file. **ALL SEVEN TASKS ARE NOW DONE. Remaining:
 > ratification of the three ADRs, and a checkpoint** — both judgment, not
-> implementation. `TASK-0026`, `0027`, `0028`, `0031`, `0032` and all three ADR
+> implementation.
+>
+> **CHECKPOINT WRITTEN 2026-09-22: `REVIEW-0010`** (not `REVIEW-0009`, which
+> stays reserved by S8). Verdict **approve**, with closure explicitly
+> **blocked on ratification** — an agent cannot perform it. Its headline
+> finding was not predicted by anyone: **the target repo is no longer
+> re-checkable at the commit S6 read it at** (`HEAD` was `d4e2dd1`, is now
+> `95b6966`; `ansible.log` gone; the ahead-count's remote gone). The
+> constraint held — that tree is clean — but the *verification method*
+> recorded in exit criterion 5 cannot be reproduced today. The guard is
+> unaffected: its harness is hermetic and re-ran **10/10** on 2026-09-22.
+> **`TASK-0032`'s choice to record F1–F4 in this repo rather than as pointers
+> is what preserved the evidence.** The review also carries a ratification
+> packet — what accepting each ADR commits the human to.
+>
+> **So the only thing outstanding in S6 is ratification.** `TASK-0026`, `0027`, `0028`, `0031`, `0032` and all three ADR
 > bodies are **done**; `0029`/`0030` were delivered by S7's pilot. **Three
 > backlog items closed by S6's own execution** — B-012/B-013 (`TASK-0026`) and
 > **B-011, the highest-value item in either sprint (`TASK-0031`)**. **B-010 is
