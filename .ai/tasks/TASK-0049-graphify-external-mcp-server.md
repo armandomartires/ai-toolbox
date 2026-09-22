@@ -450,5 +450,7 @@ of thing a pinned version does not protect against.
   **1 skipped** in the shipped state; full suite green either way.
 - Result: **done.** All eleven acceptance criteria met. Two scope
   expansions, both human-authorized before the edit, both recorded above.
-- Commit:
-- Push:
+- Commit: `2c26044` — "Ship graphify as an external MCP server; fix two
+  smoke-test defects". Pre-commit hook ran `tests/validate.sh` → OK.
+- Push: **confirmed** to `origin` (`f9686da..2c26044`); branch in sync,
+  `git remote -v` token-free.
