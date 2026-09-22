@@ -219,5 +219,8 @@ snapshot.
   confirming the dated records are byte-identical.
 - Result: **done.** All eight acceptance criteria met. Documentation-only; no
   component, script or gate changed.
-- Commit: recorded in the follow-up commit
-- Push: recorded in the follow-up commit
+- Commit: `21a1bf8` — "Correct the Bionic snapshot's drifted version and MCP
+  config claims". Pre-commit hook ran `tests/validate.sh` → OK.
+- Push: **confirmed** — `ec1cef8..21a1bf8  master -> master` to
+  `origin` (`armandomartires/ai-toolbox`). `git remote -v` verified
+  token-free before and after; branch in sync with `origin/master`.
