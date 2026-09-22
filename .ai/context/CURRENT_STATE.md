@@ -1,9 +1,57 @@
 # Current State
 
-Last updated 2026-09-23, after **`TASK-0049` shipped graphify as this
-repo's second MCP server** — and found a second defect in
-`tests/smoke-mcp.sh` on the way. Before it: S8's spike (`TASK-0048`), and
+Last updated 2026-09-23, after **`TASK-0050` documented ponytail across all
+three clients** and, before it, **`TASK-0049` shipped graphify as this
+repo's second MCP server** — which found a second defect in
+`tests/smoke-mcp.sh` on the way. Before those: S8's spike (`TASK-0048`), and
 S6's closure with S8 promoted to current (`TASK-0054`).
+
+## ponytail is documented, not installed — and it corrected its own brief twice
+
+**`TASK-0050`, 2026-09-23.** All three `configs/*/README.md` now carry a
+`## Third-party extensions` section with ponytail
+(`@dietrichgebert/ponytail` 4.10.0, MIT) described **per client**. Nothing
+vendored, nothing installed, registry unchanged — confirmed by running the
+generator rather than assuming.
+
+**The gating re-check held.** `ponytail-mcp` is still unpublished under
+**both** the bare and the scoped name (404, 2026-09-23), so `ADR-0005`'s
+external shape stays unavailable and the task remains documentation. The
+scoped name was not in the brief; checking it is what makes the negative
+result worth anything.
+
+**Two of the brief's own inputs were wrong, and both trace to the same
+root.** `TASK-0048` answered Q4 from the published package and *disclosed*
+that — the brief then carried its numbers forward as though they described
+Claude Code:
+
+- **The Claude Code plugin installs three lifecycle hooks, not two.**
+  `hooks/claude-codex-hooks.json` declares `SessionStart`, `SubagentStart`
+  and `UserPromptSubmit`. The two-hook figure describes
+  `hooks/copilot-hooks.json`, a different client's file with different event
+  names and a different timeout key. **Upstream's README says two as well**
+  — the third README-versus-source disagreement this sprint.
+- **"Schema-compatible with ADR-0003" was true of the keys only.** All six
+  skills declare a folded `description: >`, which `tests/validate.sh:86-94`
+  rejects outright. The no-vendoring decision now rests on two independent
+  reasons, the second mechanical: vendoring them would turn the gate red.
+
+**The OpenCode claim is deliberately hedged.** The npm plugin entry
+resolves — file ships, `import()` succeeds — but that is
+**package-resolution evidence, not an observed in-client load**, and the
+section says so, carrying `TASK-0048`'s control with it: the pre-existing
+working plugin logged nothing either, so the silence proved nothing.
+
+**Bionic stays UNVERIFIED, and is now better defended.** A search of the
+whole tarball for `lm studio`, `lmstudio` and `bionic` returns no match, so
+there is no vendor claim in *either* direction — which forecloses citing
+support that does not exist. `B-018` is referenced, not restated.
+
+**A seam between two briefs, recorded rather than quietly filled.** graphify
+now has a manifest and a registry row but **no `configs/*/README.md` wiring
+section**, while ansible has one in all three. `TASK-0049` excluded it as
+belonging to `TASK-0050`'s category; `TASK-0050`'s scope excludes graphify.
+Neither brief owns it. `TASK-0051` routes it or raises it.
 
 ## graphify is a component; the smoke harness had been testing the wrong thing
 

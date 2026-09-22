@@ -131,6 +131,54 @@ if Bionic's documentation describes a user-agent directory. Do not infer one
 from a directory name — that inference is exactly what produced the
 `hub/skills` error corrected above.
 
+## Third-party extensions
+
+Extensions that are **not components of this repo** and would be wired
+through the client's own mechanism (`ADR-0021` clause 2). Nothing here is
+installed, deployed or pruned by `scripts/install.sh` — which does not
+target this client at all, for the approval-gating reason above.
+
+### ponytail — UNVERIFIED here
+
+`@dietrichgebert/ponytail`, MIT, **4.10.0** (npm, re-checked 2026-09-23).
+Wired into Claude Code and OpenCode by the sections in the sibling
+`configs/*/README.md` files.
+
+**Nothing about ponytail has been tried on Bionic, and no instruction for
+doing so is given here.** This is the honest state, not a placeholder.
+
+**Upstream makes no claim either.** Its README documents Claude Code, Codex,
+GitHub Copilot CLI, Cursor, Gemini/Antigravity CLI, Grok, the Pi harness,
+Qoder, Devin and OpenCode. A case-insensitive search of the entire published
+4.10.0 tarball for `lm studio`, `lmstudio` and `bionic` returns **no match**
+(*observed 2026-09-23*). So there is no vendor claim to relay, in either
+direction.
+
+**What is known, and what it does not license.** `ADR-0020` established that
+Bionic has real Agent Skills targets — `~/.lmstudio/skills/` (global) and
+`<project>/.agents/skills/` (project) — and ponytail ships six skills. It is
+therefore *plausible* that its skills could be placed there by hand.
+
+**Plausible is not verified, and this file does not promote it.** Two
+specific reasons to leave it alone rather than infer a pass:
+
+- **Global installs are approval-gated** — the vendor forbids writing
+  `~/.lmstudio/skills/` directly. See `B-018` in `.ai/planning/BACKLOG.md`;
+  the constraint is recorded there and is not restated here.
+- **Bionic's own frontmatter schema has not been checked against ponytail's
+  skills.** All six declare `description:` as a folded scalar (*observed
+  2026-09-23*), which this repo's gate rejects for its own skills. Whether
+  Bionic's loader tolerates it is unknown, and unknown is the word for it.
+
+**`ADR-0020` exists because this client was once credited with a
+verification it never took** — a classic-LM-Studio result recorded against
+Bionic. Inferring support here from *"it has a skills directory and these are
+skills"* would be the same mistake with a new subject, and `ADR-0020`'s own
+generalisation is that a directory name is not evidence in either direction.
+
+If someone does try it, the outcome belongs here with a date and a version,
+replacing this section rather than sitting alongside it.
+
 ## MCP servers
 
 Bionic reads `mcp.json`. On this machine it lives at

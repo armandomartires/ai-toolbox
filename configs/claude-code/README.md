@@ -73,6 +73,87 @@ emission **fail loudly** rather than emit a file with the boundary dropped
 - **Nothing prunes a stale emitted file.** Deleting a role from the repo
   leaves `~/.claude/agents/<role>.md` in place. Remove it by hand.
 
+## Third-party extensions
+
+Extensions that are **not components of this repo** and are wired through
+the client's own mechanism (`ADR-0021` clause 2). Nothing here is installed,
+deployed, linked, emitted or pruned by `scripts/install.sh` — this section
+documents someone else's product so a reader can wire it themselves.
+
+`tests/validate.sh` checks that this file **exists**; it cannot check that
+anything below is true (`ADR-0009`). Every claim is therefore labelled
+either *vendor doc* or *observed*, with a date and a version.
+
+### ponytail
+
+`@dietrichgebert/ponytail`, MIT, **4.10.0** — version and license re-checked
+on npm 2026-09-23. A prompt ruleset that biases an agent toward the smallest
+solution that works, plus six Agent Skills and a set of lifecycle hooks.
+
+**This repo does not install ponytail** and does not vendor it (`ADR-0021`
+clauses 3 and 4). Run upstream's installer yourself.
+
+**Mechanism here: the plugin marketplace, as two separate prompts.**
+*Vendor doc, README 2026-09-23.* Upstream is explicit that one prompt does
+not work:
+
+```
+/plugin marketplace add DietrichGebert/ponytail
+```
+```
+/plugin install ponytail@ponytail
+```
+
+Note this installs from the **GitHub repository**, not from the npm package
+— a different distribution channel from the OpenCode wiring, which consumes
+the npm tarball. Same product, two delivery routes.
+
+**It installs three lifecycle hooks, not two.** *Observed 2026-09-23 in the
+published 4.10.0 tarball*, `hooks/claude-codex-hooks.json`:
+
+| Event | Command | Timeout |
+|---|---|---|
+| `SessionStart` (matcher `startup\|resume\|clear\|compact`) | `node "${CLAUDE_PLUGIN_ROOT}/hooks/ponytail-activate.js"` | 5 s |
+| `SubagentStart` | `node "${CLAUDE_PLUGIN_ROOT}/hooks/ponytail-subagent.js"` | 5 s |
+| `UserPromptSubmit` | `node "${CLAUDE_PLUGIN_ROOT}/hooks/ponytail-mode-tracker.js"` | 5 s |
+
+> **Upstream's README and upstream's shipped manifest disagree on the
+> count.** The README says the Claude Code plugin *"run[s] two tiny Node.js
+> lifecycle hooks"*; the manifest declares three. The two-hook description
+> matches `hooks/copilot-hooks.json`, a **different client's** file, which
+> uses different event names (`sessionStart`, `userPromptSubmitted`), a
+> different timeout key (`timeoutSec`) and separate `bash`/`powershell`
+> forms. Recorded because it is the third README-versus-source disagreement
+> this sprint has hit, and because a reader auditing their own hooks should
+> expect the third one.
+
+**`node` must be on the *non-interactive* shell's PATH** (*vendor doc*;
+upstream calls out Nix and nvm users specifically). The failure is silent by
+design: if `node` is missing *"the skills still work, the always-on
+activation just stays quiet instead of erroring on every prompt"*. So a
+half-working install looks like a working one — check the hooks fire rather
+than assuming.
+
+**State it writes outside its plugin directory**, which `/plugin remove`
+does **not** clean up (*vendor doc, README 2026-09-23*):
+
+| Path | What |
+|---|---|
+| `~/.claude/.ponytail-active` | Mode flag |
+| `~/.config/ponytail/config.json` (`%APPDATA%\ponytail\config.json` on Windows) | Optional `defaultMode`; also settable via `PONYTAIL_DEFAULT_MODE` |
+| `~/.claude/settings.json` → `statusLine` | **Only if you accept the setup nudge** |
+| `~/.cursor/hooks.json` | Cursor's entries, if you also installed there |
+
+Upstream ships `node scripts/uninstall.js` to remove them, **and the order
+matters**: run it *before* `/plugin remove ponytail`, because the script is
+itself a plugin file and removing the plugin deletes it. It only strips the
+`statusLine` entry if that entry points at ponytail's own script, so a
+statusline you wrote yourself survives.
+
+**Nothing in this repo creates or prunes any of it.** Listed so that finding
+these files later is explicable rather than alarming — the same reason
+`configs/opencode/README.md` documents its two `git-ops` copies.
+
 ## MCP servers
 
 `scripts/install.sh` prints the launch command for every server, read from

@@ -483,10 +483,18 @@ third-party-tools document.
       server to *exit*, so a conforming long-lived MCP server was reported
       as never having spoken while holding its correct reply. Fixed under a
       second explicit authorization.)
-- [ ] TASK-0050 — ponytail wiring in all three `configs/*/README.md`, one
+- [x] TASK-0050 — ponytail wiring in all three `configs/*/README.md`, one
       mechanism per client; Bionic **unverified** (B-018 referenced, not
       restated); the state files upstream leaves outside its plugin
       directory listed, since nothing here prunes them
+      (done 2026-09-23. `ponytail-mcp` re-checked under **both** the bare
+      and scoped names — still 404, so the shape holds. **Two of the
+      brief's own inputs were wrong**: the Claude Code plugin installs
+      **three** hooks, not two (the two-hook figure came from a *different*
+      client's manifest, and upstream's README repeats it), and the six
+      skills are schema-compatible only in their *keys* — all six use a
+      folded `description: >`, which this repo's gate rejects, giving the
+      no-vendoring decision a second, mechanical reason.)
 - [ ] TASK-0051 — `ADR-0021`'s placement rule into the authoring guide
       (**linking** to the reasoning, never restating it) plus
       `docs/development/third-party-tools.md` with omniroute

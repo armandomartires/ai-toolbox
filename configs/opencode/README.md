@@ -105,6 +105,90 @@ Those are separate acts needing their own authorization.
 - **Nothing prunes a stale emitted file.** Deleting a role from the repo
   leaves `~/.config/opencode/agents/<role>.md` in place. Remove it by hand.
 
+## Third-party extensions
+
+Extensions that are **not components of this repo** and are wired through
+the client's own mechanism (`ADR-0021` clause 2). Nothing here is installed,
+deployed, linked, emitted or pruned by `scripts/install.sh`.
+
+`tests/validate.sh` checks that this file **exists**; it cannot check that
+anything below is true (`ADR-0009`). Every claim is therefore labelled
+either *vendor doc* or *observed*, with a date and a version.
+
+### ponytail
+
+`@dietrichgebert/ponytail`, MIT, **4.10.0** — version and license re-checked
+on npm 2026-09-23. A prompt ruleset that biases an agent toward the smallest
+solution that works, plus six Agent Skills and six `/ponytail` commands.
+
+**This repo does not install ponytail** and does not vendor it (`ADR-0021`
+clauses 3 and 4).
+
+**Mechanism here: an npm plugin entry.** *Vendor doc, README 2026-09-23.*
+
+```json
+{ "plugin": ["@dietrichgebert/ponytail"] }
+```
+
+Upstream documents this for a project's `opencode.json`; the same key works
+in the global `~/.config/opencode/opencode.jsonc` this repo targets
+elsewhere. A checkout can be used instead, and upstream notes the `./` path
+resolves against the project's `opencode.json`, so an absolute path is what
+shares one checkout across projects:
+
+```json
+{ "plugin": ["./.opencode/plugins/ponytail.mjs"] }
+```
+
+**The npm entry resolves — stated precisely.** The package's `main` and both
+`exports` point at `./.opencode/plugins/ponytail.mjs`, a path inside a
+dotfile directory, which raised a real doubt about whether it survives into
+the published tarball. It does: the file ships, and a real
+`npm install @dietrichgebert/ponytail@4.10.0` followed by the dynamic
+`import()` that OpenCode's npm-plugin loading performs returned successfully
+(`TASK-0048` Q3, 2026-09-22; `main`/`exports` and the file's presence
+re-confirmed 2026-09-23).
+
+> **This is package-resolution evidence, not an observed in-client load.**
+> The stronger claim was not obtainable: `TASK-0048` put the entry in a live
+> `opencode.jsonc` and started OpenCode twice, and **no plugin log line
+> appeared for ponytail *or* for the pre-existing, working
+> `opencode-arcade-hub`** — so the silence was uninformative rather than a
+> negative result, and `~/.cache/opencode/node_modules` was never created.
+> `ADR-0021` clause 6 asks for the honest version over the confident one.
+
+**What it adds:** the ruleset is injected each turn at the active level,
+plus six commands (`/ponytail`, `-audit`, `-debt`, `-gain`, `-help`,
+`-review`) from `.opencode/command/*.md`, and the `lite`/`full`/`ultra`/`off`
+levels. Upstream notes OpenCode also auto-loads its `AGENTS.md`, so the
+rules apply even without the plugin — the plugin is what adds the levels.
+
+**Why the six skills are not vendored into `skills/`.** Two independent
+reasons, neither a matter of taste:
+
+- `scripts/install.sh` deploys skills with `ln -sfn`, so a vendored copy
+  would be a symlink into this repo's working tree — making this repo
+  maintainer-of-record for independently-shipping upstream content
+  (`ADR-0004`'s three-copies problem).
+- **They would fail this repo's own gate.** All six declare
+  `description: >` — a folded scalar. `tests/validate.sh` rejects the bare
+  block sigil for skills outright, because the registry renders the sigil
+  and drops the text (the defect `TASK-0039` found). *Observed 2026-09-23
+  against the 4.10.0 tarball.* Upstream is not wrong to write them that way;
+  they are simply not authored to this repo's registry constraint.
+
+**State it writes outside the plugin entry**, which nothing here creates or
+prunes (*vendor doc, README 2026-09-23*): `~/.config/ponytail/config.json`
+(`%APPDATA%\ponytail\config.json` on Windows) for an optional `defaultMode`,
+also settable via the `PONYTAIL_DEFAULT_MODE` environment variable; plus
+`~/.claude/.ponytail-active`, `~/.cursor/.ponytail-active` and
+`~/.cursor/hooks.json` entries if you installed for those clients too.
+Upstream ships `node scripts/uninstall.js` for them.
+
+**Adding the plugin entry is your edit, not this repo's.** `install.sh`
+never writes to `opencode.jsonc` — the same line agent emission holds, where
+role files are written but no `agent` key is ever added.
+
 ## MCP servers
 
 Add to `~/.config/opencode/opencode.json` (or `opencode.jsonc`).
