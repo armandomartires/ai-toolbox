@@ -1,6 +1,7 @@
 # Current State
 
-Last updated 2026-09-23. **Sprint S8 is CLOSED and no sprint is open.**
+Last updated 2026-09-23. **Sprint S8 is CLOSED. No sprint is open, and S9/S10
+are planned but not promoted.**
 
 All four briefs ran — `TASK-0048` (spike), `TASK-0049` (graphify as a
 component, plus two `smoke-mcp.sh` fixes), `TASK-0050` (ponytail per
@@ -8,6 +9,73 @@ client), `TASK-0051` (the placement rule and `third-party-tools.md`).
 `REVIEW-0009` approved the work and named one blocker; the human **ratified
 `ADR-0021` as written** the same day, and `TASK-0068` closed the sprint.
 Before it: S6's closure with S8 promoted to current (`TASK-0054`).
+
+## S9 and S10 are planned: an unattended-run harness, documentation only
+
+**`PLAN-0006`, 2026-09-23.** Planning only — **no component file changed**, and
+that boundary was the human's instruction rather than a scoping choice. What
+exists is `ADR-0022` (**`Proposed`**), two sprint files, ten task briefs
+(`TASK-0055`…`0064`) and three backlog items. Nothing in `loops/`, `skills/`,
+`agents/`, `mcp-servers/`, `configs/`, `scripts/` or `tests/` was touched.
+
+**The work generalises something that already runs elsewhere.** `asset-management`
+has an unattended orchestrator as its ad-hoc task `A119` — a gate runner plus a
+700-line Claude Code Workflow script. It has closed three tasks with commits,
+parked one correctly, and found a real defect (`A120`: a gate that had reported
+red on an untouched tree for two stages). So this is a generalisation from a
+measured artifact, not a design from first principles — which is why `ADR-0022`
+can re-raise `ADR-0019` clause 3 at all.
+
+**The headline finding, and the thing most likely to be softened later:
+seven of the nine roles will be OpenCode-only.** The harness's five rules are
+per-agent *command* boundaries, and six of the ten vocabulary terms have no
+per-agent Claude Code expression. The two roles that port — `task-planner` and
+`adjudicator` — are **the two that only think**. `ADR-0018` clause 8.3 already
+put `git-ops`, `qa-test` and `review` in the same position. **This harness is
+OpenCode-first**, and under Claude Code and Bionic it runs with boundaries that
+are weaker by construction, not equivalent.
+
+**`ADR-0022` narrows two clauses and is deliberately unratified.** Clause 3
+(dynamic workflows) is narrowed to the *component* layer: still forbidden as a
+component, permitted as a **binding** that carries no rule of its own. Ground 1
+("no mid-run user input") is inapplicable to an unattended run by construction
+rather than refuted, and stands unaltered for the two interactive loops. Ground 2
+(single-client) is **not waived** — it becomes the reason for per-client
+bindings. Clause 2.5 ("ambiguity stops the loop") is narrowed to "parks the task
+and reports it"; inventing an answer stays forbidden. Narrowing a stated
+requirement is the human's call, so the ADR is `Proposed` and nothing it
+unblocks may be authored.
+
+**Three findings that are this repo's, not the harness's**, raised as backlog
+items rather than folded into the plan:
+
+- **`B-024`** — `validate.sh`'s destructive-capability gate and its
+  `.env.example` check both read `server.json` only. The first authored server
+  will be a **command runner**, so its authorization block would be prose nothing
+  checks. The "claims a component makes about its own wiring" defect class,
+  in the file that polices it.
+- **`B-025`** — no vocabulary term for "may call only this MCP server".
+  `B-021`'s sibling, and the reason `gate-runner` has no Claude Code equivalent.
+- **`B-026`** — `ADR-0018` clause 8.5 has been unsatisfied since S7: the registry
+  cannot say a role is OpenCode-only, while three of six already are. S9 would
+  take that to eight of fifteen, so it must be fixed **before** the roles land.
+
+**Two corrections to the source harness, recorded so the port does not inherit
+them:** a null refuter currently **fails open** — a refuter returning nothing
+reads as an absence of objections — and rule 2 can be made *structural* rather
+than instructed by having the driver invoke the gate from its own map, so no
+agent ever sees a verification command string.
+
+**One thing this planning pass did not resolve, and named rather than assumed:**
+`worktree-only` still has no settled Claude Code emission (`ADR-0018` clause 7's
+leftover, assigned to `TASK-0040`, still open). All nine new roles declare it,
+and for the *acting* roles an isolated copy is the wrong confinement. `TASK-0058`
+must settle it or say explicitly that it has not.
+
+**Numbering note.** S9 took `TASK-0055`…`0064` and S10 resumes at `TASK-0065`,
+**stepping over `TASK-0068`**, which belongs to S8 — it was written by a
+concurrent session closing that sprint while `PLAN-0006` was being drafted. A
+gap in a numeric sequence reads as a lost file; this one is not.
 
 ## S8 closed; `ADR-0021` Accepted; nothing is scheduled next
 
@@ -349,7 +417,11 @@ modified it. What broke is re-verifiability, not the rule.
 1. **The guard is insulated.** `tests/gather-subset-guard.sh` uses its own
    fixtures and its own `inventory.yml`; it never reads the target repo.
    Re-run 2026-09-22: **10/10 PASS**, on a toolchain that has itself moved
-   (`ansible-core` 2.20.8 → **2.21.4**, recorded in nine files).
+   (`ansible-core` 2.20.8 → **2.21.4**). ~~recorded in nine files~~
+   **Corrected 2026-09-23 by `TASK-0069`: fifteen files, of which exactly
+   one was a live defect.** The other fourteen are dated records that must
+   not be rewritten. Counting occurrences was the wrong measure — see that
+   task.
 2. **`TASK-0032` recorded F1–F4 here rather than as pointers** — and did so
    for an unrelated reason (ADR-0015 forbids estate facts in a
    symlink-deployed component). That choice is what preserved S6's evidence.
