@@ -437,8 +437,9 @@ bad = []
 # than silently drop it. A typo must fail here, not degrade there.
 VOCAB = {
     "read-only", "no-delegation", "delegation-allowlist", "no-webfetch",
-    "worktree-only", "test-files-only", "bash-allowlist", "no-force-push",
-    "push-requires-confirmation", "webfetch-requires-confirmation",
+    "worktree-only", "test-files-only", "bash-allowlist", "test-allowlist",
+    "no-force-push", "push-requires-confirmation",
+    "webfetch-requires-confirmation",
 }
 MODES = {"primary", "subagent"}
 CLIENTS = {"claude-code", "opencode"}
@@ -602,6 +603,49 @@ if has_bash_allowlist:
 elif bash_allow is not None:
     bad.append("key 'bash_allow' is present without capability "
                "'bash-allowlist' — it would have no effect")
+
+# test-allowlist is the THIRD parameterised term, and the only one whose
+# entries are constrained. B-021 asked for a test-command term and forbade
+# resolving it as `bash: allow`; a `test_allow` accepting everything
+# `bash_allow` accepts would be that resolution under a second name. So two
+# properties are checked that `bash_allow` does not check — deliberately
+# asymmetric, and the authoring guide says why (widening them to bash_allow
+# would silently change git-ops and review, which TASK-0071 was not scoped
+# against). Raised as B-027 rather than done in passing.
+#
+# NOT checked, and not checkable here: whether OpenCode's matcher actually
+# matches a given pattern against a given command line. That is a property of
+# the client, TASK-0055's F4 is scoped to settle it, and ADR-0020 clause 6
+# forbids inferring it from a directory name or a reading of the docs.
+TEST_CHAINERS = (";", "&&", "||", "|", "$(", "`", "\n")
+test_allow = seq("test_allow")
+has_test_allowlist = bool(caps) and "test-allowlist" in caps
+if has_test_allowlist:
+    if test_allow is None:
+        bad.append("capability 'test-allowlist' requires a 'test_allow' "
+                   "block list naming the test commands it may run "
+                   "(one quoted '- pattern' per line; inline [a, b] form is "
+                   "not read)")
+    elif not test_allow:
+        bad.append("key 'test_allow' is empty — an allowlist that permits "
+                   "nothing denies everything, which is not what this term "
+                   "means")
+    else:
+        for pattern in test_allow:
+            if pattern == "*" or pattern.startswith("*"):
+                bad.append("test_allow entry '%s' is or begins with '*' — a "
+                           "test allowlist that opens universal is the "
+                           "`bash: allow` resolution B-021 forbids" % pattern)
+            for ch in TEST_CHAINERS:
+                if ch in pattern:
+                    bad.append("test_allow entry '%s' contains the shell "
+                               "chaining metacharacter '%s' — one entry must "
+                               "be one command, or the allowlist is "
+                               "decorative" % (pattern, ch.replace("\n", "\\n")))
+                    break
+elif test_allow is not None:
+    bad.append("key 'test_allow' is present without capability "
+               "'test-allowlist' — it would have no effect")
 
 # metadata.version is optional, but must be semver when given, matching the
 # skill rule so the registry's version column stays comparable.

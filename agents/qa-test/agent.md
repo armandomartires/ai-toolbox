@@ -8,12 +8,24 @@ capabilities:
   - worktree-only
   - test-files-only
   - bash-allowlist
+  - test-allowlist
 clients:
   - opencode
 bash_allow:
   - 'git status*'
   - 'git diff*'
   - 'git log*'
+test_allow:
+  - 'pytest*'
+  - 'python -m pytest*'
+  - 'npm test*'
+  - 'npm run test*'
+  - 'yarn test*'
+  - 'go test*'
+  - 'cargo test*'
+  - 'make test*'
+  - 'tests/validate.sh*'
+  - 'bash tests/*.sh*'
 ---
 
 # qa-test
@@ -37,6 +49,14 @@ whether it ships.
 If the caller has already told you the project's real test command — from
 `package.json`, a `Makefile` target, `pytest` — **use it**. If no test
 runner is evident, **say so** rather than inventing one.
+
+**You can run test commands, and only test commands.** Your allowlist covers
+the common runners plus this repo's own `tests/` scripts. Everything else is
+denied, including shells, package installs and network tools. If a project's
+real test command is not in your allowlist, **report that as a blocker** — do
+not reach for a shell to work around it, and do not rewrite the project's test
+setup so it matches what you are permitted to run. Widening the boundary is a
+decision for whoever owns the role, not a step in a test run.
 
 ## What you must not do
 

@@ -196,6 +196,7 @@ surface to emit into (ADR-0020).
 | `capabilities` | Required, non-empty list drawn **only** from the vocabulary below. This is the role's safety boundary, stated in abstract terms because the emitter has to translate it into two different permission models — a boundary written in one client's syntax cannot be translated into the other's, and is silently discarded rather than rejected. |
 | `delegates_to` | *Required **iff** `capabilities` includes `delegation-allowlist`; forbidden otherwise.* A non-empty **block list** of role names this role may invoke — one `- name` per line. The inline flow form (`[a, b]`) is **not read** and fails the gate. Held in its own key rather than inside `capabilities` because every vocabulary term is a plain string and the parsers read flat sequences; nesting a parameter would change the schema's shape for one term. Stated as `iff` because it is checkable in both directions, and both are checked. |
 | `bash_allow` | *Required **iff** `capabilities` includes `bash-allowlist`; forbidden otherwise.* A non-empty **block list** of command patterns this role may run — one `- 'git *'` per line, quoted because a glob is not a bare YAML scalar. Everything not matched is **denied**, not prompted. Same block-list-only rule as `delegates_to`, for the same parser reason. |
+| `test_allow` | *Required **iff** `capabilities` includes `test-allowlist`; forbidden otherwise.* A non-empty **block list** of test-command patterns, same quoting and block-list-only rule as `bash_allow`. Additionally gated: **no entry may be or begin with `*`**, and **no entry may contain `;`, `&&`, `\|\|`, `\|`, `$(`, a backtick or a newline** — see below for why this key is constrained where `bash_allow` is not. Merges into the same emitted `bash` map, so a role may hold both keys. |
 | `clients` | Required. List of clients this role is emitted for: `claude-code`, `opencode`, or both. Declared rather than derived, because a role asking for a capability a client cannot enforce is a **scoping decision**, not something the emitter should silently resolve. |
 | `model` | *Optional.* A **tier name**, never a client-native model ID. The two clients' model formats are mutually invalid — OpenCode wants `provider/model-id`, Claude Code wants an alias, a full ID or `inherit` — and OpenCode accepts a foreign value at parse time and **fails only at run time**. **Omit it: no tier resolver exists in this repo** — see the note below. |
 | Body | Required, non-empty. Everything after the frontmatter is the system prompt, emitted verbatim to both clients. It is the one part of a role that is genuinely portable. |
@@ -235,18 +236,26 @@ weaker of two clients, not by either client's native expressiveness.
 | `worktree-only` | Confined to the project worktree. | `external_directory: deny` | **partial** — `isolation: worktree` gives an isolated *copy*, which is a different guarantee. See below. |
 | `test-files-only` | May edit test paths only. | `edit` glob map | **not per-agent** |
 | `bash-allowlist` | May run **only** the commands named in `bash_allow`; everything else is denied. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **not per-agent** |
+| `test-allowlist` | May run **only** the test commands named in `test_allow`; everything else is denied. Merges into the same `bash` map as `bash-allowlist`, so a role may carry both. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **not per-agent** |
 | `no-force-push` | May not force-push, hard-reset or rewrite history. | `bash` deny globs | **not per-agent** |
 | `push-requires-confirmation` | Push prompts rather than proceeding. | `bash: {"git push*": ask}` | **no `ask` state exists** |
 | `webfetch-requires-confirmation` | Network fetches prompt rather than proceeding. | `webfetch: ask` | **no `ask` state exists** |
 
-**Four of the ten are enforceable in both clients** — the first three plus
-`delegation-allowlist`. The other six are enforceable in OpenCode only, and
+**Four of the eleven are enforceable in both clients** — the first three plus
+`delegation-allowlist`. The other seven are enforceable in OpenCode only, and
 the reason is structural: Claude Code's `tools`/`disallowedTools` gate
 **whole tools**, so anything needing *intra-tool* granularity — which paths,
 which commands, or a third `ask` state between allow and deny — has no
 per-agent expression. A `disallowedTools` entry with a specifier such as
 `Bash(git push *)` removes the entire `Bash` tool, not the matching
 commands.
+
+`test-allowlist` is in the OpenCode-only seven for exactly that reason, and
+it is why `qa-test` is an OpenCode-only role. Naming test commands is
+intra-`Bash` granularity; Claude Code can give a role `Bash` or withhold it,
+and nothing between. A Claude Code `qa-test` would ship with unrestricted
+`Bash` — a **weaker** boundary than the one its description implies — so the
+emitter refuses rather than emitting it (clause 8).
 
 #### `delegation-allowlist` requires `mode: primary`, and that is a client constraint
 
@@ -273,11 +282,11 @@ boundary travels with the role.
 last-match-wins, so the emitter writes `"*": "deny"` first and the allowed
 names after. Reordering an emitted file inverts its meaning.
 
-#### The two parameterised terms deny by default
+#### The three parameterised terms deny by default
 
-`delegation-allowlist` and `bash-allowlist` are the only terms taking an
-argument, and both are **deny-first allowlists**: what is not named is
-**denied**, never prompted.
+`delegation-allowlist`, `bash-allowlist` and `test-allowlist` are the only
+terms taking an argument, and all three are **deny-first allowlists**: what is
+not named is **denied**, never prompted.
 
 That distinction is the whole point of the term. An earlier draft of the
 emitter produced `bash: {"*": "ask"}` for `bash-allowlist` — which permits
@@ -288,8 +297,35 @@ role was designed to never reach. **A boundary that degrades to a prompt is
 not the boundary that was declared**, and it fails silently, because the
 emitted file still looks restrictive.
 
-So a term that names a set must carry the set. If you add a third
+So a term that names a set must carry the set. If you add a fourth
 parameterised term, give it its own key and make the default **deny**.
+
+#### `test-allowlist` is constrained where `bash-allowlist` is not
+
+The third parameterised term was added by `TASK-0071` to close `B-021`, whose
+warning shaped it: *"do not resolve it by adding `bash: allow` — that hands a
+test runner arbitrary shell and dissolves the boundary the role exists to
+have."* A `test_allow` list that accepted anything `bash_allow` accepts would
+be that resolution under a second name, so two constraints apply to its
+entries and **both are gated**:
+
+1. **No entry may be, or begin with, `*`.** An allowlist that opens universal
+   is not an allowlist.
+2. **No entry may contain a shell chaining metacharacter** — `;`, `&&`, `||`,
+   `|`, `$(`, a backtick, or a newline. Otherwise `pytest; rm -rf /` is one
+   "test command" and the boundary is decorative.
+
+**The ceiling, stated plainly.** This term bounds the **command surface** a
+role may invoke. It does not bound what the tests themselves execute, and no
+per-agent permission model can: running a test *is* running arbitrary code. A
+role holding `test-allowlist` cannot invoke `curl`; it can run a test that
+does. Do not read the term as a sandbox — it narrows what the agent may type,
+not what the repository's own test suite may do.
+
+Neither constraint is applied to `bash_allow`, which has the same hazard.
+That is deliberate scope, not an oversight: widening them would change the
+boundary of `git-ops` and `shell-runner`, which `TASK-0071` was not scoped
+against. Raised as a backlog item instead.
 
 A term that only one client can enforce is **still a legal term**. It is
 not excluded, because excluding it would mean a role could not state a
@@ -309,9 +345,22 @@ pool** — the block is parsed as an unknown key and discarded without a
 warning. Verified by fixture in TASK-0036. A file that says `deny` over an
 agent that can write is worse than a file that refused to emit.
 
-Consequently **`git-ops` and `shell-runner` are OpenCode-only roles**: both
-exist to enforce a command allowlist, which is `bash-allowlist`, which has
-no per-agent Claude Code expression.
+Consequently **`git-ops`, `review` and `qa-test` are OpenCode-only roles**:
+each exists to enforce a command allowlist — `bash-allowlist` for the first
+two, both `bash-allowlist` and `test-allowlist` for `qa-test` — and neither
+term has a per-agent Claude Code expression.
+
+> This sentence named **`shell-runner`** until `TASK-0071`, and
+> `agents/shell-runner/` **has never existed**. It is a planned role
+> (`CURRENT_STATE.md` records it as not authored, because no
+> `loops/project-build/` step needs it yet), but this guide stated it in the
+> present tense as a fact about the roles that ship — the false-present-tense
+> class `REVIEW-0008` swept across four files. The task that found it was
+> editing this very line for another reason and checked the name rather than
+> reusing it. **`ADR-0017` and `ADR-0018` still name `shell-runner` and are
+> deliberately left alone**: a decision record describes what was decided
+> when it was decided, and `ADR-0021`'s falsified predictions are preserved
+> on the same principle. Only the normative guide is corrected.
 
 #### `worktree-only` is the one term with a semantic gap
 The two mechanisms are not the same guarantee, so it is marked *partial*

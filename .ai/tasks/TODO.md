@@ -532,13 +532,31 @@ third-party-tools document.
 Opening the next sprint is a human decision. **S9 and S10 are planned**
 (`PLAN-0006` — unattended task runs) and queued in `.ai/planning/sprints/`;
 S9 is gated on `ADR-0022`, which is `Proposed` and blocked on its own two
-spikes. The outstanding queue lives in `.ai/planning/SPRINT-CURRENT.md`:
-three `ready` backlog items (**B-018**, **B-021**, **B-023**), four
-`REVIEW-0009` follow-ups, and two inherited from `REVIEW-0010`.
+spikes. The outstanding queue lives in `.ai/planning/SPRINT-CURRENT.md`.
 
-**Task numbering:** `PLAN-0006` reserves **TASK-0055…TASK-0067** for S9/S10.
-This closure took **TASK-0068** to avoid the collision; the next free number
-is **TASK-0069**.
+- [x] TASK-0069 — Sweep two stale second-hand gate-cost claims; re-verify
+      the `gather_subset` hazard under `ansible-core` 2.21.4 (done)
+- [x] TASK-0070 — One git worktree per concurrent agent session
+      (`scripts/worktree.sh`, ADR-0023 `Proposed`) (done)
+- [x] TASK-0071 — **B-021**: `test-allowlist`, the eleventh capability term,
+      so `qa-test`'s description stops being false. Definition→enforcement→
+      emission per ADR-0008; five failure modes each observed failing.
+      Raised **B-027** (the `bash_allow` sibling hazard) and corrected the
+      authoring guide's claim about **`shell-runner`, a role that has never
+      existed** (done)
+
+**Backlog after TASK-0071:** `B-021` is closed. Unscheduled and unclaimed:
+**B-018**, **B-023**, **B-027**. Ready but already scoped into S9 briefs:
+**B-024** (`TASK-0059`), **B-026** (`TASK-0060`). Waiting on a second
+instance rather than on a planner: **B-025**.
+
+**Task numbering:** `PLAN-0006` reserved **TASK-0055…TASK-0067** for S9/S10,
+but only **TASK-0055…TASK-0064** were ever written, and
+`SPRINT-S10-unattended-bindings.md` **deliberately allocates no ids at all**
+after two sessions collided inside the reserved range in one afternoon. So
+the reservation above is stale as stated: S9 holds 0055–0064, S10 holds
+none, and **0065–0067 are free**. Post-S8 work has run past the range
+instead — 0068 (S8 closure), 0069, 0070, 0071. **Next free: TASK-0072.**
 
 Notes on S8:
 - **No new component category, no plumbing, nothing vendored, nothing

@@ -1,8 +1,50 @@
 # Current State
 
 Last updated 2026-09-23. **Sprint S8 is CLOSED. No sprint is open, and S9/S10
-are planned but not promoted.** Since then: `TASK-0069` (stale-claims sweep)
-and `TASK-0070` (a worktree per agent session).
+are planned but not promoted.** Since then: `TASK-0069` (stale-claims sweep),
+`TASK-0070` (a worktree per agent session) and `TASK-0071` (the
+`test-allowlist` term, closing `B-021`).
+
+## The capability vocabulary has eleven terms, and `qa-test` can run tests
+
+**`TASK-0071`, 2026-09-23.** `B-021`'s defect — a role whose description said
+it *runs* tests over a `bash_allow` that denied every test command — is
+closed by an eleventh term, **`test-allowlist`**, with its own `test_allow`
+key. Definition in the authoring guide, then the gate, then the emitter, in
+`ADR-0008`'s order.
+
+**The term is deliberately narrower than `bash_allow`, or it would have been
+a rename.** `B-021` forbade resolving it as `bash: allow`, so two properties
+of `test_allow` entries are gated and `bash_allow`'s are not: **no entry may
+be or begin with `*`**, and **none may contain a shell chaining
+metacharacter**, or `pytest; rm -rf /` is one "test command". All five new
+failure modes were **observed failing** against a passing negative control.
+
+**It stays OpenCode-only, and the emitter refuses rather than degrades.**
+Naming commands is intra-`Bash` granularity; Claude Code grants or withholds
+whole tools. A Claude Code `qa-test` would ship with unrestricted `Bash` —
+*wider* than its description implies — so refusal is the honest outcome, and
+was observed. Note the division this confirms: `validate.sh` **accepts** a
+role declaring the term for `claude-code`; term/client compatibility is the
+emitter's job by design (ADR-0009 keeps the gate to source completeness).
+
+**The ceiling is in the guide, not just in the task log:** the term bounds
+the command surface the agent may type, **not** what the tests themselves
+execute. No per-agent model can do the latter — running a test is running
+arbitrary code.
+
+**Side finding: `agents/shell-runner/` has never existed.** The authoring
+guide asserted *"`git-ops` and `shell-runner` are OpenCode-only roles"* in the
+present tense, while this file's own S7 section records the role as **not
+authored**. Found only because the task was editing that sentence for another
+reason and checked the name instead of reusing it. The guide now names
+`git-ops`, `review` and `qa-test`. **`ADR-0017` and `ADR-0018` still say
+`shell-runner` and are left alone** — a decision record states what was
+decided when it was decided.
+
+**Raised: `B-027`** — `bash_allow` has both of `test_allow`'s hazards and
+neither guard. Left open rather than fixed in passing, because closing it
+changes the emitted boundary of `git-ops` and `review`.
 
 ## Each agent session now gets its own worktree — and every script is executable
 

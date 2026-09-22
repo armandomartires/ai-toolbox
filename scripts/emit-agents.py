@@ -37,11 +37,16 @@ this repo".
 
 REFUSE, NEVER DEGRADE
 ---------------------
-ADR-0018 clause 8. Five of the nine capability terms cannot be enforced
+ADR-0018 clause 8. Six of the eleven capability terms cannot be enforced
 per-agent in Claude Code, because `tools`/`disallowedTools` gate whole
 tools and have no third `ask` state. Asked to emit such a role for Claude
 Code, this script FAILS LOUDLY rather than emitting a file with the term
 dropped.
+
+(That count read "five of the nine" until TASK-0071, over a table of ten.
+The five was right for the refusal set and the nine was simply wrong. If you
+add a term, correct BOTH numbers here — a count in a docstring is the kind
+of second-hand claim TASK-0069 had to sweep across four files.)
 
 That is the whole point. A dropped boundary is invisible: TASK-0036
 observed a role declaring read-only in OpenCode's syntax loading in Claude
@@ -137,6 +142,20 @@ VOCAB = {
         "opencode": "PARAMETERISED",
         "claude_code": None,
     },
+    # The THIRD parameterised term (TASK-0071, closing B-021). Its permitted
+    # set comes from `test_allow`, and it merges into the SAME `bash` map as
+    # bash-allowlist rather than owning a key of its own — the two terms
+    # describe one underlying mechanism, and qa-test carries both.
+    #
+    # Claude Code is None for the same structural reason bash-allowlist is:
+    # naming commands is intra-Bash granularity, and tools/disallowedTools
+    # gate whole tools. A Claude Code qa-test would ship with unrestricted
+    # Bash, which is WIDER than the boundary its description implies, so
+    # refusing is the only honest outcome (clause 8).
+    "test-allowlist": {
+        "opencode": "PARAMETERISED",
+        "claude_code": None,
+    },
     # "no-force-push" is shorthand: it denies the whole family of git
     # operations that destroy work rather than adding to it. `git clean -f`
     # belongs here even though it pushes nothing — it deletes untracked
@@ -218,15 +237,19 @@ def emit_opencode(role, fm, body):
             for name in fm.get("delegates_to", []):
                 perms["task"][name] = "allow"
             continue
-        if term == "bash-allowlist":
+        if term in ("bash-allowlist", "test-allowlist"):
             # Same deny-first shape, merged rather than assigned: a role can
-            # carry bash-allowlist AND no-force-push AND
+            # carry bash-allowlist AND test-allowlist AND no-force-push AND
             # push-requires-confirmation, all of which write `bash` keys.
+            # qa-test is the first role to hold two of these allowlists at
+            # once, and they must land in ONE map — assigning would make the
+            # second term silently discard the first.
+            term_key = "bash_allow" if term == "bash-allowlist" else "test_allow"
             merged = perms.get("bash")
             if not isinstance(merged, dict):
                 merged = {}
             merged["*"] = "deny"
-            for pattern in fm.get("bash_allow", []):
+            for pattern in fm.get(term_key, []):
                 merged[pattern] = "allow"
             perms["bash"] = merged
             continue
