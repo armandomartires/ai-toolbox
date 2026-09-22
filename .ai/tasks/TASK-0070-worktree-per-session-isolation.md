@@ -334,5 +334,12 @@ otherwise.
   forecast. Gate observed **refusing** inside a worktree on both filesystems.
 - Result: **done.** All nine acceptance criteria met. Two findings beyond the
   brief: the repo-wide mode defect, and the `remove` false positive.
-- Commit:
-- Push:
+- Commit: **two.** `c39a6d6` — "Give each agent session its own worktree;
+  make the scripts executable" (from the main checkout, before the worktrees
+  existed). `d7e5ad4` — "Fix a false positive in worktree.sh remove; record
+  TASK-0070" (**from the `maint` worktree**). Pre-commit hook ran
+  `tests/validate.sh` → OK for both, the second one *inside a worktree*.
+- Push: **confirmed** — `a242f88..d7e5ad4` via
+  `git push origin HEAD:master` from `agent/maint`, the flow `ADR-0023`
+  clause 2 documents. The main checkout was then fast-forwarded and is in
+  sync; `git remote -v` token-free.

@@ -1,7 +1,53 @@
 # Current State
 
 Last updated 2026-09-23. **Sprint S8 is CLOSED. No sprint is open, and S9/S10
-are planned but not promoted.**
+are planned but not promoted.** Since then: `TASK-0069` (stale-claims sweep)
+and `TASK-0070` (a worktree per agent session).
+
+## Each agent session now gets its own worktree — and every script is executable
+
+**`TASK-0070`, 2026-09-23.** Two sessions shared this checkout and it cost
+work twice in two hours: `TASK-0068` had to renumber, and `TASK-0069` found
+**sixteen of the other session's files staged in the shared index**,
+mid-commit-preparation. A git index has no locking between sessions, so the
+failure mode is not a merge conflict — it is **one session committing
+another's half-finished work**, producing a *green* commit that no gate here
+can detect.
+
+`scripts/worktree.sh add|list|remove` creates one worktree per session as a
+**sibling** of the repo, on `agent/<name>`. Two exist: `s9` and `maint`.
+
+**Git refuses the same branch in two worktrees, so this also decided how work
+reaches `master`.** It lands by `git fetch && git rebase origin/master &&
+git push origin HEAD:master` — `master` stays linear and still gets one
+commit per task, so `AGENTS.md`'s rule survives with a rebase added. That is
+a change to a stated rule, so **`ADR-0023` is `Proposed`, not `Accepted`**,
+and awaits a human.
+
+**The gate was observed *refusing* inside a worktree**, not merely passing —
+`INVALID SKILL: … does not match directory`, exit 1, `HEAD` unmoved, on both
+filesystems. A worktree whose gate silently does not run is worse than no
+worktree, because it looks identical to a working one.
+
+**A repo-wide defect found while verifying: every `.sh` and `.py` entry point
+was recorded `100644`.** Only `.githooks/pre-commit` was `100755`. Hidden for
+the repo's entire life because `/mnt/c` is DrvFs and reports every file
+`0777`, and because the hook and CI both invoke `bash tests/validate.sh`
+rather than the bare path. **On a POSIX checkout every command `AGENTS.md`
+documents returned exit 126** — any Linux clone, container or CI checkout.
+Fixed with `git update-index --chmod=+x`; a plain `chmod` is invisible while
+`core.filemode` is `false`.
+
+**How it surfaced is itself the lesson:** a gate timing of **2 ms** in an
+ext4 worktree. Not a fast gate — a gate that never ran. That is the **third**
+time this session an implausibly fast number turned out to be a command
+exiting 126, after `REVIEW-0009` finding 5. Nothing flags it; only
+implausibility does.
+
+**This task landed through the workflow it documents**, from the `maint`
+worktree, rather than asserting that the flow works — which also avoided
+committing a *"do not work in the main checkout"* decision from the main
+checkout.
 
 All four briefs ran — `TASK-0048` (spike), `TASK-0049` (graphify as a
 component, plus two `smoke-mcp.sh` fixes), `TASK-0050` (ponytail per
