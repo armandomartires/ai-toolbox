@@ -226,5 +226,6 @@ The human verification that Bionic actually loads a project-deployed skill is
   - `git status --porcelain` — scratch directory outside the repo, removed
 - Result: **done.** `B-018` closed: the project half automated, the global
   half deliberately manual, and the second reason for that documented.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `4bdd719` — *Deploy skills to Bionic project targets; leave its
+  global target manual*. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `12f982b..4bdd719`.

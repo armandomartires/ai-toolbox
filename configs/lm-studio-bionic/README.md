@@ -221,6 +221,16 @@ replacing this section rather than sitting alongside it.
 
 ## MCP servers
 
+> **Not every server has a subsection here, and that is a rule rather than an
+> omission.** One is owed only when a server declares a required environment
+> variable, a destructive capability, or a launch a client cannot perform from
+> the manifest alone — the rule, its reasoning and the worked exemption are in
+> [the authoring guide](../../docs/development/authoring-guide.md). The first
+> two conditions are enforced by `tests/validate.sh`. **graphify is exempt**:
+> it declares neither, and `scripts/install.sh` already prints its launch
+> command, transport and preconditions from the manifest. (`TASK-0073`,
+> closing `B-023`.)
+
 Bionic reads `mcp.json`. On this machine it lives at
 `/mnt/c/Users/<user>/.lmstudio/mcp.json` — the app is installed
 Windows-side; WSL has no `~/.lmstudio`.

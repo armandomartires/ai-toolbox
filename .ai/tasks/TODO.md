@@ -547,11 +547,15 @@ spikes. The outstanding queue lives in `.ai/planning/SPRINT-CURRENT.md`.
 - [x] TASK-0072 — **B-018**: `install.sh --bionic-project DIR` deploys skills
       to Bionic's **project** target. The global target stays manual — it is
       approval-gated, *and* `$HOME` in WSL is not the home Bionic uses (done)
+- [x] TASK-0073 — **B-023**: the conditional wiring-section rule (required
+      env, destructive, or a launch the manifest cannot express), gated for
+      the two decidable triggers. graphify documented as exempt. **No
+      graphify sections were written** — that was the decision (done)
 
-**Backlog after TASK-0072:** `B-018` and `B-021` are closed. Unscheduled and
-unclaimed: **B-023**, **B-027**. Ready but already scoped into S9 briefs:
-**B-024** (`TASK-0059`), **B-026** (`TASK-0060`). Waiting on a second
-instance rather than on a planner: **B-025**.
+**Backlog after TASK-0073:** `B-018`, `B-021` and `B-023` are all closed —
+the unscheduled queue is down to **B-027** alone. Ready but already scoped
+into S9 briefs: **B-024** (`TASK-0059`), **B-026** (`TASK-0060`). Waiting on
+a second instance rather than on a planner: **B-025**.
 
 **Task numbering:** `PLAN-0006` reserved **TASK-0055…TASK-0067** for S9/S10,
 but only **TASK-0055…TASK-0064** were ever written, and

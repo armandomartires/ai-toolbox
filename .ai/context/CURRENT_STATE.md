@@ -3,8 +3,36 @@
 Last updated 2026-09-23. **Sprint S8 is CLOSED. No sprint is open, and S9/S10
 are planned but not promoted.** Since then: `TASK-0069` (stale-claims sweep),
 `TASK-0070` (a worktree per agent session), `TASK-0071` (the
-`test-allowlist` term, closing `B-021`) and `TASK-0072` (Bionic project
-skills, closing `B-018`).
+`test-allowlist` term, closing `B-021`), `TASK-0072` (Bionic project skills,
+closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`).
+**The unscheduled backlog queue is down to one item, `B-027`.**
+
+## A server owes a wiring section only under three conditions
+
+**`TASK-0073`, 2026-09-23.** `B-023` was blocked on a rule that did not
+exist: does *every* `mcp-servers/` entry owe three client sections? The
+answer is **no** — one is owed when a server declares a required environment
+variable, a destructive capability, or a launch a client cannot perform from
+the manifest alone. The first two are **gated**; the third is judgment and
+deliberately is not, because a check that cannot really decide is a check
+that cannot fail.
+
+**The rule changes no file's content, and that is the argument for it.**
+Measured before it was written: `ansible` triggers two conditions and has
+sections in all three snapshots; graphify triggers none and had none. The
+rule describes the arrangement that already existed rather than imposing a
+new one — so `B-023` closed **without writing the three sections it named**,
+which is what the item itself asked for.
+
+**Two things the gate got right only by being tested.** Its `_template*`
+carve-out is load-bearing: `_template-external` declares a required variable
+and appears in no snapshot, so without it the gate would fail on a clean
+checkout — `ADR-0009`'s forbidden shape, inside a check written to enforce
+documentation. And the first version matched the server name **anywhere in
+the file**, while the same task added a pointer naming graphify *to explain
+that it has no section* — so the sentence denying a section would have
+satisfied the check. Tightened to require a heading, and the tightening was
+proved with a mention-only fixture that still failed.
 
 ## Skills deploy to Bionic projects; Bionic's global target stays manual
 

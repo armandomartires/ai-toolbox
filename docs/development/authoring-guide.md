@@ -75,6 +75,49 @@ granted authorization fails `tests/validate.sh`. That is the mechanical
 form of `AGENTS.md`'s rule that destructive capabilities need explicit
 human authorization in the task file.
 
+### When a server owes a per-client wiring section
+
+**Not every server does.** `TASK-0073` settled this, closing `B-023`, which
+had been blocked on the rule not existing: `ansible` has a section in all
+three `configs/*/README.md` and graphify has none, so `configs/` and
+`docs/registry.md` disagreed about how many servers a reader must wire —
+with no way to tell an exemption from an omission.
+
+A server owes a section in **every** `configs/<client>/README.md` if any of:
+
+| Trigger | Why a section, rather than the manifest | Gated |
+|---|---|---|
+| A **required** environment variable | The variable's meaning, its blast radius and the consequence of setting it wrong are per-client prose the manifest cannot carry — `ansible`'s sections exist largely to carry `WORKSPACE_ROOT`'s | **yes** |
+| `capabilities.destructive: true` | A human wiring this needs the disabled-tool instruction and the warning *at the point of wiring*, not only in a manifest key | **yes** |
+| A launch a client **cannot perform from the manifest alone** — a wrapper, a client-set working directory, a per-client transport quirk | There is per-client knowledge with nowhere else to live | **no** — judgment |
+
+Otherwise the server is **exempt**, and exempt means *deliberately absent*,
+not pending. `scripts/install.sh` already prints the launch command,
+transport, required variables and every `precondition` from the manifest, for
+every client equally. A section that restated those would create a second
+owner of facts the manifest owns — and it would drift.
+
+**The first two triggers are checked.** `tests/validate.sh` requires a
+non-template server declaring a required variable or `destructive: true` to
+be named in every `configs/*/README.md`. The third is deliberately not
+checked: "cannot perform from the manifest alone" is a judgment, and a check
+that cannot really decide is a check that cannot fail — the lesson this repo
+has paid for most often.
+
+**graphify is the worked exemption, and it is not a clean case.** It declares
+no required variable and no destructive tool, so neither gated trigger fires.
+The third was genuinely arguable: its graph resolves from the **server's
+working directory**, so a client launching it elsewhere serves a different
+graph or fails to start. That was judged *not* to trigger a section, because
+the manifest already carries it as a `precondition` and `install.sh` prints
+it verbatim to every client — it is a fact about the server, not per-client
+knowledge. **Re-run that judgment rather than inheriting it** if graphify's
+launch surface changes.
+
+Note also that graphify's **OpenCode-native** surface
+(`graphify opencode install`) is a *separate* question from its MCP wiring,
+per `ADR-0021`'s non-exclusive rows. Do not settle both in one section.
+
 ## Loops
 A loop is a repeatable multi-step agent workflow. `loop.md` is required;
 copy from `loops/_template/`. `tests/validate.sh` enforces the **Gated**

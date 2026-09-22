@@ -695,6 +695,57 @@ for client in $(sed -n '/^CLIENTS="$/,/^"$/p' scripts/install.sh \
   }
 done
 
+# An MCP server that declares a REQUIRED environment variable or a
+# DESTRUCTIVE capability must be named in every configs/*/README.md
+# (TASK-0073, closing B-023). The authoring guide states the rule and its
+# third, ungated trigger.
+#
+# WHY ONLY THESE TWO CONDITIONS: they are the ones a file can decide. The
+# guide's third trigger — "a launch a client cannot perform from the manifest
+# alone" — is a judgment call, and a check that cannot really decide it is a
+# check that cannot fail, which is this repo's most expensive recurring
+# lesson. It is left to a human deliberately, not forgotten.
+#
+# WHAT THIS PROVES: that a server needing per-client prose has somewhere in
+# each snapshot to put it. NOT that the prose is correct, current, or says
+# anything useful — only that the section exists. graphify is exempt under
+# the rule and is expected to appear in NO snapshot; that is the arrangement
+# the rule describes, not a gap it tolerates.
+for d in mcp-servers/*/; do
+  d="${d%/}"
+  name=$(basename "$d")
+  # Same _template* carve-out every other loop makes. _template-external
+  # declares a REQUIRED variable and would otherwise demand three sections
+  # for a server nobody runs.
+  case "$name" in _template*) continue ;; esac
+  [ -f "$d/server.json" ] || continue
+  owes=$(python3 - "$d/server.json" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1]))
+req = any(v.get("required") for v in m.get("environment", {}).values()
+          if isinstance(v, dict))
+print("yes" if req or m.get("capabilities", {}).get("destructive") is True
+      else "no")
+PY
+)
+  [ "$owes" = "yes" ] || continue
+  for snap in configs/*/README.md; do
+    # A HEADING naming the server, not a mention of it anywhere in the file.
+    # A substring match was the first version and it was already unsound when
+    # written: these snapshots now carry a pointer paragraph naming graphify
+    # by way of explaining why it has no section, so "is the name present?"
+    # would be satisfied by the very sentence saying there is no section. A
+    # check a passing mention can satisfy is a check that cannot fail.
+    grep -qE "^#+[[:space:]].*(^|[^a-zA-Z0-9_-])$name([^a-zA-Z0-9_-]|$)" "$snap" || {
+      echo "MISSING wiring section: $snap has no heading for '$name', which"
+      echo "  declares a required environment variable or a destructive"
+      echo "  capability (docs/development/authoring-guide.md, 'When a server"
+      echo "  owes a per-client wiring section')"
+      fail=1
+    }
+  done
+done
+
 # The tracked pre-commit hook must exist and be executable (ADR-0007).
 # Unconditional: an earlier version guarded this with `[ -d .githooks ]`,
 # which meant deleting the hook directory made the check silently pass —
