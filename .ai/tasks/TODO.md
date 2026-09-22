@@ -505,8 +505,14 @@ third-party-tools document.
       occupies two rows. **Raised B-023** — graphify has a manifest and a
       registry row but no `configs/` wiring section, a gap each of the two
       preceding briefs assigned to the other.)
-- [ ] REVIEW-0009 — Checkpoint. Question pre-committed: *did the spike
+- [x] REVIEW-0009 — Checkpoint. Question pre-committed: *did the spike
       change anything, or did it rubber-stamp the vendor READMEs?*
+      (written 2026-09-23, `.ai/reviews/REVIEW-0009-sprint-s8-third-party-extensions.md`.
+      **Answered with six corrections, three of them against this sprint's
+      own artifacts.** Verdict: **approve the work; the review cannot close
+      the sprint** — `ADR-0021` is still `Proposed` and `PLAN-0005`'s first
+      criterion requires a *human* to ratify or reject it. Ratification
+      packet is in the review. **S8 stays current until then.**)
 
 Notes on S8:
 - **No new component category, no plumbing, nothing vendored, nothing

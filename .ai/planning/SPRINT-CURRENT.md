@@ -1,5 +1,37 @@
 # Sprint S8 — Third-party agent extensions
 
+> **ALL FOUR BRIEFS ARE `done`; `REVIEW-0009` IS WRITTEN; THE SPRINT IS NOT
+> CLOSED (2026-09-23).** `TASK-0048`, `0049`, `0050` and `0051` all ran.
+> `REVIEW-0009` — `.ai/reviews/REVIEW-0009-sprint-s8-third-party-extensions.md`
+> — **approves the work and states it cannot close the sprint**: `ADR-0021`
+> is still `Proposed`, and `PLAN-0005`'s first acceptance criterion requires
+> a **human** to ratify or reject it on `TASK-0048`'s evidence. The
+> ratification packet is in the review. **S8 stays current until that
+> decision is recorded** — the same shape as S6's closure on `REVIEW-0010`.
+>
+> **The pre-committed question is answered: the spike was load-bearing.**
+> Six corrections, **three of them against this sprint's own artifacts** —
+> the precondition path, the Claude Code hook count and the skills' schema
+> compatibility were all wrong in briefs written after the spike, and were
+> caught by re-opening the evidence rather than trusting the logs.
+>
+> **Two findings the checkpoint asks to be judged as process, not output:**
+> a *labelled* limitation is not a *contained* one (`TASK-0048` correctly
+> labelled its package-level answer, and the wrong number propagated
+> anyway, because the label records provenance but not which artifact was
+> read); and **B-023 is a seam between two briefs** that each assigned the
+> same work to the other.
+>
+> **Two things landed that the sprint did not plan.** `B-020` was fixed and
+> **`B-022` was raised and closed in the same task** — `tests/smoke-mcp.sh`
+> had been testing whether a server *exits*, not whether it *speaks*, and
+> was found only because `TASK-0049` chose to verify its own fix. And the
+> gate budget this sprint was pre-blamed for was **not spent**: 1008 ms
+> median on `/mnt/c` against `REVIEW-0010`'s ~1085 ms.
+>
+> Everything below is the sprint as planned. Its task-status table is
+> superseded by this note.
+
 > **NOW CURRENT — promoted 2026-09-22 by `TASK-0054`**, once S6 closed on
 > `REVIEW-0010` and its three ADRs were ratified. This executes the ordering
 > the human set in `TASK-0052` (*"finish S6 before S8"*) rather than making a

@@ -1,11 +1,54 @@
 # Current State
 
-Last updated 2026-09-23. **S8's four briefs are all `done`; only
-`REVIEW-0009` remains.** In order: `TASK-0048` (spike), `TASK-0049`
-(graphify as a component, plus two `smoke-mcp.sh` fixes), `TASK-0050`
-(ponytail per client), `TASK-0051` (the placement rule and
-`third-party-tools.md`). Before the sprint: S6's closure with S8 promoted
+Last updated 2026-09-23. **S8 is complete as work and open as a sprint.**
+All four briefs ran — `TASK-0048` (spike), `TASK-0049` (graphify as a
+component, plus two `smoke-mcp.sh` fixes), `TASK-0050` (ponytail per
+client), `TASK-0051` (the placement rule and `third-party-tools.md`) — and
+`REVIEW-0009` is written. **Closure is blocked on one human act: ratifying
+or rejecting `ADR-0021`.** Before the sprint: S6's closure with S8 promoted
 to current (`TASK-0054`).
+
+## REVIEW-0009: approve the work, cannot close the sprint
+
+**2026-09-23.** The pre-committed question — *did the spike change
+anything, or did it rubber-stamp the vendor READMEs?* — is answered with
+**six corrections, three of them against this sprint's own artifacts**. The
+precondition path, the Claude Code hook count and the skills' schema
+compatibility were all wrong in briefs written *after* the spike, and were
+caught by re-opening the evidence rather than trusting the logs.
+
+**The one thing the sprint still needs is a human decision.** `ADR-0021` is
+`Proposed`; `PLAN-0005`'s first acceptance criterion requires it ratified or
+rejected *on `TASK-0048`'s evidence, not on agreement with its prose*. Every
+other sprint criterion is met, four of them verified mechanically —
+`install.sh`, `sync-registry.sh` and `validate.sh` are byte-identical across
+the whole sprint, and nothing was vendored. The ratification packet is in
+the review.
+
+**Two findings to judge as process rather than output:**
+
+- **A *labelled* limitation is not a *contained* one.** `TASK-0048`
+  correctly and prominently labelled its Q4 answer as package-level, and the
+  wrong hook count propagated anyway — because the label records *how* a
+  claim was obtained and not *which artifact it describes*. The number came
+  from a different client's hook file. Candidate amendment to `ADR-0021`
+  clause 5: cite the source file, not only the date and provenance.
+- **B-023 is a seam, not an oversight** — two briefs each assigned
+  graphify's `configs/` wiring to the other. A decomposition defect in
+  `PLAN-0005`, invisible until both tasks had run.
+
+**The gate budget S8 was pre-blamed for was not spent.** Measured at review
+time: **1008 ms** median on `/mnt/c` (993–1069) against `REVIEW-0010`'s
+~1085 ms, and **572 ms** on ext4. `validate.sh`'s own cost comment
+reproduces exactly. The stale claims are second-hand and now located:
+`tests/smoke-mcp.sh:10` still says *~0.4s*, in a file this sprint edited
+twice.
+
+**One finding from inside the review's own method.** Its first ext4 timing
+read 1–2 ms — not a fast gate but one that never ran, because `git clone`
+dropped the executable bit (the `core.filemode` trap `TASK-0014` warned
+about). Caught by implausibility alone. A green-looking number from a
+command that never executed is the same shape as a check that cannot fail.
 
 ## The placement rule is out of the ADR and into the guide
 
