@@ -124,7 +124,7 @@ This task file only. A scratch fixture directory outside the repo.
 | Artifact | End state |
 |----------|-----------|
 | This task file | F5's verdict with observed output from both the live emission and a control; the `disallowedTools` and `isolation: worktree` observations; the `claude` version |
-| `agents/designer-manager/agent.md` | **Unchanged.** If F5 confirms, a backlog item is raised and named here |
+| `agents/designer-manager/agent.md` | **Unchanged**, deliberately. F5 **confirmed**, so the item is raised: **`B-028`** — *"`designer-manager` names a delegate Claude Code does not have, and nothing says so"* |
 | Component layer | Unchanged |
 
 **Next task starts here**: `TASK-0057` authors `ADR-0022` from this file and
@@ -134,18 +134,162 @@ analogy. If `isolation: worktree` is left open, say so here so `TASK-0058`
 inherits a stated gap rather than a silent one.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-23
 - Updated: 2026-09-23
 
+## Findings
+
+**`claude` version, recorded verbatim, 2026-09-23:** `2.1.246 (Claude Code)`,
+at `/home/armando.martires/.local/bin/claude`.
+
+**Expected state verified rather than assumed.** `~/.claude/agents/` contains
+exactly `critic.md`, `designer-manager.md`, `ideator.md` — re-emitted 01:36
+today by an `install.sh` run, so not stale. `git-ops.md` is **absent**, as
+designed.
+
+`~/.claude/agents/designer-manager.md`, `tools:` line verbatim:
+
+```
+tools: Agent(ideator, critic, git-ops)
+isolation: worktree
+```
+
+So the premise holds on this machine: the emitted file names a delegate the
+client does not have.
+
+### F5 — is a dead delegate reference silent? **CONFIRMED**
+
+**Live emission.** `claude -p --agent designer-manager`, asked only to list
+its permitted delegates:
+
+- **stderr: nothing about the missing delegate.** The only stderr was an
+  unrelated `Warning: no stdin data received in 3s`.
+- stdout: `ideator, critic, git-ops`, followed by the model's own note that
+  *"only `ideator` and `critic` are available as agent types in this session;
+  `git-ops` is listed in my permitted set but is not currently registered."*
+
+**The client said nothing. The *model* noticed, by reading its own tool list,
+and only because it was asked to enumerate.** That is not a diagnostic: it
+depends on the prompt and on the model bothering.
+
+**Control fixture — sharper than the live case.** A scratch agent whose only
+declared delegate is plainly absent:
+
+```
+tools: Agent(zz-absolutely-not-a-real-agent)
+```
+
+- **stderr: 0 bytes.** Exit 0.
+- The agent reported: *"No subagent types were listed in this session — I have
+  no permitted delegates."*
+
+So naming only non-existent agents leaves the role with **zero** delegates,
+silently. **A role whose whole purpose is to delegate can load, run and look
+correct while being unable to delegate at all** — `ADR-0018` clause 8's
+invisible-degradation failure, occurring inside Claude Code's own mechanism.
+
+**Control B, which is what makes the silence meaningful.** Claude Code
+**does** validate agent names elsewhere, loudly:
+
+```
+$ claude -p --agent zz-no-such-agent-at-all "hi"
+--agent 'zz-no-such-agent-at-all' not found. Available agents: claude,
+claude-code-guide, critic, designer-manager, Explore, general-purpose,
+ideator, Plan, statusline-setup, zzdead
+exit=1
+```
+
+182 bytes on stderr, exit 1. **The warning channel works.** Therefore the
+silence about a dead name *inside* a `tools: Agent(...)` allowlist is a real,
+discriminating finding and not an artifact of a client that never warns.
+
+**Claude Code validates the top-level `--agent` and does not validate the
+contents of an agent definition's `Agent(...)` allowlist.**
+
+**Consequence:** `TASK-0059`'s `delegates_to` cross-client check is justified
+**by evidence rather than by analogy**, which is what this brief existed to
+establish. **Raised as `B-028`** (see Outputs) rather than fixed here.
+
+### Per-agent command boundaries — **CONFIRMED, guide still correct**
+
+Fixture with `disallowedTools: Bash(git push *)`, asked to run a plainly
+non-matching command (`echo SPIKE-BASH-ALIVE`):
+
+> *"I have no Bash tool. My loaded toolset is Agent, Artifact, Edit,
+> ListAgents, Read, … I ran `ToolSearch` with `select:Bash` — result: 'No
+> matching deferred tools found'."*
+
+**The specifier removed the entire `Bash` tool**, not the matching commands.
+The authoring guide's claim holds at `2.1.246`.
+
+**Control:** an identical fixture with **no** `disallowedTools` ran the command
+and returned `SPIKE-BASH-ALIVE`, confirming Bash is otherwise available and
+the removal above is attributable to the specifier.
+
+**Two escape paths the fixture volunteered, recorded as PLAUSIBLE and
+UNVERIFIED.** They were reported by the agent about its own toolset and were
+**not** independently tested here, so they are written down as leads, not
+results:
+1. `Monitor` accepts a `command` string and describes itself as running *"in
+   the same shell environment as Bash"*.
+2. Several delegable agent types (`general-purpose`, `claude-code-guide`)
+   declare Bash access, so a role that keeps `Agent` may reach a shell
+   indirectly.
+
+**If either holds, removing `Bash` does not remove shell access**, and a
+command boundary in Claude Code would need `no-delegation` beside it to mean
+anything. That is a real question for `ADR-0022` and it is **open**, not
+settled — someone must test it before a role relies on it.
+
+### `isolation: worktree` — **UNSETTLED, and deliberately left so**
+
+Fixture with `isolation: worktree` in a scratch git repo, asked to `pwd`,
+create a file, commit it, and print `HEAD`.
+
+Observed:
+- `pwd` and `git rev-parse --show-toplevel` **both returned the real scratch
+  directory**, not an isolated copy.
+- The real repository was **unchanged**: `HEAD` identical before and after,
+  `spike-wt.txt` absent, still one commit.
+- But every write was refused by the **permission** layer — *"Claude requested
+  permissions to write to … but you haven't granted it yet"* — across three
+  different mechanisms.
+
+**The result is confounded and must not be read as a verdict.** Nothing
+reached the real tree, but the writes never happened at all, so this run
+cannot distinguish *isolation* from *permission denial*. The `pwd` evidence
+points **against** an isolated copy being made for a main-thread `-p` agent,
+but the guide's description concerns **subagents**, which this did not
+exercise.
+
+Per this brief's acceptance criteria, that is an acceptable outcome and better
+than a guess: **`TASK-0058` inherits this as a stated gap.** What it still
+needs to know — and what a follow-up must run in an environment where writes
+are permitted — is whether a commit made by a `worktree`-isolated **subagent**
+reaches the real tree. **All nine S9 roles declare `worktree-only`, and the
+acting roles must commit**, so this cannot be decided by reasoning.
+
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
+- Date: 2026-09-23
+- Agent: Claude Opus 5 (1M context)
+- Actions: version recorded; `~/.claude/agents/` and the live
+  `designer-manager.md` read from disk; F5 tested against the live emission
+  and against a scratch control; a second control proved the warning channel
+  works; `disallowedTools` specifier tested with a matched control;
+  `isolation: worktree` attempted and found confounded. Fixtures in a scratch
+  project outside the repo, removed and removal verified.
+- Observations: see **Findings**. F5 **confirmed**; the `disallowedTools`
+  whole-tool behaviour **confirmed with a control**; `isolation: worktree`
+  **unsettled**; two Bash-escape paths recorded as **unverified leads**.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` — **OK**
+  - `git status --porcelain` — this task file only; no component file changed
+  - `~/.claude/agents/` re-listed: `critic.md`, `designer-manager.md`,
+    `ideator.md` — **no fixture left behind**
+- Result: **done.** F5 confirmed on evidence, so `TASK-0059`'s check is
+  earned. Two questions handed forward rather than guessed.
+- Commit: *pending — recorded in the follow-up commit*
+- Push: *pending*

