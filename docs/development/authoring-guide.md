@@ -64,7 +64,8 @@ keys and the `capabilities`/`authorization` rule.
 | `runtime.declared` | Runtime the package *declares* it needs (e.g. `node>=24.0`). |
 | `runtime.tested` | Runtime it was actually verified on here. Record both: npm `engines` is advisory by default, so a package can declare one version and run on another. Claiming only one number misleads either way. |
 | `environment` | Object of `VAR: {required, description}`. Never put secret *values* here — only names and meanings. |
-| `preconditions` | *Optional.* Array of things that must be true beyond env vars (a running desktop app, an installed extra). |
+| `preconditions` | *Optional.* Array of things that must be true beyond env vars (a running desktop app, an installed extra). Prose, for a human. |
+| `smoke_test.requires_paths` | *Optional.* Array of paths, resolved against the repo root, that must exist before `tests/smoke-mcp.sh` will attempt the handshake. If any is missing the server is reported **SKIP**, not FAIL. Use it when a server refuses to start until some state exists — such a server has not failed the handshake, it was never attempted. This is the machine-readable counterpart to the `preconditions` prose above; state a precondition in both if it is both. Mirror what the server itself checks: `mcp-servers/graphify/server.json` declares `.graphify/graph.json` rather than `.graphify/`, because the directory alone is not enough to let it start. |
 | `capabilities.destructive` | Boolean. True if any tool can change state outside the agent's own context. |
 | `capabilities.destructive_tools` | Array of `"tool: what it can do"` strings. Required (and non-empty) when `destructive` is true. The boolean is what validation gates on; this list is what a human needs to make an informed decision. |
 | `authorization` | Required when `destructive` is true: `{granted, by, date, task}`. `task` is a repo-relative path to the task file carrying the authorization, and validation asserts that file exists — an authorization pointing at nothing is not an authorization. |
@@ -360,6 +361,55 @@ that machine has installed — including roles this repo did not emit. This
 repo cannot compute it, so gating on it would be enforcing a number it
 cannot measure. Prefer short descriptions because the delegating model
 reads them, not because a check demands it.
+
+## Placing a third-party extension
+
+Someone else's product — a plugin, a ruleset, a CLI, a gateway — that a user
+might want alongside this repo's components. **Route it by what it *is*, not
+by what its vendor calls it.** The word "plugin" named three unrelated
+mechanisms across the three products that produced this rule.
+
+| If the extension… | Then it lives in… | Gated |
+|---|---|---|
+| has a published upstream package **and** an MCP transport this repo can launch | `mcp-servers/<name>/server.json` (external shape, above) | **no** |
+| integrates through client-native mechanisms only — plugin entries, marketplaces, hooks, rules files | `configs/<client>/README.md`, one section per client | **no** |
+| is a service or tool that changes the *environment* rather than the agent's behaviour | `docs/development/third-party-tools.md` — documented as optional, never installed | **no** |
+
+**Nothing enforces any of this.** `tests/validate.sh` has no check for
+placement and is not getting one: routing is a judgment call, and a check
+that cannot really decide it would be a check that cannot fail — this
+repo's most-repeated lesson. The gate does enforce the *shape* of whatever
+you land on (a manifest's required keys, a `configs/<client>/README.md`
+existing), but never that you chose the right row. Treat the column above
+as honest rather than discouraging: two of the three rows produce
+documentation, and documentation is the deliverable.
+
+**Two standing constraints come with the rule**, and unlike the routing
+they are absolute: **nothing is vendored** into this repo, and **nothing is
+auto-installed** — `scripts/install.sh` never writes into a client's plugin
+registry or config file. The user runs upstream's installer.
+
+**The rows are not mutually exclusive.** A product can occupy two at once,
+and the first one to do so did: **graphify** is an `mcp-servers/` component
+(`mcp-servers/graphify/server.json`) *and* has a client-native OpenCode
+surface — its `graphify opencode install` writes an `AGENTS.md` section, a
+`tool.execute.before` plugin, a project config entry and an Agent Skill.
+Placing it in the first row does not mean the second is wrong about it.
+**ponytail** is the second-row worked example: no publishable MCP package
+exists upstream, so it is documented in all three
+`configs/*/README.md` and nowhere else.
+
+**Why the rule lives here rather than only in the decision:** an author
+needs it at the moment they are adding something, which is when they are
+reading this guide. The reasoning, the evidence and the three products'
+integration surfaces are in
+[`ADR-0021`](../../.ai/decisions/0021-third-party-extensions-are-wired-not-vendored.md)
+— read it before arguing with the table, and do not restate it here.
+
+> **`ADR-0021` is `Proposed`, not `Accepted`, as of 2026-09-23.** The rule
+> above is followed in this repo today and has two worked examples behind
+> it, but it has not been ratified. Recorded because a normative guide
+> should not present a pending decision as settled.
 
 ## Versioning
 - Semver per component. Skills: `metadata.version` in SKILL.md

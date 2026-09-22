@@ -495,9 +495,16 @@ third-party-tools document.
       skills are schema-compatible only in their *keys* — all six use a
       folded `description: >`, which this repo's gate rejects, giving the
       no-vendoring decision a second, mechanical reason.)
-- [ ] TASK-0051 — `ADR-0021`'s placement rule into the authoring guide
+- [x] TASK-0051 — `ADR-0021`'s placement rule into the authoring guide
       (**linking** to the reasoning, never restating it) plus
       `docs/development/third-party-tools.md` with omniroute
+      (done 2026-09-23. All three rows **Gated: no** — four claims about
+      `validate.sh` grepped against the script, none recalled. `ADR-0021` is
+      still `Proposed`, so the guide labels it rather than implying
+      consensus. Non-exclusivity stated as fact, not hedged: graphify
+      occupies two rows. **Raised B-023** — graphify has a manifest and a
+      registry row but no `configs/` wiring section, a gap each of the two
+      preceding briefs assigned to the other.)
 - [ ] REVIEW-0009 — Checkpoint. Question pre-committed: *did the spike
       change anything, or did it rubber-stamp the vendor READMEs?*
 

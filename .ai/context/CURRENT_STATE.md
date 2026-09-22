@@ -1,10 +1,57 @@
 # Current State
 
-Last updated 2026-09-23, after **`TASK-0050` documented ponytail across all
-three clients** and, before it, **`TASK-0049` shipped graphify as this
-repo's second MCP server** — which found a second defect in
-`tests/smoke-mcp.sh` on the way. Before those: S8's spike (`TASK-0048`), and
-S6's closure with S8 promoted to current (`TASK-0054`).
+Last updated 2026-09-23. **S8's four briefs are all `done`; only
+`REVIEW-0009` remains.** In order: `TASK-0048` (spike), `TASK-0049`
+(graphify as a component, plus two `smoke-mcp.sh` fixes), `TASK-0050`
+(ponytail per client), `TASK-0051` (the placement rule and
+`third-party-tools.md`). Before the sprint: S6's closure with S8 promoted
+to current (`TASK-0054`).
+
+## The placement rule is out of the ADR and into the guide
+
+**`TASK-0051`, 2026-09-23.** `docs/development/authoring-guide.md` gains
+`## Placing a third-party extension` — the three-row routing table, with
+every row marked **Gated: no**, because nothing in `tests/validate.sh`
+checks placement and nothing will: routing is a judgment call, and a check
+that cannot decide it would be a check that cannot fail.
+
+**Four claims about the gate were grepped against the script, not
+recalled** — the brief named a false enforcement claim in the guide that
+documents that defect class as the single most embarrassing available
+error. The section also states what the gate *does* enforce, so three `no`s
+are not misread as "unchecked, therefore optional".
+
+**`ADR-0021` is still `Proposed`**, so the guide carries a dated note saying
+the rule is followed here with two worked examples but is not ratified. A
+normative guide documenting a pending decision as settled is the thing
+`ADR-0019` set the precedent against.
+
+**Non-exclusivity is stated as fact, not hedged.** graphify occupies two
+rows — an `mcp-servers/` component *and* a client-native OpenCode surface
+writing four things. ponytail is the second-row example, and *why* it cannot
+occupy the first (`ponytail-mcp` unpublished) is one linking clause.
+
+**`docs/development/third-party-tools.md` is new**, with omniroute as its
+first and only entry: a local gateway service on `:20128`, an OpenCode
+*provider* plugin, a Claude Code integration that is **not a plugin at all**
+but base-URL redirection, and the `mcpAutoEmit` caveat — an option that
+writes an `mcp.*` entry into the client config, a mutation this repo forbids
+itself. Every claim vendor-doc and dated; nothing observed, and the file
+says so.
+
+**`AGENTS.md` checked and deliberately unchanged** — its structure line
+points at `docs/development/` as a directory, so naming the new file would
+start a list that must then be maintained.
+
+**B-023 raised: a seam, not an oversight.** graphify has a manifest and a
+registry row but no `configs/` wiring section. `TASK-0049` assigned that to
+`TASK-0050`'s category; `TASK-0050`'s scope excluded graphify. Neither brief
+owned it, and it is only visible now both have run. Raised rather than
+filled, because **no rule exists** about whether every `mcp-servers/` entry
+owes three client sections — writing them now would set that precedent by
+accident, using the weakest possible case.
+
+## ponytail is documented, not installed — and it corrected its own brief twice
 
 ## ponytail is documented, not installed — and it corrected its own brief twice
 

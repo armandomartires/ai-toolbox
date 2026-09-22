@@ -155,34 +155,38 @@ No component, script or registry change is expected.
 
 ## Acceptance criteria
 
-- [ ] The authoring guide carries the placement rule, as a table, in the
+- [x] The authoring guide carries the placement rule, as a table, in the
       established house style.
-- [ ] Its **Gated** marking is truthful: nothing in `validate.sh` checks
-      placement, and the section says so.
-- [ ] The section **links** to `ADR-0021` rather than restating its
+- [x] Its **Gated** marking is truthful: nothing in `validate.sh` checks
+      placement, and the section says so. **All three rows are `no`**, and
+      the section adds what the gate *does* check, so the column is not
+      read as "unchecked, therefore optional".
+- [x] The section **links** to `ADR-0021` rather than restating its
       evidence — no second owner of the reasoning.
-- [ ] Both worked examples (graphify's manifest, ponytail's `configs/`
+- [x] Both worked examples (graphify's manifest, ponytail's `configs/`
       sections) are named, so the rule is concrete.
-- [ ] If graphify occupies two rows, the non-exclusivity is stated.
-- [ ] `docs/development/third-party-tools.md` exists, states its purpose
+- [x] If graphify occupies two rows, the non-exclusivity is stated. **It
+      does, and it is** — with the four surfaces `TASK-0048` observed.
+- [x] `docs/development/third-party-tools.md` exists, states its purpose
       and inclusion criterion, and documents omniroute.
-- [ ] The omniroute entry states: per-client mechanism (including that
+- [x] The omniroute entry states: per-client mechanism (including that
       Claude Code's is *not* a plugin), prerequisites, the `mcpAutoEmit`
       config-mutation caveat, and that this repo neither installs nor tests
       it.
-- [ ] Every claim about omniroute is labelled vendor-doc with a date, since
+- [x] Every claim about omniroute is labelled vendor-doc with a date, since
       none is observed.
-- [ ] Every claim the new text makes about `validate.sh` was checked
-      against the script.
-- [ ] No `mcp-servers/omniroute/`, no omniroute `configs/` section, no
+- [x] Every claim the new text makes about `validate.sh` was checked
+      against the script. **Four claims, each grepped** — see the log.
+- [x] No `mcp-servers/omniroute/`, no omniroute `configs/` section, no
       registry row.
-- [ ] `tests/validate.sh` passes.
+- [x] `tests/validate.sh` passes.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh — **expected not required**; documentation
-      only, no component change.
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh — **expected not required**; documentation
+      only, no component change. Run as a control: `docs/registry.md`
+      unchanged.
 
 ## Risks and rollback
 
@@ -208,37 +212,149 @@ No component, script or registry change is expected.
 
 ## Outputs / handover
 
-*Intended* end state — this task has not run.
-
 | Artifact | End state |
 |----------|-----------|
-| `docs/development/authoring-guide.md` | New placement-rule section: table, truthful **Gated** marking (nothing enforces it), link to `ADR-0021`, both worked examples named |
-| `docs/development/third-party-tools.md` | New; purpose, inclusion criterion, omniroute entry with per-client mechanisms, prerequisites and the `mcpAutoEmit` caveat, all labelled vendor-doc with dates |
-| `AGENTS.md` | Structure/docs pointer updated **only if** needed; otherwise deliberately unchanged |
-| `mcp-servers/`, `configs/`, `docs/registry.md` | **Deliberately unchanged** — omniroute gets no manifest, no wiring snippet, no registry row, which is the decision itself |
+| `docs/development/authoring-guide.md` | New `## Placing a third-party extension` section: the three-row table, all rows **Gated: no**, link to `ADR-0021`, both worked examples named, non-exclusivity stated, and a dated note that `ADR-0021` is still `Proposed`. **Plus** a `smoke_test.requires_paths` row added to the `server.json` schema table — handed over by `TASK-0049`, which introduced the key |
+| `docs/development/third-party-tools.md` | New; purpose, a two-part inclusion criterion, omniroute entry with both per-client mechanisms, prerequisites and the `mcpAutoEmit` caveat, all labelled vendor-doc and dated |
+| `AGENTS.md` | **Unchanged, after checking.** Its structure line already points at `docs/development/` as a directory, so the new file is covered without an edit |
+| `mcp-servers/`, `configs/`, `docs/registry.md` | **Unchanged** — omniroute gets no manifest, no wiring snippet, no registry row, which is the decision itself |
+| `.ai/planning/BACKLOG.md` | **B-023 raised** — graphify has a manifest and a registry row but no `configs/` wiring section |
 
 **Next task starts here**: `REVIEW-0009` picks up from a complete sprint —
 one manifest, three wiring sections, one placement rule, one documented
 non-component — and answers its pre-committed question: *did the spike
-change anything, or did it rubber-stamp the vendor READMEs?* Record any
-deviation from this plan here.
+change anything, or did it rubber-stamp the vendor READMEs?* Four things it
+should weigh, none of them flattering to the plan, which is the point:
+
+- **The spike overturned two of three claims, and the two tasks after it
+  each corrected the brief again** — TASK-0049 on the precondition path,
+  TASK-0050 on the hook count and the skills' schema. The rubber-stamp
+  hypothesis is not merely refuted, it is refuted four times over.
+- **The sprint's own "honest cut is a product, never the spike" line was
+  never tested**, because nothing had to be cut.
+- **B-022 was found by verifying a fix, not by planning one.** The check
+  that was not strictly required is the one that found the larger defect.
+- **B-023 is a seam, not an oversight.** Two briefs each assigned graphify's
+  `configs/` wiring to the other. That is a planning-level defect the
+  checkpoint may want to judge separately from the sprint's output.
+
+**Deviations from the Plan — two, both additive:**
+
+1. **A `smoke_test.requires_paths` row was added to the `server.json`
+   schema table.** Not in this brief; handed over by `TASK-0049`, which
+   added the key to a manifest without the guide documenting it. Leaving it
+   undocumented would have made the guide's schema table wrong by omission
+   the moment it was read.
+2. **B-023 was raised.** The brief anticipated *stating* non-exclusivity; it
+   did not anticipate that the two preceding briefs would leave an
+   unassigned gap between them. Raised rather than filled, because filling
+   it would set an unwritten precedent — see the item.
 
 ## Status
 
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-16
-- Updated: 2026-09-16
+- Updated: 2026-09-23
 
 ## Execution log
 
 ### Attempt 1
 
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
+- Date: 2026-09-23
+- Agent: Claude Opus 5 (1M context)
+
+#### `ADR-0021` is still `Proposed`, and the guide says so
+
+Checked rather than assumed: `ADR-0021`'s Status block reads **Proposed,
+2026-09-16**, and it has not been ratified. The brief's risk section is
+explicit that a normative guide must not document a pending decision as
+settled, so the new section carries a dated blockquote saying the rule is
+followed here and has two worked examples, but is not ratified. That is
+`ADR-0019`'s precedent — a decision whose basis changes must show it —
+applied to a decision whose *status* has not yet changed.
+
+#### Upstream re-checked, and nothing moved
+
+| Package | 2026-09-23 | Plan time (2026-09-16) |
+|---|---|---|
+| `omniroute` | **3.8.50**, MIT | 3.8.50 |
+| `@omniroute/opencode-plugin` | **0.2.1**, MIT | 0.2.1 |
+
+Unchanged over seven days. Recorded because the brief predicted omniroute's
+documentation would decay fastest of anything in the sprint — that may still
+be true, but it is not true *yet*, and saying so is cheaper than implying
+churn that did not happen.
+
+#### The Gated column, which is where this task could most easily have lied
+
+The brief names this as the single most likely and most embarrassing error:
+adding a false enforcement claim to the guide that documents that defect
+class. Four claims were made about `tests/validate.sh`; each was grepped
+against the script rather than recalled:
+
+| Claim | Check | Result |
+|---|---|---|
+| Nothing checks placement | `grep -i 'third-party\|placement\|omniroute\|ponytail\|graphify' tests/validate.sh` | **no match** — the gate knows nothing of any of it |
+| The gate checks a manifest's required keys | `validate.sh:122-200` | holds |
+| The gate checks `configs/<client>/README.md` exists | `validate.sh:643-652` | holds — and only for clients listed in `install.sh` |
+| omniroute has no registry row | `grep -i omniroute docs/registry.md` | **no match** |
+
+All three table rows are therefore **Gated: no**. One thing was added beyond
+the brief's ask: the section also states what the gate *does* enforce (the
+shape of whatever row you land on), because a column reading `no` three
+times invites the reading *"unchecked, therefore optional"*, which is the
+opposite of true.
+
+#### Non-exclusivity is not hypothetical, and both examples are concrete
+
+The brief hedges — *"if `TASK-0049` found graphify needed both"*. It does.
+graphify is an `mcp-servers/` component **and** has a client-native OpenCode
+surface writing four things (`TASK-0048` Q1). The section states it as fact
+with the surfaces named, rather than as a caveat. ponytail is the
+second-row example, and the reason it *cannot* occupy the first row —
+`ponytail-mcp` unpublished — is one clause, linking rather than restating.
+
+#### A gap neither preceding brief owned
+
+`TASK-0049` excluded graphify's client-native wiring as belonging to
+`TASK-0050`'s category; `TASK-0050`'s scope excluded graphify entirely. So
+graphify has a manifest and a registry row and **no `configs/` section**,
+while ansible has one in all three clients.
+
+Raised as **B-023** rather than fixed here. The reason is not scope
+protectiveness: there is **no rule** stating whether every `mcp-servers/`
+entry owes three client sections, or only those with env vars, destructive
+tools or a non-obvious launch. Writing three sections now would answer that
+question by accident and set the precedent silently — and graphify is the
+weakest possible case to set it with, since it has no env vars and no
+destructive tools, so `install.sh`'s generic output already carries most of
+what a section would say. The item names the decision that has to come
+first.
+
+#### `AGENTS.md` checked, deliberately unchanged
+
+Its structure line reads *"Details: `docs/development/`, runbook:
+`docs/operations/`"* — a pointer to the **directory**, so
+`third-party-tools.md` is already covered. Editing it to name the new file
+would start a list that must then be maintained, which is the failure mode
+the directory pointer avoids. Recorded because the brief asks for the check,
+and "checked, no change needed" is a different outcome from "not checked".
+
+#### One thing carried in from `TASK-0049`
+
+The `server.json` schema table gained a `smoke_test.requires_paths` row.
+`TASK-0049` added that key to a manifest and to `tests/smoke-mcp.sh` under
+human authorization, and its handover flagged that the guide did not know
+about it. The row states the SKIP-not-FAIL semantics, its relationship to
+the prose `preconditions` key, and the graphify precedent for mirroring what
+the server itself checks rather than something looser.
+
+- Validation: `tests/validate.sh` → **OK**. `scripts/sync-registry.sh` run
+  as a control although no component changed — `docs/registry.md` unchanged.
+  No `mcp-servers/omniroute/`, no omniroute `configs/` section, no registry
+  row: the decision, observable in `git status` rather than asserted.
+- Result: **done.** All eleven acceptance criteria met. Two additive
+  deviations, both recorded above.
 - Commit:
 - Push:
