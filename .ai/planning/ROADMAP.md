@@ -156,15 +156,16 @@ any agent or human can understand, trust, and deploy.
   keeps the gate and drops the read-order step keeps the part that found
   nothing.
 
-## Phase 6 — Ansible agent guardrails (UN-PARKED 2026-09-16, now current)
+## Phase 6 — Ansible agent guardrails (COMPLETE 2026-09-22)
 - Objective: add the **instruct layer** the `ansible` MCP server has
   lacked since S1 — nothing tells an agent how or when to use it, what the
   estate's workflow is, or which actions need approval — correct two false
   claims in this repo's own MCP wiring, narrow that server's blast radius,
   and ground it all in evidence read from a real Ansible repository
   without modifying it.
-- Planned by `PLAN-0003`; decisions ADR-0014…0016, all **proposed** with
-  **bodies written 2026-09-16**, none accepted. Sprint S6, tasks
+- Planned by `PLAN-0003`; decisions ADR-0014…0016, bodies written
+  2026-09-16 and **all three Accepted 2026-09-22** (`TASK-0054`), ratified by
+  the human in answer to `REVIEW-0010`'s ratification packet. Sprint S6, tasks
   TASK-0026…0032 plus TASK-0052. Raised B-010…B-013.
 - **This section was written on 2026-09-15, by TASK-0033, one sprint
   late.** The roadmap had no Phase 6 at all: S6 existed in
@@ -179,9 +180,12 @@ any agent or human can understand, trust, and deploy.
   began~~ **ALL FIVE met as of 2026-09-16**; each is marked below. Wording is
   otherwise as written on 2026-09-14. **What remains for the phase is not an
   exit criterion but a judgment**: ratifying the three ADRs and writing the
-  checkpoint. **The checkpoint is written — `REVIEW-0010`, 2026-09-22,
-  verdict approve, closure blocked on ratification. Ratification is now the
-  only outstanding item in Phase 6.**
+  checkpoint. **Both are done. `REVIEW-0010` (2026-09-22, verdict approve)
+  is the checkpoint, and the human ratified all three ADRs the same day, so
+  the phase is COMPLETE.** Its four follow-ups are the review's and outlive
+  the phase: the gate's undecided budget, a moved `ansible-core` version
+  recorded nine times, whether anything re-checks external claims, and
+  `skills/ansible-ops/` still unexercised against a live estate.
   - **MET** — `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
     execution or system package installation (TASK-0026). It now carries a
     `workspace_root_bounds` key splitting `bounded` from `not_bounded` per
@@ -227,8 +231,8 @@ any agent or human can understand, trust, and deploy.
   longer true: `TASK-0026` is the phase's first real implementation, so a
   second park would now cost reconciliation. Recorded because the original
   parking note made exactly this prediction.
-  - Outstanding: **ratification of the three ADRs, and a checkpoint** — both
-    judgment rather than implementation. **All seven S6 tasks are done as of
+  - ~~Outstanding: **ratification of the three ADRs, and a checkpoint**~~ —
+    **both delivered 2026-09-22.** **All seven S6 tasks are done as of
     2026-09-16**: `TASK-0026`, both spikes (`0027`, `0028`), `0031`, `0032`,
     plus `0029`/`0030` delivered by Phase 7's pilot; and all three ADR bodies
     are written.
@@ -254,8 +258,8 @@ any agent or human can understand, trust, and deploy.
     **done, delivered by Phase 7's pilot** — the sprint table said `planned`
     while both task files said `done`, corrected on the first read (the
     four-files-disagree class `REVIEW-0008` swept for Phase 7).
-  - **ADR-0014/0015/0016 now have bodies; all three remain `Proposed`** and
-    await human ratification. Written from the spikes' observed evidence,
+  - **ADR-0014/0015/0016 — bodies written 2026-09-16, all three Accepted
+    2026-09-22.** Written from the spikes' observed evidence,
     explicitly **not** filled from `PLAN-0003`'s prose — that is how they
     reached skeleton state. **Two were retitled because the evidence
     contradicted their planned titles**, which is the substantive output of
@@ -460,7 +464,7 @@ any agent or human can understand, trust, and deploy.
   and `prompts/`: indefinitely. If the sprint shrinks, the honest cut is
   role reconciliation, never the plumbing and never the pilot.
 
-## Phase 8 — Third-party agent extensions (RE-QUEUED 2026-09-16, not started)
+## Phase 8 — Third-party agent extensions (CURRENT 2026-09-22, not started)
 
 **This section was written at plan time, in the same change as
 `PLAN-0005`.** The roadmap has now had two phases go missing from it —

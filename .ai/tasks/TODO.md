@@ -61,9 +61,10 @@ decisions in ADR-0012. Run in order — each depends on the one above.
       the two skills scaffold two different frameworks, differing nine
       ways; its premise of a shared convention was false (done)
 
-## Sprint S6 — Ansible agent guardrails (UN-PARKED 2026-09-16, CURRENT)
+## Sprint S6 — Ansible agent guardrails (CLOSED 2026-09-22 by REVIEW-0010)
 Planned by `.ai/planning/plans/PLAN-0003-ansible-agent-guardrails.md`;
-decisions ADR-0014…0016 (all **proposed**, none accepted yet). Raised
+decisions ADR-0014…0016 (**all three Accepted 2026-09-22**, `TASK-0054`).
+Raised
 B-010…B-013. Sprint opened by commit `9528d13`, pushed and confirmed.
 
 **Un-parked 2026-09-16 by `TASK-0052`; S6 now holds `SPRINT-CURRENT.md`.**
@@ -85,7 +86,8 @@ B-011 stays open.
 **Outstanding: TASK-0026, TASK-0031, TASK-0032, ratification of the three
 ADRs, and a checkpoint.** Both spikes and all three ADR bodies are **done**
 (2026-09-16). Two things a cold reader needs:
-- **All three ADRs now have bodies and all three are still `Proposed`** —
+- **All three ADRs have bodies and all three are now `Accepted`
+(2026-09-22)** —
   written from the spikes' observed evidence, per the human decision, and
   **awaiting ratification, which is a human act**. Two were **retitled**
   because the evidence contradicted their planned titles: `ADR-0015` (its

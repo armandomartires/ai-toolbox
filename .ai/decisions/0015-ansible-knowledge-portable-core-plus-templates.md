@@ -1,10 +1,28 @@
 # ADR-0015 — Ansible knowledge is derived per change, not declared; and the graduated workflow is check-plus-snapshot
 
 ## Status
-**Proposed**, 2026-09-14. Opened by `PLAN-0003` (sprint S6).
-**Body written 2026-09-16** against evidence, per the human decision of the
-same date: draft from spike evidence, leave `Proposed` for ratification.
-**Still owes ratification.**
+**Accepted — 2026-09-22.** Ratified by the human in answer to `REVIEW-0010`'s
+ratification packet. Opened by `PLAN-0003` (sprint S6); recorded by
+`TASK-0054`.
+
+**What was ratified is the reversal.** `REVIEW-0010` flagged this as the one
+of the three most needing a human, because clause 1 **reverses an approved
+mechanism** rather than restating it: the planned "portable core plus
+per-project `templates/`" shape is rejected, on the evidence that
+`install.sh:105` symlinks a deployed skill into this repo's working tree. The
+human ratified with that flagged. **`templates/` survives only for copy-out
+artifacts carrying no estate facts.**
+
+**This also retires the Option 2 waiver.** `skills/ansible-ops/` and
+`loops/ansible-change/` shipped 2026-09-15 under an explicit waiver because
+this ADR was unratified. They now stand on a ratified decision. The waiver
+records in `TASK-0029` and `TASK-0030` are dated and stay as written.
+
+The trail below is kept as written:
+
+> **Proposed**, 2026-09-14. **Body written 2026-09-16** against evidence, per
+> the human decision of the same date: draft from spike evidence, leave
+> `Proposed` for ratification.
 
 **The title changed when the body was written.** It read *"…is a portable core
 plus per-project templates…"*, which names a mechanism this ADR now

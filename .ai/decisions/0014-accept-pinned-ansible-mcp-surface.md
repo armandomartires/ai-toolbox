@@ -1,14 +1,27 @@
 # ADR-0014 — Accept the pinned ansible MCP surface; narrow it rather than extend it
 
 ## Status
-**Proposed**, 2026-09-14. Opened by `PLAN-0003` (sprint S6).
-**Body written 2026-09-16** against `TASK-0027`'s observed lint result, per
-the human decision of the same date: draft the bodies from spike evidence,
-leave them `Proposed` for ratification. **Still owes ratification.**
+**Accepted — 2026-09-22.** Ratified by the human in answer to `REVIEW-0010`'s
+ratification packet, eight days after the body was written. Opened by
+`PLAN-0003` (sprint S6); recorded by `TASK-0054`.
 
-Its stated dependency is met: `TASK-0027` is **done**, so the "do not accept
-before that task reports" condition no longer blocks. What remains is a human
-act, not more evidence.
+**Ratified with one evidence caveat on the record, not resolved by
+ratification.** `REVIEW-0010` finding 3 observed that the control venv's
+toolchain has moved since this ADR's evidence was gathered — `ansible-core`
+**2.20.8 → 2.21.4**, `ansible-lint` unchanged at 26.8.0. The "53 rules / 0
+real violations" figure below was observed under 2.20.8 and has **not** been
+re-run under 2.21.4. The decision does not rest on the count, which is why
+this is a caveat rather than a blocker — but a reader re-checking that number
+should expect to re-run it first.
+
+The trail below is kept as written:
+
+> **Proposed**, 2026-09-14. **Body written 2026-09-16** against `TASK-0027`'s
+> observed lint result, per the human decision of the same date: draft the
+> bodies from spike evidence, leave them `Proposed` for ratification.
+> Its stated dependency was met: `TASK-0027` is **done**, so the "do not
+> accept before that task reports" condition no longer blocked. What remained
+> was a human act, not more evidence.
 
 ## Context
 

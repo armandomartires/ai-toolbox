@@ -1,18 +1,62 @@
 # Current State
 
-Last updated 2026-09-22, after **S6's checkpoint was written as
-`REVIEW-0010`** and, earlier the same day, **the Bionic client snapshot was
-corrected for two drifted observations** (`TASK-0053`, both below).
+Last updated 2026-09-22, after **sprint S6 was closed and S8 promoted to
+current** (`TASK-0054`). Earlier the same day, **S6's checkpoint was written
+as `REVIEW-0010`** and **the Bionic client snapshot was corrected for two
+drifted observations** (`TASK-0053`). All three below.
 
-## S6 has its checkpoint; only ratification is outstanding
+## S6 is CLOSED; the three ADRs are ratified; S8 is current
+
+**`TASK-0054`, 2026-09-22.** The human answered `REVIEW-0010`'s ratification
+packet with **ratify** — **ADR-0014, ADR-0015 and ADR-0016 are all
+`Accepted`**, eight days after their bodies were written. That was the one
+act the checkpoint named as blocking closure, so S6 closed on the same date
+and **S8 moved from re-queued to current**.
+
+**Promotion executed a decision already taken, rather than making one.**
+`TASK-0052` recorded *"finish S6 before S8"* — an ordering that always
+presupposed S8 followed. **All four S8 briefs are still `planned`,
+`ADR-0021` is still `Proposed`, and B-018…B-021 are still `ready`.** Nothing
+in S8 has been executed; this is the third sprint-state change to that file
+without a content change.
+
+**What ratification actually settled, per ADR:**
+
+- **ADR-0014** — accepted **with an evidence caveat on the record**: its
+  "53 rules / 0 real violations" was observed under `ansible-core` 2.20.8 and
+  the live toolchain is 2.21.4. The decision does not rest on the count.
+- **ADR-0015** — the substantive one. What was ratified is a **reversal** of
+  an approved mechanism, not a restatement. **This also retires the Option 2
+  waiver** under which `skills/ansible-ops/` and `loops/ansible-change/`
+  shipped on 2026-09-15; they now stand on a ratified decision.
+- **ADR-0016** — what was ratified is the **ground, not the conclusion**. The
+  conclusion (no `hooks/` category) was expected; its basis was refuted and
+  replaced — interception *works* in both clients, and the category is
+  declined on **portability**, never on capability.
+
+**`ADR-0021` asserted twice that ADR-0016 was `Proposed`** and now carries
+dated notes at both. It is itself still `Proposed` and about to be read as
+the current sprint's, which is why it was annotated rather than left — the
+same false-present-tense class `REVIEW-0008` swept across four files.
+
+**Dated records were not rewritten** — completed task files, session logs,
+`REVIEW-0008`, `docs/design/ansible-ops-brief.md`. The trace that these ADRs
+were unratified for eight days, and that two components shipped under a
+waiver in that window, is part of the record.
+
+## S6's checkpoint: what REVIEW-0010 found
+
+> **Superseded within the day by the section above.** This records the
+> checkpoint as written, before the human ratified. Kept because it is what
+> the review found; read the section above for the resolved state.
 
 **`REVIEW-0010`, 2026-09-22.** Verdict **approve**, with closure explicitly
-**blocked on an act the review cannot perform**: ADR-0014, ADR-0015 and
-ADR-0016 are still `Proposed`, and ADR-0014 states it plainly — *"What
-remains is a human act, not more evidence."* Every ratification in this repo
-is recorded as a human decision, so an agent accepting them would
-manufacture the one signature the convention exists to require. **S6 stays
-current.** The review carries a **ratification packet** summarising what
+**blocked on an act the review could not perform**: ADR-0014, ADR-0015 and
+ADR-0016 were **then** still `Proposed`, and ADR-0014 stated it plainly —
+*"What remains is a human act, not more evidence."* Every ratification in
+this repo is recorded as a human decision, so an agent accepting them would
+manufacture the one signature the convention exists to require. **S6 stayed
+current until the human answered — which was the same day.** The review carries a **ratification packet** summarising what
 accepting each ADR commits the human to, with ADR-0015's reversed clause 1
 flagged as the one most needing a human.
 

@@ -1,10 +1,25 @@
 # ADR-0016 — Hooks as a component category: declined, because the clients disagree on the tool's name
 
 ## Status
-**Proposed**, 2026-09-14. Opened by `PLAN-0003` (sprint S6).
-**Body written 2026-09-16** against `TASK-0028`'s evidence, per the human
-decision of the same date: draft from spike evidence, leave `Proposed` for
-ratification. **Still owes ratification.**
+**Accepted — 2026-09-22.** Ratified by the human in answer to `REVIEW-0010`'s
+ratification packet. Opened by `PLAN-0003` (sprint S6); recorded by
+`TASK-0054`.
+
+**What was ratified is the ground, not the conclusion.** The conclusion — no
+`hooks/` category — was the expected one. Its basis was **refuted and
+replaced**: `TASK-0028` found interception **works in both clients**, so the
+category is **declined on portability**, never unavailable on capability.
+Ratification binds that distinction, and with it Decision 4 (a future
+category is not named `hooks/`) and the three-part reopen trigger.
+
+**`ADR-0021` extends this ADR and is still `Proposed`** — its own status is
+unaffected by this ratification; see the dated note in its Context.
+
+The trail below is kept as written:
+
+> **Proposed**, 2026-09-14. **Body written 2026-09-16** against `TASK-0028`'s
+> evidence, per the human decision of the same date: draft from spike
+> evidence, leave `Proposed` for ratification.
 
 Its blocking dependency is met: `TASK-0028` is **done**. The title changed
 when the body was written — it previously read *"decide after evidence, expect

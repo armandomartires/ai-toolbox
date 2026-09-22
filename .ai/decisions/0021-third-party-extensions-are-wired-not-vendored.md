@@ -37,8 +37,12 @@ per capability**, and "plugin" is not a capability.
 
 ### ADR-0016 already declined a category, and its reasoning still holds
 
-ADR-0016 (proposed 2026-09-14, still `Proposed`) declined a `hooks/`
-category. Its plumbing claims were **re-verified on 2026-09-16** rather
+ADR-0016 declined a `hooks/` category. **(Dated note, 2026-09-22,
+`TASK-0054`: this section was written 2026-09-16, when ADR-0016 was
+`Proposed`. It is now **Accepted — 2026-09-22**. The text is left as written;
+only this note and the one at the end of the section are added, because that
+status is asserted twice here and this ADR is itself still `Proposed` and
+about to be read as the current sprint's.)** Its plumbing claims were **re-verified on 2026-09-16** rather
 than cited, because they are the load-bearing half of this decision and
 two sprints have landed since they were written. All three still hold:
 
@@ -62,8 +66,14 @@ written about hooks-versus-plugins and applies here unchanged.
 adjacent cases: ADR-0016 declined a category for a capability this repo
 would *implement itself*, and this one declines a category for third-party
 extensions this repo would *consume*. Neither supersedes the other, and
-ADR-0016 stays `Proposed` (it is still blocked on `TASK-0028`, which is
-unrun and belongs to parked sprint S6).
+~~ADR-0016 stays `Proposed` (it is still blocked on `TASK-0028`, which is
+unrun and belongs to parked sprint S6).~~ **Superseded 2026-09-22
+(`TASK-0054`): every clause of that parenthetical is now false. `TASK-0028`
+ran on 2026-09-16 and is `done`; S6 was un-parked on 2026-09-17 and is closed
+on `REVIEW-0010`; ADR-0016 is **Accepted — 2026-09-22**. Struck rather than
+deleted, because it dates what this ADR was reasoning from.** The substantive
+claim is unaffected: the two ADRs cover adjacent cases and neither supersedes
+the other.
 
 ### Upstream already did the porting, and vendoring would take ownership
 

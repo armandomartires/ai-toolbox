@@ -1,336 +1,246 @@
-# Sprint S6 — Ansible agent guardrails
+# Sprint S8 — Third-party agent extensions
 
-> **UN-PARKED 2026-09-16 by `TASK-0052`. NOW CURRENT.** Human decision, in
-> answer to a direct question about how S6 should re-enter: **finish S6
-> before S8**. S8 is **re-queued** (not parked, not closed) at
-> `sprints/SPRINT-S8-third-party-extensions.md` — it had done zero work, so
-> the swap cost nothing in either direction.
+> **NOW CURRENT — promoted 2026-09-22 by `TASK-0054`**, once S6 closed on
+> `REVIEW-0010` and its three ADRs were ratified. This executes the ordering
+> the human set in `TASK-0052` (*"finish S6 before S8"*) rather than making a
+> new decision: that ordering always presupposed S8 followed.
 >
-> **The parking note below still stands as written and is preserved
-> deliberately.** Its central claim is still true and is why un-parking is
-> also cheap: **S6 still has zero implementation of its own.** What changed
-> is only that two of its briefs were delivered by another route.
+> **Promotion is a state change, not a start.** `TASK-0048`, `0049`, `0050`
+> and `0051` are all still **`planned`**, `ADR-0021` is still **`Proposed`**
+> and owes its own ratification, and `B-019`/`B-020` are still **`ready`**.
+> Nothing in this sprint has been executed. This is the third time this file
+> has changed sprint-state without changing its content, and the reason is
+> unchanged: planning-only was the explicit instruction, so nothing is
+> half-built.
 >
-> ## What is actually outstanding
+> **Two things landed while this sprint was re-queued** and bear on it:
 >
-> `TASK-0029` and `TASK-0030` are **`done`, delivered by S7's pilot**
-> (`TASK-0046`) — the table below has been corrected, because it read
-> `planned` while both task files read `done`. That is the four-files-
-> disagree defect `REVIEW-0008` had to sweep across S7, found here on the
-> first read of this file. **ALL SEVEN TASKS ARE NOW DONE. Remaining:
-> ratification of the three ADRs, and a checkpoint** — both judgment, not
-> implementation.
+> - **`ADR-0016` is now `Accepted`** (2026-09-22). This sprint's `ADR-0021`
+>   extends it and asserted twice that it was `Proposed`; both assertions now
+>   carry dated notes. The substantive argument is unaffected — if anything
+>   it is firmer, since the ADR it extends is no longer provisional.
+> - **`REVIEW-0010` left four follow-ups** that are not this sprint's but
+>   will be read alongside it: the gate at ~1085 ms against a sub-second
+>   claim (**unactioned at its second checkpoint** — S8 adds a
+>   `mcp-servers/` entry, so it is the sprint most likely to be blamed for a
+>   budget it did not spend), an `ansible-core` version recorded in nine
+>   places that has moved, whether anything re-checks external claims at all,
+>   and `skills/ansible-ops/` unexercised against a live estate.
 >
-> **CHECKPOINT WRITTEN 2026-09-22: `REVIEW-0010`** (not `REVIEW-0009`, which
-> stays reserved by S8). Verdict **approve**, with closure explicitly
-> **blocked on ratification** — an agent cannot perform it. Its headline
-> finding was not predicted by anyone: **the target repo is no longer
-> re-checkable at the commit S6 read it at** (`HEAD` was `d4e2dd1`, is now
-> `95b6966`; `ansible.log` gone; the ahead-count's remote gone). The
-> constraint held — that tree is clean — but the *verification method*
-> recorded in exit criterion 5 cannot be reproduced today. The guard is
-> unaffected: its harness is hermetic and re-ran **10/10** on 2026-09-22.
-> **`TASK-0032`'s choice to record F1–F4 in this repo rather than as pointers
-> is what preserved the evidence.** The review also carries a ratification
-> packet — what accepting each ADR commits the human to.
->
-> **So the only thing outstanding in S6 is ratification.** `TASK-0026`, `0027`, `0028`, `0031`, `0032` and all three ADR
-> bodies are **done**; `0029`/`0030` were delivered by S7's pilot. **Three
-> backlog items closed by S6's own execution** — B-012/B-013 (`TASK-0026`) and
-> **B-011, the highest-value item in either sprint (`TASK-0031`)**. **B-010 is
-> also closed**, by S7's pilot, which delivered its two components while S6 was
-> parked — **so all four of S6's backlog items are now closed**, the first time
-> a sprint's entire slice has been cleared here. Only B-010's route is the kind
-> a checkpoint should question, and it is closed **with its limitation stated**:
-> the components were authored *from* the target estate and never executed *in*
-> it.
->
-> **All five of Phase 6's exit criteria are met** (see `ROADMAP.md`).
->
-> **The guard exists and is proven to fire**, which is the thing this sprint
-> was for. `skills/ansible-ops/scripts/gather_subset_guard.py` plus seven
-> fixtures plus `tests/gather-subset-guard.sh` (10 checks, PASS/FAIL/**SKIP**,
-> with a negative control that reproduces the silent-no-op trap). **The
-> decisive evidence is outside the fixture set**: the real playbook, flipped to
-> `gather_facts: true` in a `/tmp` copy, produced `MISSING EXCLUSION` naming
-> `sigsrvpve1` resolved through the real nested inventory — which is what makes
-> its silence on the unmodified file discriminating rather than inert. **The checkpoint is NOT `REVIEW-0009`** — that number is reserved
-> by S8's file; S6's takes the next free one.
->
-> **All three ADRs now have bodies; all three remain `Proposed`.** They were
-> skeletons until 2026-09-16 — every section reading "to be written". Per the
-> human decision they were written **from the spikes' observed evidence** and
-> **not** self-accepted, and deliberately not filled from `PLAN-0003`'s prose,
-> which is how they reached skeleton state. **Two were retitled because the
-> evidence contradicted their planned titles:**
->
-> - **`ADR-0015`** — clause 1 is **formally reversed**. The "portable core
->   plus per-project `templates/`" mechanism fails because `install.sh:105`
->   symlinks a deployed skill into this repo's working tree, so an operator
->   filling in a shipped template would write one estate's production facts
->   into the portable component. Decision 1 is now **derive per change, never
->   declared and never stored**, which is what the shipped skill already does.
->   `templates/` survives for **copy-out** artifacts holding no estate facts
->   (`change-record.md` is the worked example). **Its filename still names the
->   rejected shape**, deliberately, per `ADR-0017`'s precedent — flagged in
->   the ADR's own Status. Ratification is owed *specifically* on this clause:
->   reversing an approved mechanism is substantive, not a restatement.
-> - **`ADR-0016`** — still **no category**, but the reasoning is **inverted**.
->   The plan expected hooks not to work; `TASK-0028` found interception
->   **works in both clients**. What declines the category is that the two
->   clients **disagree on the tool's name** —
->   `mcp__ansible__zen_of_ansible` (Claude Code, documented) vs
->   `ansible_zen_of_ansible` (OpenCode, **observed live**) — so no portable
->   artifact can even match the same string. The ADR must therefore read as a
->   **declined** option, never an unavailable one.
->
-> **Both spikes' results now bind `TASK-0031`:** its home is a custom
-> `ansible-lint` rule wired via `enable_list:`, and it **must ship a proof
-> that it fires**. `TASK-0027` observed that a custom rule outside the active
-> profile is **loaded, listed and never evaluated — at exit 0**. Without the
-> fires-proof this route is strictly worse than `pre-commit`, which fails
-> loudly. Two sibling silent-no-op modes are on the record for the same
-> reason: Claude Code's matcher needs its `.*` (`mcp__ansible` matches
-> nothing), and OpenCode under `experimental.codeMode` does not register MCP
-> tools individually at all.
->
-> ## Four defects in this sprint's own remaining plan
->
-> Found by `TASK-0052` before executing any of it, by opening the files the
-> briefs name (standing lesson 7). **All four bear on `TASK-0031`**, the
-> guard — this sprint's highest-value deliverable — and are corrected in that
-> brief as well as recorded here, because a finding kept only in the log of
-> the task that fixes it gets rediscovered rather than reused
-> (`REVIEW-0008` finding 2):
->
-> - **D1 — the guard's target matching does not match the real playbook.**
->   `TASK-0031` scopes "PVE-class" detection around group names
->   (`pve_cluster`/`pve_voting`). But `capture_pve_baseline.yml:21` reads
->   `hosts: sigsrvpve1` — a **bare hostname**. Group-name matching would
->   never classify the one playbook in the estate that targets a PVE node.
->   Detection must resolve host→group membership from
->   `inventory/production.yml`.
-> - **D2 — fixture 5 cannot tell a working guard from a broken one, and it
->   was an acceptance criterion.** "The two real playbooks → guard silent"
->   is satisfied by a correct guard *and* by a D1-afflicted guard that
->   recognises nothing at all. That is a check that cannot fail — standing
->   lesson 8, in the fixture design of the task written to avoid it. A
->   **sixth fixture** is now required: PVE host by bare hostname,
->   `gather_facts: true`, no exclusion → must **fail**.
-> - **D3 — a naive `module_defaults` check would over-accept the real
->   playbook.** `capture_pve_baseline.yml:23` has `module_defaults:` scoped
->   to `group/community.proxmox.proxmox` with **no
->   `ansible.builtin.setup`** entry. Accepting the key rather than a
->   `setup`-scoped `gather_subset` passes dangerous code while appearing to
->   implement the second accepted form.
-> - **D4 — `ansible-lint`'s recorded location is wrong.** There is no venv
->   in `SIGMA-infrastructure`. It is at
->   `~/.venvs/sigma-ansible/bin/ansible-lint`, **not on `PATH`**. Version
->   confirmed by running it: `26.8.0`, `ansible-core 2.20.8`. The version
->   claim held; the location did not.
->
-> **What D1–D3 have in common:** the plan was written from `ansible.cfg`'s
-> prose — accurate and emphatic about the hazard — without opening the
-> playbook the guard must classify. **The brief verified the hazard and
-> never verified the subject.** D2 generalises past Ansible: it is a
-> fixture-design failure mode.
->
-> ## Still binding
->
-> `SIGMA-infrastructure` is **read as evidence and never modified**
-> (decision 3 below). Verified clean at the start of this session and to be
-> verified clean at the end of every task.
->
-> **`REVIEW-0009` is S8's checkpoint number, already reserved in that
-> sprint's file.** S6's checkpoint must take the next free number rather
-> than reusing it — check before writing.
->
-> Everything from here down is the sprint as parked, with the single
-> correction to the `TASK-0029`/`0030` rows noted above.
+> **The re-queue note below is preserved as written.** Everything under it is
+> the sprint as planned, unmodified.
 
-> **PARKED 2026-09-15 by TASK-0033, not closed and not abandoned.**
->
-> Human decision, recorded in `PLAN-0004`'s "Human decisions required"
-> table. S7 (`PLAN-0004`) opened instead. All ten artifacts below stay
-> exactly as planned: TASK-0026…0032 remain `planned`, ADR-0014…0016
-> remain `proposed`, and B-010…B-013 remain **ready** in
-> `BACKLOG.md` — parking a sprint does not un-scope its backlog items.
->
-> **Nothing in this sprint was implemented before it was parked**, which
-> is why parking cost nothing: the archived file below is the plan as
-> written, not a partial execution needing reconciliation.
->
-> Two connections to S7 that a future reader will need:
->
-> - **S7's pilot (`TASK-0046`) delivers this sprint's `TASK-0029` and
->   `TASK-0030`** — `skills/ansible-ops/` and `loops/ansible-change/` —
->   by producing them *through* S7's new design and build loops. Whether
->   0029/0030 are then closed as delivered-by-S7, rewritten, or left
->   parked is recorded in `TASK-0046`'s execution log, deliberately not
->   pre-empted here.
-> - **This sprint's standing constraint still binds S7**:
->   `SIGMA-infrastructure` is read as evidence and **never modified**, and
->   its unpushed commits are left untouched. Parking does not relax it.
->
-> Everything below is the sprint as opened on 2026-09-14, unedited.
 
-**Phase 6. Opened 2026-09-14, planning only — no implementation yet.**
-Planned by `PLAN-0003`. The second sprint since S1 to start from a written
-plan rather than a backlog item, and the first to start from a
-human-supplied analysis that had to be corrected before it could be
-built.
+> **RE-QUEUED 2026-09-16 by `TASK-0052` — not current, not parked, not
+> closed.** Human decision: **S6 is un-parked and finished first**, so this
+> sprint returns to `sprints/` in exactly the state it was planned in.
+>
+> **Re-queuing cost nothing, for the same reason parking S6 cost nothing:**
+> all four tasks (`TASK-0048…0051`) are still `planned` and **zero
+> components were changed** — planning-only was the explicit instruction at
+> the time. Nothing is half-built, so nothing needs reconciling. Had this
+> sprint been mid-implementation the swap would have cost real work.
+>
+> **This is a third sprint end-state, deliberately distinct from the other
+> two.** A *closed* sprint gets a `REVIEW-####` and resolves its backlog
+> items. A *parked* sprint keeps its artifacts `planned`/`proposed`. This
+> one was promoted and is **un-promoted before doing any work** — so there
+> is no checkpoint, because there is nothing to check.
+>
+> **`B-019` and `B-020` stay `ready`.** Re-queuing a sprint does not
+> un-scope its backlog items, the same rule that held B-010…B-013 `ready`
+> through S6's park. B-020 in particular is latent for **any** future
+> stateful MCP server, not only graphify, so it outlives this sprint's
+> scheduling either way.
+>
+> Nothing below is rescoped. `PLAN-0005` and all four briefs are unmodified.
+> **The header below is preserved with exactly one edit**: its "NOW CURRENT"
+> claim is struck through, because leaving a false present-tense status
+> assertion in place is the defect class `REVIEW-0008` had to sweep across
+> four files. Everything else is verbatim — it carries S7's two binding
+> findings and the corrected task counts, which are still true and still
+> bind this sprint whenever it resumes.
 
-Sprint opened by commit `9528d13` (pushed to `origin/master`, confirmed by
-`git fetch` + `git log origin/master`). That commit contains **no component
-changes** — `skills/`, `mcp-servers/`, `loops/`, `configs/`, `scripts/`,
-`tests/` and `docs/` are all untouched, and `sync-registry.sh` produced no
-diff, which is the correct result for a planning-only commit.
+> **PLANNED 2026-09-16.** ~~**NOW CURRENT**~~ *(struck 2026-09-16 by
+> `TASK-0052` — re-queued; see the note above)* — promoted 2026-09-16 once
+> S7 closed
+> with `REVIEW-0008` (**approve**), archived at
+> `sprints/SPRINT-S7-design-and-production-loops.md`.
+>
+> This file previously sat in `sprints/` with a note that it was *not* yet
+> current, because promoting it while `REVIEW-0008` was missing would have
+> silently closed a sprint without its checkpoint. **That deviation is now
+> resolved in the correct order** — the review was written first, from
+> independent evidence, and it did not rubber-stamp: it found the gate had
+> left its sub-second budget, four S7 tasks (including the pilot) had left
+> no session record, and the pilot's most actionable finding was untracked
+> until it became **B-021**.
+>
+> The old header also said *"all six of its tasks are `done`"*. **That was
+> false — thirteen were done and one cancelled**, and it was one of three
+> files disagreeing about the count. Corrected at closure, and worth keeping
+> visible here: the note warning about false self-claims contained one.
+>
+> **Two S7 findings bind this sprint directly**, before any of its own work
+> starts:
+> - **`tests/validate.sh` is at ~1150 ms**, past the sub-second property
+>   `AGENTS.md` treats as load-bearing. S8 adds a `mcp-servers/` entry and
+>   `configs/` prose, so its own cost is small — but do not measure the
+>   gate on `/tmp` (ext4) and compare against `/mnt/c` (9p): that
+>   understates by ~40%.
+> - **A finding recorded only in a task log gets rediscovered, not fixed**
+>   (B-021's lesson). `TASK-0048`'s spike exists to produce findings; each
+>   one that outlives the task belongs in `BACKLOG.md`, not only in prose.
+
+**Phase 8. Planned by `PLAN-0005`. Planning only — no implementation.**
+
+Opened from a human request rather than a backlog item: *add ponytail,
+omniroute and graphify to the toolbox, cross-agent compatible if
+possible.* That makes it the third sprint in a row to start from a
+human-supplied premise, and the third in a row where **the premise had to
+be corrected before it could be built**.
 
 ## What this sprint is for
 
-The `ansible` MCP server has shipped since S1 with **no instruct layer**:
-nothing tells an agent how or when to use it, what this estate's workflow
-is, or which actions need approval. The premise, supplied by the human,
-is that MCP gives connectivity and structured tool use while a skill
-supplies the runbook and hooks supply enforcement.
+Bring two of the three requested extensions into this repo's governance —
+each in the category it actually belongs to — and document the third as an
+optional tool rather than a component.
 
-The premise holds. **Its specifics did not survive contact with the
-files**, and six corrections are the substance of `PLAN-0003`. The two
-that matter most:
+- **graphify** → `mcp-servers/graphify/server.json` (ADR-0005 external
+  shape). A real, pinned, indexed component.
+- **ponytail** → per-client wiring in `configs/*/README.md`.
+- **omniroute** → **out of the component layer** (human decision,
+  2026-09-16). One entry in a new `docs/development/third-party-tools.md`.
 
-- **There is no staging inventory in the target estate, and there cannot
-  be one.** The analysis's central example (`--check --diff -l staging`,
-  then `-l staging`, then production) is unimplementable against a single
-  6-node cluster at 3-of-4 quorum with one inventory file. The real
-  graduated workflow is **`--check --diff` plus snapshot and rollback**.
-  Building from the source text would have produced a runbook gating on
-  an inventory that does not exist.
-- **The pinned MCP server exposes 2 of the 7 capabilities the analysis
-  recommends** — and they are the two destructive ones. `ansible_navigator`
-  has no inventory, limit, `--check` or `--diff` parameter, so it *cannot*
-  perform the safe workflow, while it *can* execute against production.
-  It is disabled by this sprint.
+**No new component category. No plumbing changes. Nothing vendored.
+Nothing auto-installed.** All four are `ADR-0021`.
+
+## The correction that shapes the sprint
+
+**The word "plugin" named three unrelated mechanisms.** Verified from npm
+metadata and upstream *source* on 2026-09-16:
+
+| | OpenCode | Claude Code |
+|---|---|---|
+| ponytail | npm `plugin` entry; `main` points at `./.opencode/plugins/ponytail.mjs` | plugin **marketplace** + two Node lifecycle hooks |
+| omniroute | provider plugin needing a running daemon and an API key | **not a plugin** — an OpenAI-compatible base URL |
+| graphify | a generated plugin file *or* `AGENTS.md` — **its README and its source disagree** | `CLAUDE.md` section + `PreToolUse` hook |
+
+There is no portable "plugin" capability to abstract. ADR-0006's rule
+applies unchanged: portability is scoped **per capability**.
+
+## Two upstream claims were falsified before the sprint started
+
+Both found by reading source rather than READMEs, and both set
+`TASK-0048`'s agenda:
+
+1. **graphify's README contradicts graphify's source.** The README lists
+   OpenCode among platforms with no hook point that fall back to
+   `AGENTS.md`; `src/cli.ts` defines
+   `OPENCODE_PLUGIN_ENTRY = ".opencode/plugins/graphify.js"` plus a plugin
+   template that hooks bash calls.
+2. **`graphify serve` cannot start without an existing graph.**
+   `src/serve.ts:188-195` — `validateGraphFilePath`, then `console.error`
+   and `process.exit(1)`. This breaks `tests/smoke-mcp.sh`, which would
+   report **FAIL** where the truth is *precondition unmet* → **SKIP** —
+   the mirror of the defect that script's own header guards against.
+
+Neither document is evidence of installed behaviour. That is `TASK-0036`'s
+lesson from S7 — *a doc-confirmed field is not an installed field* — which
+is why the spike runs first.
 
 ## Tasks
 
 | Task | Depends on | Status | What |
 |------|-----------|--------|------|
-| TASK-0026 | — | **done** | Correct the `WORKSPACE_ROOT` blast-radius claim; disable `ansible_navigator` in 3 snippets; ~~LM Studio → models-only~~. **Done 2026-09-16; closes B-012 and B-013.** The false claim was in **six** places, not four (the extras: `docs/operations/runbook.md` and a *lessons* list). **Models-only deliberately not done — `ADR-0020` refuted it.** `authorization.history` now shows the original five-tool grant *and* the narrowing; gate **observed failing** on a broken authorization block, then restored byte-identically |
-| TASK-0027 | — | **done** | *Spike.* Lint the two real playbooks on a `/tmp/opencode/` copy; record what degraded; choose the guard's home. **Ran 2026-09-16: gate passes (0 failures / 53 rules / exit 0); guard = custom `ansible-lint` rule via `enable_list:`, conditional on a fires-proof** |
-| TASK-0028 | — | **done** | *Spike.* Can a Claude Code `PreToolUse` hook match `mcp__ansible__*`? OpenCode's equivalent? Non-blocking. **Ran 2026-09-16: YES in both — Claude Code documented, OpenCode observed live. The clients' MCP tool *names* are incompatible, which is what declines the category** |
-| ADR-0014 | TASK-0027 | **proposed** (body written) | Accept and narrow the MCP surface; ADR-0010 stays closed. **Body written 2026-09-16; ratification owed** |
-| ADR-0015 | TASK-0027 | **proposed** (body written, **retitled**) | ~~Portable core + per-project templates~~ → **derive per change, persist nothing**; check+snapshot, not staging. **Clause 1 reversed on evidence**; filename deliberately unchanged |
-| ADR-0016 | TASK-0028 | **proposed** (body written, **retitled**) | Hooks as a component category — ~~expected "no"~~ **declined, but because the clients disagree on the tool's *name*, not because interception fails; it works in both** |
-| TASK-0029 | ADR-0015 | **done** | `skills/ansible-ops/` — **delivered by S7's pilot (`TASK-0046`), 2026-09-15**, produced *through* S7's loops. Row corrected 2026-09-16 by `TASK-0052`: it read `planned` while the task file read `done` |
-| TASK-0030 | TASK-0029 | **done** | `loops/ansible-change/` — same, delivered by `TASK-0046`. Both ran under an **Option 2 waiver** (built from `PLAN-0003`'s F1–F7 evidence, ADR-0015 unratified), recorded in both task files |
-| TASK-0031 | ADR-0016, TASK-0027 | **done** | The `gather_subset` guard + **7** fixture proofs (raised from 5 by `TASK-0052`). **Delivered 2026-09-16; closes B-011.** A custom `ansible-lint` rule, **10/10** in `tests/gather-subset-guard.sh` including a negative control reproducing the `enable_list` silent-no-op trap. Fixture 6 **observed failing**, plus the *real* playbook flipped in a `/tmp` copy firing on `sigsrvpve1` resolved through the real inventory. Three defects found and fixed en route — including that **`TASK-0027`'s "declarative wiring" recommendation was wrong** |
-| TASK-0032 | TASK-0029 | **done** | Record the target-repo findings; state what was left alone. **Done 2026-09-16.** F1–F4 recorded in `CURRENT_STATE.md` — **not** with the skill, because `ADR-0015` forbids estate facts in a symlink-deployed component, which is where this brief suggested putting them. **Two citations had drifted** (`ci.yml`'s "no GitHub remote" is now *half* false), and **the "42 unpushed commits" repeated in three files is 42 only against a local-path `origin` — it is 8 against both real remotes** |
+| `TASK-0048` | none | **planned** | **Spike.** Verify both products on this machine: graphify's real OpenCode surface, `graphify serve` without a graph, and whether ponytail loads from an npm `plugin` entry. Version-stamped observations; no component files written |
+| `TASK-0049` | TASK-0048 | **planned** | `mcp-servers/graphify/server.json` pinned exactly; registry regenerated; the smoke-test precondition decision made and **observed** |
+| `TASK-0050` | TASK-0048 | **planned** | ponytail sections in all three `configs/*/README.md`; Bionic labelled **unverified**; the out-of-plugin-dir state files noted |
+| `TASK-0051` | TASK-0049, TASK-0050 | **planned** | Placement rule into the authoring guide (linking, not restating); `docs/development/third-party-tools.md` created with omniroute |
+| `REVIEW-0009` | all | **planned** | Checkpoint; headline question pre-committed below |
 
-Order matters, and for the same reason it did in S5: ground truth before
-decisions, decisions before the canonical shape, enforcement last.
-TASK-0026 and both spikes are mutually independent and may run in
-parallel or in one session — ADR-0012's second decision applies, so
-one-task-one-session remains the default rather than a rule.
+`TASK-0049` and `TASK-0050` are dependency-independent but **not assumed
+safely concurrent** — both would regenerate `docs/registry.md`, and S7's
+TASK-0038/0039/0040 sequence is the precedent for checking that before
+parallelising rather than after.
 
 ## Decisions taken at plan time — do not re-open
 
-All are human decisions from the planning session, recorded in
-`PLAN-0003`'s "Human decisions required" table with where each binds.
-
-1. **MCP surface: accept-and-document.** No Python MCP server. ADR-0010
-   stays closed and its reopen trigger is deliberately not pulled, even
-   though the 2-of-7 gap is exactly the kind of "real reason" that
-   trigger describes. ADR-0014 must close this door explicitly so the
-   next reader who notices the gap does not re-raise it.
-2. **`ansible_navigator` is disabled.** Not a preference — it cannot
-   express the safe workflow and the control venv's own
-   `ansible-playbook` strictly dominates it.
-3. **Option (a) for cross-repo work.** This repo ships portable
-   components. `SIGMA-infrastructure` is **read as evidence and never
-   modified**; its 42 unpushed commits and 4 stale claims are left
-   untouched. Adoption there is that repo's own sprint to open.
-4. **The working guard beats the portable abstraction.** If the guard
-   ships usefully without a new component category, it does.
-5. **Spike linting happens on a `/tmp/opencode/` copy**, not in place.
-
-## The highest-value item, and why it is not the skill
-
-`ansible.cfg:21-48` in the target repo carries a capitalised warning that
-`ansible.builtin.setup`'s default fact gathering stats `/etc/pve`, which on
-a node with wedged pmxcfs is an uninterruptible D-state hang that
-`timeout` cannot kill. It records that the intended global fix **does not
-work** (`gather_subset` is rejected in `[defaults]` and silently ignored in
-group_vars — verified empirically, there), that it is a play-level keyword
-only, and then: *"A code-review or CI check should confirm this before that
-playbook is trusted against a live node. **Tracked as unenforced until
-then.**"*
-
-A written rule, with a node-hanging failure mode, statically checkable,
-enforced by nothing. Unlike every example in the source analysis, it does
-**not** depend on whether hooks can intercept MCP tool calls — so it
-survives TASK-0028 reporting either way. TASK-0031 is the sprint's
-strongest deliverable; everything else is supporting structure.
+- **No `plugins/` category.** ADR-0016 declined one for hooks, and its
+  three plumbing findings were **re-verified 2026-09-16**: four hardcoded
+  `emit_section` calls, four hardcoded `validate.sh` iteration roots, a
+  four-column `install.sh` `CLIENTS` table. A new top-level directory is
+  still silently ignored by all three and by CI.
+- **Nothing is vendored.** `install.sh:105` deploys skills with `ln -sfn`,
+  so a vendored copy would be a symlink into this repo's working tree,
+  making this repo maintainer-of-record for upstream content. Same
+  mechanism that invalidated ADR-0015's shape in S6.
+- **Nothing is auto-installed.** `install.sh` is not extended to write into
+  `~/.claude/plugins/` or `~/.config/opencode/opencode.jsonc`. This holds
+  the line the repo already keeps for agent emission.
+- **ponytail cannot be an MCP server**, on a checkable fact: upstream's
+  `ponytail-mcp/` is `"private": true` and unpublished
+  (`registry.npmjs.org/ponytail-mcp` → *Not found*, 2026-09-16). ADR-0005's
+  external shape needs a published package; with none there is no
+  `launch.command`.
+- **omniroute is a service, not an agent extension.** A daemon on `:20128`,
+  an API key, a dashboard. Its OpenCode plugin's `mcpAutoEmit` even
+  **writes an `mcp.*` entry into the client config** — a mutation this repo
+  forbids itself. The human's exclusion is also the technically correct
+  call, and `ADR-0021` records why, not just that.
 
 ## Known limitation, recorded at plan time
 
-**Under Option (a) the skill is authored from the target repo as evidence
-but never executed there during S6.** `ansible-ops` will therefore end
-this sprint in the same epistemic position as `mcp-servers/_template/`:
-plausible, unexercised scaffolding. That is the honest price of clean repo
-ownership.
+**Two of three deliverables are prose.** graphify becomes a real pinned
+component; ponytail and omniroute produce documentation only.
 
-This is deliberately written down *now*, before the work, because S5's
-equivalent limitation (four tasks in one session leaving the cold-start
-benefit untested) was only stated at its checkpoint. It should be S6's
-headline checkpoint finding.
+That is the pattern `mcp-servers/_template/` established (ADR-0010),
+`agents/` and `prompts/` repeated (ADR-0016), and S7 flagged about itself.
+This would be the **fourth** instance of the class.
+
+The only defence is ordering: `TASK-0048` runs first, so the prose
+describes observed behaviour rather than transcribed vendor claims.
+**If this sprint shrinks, the honest cut is a product, never the spike.**
+
+Hence `REVIEW-0009`'s question is fixed in advance: **did the spike change
+anything, or did it rubber-stamp the vendor READMEs?** Two README/source
+discrepancies were found *before* the spike began, so a spike reporting
+zero findings is more likely weak than reassuring — the checkpoint must
+judge its method, not only its verdict.
 
 ## Standing constraints
 
-Unchanged, and four bind this sprint directly:
-
-- `tests/validate.sh` is a commit gate: offline, hermetic, sub-second —
-  all three load-bearing. TASK-0031 validates *other* repos' content, so
-  it likely belongs in `tests/` as its own harness rather than inside the
-  mandatory gate. It must never require the network or an env var.
-- **A check that cannot fail is worse than no check, because it is still
-  trusted.** Lesson 8 records that knowing this has not prevented
-  authoring one — twice. The control is TASK-0031's fixture proofs run
-  before the guard is trusted.
-- **No invented size budget for `SKILL.md`** (ADR-0008,
-  `authoring-guide.md:17-21`). To add one, define it there first, in
-  bytes, with a rationale.
-- Destructive changes need explicit human authorization in the task file.
-  TASK-0026 *narrows* an existing authorization rather than widening one,
-  which is the safe direction but still a change to a recorded grant.
-
-## Two gate properties discovered while planning
-
-Both changed this sprint's file layout, and both are worth knowing before
-adding any artifact:
-
-- `tests/validate.sh:456-463` **fails** on any file in `.ai/tasks/` not
-  matching `TASK-####-*.md`. So the two spikes are **numbered task
-  briefs**, not a `SPIKE-####` type. Introducing a new artifact type
-  would have meant weakening the gate for a naming preference.
-- `:402`, `:450-465` require `## Inputs` and `## Outputs / handover`
-  non-empty for every brief ≥ 0020 — **including briefs not yet
-  executed**. Every unexecuted brief in this sprint therefore states an
-  explicitly-labelled *intended* end state. A planned brief cannot
-  describe a real one, and the check cannot tell the difference: it
-  detects omission, not correctness (ADR-0012 Decision 3).
+- **Capability claims about third-party clients cite vendor documentation
+  *or* a version-stamped observation, and say which** (ADR-0020, now
+  `ADR-0021` clause 5). Three independently-shipping products plus two
+  clients is the fastest-decaying claim class this repo has yet handled;
+  graphify is pre-1.0 at `0.18.0`.
+- **Directory-name inference is not evidence in either direction**
+  (ADR-0020's generalisation). The mistake that cost two sprints of a false
+  belief about Bionic.
+- **A pinned version is a record, not a guarantee.** Bump deliberately and
+  update the manifest in the same change, as the ansible entry already
+  says.
+- **`validate.sh` checks documentation completeness, never runtime
+  presence** (ADR-0009). For `configs/` it checks only that the file
+  *exists* — a green gate says almost nothing about whether these
+  instructions are true, and `TASK-0050` must say so in its log.
 
 ## Out of scope, recorded not hidden
 
-- **Modifying `SIGMA-infrastructure` in any way** — decision 3. Its four
-  stale claims (`.ansible-lint:4`, `.pre-commit-config.yaml:42`,
-  `ci.yml:13,44`, `requirements.yml:4-6`) are recorded by TASK-0032 as
-  evidence and fixed nowhere. Its `ansible-lint` gate has also never had
-  content to lint, which TASK-0027 establishes but does not fix there.
-- **Authoring a Python MCP server** — decision 1.
-- **A `hooks/` component category**, unless ADR-0016 justifies it against
-  TASK-0028's evidence. Note it would need two implementations (Claude
-  Code `settings.json` JSON vs an OpenCode TS plugin), which is a real
-  portability problem under `AGENTS.md`'s "portable across every client
-  that supports its capability."
-- **Retrofitting the `ansible` server to the Python shape.** ADR-0010,
-  unchanged.
+Each of these would recreate a defect already paid for:
+
+- **A `plugins/` (or `extensions/`, or `hooks/`) category** — ADR-0016's
+  reasoning, re-verified. Naming a category after one vendor's term for a
+  capability another implements differently is how confusion starts.
+- **Vendoring ponytail's six skills into `skills/`** — the symlink
+  ownership problem above, plus ADR-0004's three copies.
+- **`mcp-servers/omniroute/` or an omniroute `configs/` section** — the
+  decision is precisely that it gets neither.
+- **Extending `install.sh` to wire any of the three** — crosses the
+  never-touch-client-config line deliberately.
+- **Installing omniroute to "complete the picture"** during the spike. It
+  is a gateway service with a daemon and an API key.
+- **A `validate.sh` check enforcing the placement rule** — routing is a
+  judgment call; a check that cannot really decide it would be a check that
+  cannot fail, which is this repo's most-repeated lesson.
