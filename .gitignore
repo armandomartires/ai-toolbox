@@ -9,3 +9,11 @@ node_modules/
 .DS_Store
 .ai/tasks/completed/archive/
 .pilot-scratch/
+# graphify state, if anyone builds a graph over this repo. It is generated,
+# machine-specific (upstream warns its branch.json, worktree.json,
+# needs_update and cache/ must never be committed), and can be large. This
+# repo ships graphify as an mcp-servers/ manifest only - it never builds or
+# commits a graph. tests/smoke-mcp.sh reads .graphify/graph.json as a
+# precondition, so an ignored-but-present directory is the expected state
+# for anyone who wants that server smoke-tested for real.
+.graphify/

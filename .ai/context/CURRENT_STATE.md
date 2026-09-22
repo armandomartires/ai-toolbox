@@ -1,8 +1,55 @@
 # Current State
 
-Last updated 2026-09-22, after **S8's first brief ran** (`TASK-0048`, the
-third-party extension spike) and, before it, **sprint S6 was closed and S8
-promoted to current** (`TASK-0054`).
+Last updated 2026-09-23, after **`TASK-0049` shipped graphify as this
+repo's second MCP server** — and found a second defect in
+`tests/smoke-mcp.sh` on the way. Before it: S8's spike (`TASK-0048`), and
+S6's closure with S8 promoted to current (`TASK-0054`).
+
+## graphify is a component; the smoke harness had been testing the wrong thing
+
+**`TASK-0049`, 2026-09-23.** `mcp-servers/graphify/server.json` is the
+repo's **second external manifest**, pinned to `@sentropic/graphify@0.18.0`
+(re-resolved, not carried forward — unchanged over the 7 days since
+plan time). `docs/registry.md` carries the `external` row.
+
+**`capabilities.destructive` is `false` on a reachability argument, not a
+judgement.** `graphify serve --help` declares no options beyond `-h`, and
+the bundle only pushes the mutating ontology tools when
+`options.ontology.write === true` — which `serve` has no flag to set. The
+flag belongs to a *different* subcommand, `graphify ontology serve
+--write`. The CLI around `serve` is emphatically not read-only, so the
+manifest names its mutating subcommands in `cli_scope`. That is **B-012
+applied before it could repeat**.
+
+**The precondition is the graph FILE, not the state directory.** The brief,
+`ADR-0021` and `TASK-0048` all say `.graphify/`. Observed: with the
+directory present and the file absent, v0.18.0 still exits 1, with a
+different message. Declaring the directory would have left the same false
+FAIL in a narrower window.
+
+**Two human-authorized changes to `tests/smoke-mcp.sh`, the second one not
+in anyone's plan.** B-020's fix is a manifest-driven
+`smoke_test.requires_paths` → SKIP, so nothing about graphify is hard-coded
+in the harness. Proving that SKIP was a *precondition gate* and not a
+blanket exemption meant placing a graph and re-running — and that is what
+exposed the real defect: **the harness waited for the server process to
+exit**, so a conforming MCP server that keeps serving after `initialize`
+was reported `no reply within 90s (server hung or never spoke)` **while
+holding the correct reply it had already received**. It was testing whether
+a server dies, not whether it speaks; ansible passed only because its
+server happens to exit on stdin EOF. Fixed in the same task under a second
+explicit authorization: stdin stays open, one reply is read with a
+deadline, then the server is terminated. Both servers now PASS.
+
+**The fabricated test graph was deleted**, so the repo ships in the SKIP
+state. A PASS resting on a hand-written `{"nodes":[],"edges":[]}` would be
+this repo's own *"a check that cannot fail"*.
+
+**Carried forward:** `@modelcontextprotocol/sdk` is an **optional**
+dependency of graphify, guarded by a try/catch that throws if absent. It
+resolved under `npx -y` here, but a `--no-optional` install would yield a
+server that cannot speak MCP at all — the kind of thing a pinned version
+does not protect against.
 
 ## S8 is under way: the spike overturned two of three expectations
 

@@ -460,16 +460,29 @@ real pinned component; **ponytail** becomes per-client documentation;
 **omniroute is out of the component layer** and gets one entry in a new
 third-party-tools document.
 
-- [ ] TASK-0048 — **Spike, runs first.** Verify both products on this
+- [x] TASK-0048 — **Spike, runs first.** Verify both products on this
       machine: graphify's real OpenCode surface (its README and its
       `src/cli.ts` **disagree**), whether `graphify serve` can start
       without a graph (`src/serve.ts:188-195` says no), and whether
       ponytail loads from an npm `plugin` entry given its `main` points
       into `./.opencode/plugins/`. Writes no component files
-- [ ] TASK-0049 — `mcp-servers/graphify/server.json`, pinned exactly;
+      (done 2026-09-22, commit `90db5a4`. **Both products are
+      multi-surface; 2 of 3 claims overturned.** This box was left unticked
+      by that commit — the *third* instance of the omission class noted
+      against TASK-0019 and TASK-0046 above, and ticked here rather than
+      left false for a third time.)
+- [x] TASK-0049 — `mcp-servers/graphify/server.json`, pinned exactly;
       registry regenerated; **the smoke-test precondition decided** — an
       unbuilt graph would make `smoke-mcp.sh` report FAIL where the truth
       is SKIP, the mirror of the defect its own header guards against
+      (done 2026-09-23. Decided as a **manifest-driven**
+      `smoke_test.requires_paths` → SKIP, human-authorized, so graphify is
+      not named in the harness and the rule covers any future stateful
+      server. Proving the SKIP was a precondition gate rather than an
+      exemption uncovered a **second** harness defect: it waited for the
+      server to *exit*, so a conforming long-lived MCP server was reported
+      as never having spoken while holding its correct reply. Fixed under a
+      second explicit authorization.)
 - [ ] TASK-0050 — ponytail wiring in all three `configs/*/README.md`, one
       mechanism per client; Bionic **unverified** (B-018 referenced, not
       restated); the state files upstream leaves outside its plugin

@@ -1,0 +1,54 @@
+{
+  "name": "graphify",
+  "description": "Read-only MCP access to a graphify knowledge graph: graph queries, node and neighbour lookup, shortest path, stats and review helpers over a prebuilt .graphify/graph.json",
+  "upstream": {
+    "registry": "npm",
+    "package": "@sentropic/graphify",
+    "version": "0.18.0",
+    "license": "MIT",
+    "homepage": "https://github.com/rhanka/graphify"
+  },
+  "launch": {
+    "command": ["npx", "-y", "@sentropic/graphify@0.18.0", "serve"],
+    "transport": "stdio"
+  },
+  "runtime": {
+    "declared": "node>=20",
+    "tested": "node v22.23.2"
+  },
+  "environment": {},
+  "environment_note": "EMPTY DELIBERATELY - the wired command requires no environment variables, and this is a statement rather than an omission. `graphify serve` resolves its graph from the working directory it is launched in (.graphify/graph.json, falling back to the legacy graphify-out/), or from an optional positional argument; no variable participates. The package does read many optional GRAPHIFY_* variables (GRAPHIFY_STORE, GRAPHIFY_POSTGRES_URL, GRAPHIFY_WHISPER_*, plus LLM API keys), but every one of them belongs to a subcommand this manifest does not wire - graph building, labelling, and store mirroring. Because nothing here is `required`, tests/validate.sh's .env.example completeness check has nothing to assert for this server, and .env.example is deliberately unchanged.",
+  "preconditions": [
+    "Node and npx on PATH. Upstream declares node>=20 (package.json engines); verified running on node v22.23.2 (observed 2026-09-23).",
+    "A GRAPH MUST ALREADY EXIST. `graphify serve` refuses to start without one: run in a directory with no .graphify/, it writes nothing, prints nothing on stdout, and exits 1 with `error: Graph base directory does not exist: <cwd>/.graphify. Run the graphify skill first to build the graph` (observed 2026-09-23, v0.18.0; independently confirms TASK-0048 Q2). Build the graph with the graphify skill or `graphify build` BEFORE wiring this server into a client.",
+    "The graph is resolved from the SERVER'S WORKING DIRECTORY, not from a configured path. A client that launches this command in a different directory than intended will serve a different graph, or fail to start. Whichever client wires it must control that working directory, or pass the graph explicitly as the positional argument accepted by `graphify serve [graph]`.",
+    "This repo does not install, build, or wire graphify anywhere (ADR-0021 clause 4). scripts/install.sh prints the launch command above from this manifest; it writes nothing into any client config."
+  ],
+  "capabilities": {
+    "destructive": false,
+    "destructive_tools": []
+  },
+  "cli_scope": {
+    "note": "capabilities.destructive above describes the WIRED command - `graphify serve` - and nothing else. The graphify CLI as a whole is not read-only, and reading this manifest as if it were would repeat B-012, where this repo's other manifest overstated a bound and the wrong claim then propagated into three wiring snippets. The distinction is mechanical, not a matter of trust: `graphify serve --help` declares no options at all beyond -h (observed 2026-09-23), so the flags that unlock mutation cannot be reached through it.",
+    "wired_command_tools": {
+      "note": "Enumerated by reading the published bundle's serve() tool list at v0.18.0, not from upstream prose. Every one is a read or a rendering over an existing graph; none writes.",
+      "tools": [
+        "graphify, first_hop_summary, review_delta, review_analysis, recommend_commits",
+        "query_graph, answer_graph, get_node, get_neighbors, get_community, god_nodes, graph_stats, shortest_path",
+        "list_reconciliation_candidates, get_reconciliation_candidate, preview_ontology_decision_log, ontology_rebuild_status - ontology inspection, all documented by upstream as non-mutating"
+      ]
+    },
+    "not_wired_mutating_commands": [
+      "graphify ontology serve --write: a DIFFERENT MCP server, whose --write flag adds validate_ontology_patch and apply_ontology_patch. In the bundle these tools are pushed only when `options.ontology.write === true`, which `graphify serve` has no flag to set. Its own --help reads: 'Start an ontology MCP server; write tools require explicit --write' (observed 2026-09-23). Wiring that command instead of this one would be a destructive change needing its own authorization.",
+      "graphify hook install: installs post-commit, post-checkout, post-merge and post-rewrite git hooks (its --help, observed 2026-09-23); the bundle also carries merge-driver wiring.",
+      "graphify store push: pushes the graph to a configured Postgres/neo4j GraphStore in REPLACE mode (its --help, observed 2026-09-23).",
+      "graphify install / graphify <platform> install: writes into client config directories - by default the user's home, or the project with --project. TASK-0048 observed `graphify opencode install` writing AGENTS.md, .opencode/plugins/graphify.js, .opencode/opencode.json and an Agent Skill, with the skill absent from the tool's own mutation preview.",
+      "graphify build / update / label / describe / watch: write .graphify/ state, which is how the graph this server reads gets made in the first place."
+    ]
+  },
+  "smoke_test": {
+    "requires_paths": [".graphify/graph.json"],
+    "note": "Read by tests/smoke-mcp.sh. Each path is resolved relative to the directory the harness launches the server in (the repo root); if any is missing the server is reported SKIP - precondition unmet - instead of FAIL. This exists because `graphify serve` exits 1 before speaking MCP when no graph is present, which the handshake check would otherwise report as a broken server (B-020). The path mirrors what the server itself checks, so the SKIP is a prediction of the real failure rather than a blanket exemption: put a graph at .graphify/graph.json in the repo root and this server is smoke-tested for real, with no manifest or script change. Verified both ways on 2026-09-23 - with the file absent the harness SKIPs, and with a graph present it runs the handshake through to PASS.",
+    "why_this_exact_path": "Not the state directory. `.graphify/` alone is insufficient: with the directory present and the file absent, v0.18.0 still exits 1, with a different message (`Graph file not found: <cwd>/.graphify/graph.json`, observed 2026-09-23). Declaring the directory would have reproduced the same false FAIL in a narrower window. Known and accepted imprecision in the other direction: the server also accepts a legacy graphify-out/graph.json layout, which this check does not look for, so such a project would SKIP although the server could have started. That is a pessimistic SKIP - never a false PASS, and never the false FAIL this key exists to remove."
+  }
+}

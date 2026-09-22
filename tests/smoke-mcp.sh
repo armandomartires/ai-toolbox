@@ -16,7 +16,8 @@
 # Outcomes are three, never two:
 #   PASS - server started and returned a well-formed initialize result
 #   FAIL - server started but did not speak MCP correctly (a real defect)
-#   SKIP - could not attempt (missing runtime, no network). NOT a pass.
+#   SKIP - could not attempt (missing runtime, no network, or a
+#          precondition the manifest declares). NOT a pass.
 #
 # Exit codes: 0 = no failures (all PASS, or PASS+SKIP)
 #             1 = at least one FAIL
@@ -36,7 +37,7 @@ while [ $# -gt 0 ]; do
     --server=*) WANT_SERVER="${1#*=}" ;;
     --timeout)   shift; TIMEOUT="${1:-90}" ;;
     --timeout=*) TIMEOUT="${1#*=}" ;;
-    -h|--help) sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
@@ -72,9 +73,28 @@ for d in mcp-servers/*/; do
     continue
   fi
 
+  # Manifest-declared filesystem preconditions: optional
+  # `smoke_test.requires_paths`. A server that refuses to start until some
+  # state already exists has not failed the handshake - it was never
+  # attempted - so the honest outcome is SKIP, the mirror of the rule above
+  # for a missing launcher. Paths resolve against this script's working
+  # directory, which is also where the server is launched, so the check
+  # mirrors what the server itself checks rather than exempting it.
+  # Authorized by the repo owner for TASK-0049 (B-020); graphify is not
+  # named here, so the rule holds for any future stateful server.
+  missing_pre=$(python3 -c 'import json, os, sys
+m = json.load(open(sys.argv[1]))
+req = (m.get("smoke_test") or {}).get("requires_paths") or []
+print(", ".join(p for p in req if not os.path.exists(p)))' "$d/server.json")
+  if [ -n "$missing_pre" ]; then
+    echo "SKIP $name: precondition unmet, server never started: missing $missing_pre"
+    skipped=$((skipped + 1))
+    continue
+  fi
+
   echo "--- $name: initialize handshake (timeout ${TIMEOUT}s)"
   out=$(python3 - "$d/server.json" "$TIMEOUT" <<'PY'
-import json, os, subprocess, sys
+import json, os, subprocess, sys, threading
 
 manifest, timeout = sys.argv[1], int(sys.argv[2])
 m = json.load(open(manifest))
@@ -105,41 +125,77 @@ req = {"jsonrpc": "2.0", "id": 1, "method": "initialize",
                   "clientInfo": {"name": "ai-toolbox-smoke", "version": "1"}}}
 
 try:
-    proc = subprocess.run(
-        cmd, input=json.dumps(req) + "\n", capture_output=True,
-        text=True, timeout=timeout, env=env)
-except subprocess.TimeoutExpired:
-    print("FAILREASON no reply within %ss (server hung or never spoke)" % timeout)
-    sys.exit(0)
+    proc = subprocess.Popen(
+        cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, text=True, env=env)
 except (FileNotFoundError, PermissionError) as exc:
     print("SKIPREASON cannot launch: %s" % exc)
     sys.exit(0)
 
-stdout = proc.stdout or ""
-if not stdout.strip():
-    tail = " ".join((proc.stderr or "").split())[-200:]
-    print("FAILREASON no stdout (exit %s)%s"
-          % (proc.returncode, "; stderr: " + tail if tail else ""))
-    sys.exit(0)
+# Read one reply, then stop the server - do NOT wait for it to exit.
+# A conforming MCP server keeps serving after answering `initialize`, so
+# waiting for exit tests whether the server died, not whether it spoke.
+# This previously reported "server hung or never spoke" for a server that
+# had already answered correctly, discarding the reply it was sent
+# (TASK-0049, authorized by the repo owner). stdin is left OPEN for the
+# same reason: closing it is a disconnect, not part of the handshake.
+# A server may emit banners first, so scan for the response to our request.
+lines, replies, found = [], [], threading.Event()
 
-# A server may emit banners before its JSON-RPC reply; scan for the first
-# line that parses as the response to our request.
-reply = None
-for line in stdout.splitlines():
-    line = line.strip()
-    if not line:
-        continue
+def read_stdout():
     try:
-        obj = json.loads(line)
-    except json.JSONDecodeError:
-        continue
-    if isinstance(obj, dict) and obj.get("id") == 1:
-        reply = obj
-        break
+        for line in proc.stdout:
+            lines.append(line)
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                obj = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict) and obj.get("id") == 1:
+                replies.append(obj)
+                return
+    except (ValueError, OSError):
+        pass
+    finally:
+        found.set()
+
+reader = threading.Thread(target=read_stdout, daemon=True)
+reader.start()
+try:
+    proc.stdin.write(json.dumps(req) + "\n")
+    proc.stdin.flush()
+except (BrokenPipeError, OSError):
+    pass          # the server died before reading; diagnosed below
+found.wait(timeout)
+
+reply = replies[0] if replies else None
+alive = proc.poll() is None
+proc.terminate()
+try:
+    proc.wait(timeout=5)
+except subprocess.TimeoutExpired:
+    proc.kill()
+    proc.wait(timeout=5)
+try:
+    stderr = proc.stderr.read() or ""
+except (ValueError, OSError):
+    stderr = ""
 
 if reply is None:
-    first = " ".join(stdout.split())[:200]
-    print("FAILREASON no JSON-RPC reply with id=1 on stdout; got: %s" % first)
+    got = " ".join("".join(lines).split())
+    tail = " ".join(stderr.split())[-200:]
+    if got:
+        print("FAILREASON no JSON-RPC reply with id=1 on stdout; got: %s"
+              % got[:200])
+    elif alive:
+        print("FAILREASON silent for %ss; process still running, so it "
+              "started but did not answer initialize%s"
+              % (timeout, "; stderr: " + tail if tail else ""))
+    else:
+        print("FAILREASON no stdout (exit %s)%s"
+              % (proc.returncode, "; stderr: " + tail if tail else ""))
     sys.exit(0)
 if "error" in reply:
     print("FAILREASON server returned an error: %s" % json.dumps(reply["error"])[:200])
