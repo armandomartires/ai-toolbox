@@ -372,5 +372,7 @@ when it matters.
   own factual inputs were corrected in the process, both traceable to
   `TASK-0048` answering Q4 from the package rather than from an install —
   which it disclosed at the time.
-- Commit:
-- Push:
+- Commit: `0bc5e9d` — "Document ponytail per client; correct two of its
+  brief's inputs". Pre-commit hook ran `tests/validate.sh` → OK.
+- Push: **confirmed** to `origin` (`17abb08..0bc5e9d`); branch in sync,
+  `git remote -v` token-free.
