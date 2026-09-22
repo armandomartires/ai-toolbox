@@ -403,5 +403,6 @@ any change.
   the published package and labelled as such. All nine acceptance criteria
   met, with the Q3 criterion met by a different method than planned and the
   substitution recorded.
-- Commit: recorded in the follow-up commit
-- Push: recorded in the follow-up commit
+- Commit: `90db5a4` — "Run TASK-0048: both extensions are multi-surface; 2 of 3
+  claims overturned". Pre-commit hook ran `tests/validate.sh` → OK.
+- Push: **confirmed** to `origin`; branch in sync, remote token-free.
