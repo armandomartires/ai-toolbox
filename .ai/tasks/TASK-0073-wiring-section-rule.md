@@ -212,5 +212,6 @@ execution log below records otherwise.*
   - `git status --porcelain` — fixture directories removed; no leaked
     fixture text in `configs/` (grepped)
 - Result: **done.** `B-023` closed by writing the rule, not the sections.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `ca8443d` — *Rule when an MCP server owes a per-client wiring
+  section*. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `4bdd719..ca8443d`.
