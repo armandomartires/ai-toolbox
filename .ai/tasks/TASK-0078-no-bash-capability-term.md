@@ -159,5 +159,5 @@ copy the thinking roles' profile** — a role that runs commands needs
   - `git status --porcelain` — four files plus this one
 - Result: **done.** The sprint's portability headline is now true of a
   boundary that actually holds, rather than true because the roles were weak.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `19cff2d`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `654da49..19cff2d`.
