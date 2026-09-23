@@ -151,5 +151,5 @@ decision and now rests on two ratified ADRs.
   - `tests/validate.sh` — **OK**
   - `git status --porcelain` — `.ai/` and `AGENTS.md` only; no component file
 - Result: **done.** `ADR-0023` is `Accepted` and `AGENTS.md` agrees with it.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `60ec36e`. Pre-commit hook ran `tests/validate.sh`: OK. **Verified atomic:** the ADR and `AGENTS.md` are in the same commit.
+- Push: **confirmed** — `origin/master` `3a3faa2..60ec36e`.
