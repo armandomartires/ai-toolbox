@@ -11,3 +11,41 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 template-mcp-server = "template_mcp_server.server:main"
+
+# --- Repo metadata: the authored shape's answer to server.json -------------
+#
+# `tests/validate.sh` reads this table and enforces it. It mirrors the
+# external shape's `server.json` key for key, so the two shapes answer the
+# same questions with the same words. Keep it BELOW [project]: the registry
+# generator reads `^name = ` and `^description = `, first match only.
+#
+# Do NOT add a server.json alongside this file to reuse the external checks —
+# ADR-0005 derives the shape from the marker file, and validate.sh fails a
+# directory carrying both as AMBIGUOUS SHAPE, deliberately.
+
+[tool.ai-toolbox.capabilities]
+# Required, and a real TOML boolean. There is no default: a server that does
+# not say is a server nobody decided about.
+destructive = false
+# Required to be non-empty when `destructive = true`. Name the tools, not the
+# category — a reader wiring this needs to know which calls to disable.
+# destructive_tools = ["run_command", "kill_process"]
+
+# Required when `destructive = true`; omit entirely otherwise. AGENTS.md:
+# "MCP servers must not expose destructive capabilities without explicit
+# human authorization in the task file." `task` must name a file that
+# EXISTS — validate.sh checks the path, which is what stops this block from
+# being prose nothing reads.
+# [tool.ai-toolbox.authorization]
+# granted = true
+# by = "<human who authorized it>"
+# date = "YYYY-MM-DD"
+# task = ".ai/tasks/TASK-0000-example.md"
+
+# One table per variable. Every variable marked `required = true` must appear
+# in `.env.example` as `VAR=` at line start, or validate.sh fails the commit —
+# so a new server cannot introduce a requirement a contributor has no way to
+# discover. `.env.example` carries NAMES AND MEANINGS ONLY, never values.
+# [tool.ai-toolbox.environment.EXAMPLE_VAR]
+# required = true
+# description = "What it points at, and the consequence of setting it wrong"

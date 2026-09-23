@@ -131,24 +131,54 @@ roles downstream need to know.
 
 ## Acceptance criteria
 
-- [ ] Both checks exist and their authoring-guide rows read Gated **yes**.
-- [ ] **Each check was observed failing on a fixture**, and the failing output is
+- [x] Both checks exist. **Their authoring-guide rows do NOT yet read Gated
+      yes** — see *Deviations*, item 1. This half is owed and named.
+- [x] **Each check was observed failing on a fixture**, and the failing output is
       recorded verbatim in this file. A check accepted on a green alone does not
       satisfy this criterion.
-- [ ] Every fixture is removed, and its removal verified.
-- [ ] `validate.sh` passes on the real tree — or, if check 1 reds an existing
-      role, that is recorded with the chosen handling stated explicitly and a
-      backlog item raised.
-- [ ] Check 2 asserts all four of: `destructive` boolean present;
+- [x] Every fixture is removed, and its removal verified.
+- [x] `validate.sh` passes on the real tree. Check 1 reds **nothing**.
+- [x] Check 2 asserts all four of: `destructive` boolean present;
       `destructive_tools` non-empty when true; `authorization.granted`;
       `authorization.task` is an existing file.
-- [ ] `B-024` is `done` with its evidence.
-- [ ] No shape rule is weakened. No directory gains a second marker file.
+- [x] `B-024` is `done` with its evidence.
+- [x] No shape rule is weakened. No directory gains a second marker file.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` — no-op expected
+- [x] `tests/validate.sh` — `validate.sh: OK`, exit 0, on a clean tree.
+- [x] `scripts/sync-registry.sh` — no-op confirmed (`git status --porcelain`
+      unchanged after running it). Templates are excluded from the registry, and
+      the `[tool.ai-toolbox]` block was appended **below** `[project]` so
+      `sync-registry.sh`'s `grep '^name = ' | head -1` still reads the
+      `[project]` values.
+
+## Deviations from the plan
+
+1. **The authoring guide was not edited**, though step 6 of the plan says to
+   flip two Gated cells. This worktree was scoped out of
+   `docs/development/authoring-guide.md` (the landing session consolidates the
+   narrative files). Three edits are therefore **owed to the guide** and are not
+   optional, because two of them make a currently-true sentence false:
+   - The *"Authored (Python) servers"* section states **"What `tests/validate.sh`
+     checks on an authored server is the marker file, and nothing else. It never
+     reads `pyproject.toml`."** That is now **false**. It also names `B-024` as
+     open.
+   - The `mode: all` section quotes the old failure string verbatim: *"fails the
+     commit with `mode 'all' is not one of: primary, subagent`"*. Also now false.
+     The new string is recorded below.
+   - The authored shape has **no schema section** to match *"`server.json` schema
+     (external servers)"*. `[tool.ai-toolbox]` is currently defined only by the
+     commented template and by `validate.sh`'s own block comment. Under
+     `ADR-0008` (define first, enforce second) the guide owes that section; this
+     task inverted the order and says so rather than hiding it.
+2. **`mcp-servers/_template/pyproject.toml` was edited**, which the plan did not
+   list. It is unavoidable: a required table that the template does not model is
+   a rule every first author would discover by failing the gate.
+3. **The `.env.example` half was not written as a second loop** beside the
+   external one. Both halves of check 2 read `pyproject.toml` in one parse, in
+   one place, so the file is read once and the two rules cannot drift. A pointer
+   comment was added at the external `.env.example` loop saying so.
 
 ## Risks and rollback
 
@@ -162,37 +192,201 @@ roles downstream need to know.
 - **Weakening the shape rule to make check 2 easy.** Closed by `ADR-0005`.
 - Rollback: revert the commit; both checks are additive.
 
-## Outputs / handover
+## Verification
 
-*Forecast until verified.*
+### The schema check 2 enforces
+
+Authored servers declare capabilities in a `[tool.ai-toolbox]` table in
+`pyproject.toml`, mirroring `server.json` key for key, so the two shapes answer
+the same questions with the same words:
+
+```toml
+[tool.ai-toolbox.capabilities]
+destructive = false                       # required, a real TOML boolean
+destructive_tools = ["run_command"]       # required non-empty when destructive
+
+[tool.ai-toolbox.authorization]           # required when destructive
+granted = true
+by = "<human>"
+date = "YYYY-MM-DD"
+task = ".ai/tasks/TASK-0000-example.md"   # must be a file that EXISTS
+
+[tool.ai-toolbox.environment.EXAMPLE_VAR] # each required var must be in .env.example
+required = true
+```
+
+**No directory gains a second marker file.** `ADR-0005` is untouched; a
+directory holding both markers is still `AMBIGUOUS SHAPE`, verified below.
+
+**Parsed with `tomllib`, never grepped.** `scripts/sync-registry.sh` reads the
+registry row by line prefix (`grep '^name = '`, first match, quotes stripped),
+which is sound only for a single-line double-quoted value at column 1. Nesting
+and booleans are not grep-shaped questions: `^destructive = false` would be
+satisfied by that text in a comment or in an unrelated `[tool.*]` table. If
+`tomllib` is absent (python3 < 3.11) the pass **fails loudly** rather than
+skipping — it raises the gate's interpreter floor and says so in the failure.
+
+### Observed failures — check 2 (`B-024`), verbatim
+
+Fixture `mcp-servers/_fixture-authored/`, one form at a time. Every run exited
+**1**.
+
+```
+INVALID AUTHORED MANIFEST: mcp-servers/_fixture-authored/pyproject.toml: missing required table [tool.ai-toolbox] — an authored server declares its capabilities there, exactly as an external one declares them in server.json. Without it this server would be the only shape that can expose destructive tools with nothing checking its authorization (B-024). Copy the block from mcp-servers/_template/pyproject.toml.
+
+INVALID AUTHORED MANIFEST: mcp-servers/_fixture-authored/pyproject.toml: capabilities.destructive is true but destructive_tools is empty
+INVALID AUTHORED MANIFEST: mcp-servers/_fixture-authored/pyproject.toml: capabilities.destructive is true but authorization.granted is not true (AGENTS.md requires explicit human authorization in the task file)
+
+INVALID AUTHORED MANIFEST: mcp-servers/_fixture-authored/pyproject.toml: authorization.task points at a nonexistent file: .ai/tasks/TASK-9999-does-not-exist.md
+
+INVALID AUTHORED MANIFEST: mcp-servers/_fixture-authored/pyproject.toml: authorization.by is required when destructive
+INVALID AUTHORED MANIFEST: mcp-servers/_fixture-authored/pyproject.toml: authorization.date is required when destructive
+
+INVALID AUTHORED MANIFEST: mcp-servers/_fixture-authored/pyproject.toml: tool.ai-toolbox.capabilities.destructive must be a TOML boolean (true/false), not 'true'
+
+INVALID AUTHORED MANIFEST: mcp-servers/_fixture-authored/pyproject.toml: does not parse as TOML: Expected ']' at the end of a table declaration (at line 1, column 9)
+
+UNDOCUMENTED ENV: mcp-servers/_fixture-authored/pyproject.toml requires 'FIXTURE_UNDOCUMENTED' but .env.example does not list it
+```
+
+**Positive control — the check is not merely always-red.** The same fixture,
+fully declared (`destructive = true`, `destructive_tools` named, `granted`/`by`/
+`date` set, `task = "CLAUDE.md"` which exists, and `WORKSPACE_ROOT` which
+`.env.example` documents) produced `validate.sh: OK`, exit **0**.
+
+**The `_template*` carve-out is split, and the split was verified rather than
+asserted.** The destructive half runs on templates (parity with the external
+manifest check, which validates `_template-external/server.json` for schema
+drift); the `.env.example` half skips them (parity with the external
+`.env.example` loop). A `mcp-servers/_template-fixture/` declaring **both**
+faults produced the two `INVALID AUTHORED MANIFEST` lines and **no**
+`UNDOCUMENTED ENV` line — the split behaving exactly as its comment claims.
+
+**No double-reporting.** A fixture carrying both markers produced
+`AMBIGUOUS SHAPE: mcp-servers/_fixture-both has both pyproject.toml and
+server.json` and nothing from the authored pass.
+
+### Observed failures — check 1 (`delegates_to`), re-verified
+
+Not rebuilt. `TASK-0075` wrote it and it fired on the live `designer-manager`
+defect. Re-run here so this task does not trust a check it has only read:
+
+```
+INVALID DELEGATION: agents/designer-manager/agent.md: delegates_to names 'git-ops', which is not emitted for claude-code — the caller IS emitted for claude-code, so that client gets an Agent(git-ops) allowlist naming an agent it does not have, and neither client warns (TASK-0056). Narrow the caller's clients, or widen the delegate's.
+
+INVALID DELEGATION: agents/_fixture-del/agent.md: delegates_to names 'ghost-role', which is not a role in agents/
+```
+
+The first was produced by temporarily re-widening `designer-manager` to
+`clients: [claude-code, opencode]` — i.e. by reconstructing the historical live
+defect, then `git checkout --`ing the file. Both modes still fire.
+
+**The re-read against `TASK-0058`'s `mode` decision: the delegation rule needs
+no change, and here is why, so the next reader does not have to redo it.**
+`TASK-0058` **rejected** `all`, so `MODES` stays `{primary, subagent}` and no new
+mode value can reach the cross-role pass at all. Independently of that, the pass
+never reads `mode`: it reads `clients` and `delegates_to` only, and its rule
+(*the delegate must be emitted for every client the caller is*) is a statement
+about emission targets, which `mode` does not affect. The `mode`-sensitive half
+of delegation already lives in the **per-role** check —
+`delegation-allowlist` requires `mode: primary`, because Claude Code ignores a
+subagent's `Agent(...)` allowlist. Note that had `all` been admitted, that
+existing `mode != "primary"` test would have rejected it, and for the right
+reason: `all` means both, so the boundary would be enforced or silently widened
+depending on invocation, which is argument 1 of the guide's rejection. So the
+rule was already correct for the case that did not arrive. **Nothing to change.**
+
+### The `mode: all` message
+
+`MODES` is unchanged — no value in that set was touched. A `REJECTED_MODES`
+table was added beside it, so the failure distinguishes *rejected* from
+*unrecognised*. Observed on a fixture role declaring `mode: all`:
+
+```
+INVALID AGENT: agents/_fixture-mode/agent.md: mode 'all' is a real client value this repo REJECTS ON PURPOSE, not an unrecognised string. OpenCode accepts 'all' and this repo rejects it deliberately: 'all' means BOTH primary and subagent, so a role carrying 'delegation-allowlist' would have that boundary enforced or silently widened depending on how it happened to be invoked, which no reader can determine from the file. Nothing in this repo needs it, and what 'all' does beyond selection is untested. Do not widen MODES to make this pass — see docs/development/authoring-guide.md, "`mode: all` is rejected on purpose, not overlooked", which states what would reopen it
+```
+
+**Control: a genuine typo must still read as a typo.** The same fixture with
+`mode: primry` produced the unchanged
+`mode 'primry' is not one of: primary, subagent`. The two paths are
+distinguishable, which was the whole point.
+
+### Fixtures removed
+
+`git status --porcelain` after the fixture runs shows only
+`M mcp-servers/_template/pyproject.toml` and `M tests/validate.sh`.
+`mcp-servers/` holds `ansible graphify _template _template-external` and
+`agents/` holds `critic designer-manager git-ops ideator qa-test review
+_template README.md` — the trees as found.
+
+### Cost
+
+Within measurement noise on this `/mnt/c` WSL checkout. Five consecutive runs,
+two rounds, alternating stash/pop: before 8.31 s / 7.54 s, after 8.70 s /
+7.30 s — i.e. ~1.5 s per run in both conditions, with round-to-round variance
+larger than the difference. The added pass is one `python3` spawn, and a bare
+`python3 -c pass` costs ~10 ms here. Measure on a native path before concluding
+a check is expensive.
+
+## Outputs / handover
 
 | Artifact | End state |
 |----------|-----------|
-| `tests/validate.sh` | Two new checks, each demonstrated red on a fixture first |
-| `docs/development/authoring-guide.md` | Both Gated cells read yes |
-| `.ai/planning/BACKLOG.md` | `B-024` done with evidence; a new item if check 1 reds an existing role |
-| This task file | The verbatim failing output of both fixtures |
-| `agents/` | Unchanged |
+| `tests/validate.sh` | The authored-MCP pass (`INVALID AUTHORED MANIFEST` / `UNDOCUMENTED ENV`), each form demonstrated red on a fixture first, plus a positive control; `REJECTED_MODES` beside `MODES`; a pointer comment on the external `.env.example` loop |
+| `mcp-servers/_template/pyproject.toml` | Models the `[tool.ai-toolbox]` block, with the destructive/authorization/environment forms commented in place |
+| `docs/development/authoring-guide.md` | **Unchanged — three edits owed**, see *Deviations* item 1. Two of its sentences are now false |
+| `.ai/planning/BACKLOG.md` | `B-024` `done` with evidence |
+| `agents/`, `docs/registry.md`, `.env.example` | Unchanged |
 
-**Next task starts here**: `TASK-0063` may author the four thinking roles
-against a gate that now enforces the delegation rule. `TASK-0067` may author the
-gate server knowing its authorization block is mechanically checked. State here
-whether check 1 reds anything in the existing tree — the next session must not
-discover that from a failing commit.
+**Next task starts here.**
+
+- **`TASK-0067`** may author the gate server knowing its `authorization` block is
+  mechanically checked. It must put the block in `[tool.ai-toolbox]`, and it will
+  fail the gate until `authorization.task` names a file that exists — which is
+  the point. Its two launch-form discrepancies are untouched and still its.
+- **`TASK-0063`** may author roles against a gate that enforces the delegation
+  rule. **Check 1 reds nothing in the existing tree** — no commit is blocked, and
+  no session should discover otherwise from a failing commit.
+- **A third `server.json`-only gate was found and deliberately left.** The
+  per-client wiring-section check (`TASK-0073`, `B-023`) also begins
+  `[ -f "$d/server.json" ] || continue`, so an **authored** server declaring a
+  required variable or `destructive = true` owes sections that nothing demands.
+  The guide's claim *"The first two triggers are checked"* becomes false the
+  moment `TASK-0067` lands. It is the same defect class as `B-024` but a
+  different backlog row, and this worktree may only touch `B-024`'s — so it is
+  raised here rather than silently scope-crept. It is now ~10 lines, since the
+  metadata is already parsed.
+- **The two agent-file parsers remain separate**: the per-role check's `seq()`
+  and the cross-role pass's `field()` both read a YAML block sequence, by
+  different code. No hole was found between them (an inline `[a, b]` list fails
+  the per-role check either way), but they are two owners of one rule.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-23
 - Updated: 2026-09-23
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-23
+- Agent: Claude Opus 5 (1M context), in worktree `agent/t0059`
+- Actions: read `CLAUDE.md`, this brief, the authoring guide's authored-server
+  and `mode: all` sections, `B-024`, and `tests/validate.sh`. Confirmed check 1
+  already exists (`TASK-0075`) and did not rebuild it. Added the authored-MCP
+  pass to `tests/validate.sh`; added `REJECTED_MODES`; modelled the
+  `[tool.ai-toolbox]` block in `mcp-servers/_template/pyproject.toml`; closed
+  `B-024`.
+- Observations: eight distinct failure forms observed red before any green was
+  trusted, plus a positive control, a carve-out split proof, an
+  `AMBIGUOUS SHAPE` de-dup proof, a typo-vs-rejection control, and both modes of
+  check 1 re-fired. All verbatim above. Two guide sentences are now false and
+  the guide owes a `[tool.ai-toolbox]` schema section; a third `server.json`-only
+  gate (the wiring-section check) was found and left named.
+- Validation: `tests/validate.sh` → `validate.sh: OK`, exit 0.
+  `scripts/sync-registry.sh` → no-op.
+- Result: done, with the authoring-guide half explicitly owed rather than
+  silently dropped.
+- Commit: 97e8be9 (amended to record its own hash)
+- Push: **not pushed, deliberately.** This worktree lands by rebase from the
+  main checkout (`ADR-0023`); the landing session pushes.

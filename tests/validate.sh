@@ -199,6 +199,184 @@ sys.exit(1 if bad else 0)
 PY
 done
 
+# AUTHORED (Python) MCP servers: the same destructive-capability assertions
+# the external manifest check makes just above, plus the same .env.example
+# completeness rule, read from `pyproject.toml` (TASK-0059, closing B-024).
+#
+# WHY THIS EXISTS: every MCP check that preceded it parses `server.json`, so
+# each one effectively began `[ -f "$d/server.json" ] || continue` and an
+# AUTHORED server was invisible to all of them. Every server shipped so far
+# is external, so nothing ever noticed. The first authored server this repo
+# will ship is a command runner — it launches ~70-minute builds, rewrites
+# workbook VBA, and force-terminates processes — and under the gate as it
+# stood its `authorization` block would have been PROSE NOTHING CHECKS. That
+# is the authoring guide's own "Claims a component makes about its own
+# wiring" defect class, occurring in the file that polices it, and it would
+# have left AGENTS.md's rule ("MCP servers must not expose destructive
+# capabilities without explicit human authorization in the task file") with
+# no mechanical form for half the shapes.
+#
+# THE METADATA LIVES IN `[tool.ai-toolbox]` in pyproject.toml. Not in a
+# second marker file: ADR-0005 derives the shape from which marker a
+# directory holds, `AMBIGUOUS SHAPE` above fails a directory carrying both,
+# and weakening that to make this check easy was closed by B-024 itself. The
+# sub-tables mirror `server.json` key for key — `capabilities.destructive`,
+# `capabilities.destructive_tools`, `authorization.{granted,by,date,task}`,
+# `environment.<VAR>.required` — so the two shapes answer the same questions
+# with the same words, in two file formats. `mcp-servers/_template/` models
+# the block.
+#
+# HOW IT IS PARSED, and what that does and does not handle:
+#   - `tomllib` (standard library, Python 3.11+). NOT grepped. The repo has
+#     been bitten by parsers that silently accepted a shape they could not
+#     read, and `scripts/sync-registry.sh` is the live precedent: it reads
+#     the registry row with `grep '^name = '` / `grep '^description = '`,
+#     first match, quotes stripped — sound only for a single-line
+#     double-quoted value at column 1, and hopeless here. A grep for
+#     `^destructive = false` would be satisfied by that text in a COMMENT, in
+#     some unrelated `[tool.*]` table, or in a `[project]` key of the same
+#     name, and would miss the value entirely if it were indented under an
+#     inline table. Nesting and booleans are not grep-shaped questions.
+#   - If `tomllib` is ABSENT (python3 < 3.11) this pass FAILS LOUDLY rather
+#     than skipping. A gate that quietly does nothing on an older interpreter
+#     is a gate that cannot fail, which is this repo's most-repeated lesson.
+#     It raises the gate's floor from "python3" (AGENTS.md, Commands) to
+#     python3 >= 3.11, and says so in the failure.
+#
+# WHAT THIS PROVES: that an authored server declares whether it is
+# destructive, and that if it is, a human granted that in a task file which
+# EXISTS; and that every environment variable it marks required is
+# documented in .env.example.
+#
+# WHAT IT DOES NOT PROVE: that `destructive_tools` names the tools the server
+# actually registers — nothing here imports the server, and ADR-0009 keeps
+# this gate to source completeness. Nor that the authorization task file SAYS
+# anything; only that it exists, exactly the limit the external check accepts.
+# Nor anything about the rest of pyproject.toml — build backend, src layout,
+# dependencies, entry point are all Gated **no** in the authoring guide and
+# stay that way; enforcing them here would make the gate the author of a
+# requirement (ADR-0008).
+#
+# THE `_template*` CARVE-OUT IS SPLIT, deliberately, and the split is not the
+# one every other loop makes:
+#   - The DESTRUCTIVE half runs on templates too. That is parity with the
+#     external manifest check above, which validates `_template-external/
+#     server.json` for schema drift and carves out only the
+#     name-matches-directory rule, because that rule cannot apply to a
+#     `_template*` name. No rule in this half is name-derived, so nothing
+#     needs carving out — and the template is what every authored server is
+#     copied from, so a template that could not pass this gate would ship the
+#     defect to the first server that copied it.
+#   - The .env.example half SKIPS templates, matching the external
+#     .env.example loop below, which skips them because `_template-external`
+#     declares a required variable and would otherwise demand a .env.example
+#     entry for a server nobody runs.
+python3 - <<'PY' || fail=1
+import glob, os, re, sys
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    print("MISSING prerequisite: python3 >= 3.11 (tomllib). The authored-MCP "
+          "gate parses pyproject.toml and refuses to skip silently — a check "
+          "that cannot fail is worse than no check, because it is still "
+          "trusted.")
+    raise SystemExit(1)
+
+# Read once. A missing .env.example is reported by its own check further
+# down; here it simply documents nothing, so required variables are reported
+# rather than waved through.
+try:
+    with open(".env.example", encoding="utf-8") as fh:
+        env_body = fh.read()
+except OSError:
+    env_body = ""
+# Assignment at line start, so a variable named only inside a comment does
+# not count as documented — the same rule the external loop applies.
+documented = set(re.findall(r"(?m)^([A-Z_][A-Z0-9_]*)=", env_body))
+
+bad = []      # INVALID AUTHORED MANIFEST
+undoc = []    # UNDOCUMENTED ENV
+
+for path in sorted(glob.glob("mcp-servers/*/pyproject.toml")):
+    d = os.path.dirname(path)
+    base = os.path.basename(d)
+    # A directory holding both markers is already reported as AMBIGUOUS
+    # SHAPE above; reporting it twice would just be noise.
+    if os.path.isfile(os.path.join(d, "server.json")):
+        continue
+
+    try:
+        with open(path, "rb") as fh:
+            data = tomllib.load(fh)
+    except tomllib.TOMLDecodeError as exc:
+        bad.append("%s: does not parse as TOML: %s" % (path, exc))
+        continue
+
+    tool = data.get("tool")
+    meta = tool.get("ai-toolbox") if isinstance(tool, dict) else None
+    if not isinstance(meta, dict):
+        bad.append("%s: missing required table [tool.ai-toolbox] — an "
+                   "authored server declares its capabilities there, exactly "
+                   "as an external one declares them in server.json. Without "
+                   "it this server would be the only shape that can expose "
+                   "destructive tools with nothing checking its "
+                   "authorization (B-024). Copy the block from "
+                   "mcp-servers/_template/pyproject.toml." % path)
+        continue
+
+    caps = meta.get("capabilities")
+    if not isinstance(caps, dict) or "destructive" not in caps:
+        bad.append("%s: missing required key: "
+                   "tool.ai-toolbox.capabilities.destructive" % path)
+        caps = {}
+    elif not isinstance(caps["destructive"], bool):
+        # TOML has real booleans, so a string "true" here is an author who
+        # meant a boolean and got a truthy value that no branch below reads
+        # the way they expect.
+        bad.append("%s: tool.ai-toolbox.capabilities.destructive must be a "
+                   "TOML boolean (true/false), not %r"
+                   % (path, caps["destructive"]))
+
+    if caps.get("destructive") is True:
+        if not caps.get("destructive_tools"):
+            bad.append("%s: capabilities.destructive is true but "
+                       "destructive_tools is empty" % path)
+        auth = meta.get("authorization")
+        if not isinstance(auth, dict) or auth.get("granted") is not True:
+            bad.append("%s: capabilities.destructive is true but "
+                       "authorization.granted is not true (AGENTS.md requires "
+                       "explicit human authorization in the task file)" % path)
+        else:
+            for key in ("by", "date", "task"):
+                if not auth.get(key):
+                    bad.append("%s: authorization.%s is required when "
+                               "destructive" % (path, key))
+            task = auth.get("task")
+            if task and not os.path.isfile(task):
+                bad.append("%s: authorization.task points at a nonexistent "
+                           "file: %s" % (path, task))
+
+    if base.startswith("_template"):
+        continue
+
+    env = meta.get("environment")
+    if env is not None and not isinstance(env, dict):
+        bad.append("%s: tool.ai-toolbox.environment must be a table of "
+                   "<VAR> tables" % path)
+        env = {}
+    for k, v in sorted((env or {}).items()):
+        if isinstance(v, dict) and v.get("required") and k not in documented:
+            undoc.append("%s requires '%s' but .env.example does not list it"
+                         % (path, k))
+
+for msg in bad:
+    print("INVALID AUTHORED MANIFEST: %s" % msg)
+for msg in undoc:
+    print("UNDOCUMENTED ENV: %s" % msg)
+sys.exit(1 if (bad or undoc) else 0)
+PY
+
 # Loops: frontmatter name/description, name matches directory, and the
 # three structural sections. A loop without exit conditions is an
 # unbounded instruction, which is the failure mode worth catching.
@@ -442,6 +620,30 @@ VOCAB = {
     "webfetch-requires-confirmation",
 }
 MODES = {"primary", "subagent"}
+# Values that are REAL in a client and REJECTED here, kept separate from the
+# unknown-string case so the message says which it is (TASK-0058, discharging
+# ADR-0022 clause 5.2; the message wording is TASK-0059's half).
+#
+# WHY THIS DISTINCTION IS WORTH A TABLE: `mode 'all' is not one of: primary,
+# subagent` reads like a caught typo. `all` is not a typo — OpenCode accepts
+# it, `opencode agent list` reports it beside `(primary)` and `(subagent)`,
+# and `--agent` selects such a role correctly (TASK-0055). An author who has
+# just watched it work in OpenCode and is then told it is "not one of" the
+# valid values will reasonably conclude this gate is out of date and widen
+# MODES. The rejection has to argue its own case at the point it fires.
+#
+# MODES itself is unchanged: `all` was rejected, not admitted.
+REJECTED_MODES = {
+    "all": "OpenCode accepts 'all' and this repo rejects it deliberately: "
+           "'all' means BOTH primary and subagent, so a role carrying "
+           "'delegation-allowlist' would have that boundary enforced or "
+           "silently widened depending on how it happened to be invoked, "
+           "which no reader can determine from the file. Nothing in this "
+           "repo needs it, and what 'all' does beyond selection is untested. "
+           "Do not widen MODES to make this pass — see "
+           "docs/development/authoring-guide.md, \"`mode: all` is rejected "
+           "on purpose, not overlooked\", which states what would reopen it",
+}
 CLIENTS = {"claude-code", "opencode"}
 
 if not lines or lines[0].strip() != "---":
@@ -523,6 +725,10 @@ elif desc_span > 1 or desc in (">", ">-", "|", "|-", ">+", "|+"):
 mode, _ = scalar("mode")
 if mode is None:
     bad.append("missing required key: mode")
+elif mode in REJECTED_MODES:
+    bad.append("mode '%s' is a real client value this repo REJECTS ON "
+               "PURPOSE, not an unrecognised string. %s"
+               % (mode, REJECTED_MODES[mode]))
 elif mode not in MODES:
     # Not inferred: OpenCode has an explicit mode field, Claude Code has
     # none, so the emitter must be told rather than guess.
@@ -856,6 +1062,11 @@ fi
 # variable is SET. Checking presence would tie this hermetic gate to one
 # machine's environment and fail on every fresh clone and CI run — a gate
 # that cannot pass on a clean checkout stops being run.
+#
+# EXTERNAL SHAPE ONLY. The authored shape's identical rule is enforced in the
+# authored-MCP pass above, in the same parse as its destructive checks, so
+# pyproject.toml is read once rather than twice (TASK-0059, B-024). Do not
+# "fix" this loop by pointing it at pyproject.toml as well.
 if [ -f .env.example ]; then
   for d in mcp-servers/*/; do
     d="${d%/}"
