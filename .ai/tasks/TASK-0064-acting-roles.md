@@ -396,8 +396,8 @@ stages or the driver does, and whether `worktree-only` is still open.
 - Result: all acceptance criteria met **except** the `git-ops` one, which is
   blocked on a permission refusal rather than on a decision — see observation
   9, which carries the exact replacement and the re-check of both loops.
-- Commit: recorded by a follow-up commit, since a commit cannot contain its
-  own hash.
+- Commit: `69e6eb2` on `agent/t0064` (recorded by this follow-up commit, the
+  same shape as `02c1cb2`, because a commit cannot contain its own hash).
 - Push: not attempted. This work is in a per-session worktree and is landed on
   `master` by the human operator (`ADR-0023`); pushing is theirs.
 
