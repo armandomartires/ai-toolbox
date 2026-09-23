@@ -325,7 +325,12 @@ before the roles land, not at runtime.
     instead, and it was performed as recorded above.
 - Result: acceptance criteria met. `skills/unattended-ops/` (12 files) and the
   regenerated `docs/registry.md` are the whole change, plus this task file.
-- Commit: `<recorded below>`
+- Commit: `143b109` — *Add skills/unattended-ops, the method the unattended-run
+  loop links to*. Recorded in a follow-up commit rather than by amending, for
+  the reason `TASK-0061` gave: an amend rewrites the hash it is trying to
+  record. The script is committed `100644`, matching every other script in
+  `skills/*/scripts/` — `core.filemode` is `false` on this checkout, so the
+  executable bit is not tracked and `bash <path>` is the portable invocation.
 - Push: **not pushed, and not rebased, deliberately.** Work was done in
   worktree `t0062` on `agent/t0062` under `ADR-0023`; the operator lands the
   concurrent branches serially and pushes from `master`. Recorded as a stated
