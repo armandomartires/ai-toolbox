@@ -616,9 +616,16 @@ bad = []
 VOCAB = {
     "read-only", "no-delegation", "delegation-allowlist", "no-webfetch",
     "worktree-only", "test-files-only", "bash-allowlist", "test-allowlist",
-    "no-force-push", "push-requires-confirmation",
+    "no-bash", "no-force-push", "push-requires-confirmation",
     "webfetch-requires-confirmation",
 }
+
+# Terms that write a `bash` permission rule. `no-bash` denies the whole tool,
+# so pairing it with any of these is a contradiction rather than a
+# refinement — and under OpenCode's last-match-wins resolution the EMITTED
+# ORDER would silently decide which one won. Rejected here instead.
+BASH_SHAPING = {"bash-allowlist", "test-allowlist", "no-force-push",
+                "push-requires-confirmation"}
 MODES = {"primary", "subagent"}
 # Values that are REAL in a client and REJECTED here, kept separate from the
 # unknown-string case so the message says which it is (TASK-0058, discharging
@@ -787,9 +794,30 @@ if has_allowlist:
     if caps and "no-delegation" in caps:
         bad.append("capabilities 'delegation-allowlist' and "
                    "'no-delegation' contradict each other")
+
 elif delegates is not None:
     bad.append("key 'delegates_to' is present without capability "
                "'delegation-allowlist' — it would have no effect")
+
+# `no-bash` denies the bash tool outright, so pairing it with any term that
+# SHAPES bash is a contradiction rather than a refinement — and under
+# OpenCode's last-match-wins resolution the emitted order would silently
+# decide which one applied.
+#
+# Kept clear of the delegation if/elif chain above deliberately: an earlier
+# version of this check was inserted between that chain's last `bad.append`
+# and its `elif`, which re-bound the `elif` to the new `if` and made every
+# role carrying `delegates_to` fail with "present without capability
+# 'delegation-allowlist'". The gate caught it on `designer-manager`
+# immediately, which is the argument for running it rather than reading it.
+if caps and "no-bash" in caps:
+    clash = sorted(BASH_SHAPING & set(caps))
+    if clash:
+        bad.append("capability 'no-bash' denies the bash tool outright and "
+                   "contradicts %s, which shape what bash may run. Under "
+                   "last-match-wins the emitted order would decide which "
+                   "applies. Use one or the other."
+                   % ", ".join("'%s'" % c for c in clash))
 
 # The two COMMAND allowlists — bash_allow and test_allow — take the same
 # argument shape and the same entry guards. Checked by one function so the

@@ -4,6 +4,7 @@ description: Turns a settled, committed task file into an ordered file-level pla
 mode: primary
 capabilities:
   - read-only
+  - no-bash
   - no-delegation
   - no-webfetch
   - worktree-only

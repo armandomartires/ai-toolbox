@@ -37,16 +37,23 @@ this repo".
 
 REFUSE, NEVER DEGRADE
 ---------------------
-ADR-0018 clause 8. Six of the eleven capability terms cannot be enforced
+ADR-0018 clause 8. **Six of the twelve** capability terms cannot be enforced
 per-agent in Claude Code, because `tools`/`disallowedTools` gate whole
 tools and have no third `ask` state. Asked to emit such a role for Claude
 Code, this script FAILS LOUDLY rather than emitting a file with the term
 dropped.
 
-(That count read "five of the nine" until TASK-0071, over a table of ten.
-The five was right for the refusal set and the nine was simply wrong. If you
-add a term, correct BOTH numbers here — a count in a docstring is the kind
-of second-hand claim TASK-0069 had to sweep across four files.)
+TWO DIFFERENT COUNTS, AND THEY ARE BOTH RIGHT. This docstring counts the
+REFUSAL set — terms whose `claude_code` is None (six). The authoring guide
+counts terms NOT enforceable in both clients (seven). The difference is
+`worktree-only`, which is PARTIAL: it emits `isolation: worktree` rather
+than refusing. Read either as the other and you will be wrong; TASK-0063
+flagged exactly that risk. If you add a term, correct both numbers, in both
+files.
+
+(The count read "five of the nine" until TASK-0071, over a table of ten,
+and "six of the eleven" until TASK-0078 added `no-bash`. A count in a
+docstring is the second-hand claim class TASK-0069 swept across four files.)
 
 That is the whole point. A dropped boundary is invisible: TASK-0036
 observed a role declaring read-only in OpenCode's syntax loading in Claude
@@ -104,6 +111,25 @@ VOCAB = {
     "no-webfetch": {
         "opencode": [("webfetch", "deny"), ("websearch", "deny")],
         "claude_code": {"deny_tools": ["WebFetch", "WebSearch"]},
+    },
+    # The FIFTH term enforceable in both clients, and the reason it earns a
+    # place rather than being a third OpenCode-only term: `read-only` binds
+    # at the TOOL layer only, so a role declaring it can still write a file
+    # through a shell. TASK-0063 shipped two such roles before TASK-0078
+    # closed it.
+    #
+    # Claude Code's mapping is sound on evidence, not analogy: TASK-0056
+    # observed `disallowedTools: Bash(git push *)` removing the ENTIRE Bash
+    # tool against a control that retained it, so the unqualified form
+    # certainly does.
+    #
+    # validate.sh rejects `no-bash` beside any term that shapes bash
+    # (bash-allowlist, test-allowlist, no-force-push,
+    # push-requires-confirmation) — denying everything and then shaping what
+    # is denied is a contradiction, and emitted order would decide it.
+    "no-bash": {
+        "opencode": [("bash", "deny")],
+        "claude_code": {"deny_tools": ["Bash"]},
     },
     # Semantically PARTIAL, not equivalent. OpenCode refuses tool calls
     # touching paths outside the worktree; Claude Code's `isolation:

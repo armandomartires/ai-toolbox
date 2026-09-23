@@ -466,6 +466,7 @@ weaker of two clients, not by either client's native expressiveness.
 | `no-delegation` | May not invoke **any** other agent. | `task: deny` | omit `Agent` from `tools` |
 | `delegation-allowlist` | May invoke **only** the roles named in `delegates_to`. Requires `mode: primary` — see below. | `task: {"*": "deny", "<name>": "allow", …}` | `tools: Agent(<name>, …)` |
 | `no-webfetch` | May not fetch network resources. | `webfetch: deny` | omit `WebFetch`, `WebSearch` from `tools` |
+| `no-bash` | May not run **any** shell command. The complement of `bash-allowlist`: that term names what is permitted, this one permits nothing. | `bash: deny` | `disallowedTools: Bash` |
 | `worktree-only` | Confined to the project worktree. | `external_directory: deny` | **partial** — `isolation: worktree` gives an isolated *copy*, which is a different guarantee. See below. |
 | `test-files-only` | May edit test paths only. | `edit` glob map | **not per-agent** |
 | `bash-allowlist` | May run **only** the commands named in `bash_allow`; everything else is denied. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **not per-agent** |
@@ -474,8 +475,9 @@ weaker of two clients, not by either client's native expressiveness.
 | `push-requires-confirmation` | Push prompts rather than proceeding. | `bash: {"git push*": ask}` | **no `ask` state exists** |
 | `webfetch-requires-confirmation` | Network fetches prompt rather than proceeding. | `webfetch: ask` | **no `ask` state exists** |
 
-**Four of the eleven are enforceable in both clients** — the first three plus
-`delegation-allowlist`. The other seven are enforceable in OpenCode only, and
+**Five of the twelve are enforceable in both clients** — the first three plus
+`delegation-allowlist` and `no-bash`. The other seven are enforceable in
+OpenCode only, and
 the reason is structural: Claude Code's `tools`/`disallowedTools` gate
 **whole tools**, so anything needing *intra-tool* granularity — which paths,
 which commands, or a third `ask` state between allow and deny — has no
@@ -551,6 +553,42 @@ an OpenCode-only capability is not an option — the emitter refuses it (clause
 **Emitted glob order matters.** OpenCode's `permission` rules are
 last-match-wins, so the emitter writes `"*": "deny"` first and the allowed
 names after. Reordering an emitted file inverts its meaning.
+
+#### `read-only` does not stop a shell — that is what `no-bash` is for
+
+**`read-only` binds at the tool layer only.** It denies `edit`/`write` in
+OpenCode and withholds `Write`, `Edit` and `NotebookEdit` in Claude Code. It
+says nothing about `bash`, so a role declaring `read-only` and nothing else
+**can still write a file with `echo x > file`**. The declared boundary does
+not hold.
+
+That was not hypothetical: `TASK-0063` shipped `task-planner` and
+`adjudicator` as `read-only` and portable, and the emitted files constrained
+no shell in either client. `TASK-0078` added `no-bash` and declared it on
+both.
+
+**`no-bash` is enforceable in both clients**, which is why it earns a place
+rather than being a third OpenCode-only term:
+
+- **OpenCode** — `bash: deny`.
+- **Claude Code** — `disallowedTools: Bash`. This is sound on evidence rather
+  than by analogy: `TASK-0056` observed that `disallowedTools: Bash(git push
+  *)` removes the **entire** `Bash` tool, against a control fixture that
+  retained it. A specifier that removes the whole tool means the unqualified
+  form certainly does.
+
+**A role wanting *some* commands uses `bash-allowlist`, not this.** The two
+are mutually exclusive and the gate rejects the pair, along with every other
+term that writes a `bash` rule — `test-allowlist`, `no-force-push`,
+`push-requires-confirmation`. Denying everything and then shaping what is
+denied is a contradiction, and under OpenCode's last-match-wins resolution
+the emitted order would decide which one won.
+
+**The ceiling, since it matters for what "read-only" can promise.** Even
+`read-only` + `no-bash` is not a sandbox: it constrains the tools the agent
+may invoke, not what the process it never gets to start would have done. It
+is the strongest read-only boundary this vocabulary can express in both
+clients, which is a different claim from "cannot affect the machine".
 
 #### The three parameterised terms deny by default
 

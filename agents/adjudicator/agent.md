@@ -4,6 +4,7 @@ description: Returns exactly one of the unattended-run loop's five verdicts on a
 mode: primary
 capabilities:
   - read-only
+  - no-bash
   - no-delegation
   - no-webfetch
   - worktree-only
