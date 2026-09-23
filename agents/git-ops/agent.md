@@ -9,6 +9,7 @@ capabilities:
   - worktree-only
   - bash-allowlist
   - no-force-push
+  - no-bypass
   - push-requires-confirmation
 clients:
   - opencode

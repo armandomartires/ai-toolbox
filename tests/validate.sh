@@ -616,7 +616,7 @@ bad = []
 VOCAB = {
     "read-only", "no-delegation", "delegation-allowlist", "no-webfetch",
     "worktree-only", "test-files-only", "bash-allowlist", "test-allowlist",
-    "no-bash", "no-force-push", "push-requires-confirmation",
+    "no-bash", "no-bypass", "no-force-push", "push-requires-confirmation",
     "webfetch-requires-confirmation",
 }
 
@@ -625,7 +625,7 @@ VOCAB = {
 # refinement — and under OpenCode's last-match-wins resolution the EMITTED
 # ORDER would silently decide which one won. Rejected here instead.
 BASH_SHAPING = {"bash-allowlist", "test-allowlist", "no-force-push",
-                "push-requires-confirmation"}
+                "no-bypass", "push-requires-confirmation"}
 MODES = {"primary", "subagent"}
 # Values that are REAL in a client and REJECTED here, kept separate from the
 # unknown-string case so the message says which it is (TASK-0058, discharging

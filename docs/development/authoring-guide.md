@@ -471,12 +471,13 @@ weaker of two clients, not by either client's native expressiveness.
 | `test-files-only` | May edit test paths only. | `edit` glob map | **not per-agent** |
 | `bash-allowlist` | May run **only** the commands named in `bash_allow`; everything else is denied. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **not per-agent** |
 | `test-allowlist` | May run **only** the test commands named in `test_allow`; everything else is denied. Merges into the same `bash` map as `bash-allowlist`, so a role may carry both. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **not per-agent** |
-| `no-force-push` | May not force-push, hard-reset or rewrite history. | `bash` deny globs | **not per-agent** |
+| `no-force-push` | May not force-push, hard-reset or rewrite history — including `--amend` reached by a **trailing** flag. | `bash` deny globs | **not per-agent** |
+| `no-bypass` | May not defeat a repo control while using a permitted command form — today that is `--no-verify`, skipping the commit gate. **Not** about destroying work; that is `no-force-push`. **Does not cover `git add -- .`** — see below. | `bash` deny globs | **not per-agent** |
 | `push-requires-confirmation` | Push prompts rather than proceeding. | `bash: {"git push*": ask}` | **no `ask` state exists** |
 | `webfetch-requires-confirmation` | Network fetches prompt rather than proceeding. | `webfetch: ask` | **no `ask` state exists** |
 
-**Five of the twelve are enforceable in both clients** — the first three plus
-`delegation-allowlist` and `no-bash`. The other seven are enforceable in
+**Five of the thirteen are enforceable in both clients** — the first three plus
+`delegation-allowlist` and `no-bash`. The other eight are enforceable in
 OpenCode only, and
 the reason is structural: Claude Code's `tools`/`disallowedTools` gate
 **whole tools**, so anything needing *intra-tool* granularity — which paths,
@@ -553,6 +554,57 @@ an OpenCode-only capability is not an option — the emitter refuses it (clause
 **Emitted glob order matters.** OpenCode's `permission` rules are
 last-match-wins, so the emitter writes `"*": "deny"` first and the allowed
 names after. Reordering an emitted file inverts its meaning.
+
+#### A trailing flag escapes a prefix allow-glob — `no-bypass` and the `--amend` extension
+
+**Observed against `opencode 1.18.31`, not reasoned** (`TASK-0082`). An
+allow-glob ending in `*` cannot constrain what follows it, so a permitted
+command form carries an unpermitted flag straight through:
+
+| Form | Before | Evidence |
+|---|---|---|
+| `git commit -m msg --amend` | **allowed, and it ran** | the base commit was gone from the log afterwards — history actually rewritten |
+| `git commit -m msg --no-verify` | **allowed** | `status: completed`, `error: None` |
+| `git add -- .` | **allowed, and it ran** | 17 paths staged, including two whole directories |
+
+Controls behaved: `git commit --amend -m msg` and `git push` were denied, so
+these were discriminating results rather than a fixture that allowed
+everything.
+
+**They are closed by two different terms, because they are two different
+failures.** `--amend` destroys work by rewriting it, which is what
+`no-force-push` already exists for. `--no-verify` and `git add -- .` destroy
+nothing: they **defeat a control while using a sanctioned form**. A role can
+reasonably need one boundary and not the other, so folding them together
+would force a role to buy a rule it does not want — `ADR-0018` clause 8.1's
+objection, applied to a deny rather than an allow.
+
+**The ordering hazard, and the one it defeated.** OpenCode resolves **last
+match wins**, and the emitter writes `"*"` first then **shortest to longest**.
+*A deny only beats an allow if it is longer.* `TASK-0045` already lost a
+boundary here: alphabetical order put `git push*: ask` after
+`git push --force*: deny`, so a force-push resolved to *ask*.
+
+**Two of the three closed. `git add -- .` did not, and is a stated
+limitation** (`TASK-0083`, verified against `opencode 1.18.31`):
+
+| Deny | Length vs its allow | Fires? |
+|---|---|---|
+| `git commit*--amend*` | 20 vs 15 | **yes**, observed |
+| `git commit*--no-verify*` | 24 vs 15 | **yes**, observed |
+| `git add -- .` | **12 vs 12** | **NO** — observed still allowed, and it staged the tree |
+
+An equal-length deny did **not** win despite being emitted after the allow.
+Any pattern long enough to win — `git add -- .*` at 13 — also matches
+legitimate dotfile paths such as `git add -- .ai/tasks/x.md`, which is most of
+what these roles commit in this repo. **So the glob layer cannot express it**,
+and the deny was **removed rather than left in place**: a deny that does not
+fire is worse than no deny, because a reader of the emitted map would believe
+the boundary holds. The rule lives in the roles' bodies instead, which is
+weaker and says so.
+
+**Any deny added to either term must be verified against the client**, not
+computed — that is `TASK-0082`'s lesson and this is what it caught.
 
 #### `read-only` does not stop a shell — that is what `no-bash` is for
 

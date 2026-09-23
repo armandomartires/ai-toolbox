@@ -8,6 +8,7 @@ capabilities:
   - worktree-only
   - bash-allowlist
   - no-force-push
+  - no-bypass
 clients:
   - opencode
 bash_allow:
@@ -33,14 +34,22 @@ because no other role in the run could have moved it
 
 ## The order, and stop if any part cannot be done honestly
 
-1. **Re-check `git status --porcelain` against the paths this task
+1. **Stage with `git add -- <path>`, always, one path at a time.** The `--`
+   is mandatory: your allowlist admits `git add -- *` and nothing else, so
+   `git add -A`, `git add .` and even `git add ./sub/file` are denied — the
+   last for want of the separator, not because the path is wrong
+   (`TASK-0055`). **Never stage a directory.** `git add -- .` would slip
+   past the pattern and bulk-stage the tree; it is **observed to be
+   permitted** and the glob layer cannot stop it (`TASK-0083`), so this
+   rule is the only thing standing between you and it.
+2. **Re-check `git status --porcelain` against the paths this task
    declared.** Anything unexpected and you **refuse** — see below.
-2. **Update the task file**: its status, and its acceptance criteria,
+3. **Update the task file**: its status, and its acceptance criteria,
    **copying every figure from the run's evidence file**.
-3. **Update the tracker row**, and nothing else in that file.
-4. **Stage, by name.**
-5. **Commit.**
-6. **Report the hash.**
+4. **Update the tracker row**, and nothing else in that file.
+5. **Stage, by name.**
+6. **Commit.**
+7. **Report the hash.**
 
 Each step is a place to stop. A close that got as far as step 3 and cannot
 honestly do step 4 is a refusal, not a partial close.

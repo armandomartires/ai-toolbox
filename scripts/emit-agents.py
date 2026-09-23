@@ -37,22 +37,23 @@ this repo".
 
 REFUSE, NEVER DEGRADE
 ---------------------
-ADR-0018 clause 8. **Six of the twelve** capability terms cannot be enforced
+ADR-0018 clause 8. **Seven of the thirteen** capability terms cannot be enforced
 per-agent in Claude Code, because `tools`/`disallowedTools` gate whole
 tools and have no third `ask` state. Asked to emit such a role for Claude
 Code, this script FAILS LOUDLY rather than emitting a file with the term
 dropped.
 
 TWO DIFFERENT COUNTS, AND THEY ARE BOTH RIGHT. This docstring counts the
-REFUSAL set — terms whose `claude_code` is None (six). The authoring guide
-counts terms NOT enforceable in both clients (seven). The difference is
+REFUSAL set — terms whose `claude_code` is None (seven). The authoring guide
+counts terms NOT enforceable in both clients (eight). The difference is
 `worktree-only`, which is PARTIAL: it emits `isolation: worktree` rather
 than refusing. Read either as the other and you will be wrong; TASK-0063
 flagged exactly that risk. If you add a term, correct both numbers, in both
 files.
 
 (The count read "five of the nine" until TASK-0071, over a table of ten,
-and "six of the eleven" until TASK-0078 added `no-bash`. A count in a
+then "six of the eleven" (TASK-0078, `no-bash`) and "six of the twelve"
+until TASK-0083 added `no-bypass`. A count in a
 docstring is the second-hand claim class TASK-0069 swept across four files.)
 
 That is the whole point. A dropped boundary is invisible: TASK-0036
@@ -197,6 +198,54 @@ VOCAB = {
             "git rebase*": "deny",
             "git filter-branch*": "deny",
             "git clean -f*": "deny",
+            # `--amend` reached by a TRAILING flag. `git commit --amend -m x`
+            # already fell through to "*": deny for want of a matching allow,
+            # but `git commit -m x --amend` slipped past `git commit -m *` and
+            # was OBSERVED rewriting a commit (TASK-0082, opencode 1.18.31).
+            # This pattern is longer than that allow, so last-match-wins gives
+            # deny -- the ordering property TASK-0045 lost a boundary to.
+            "git commit*--amend*": "deny",
+        })],
+        "claude_code": None,
+    },
+    # THIRTEENTH term. Denies defeating a repo control while using a
+    # PERMITTED command form -- which is a different failure from destroying
+    # work, and is why these are not folded into no-force-push (TASK-0083,
+    # human decision). A role can need one boundary and not the other.
+    #
+    # Both were OBSERVED escaping, not computed (TASK-0082):
+    #   - `git commit -m x --no-verify` passed the permission layer, skipping
+    #     the mandatory commit gate AGENTS.md forbids bypassing.
+    #   - `git add -- .` ran and staged 17 paths including two directories,
+    #     straight through the `git add -- *` pattern meant to prevent bulk
+    #     staging.
+    #
+    # ORDERING IS SEMANTIC HERE. A deny beats an allow only if it is LONGER,
+    # because the emitter writes "*" first then shortest-to-longest and
+    # OpenCode resolves last-match-wins. `git add -- .` is the same length as
+    # `git add -- *`, so it is NOT safe to assume; TASK-0083 verified the
+    # resolution against the client rather than reasoning about the tiebreak.
+    # WHAT IS NOT HERE, AND WHY -- `git add -- .` (TASK-0083).
+    # It was added as a deny and REMOVED after verification, because it did
+    # not fire. Observed against opencode 1.18.31: with `"git add -- .":
+    # deny` emitted AFTER `"git add -- *": allow`, `git add -- .` was still
+    # ALLOWED and staged the tree.
+    #
+    # The two denies that DO fire are longer than the allow they must beat
+    # (`git commit*--amend*` is 20 against `git commit -m *` at 15). The
+    # bulk-stage one is exactly as long as `git add -- *` -- 12 each -- and an
+    # equal-length deny did not win despite being emitted later. Any pattern
+    # long enough to win (`git add -- .*`, 13) also matches legitimate dotfile
+    # paths such as `git add -- .ai/tasks/x.md`, which is most of what these
+    # roles commit in THIS repo.
+    #
+    # So it is left to the roles' bodies and recorded as a stated limitation.
+    # A deny that does not fire is worse than no deny: a reader of the emitted
+    # map would believe the boundary holds. That is the false-boundary defect
+    # class this sprint found four times.
+    "no-bypass": {
+        "opencode": [("bash", {
+            "git commit*--no-verify*": "deny",
         })],
         "claude_code": None,
     },
