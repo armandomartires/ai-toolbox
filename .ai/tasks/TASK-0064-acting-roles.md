@@ -83,6 +83,23 @@ them as universal.
 | `park-steward` | subagent | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only`, `bash-allowlist`, `no-force-push` | opencode |
 | `run-scribe` | subagent | `no-delegation`, `no-webfetch`, `worktree-only`, `bash-allowlist` | opencode |
 
+> **The `mode` column read `subagent` for all five when this brief was
+> written, and that was wrong — the same correction `TASK-0063` made to its
+> own table.** `ADR-0022` clause 5.1: every role a driver invokes via
+> `opencode run --agent` must be `primary`, because a `subagent`-mode role is
+> **silently replaced by the default agent**, which answers with well-formed
+> stdout and exit 0 (`TASK-0055` F1). All five of these roles are
+> driver-invoked — `loops/unattended-run/loop.md` names the driver as the
+> actor holding control flow, and **no role in this run delegates to another**
+> (all nine carry `no-delegation`). Shipped as **`primary`**.
+>
+> This removes the premise of one sentence in **Minimal context** above: *"a
+> subagent cannot spawn one: OpenCode's `subagent_depth` defaults to 1"*. The
+> conclusion survives on two independent grounds that do not depend on mode —
+> `git-ops` declares `read-only`, so it **cannot** edit a task file or a
+> tracker whoever calls it; and the closer is invoked by the driver, not by a
+> peer role, so there is no delegation edge to use.
+
 - Fix `agents/git-ops/agent.md`: narrow or supplement `git *` so `git add -A`,
   `git add .`, `git checkout --`, `git clean` and `git stash drop` are denied.
   **This is a behaviour change to a role two shipped loops already use** — treat
@@ -177,18 +194,226 @@ Record here anything the bindings must know: F4's outcome, whether the closer
 stages or the driver does, and whether `worktree-only` is still open.
 
 ## Status
-- Status: planned
+- Status: done, with one carried-over item — see **`git-ops` was not fixed**
 - Owner: agent
 - Created: 2026-09-23
 - Updated: 2026-09-23
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-23
+- Agent: Claude Opus 5 (1M context), in worktree `ai-toolbox-worktrees/t0064`
+  on `agent/t0064` (`ADR-0023`).
 - Actions:
+  - Authored `agents/{implementer,gate-runner,closer,park-steward,run-scribe}/agent.md`
+    with the capability profiles this Scope table specifies, **`mode: primary`
+    for all five** (see the correction above), `clients: opencode` for all
+    five.
+  - Emitted for **both** clients into a scratch directory and read every
+    emitted `bash` map rather than trusting the sort key.
+  - Proved the refusal path on a scratch **copy** of `agents/`.
+  - `scripts/sync-registry.sh`; five new Agents rows, all showing `opencode`.
+  - **Attempted and failed** to narrow `agents/git-ops/agent.md` — recorded
+    below.
+
 - Observations:
+
+  **1. F4 was CONFIRMED (with a constraint), so the closer stages itself.**
+  `TASK-0055` measured, against `opencode 1.18.31`, that under
+  `{"*": deny, "git add -- *": allow}`: `git add -- a.txt` is **permitted**
+  and `git add -A`, `git add .` **and `git add ./sub/b.txt`** are all
+  **denied**. The third fallback in **Minimal context** — the driver stages
+  and the closer keeps only `git commit` — is therefore **not needed**, and
+  no new vocabulary term was required. The mandatory `--` form is written
+  into the closer's body as an instruction, per `ADR-0022` clause 5.4.
+
+  **2. Every critical glob resolution, read out of the emitted OpenCode files
+  and re-resolved under last-match-wins** (`fnmatch`, in emission order):
+
+  | Role | Command | Resolves to |
+  |---|---|---|
+  | `closer` | `git add -A` | **deny** (matches `"*"` only) |
+  | `closer` | `git add .` | **deny** (matches `"*"` only) |
+  | `closer` | `git add ./sub/f.txt` | **deny** — the F4 constraint, by design |
+  | `closer` | `git add -- sub/f.txt` | allow |
+  | `closer` | `git push` / `git push origin master` | **deny** (matches `"*"` only — **not** `ask`) |
+  | `closer` | `git commit -m "x"` | allow |
+  | `closer` | `git commit -am "x"` | **deny** |
+  | `closer` | `git commit --amend` | **deny** |
+  | `park-steward` | `git stash drop` | **deny** |
+  | `park-steward` | `git stash clear` | **deny** |
+  | `park-steward` | `git stash push -m …` | allow |
+  | `park-steward` | `git checkout -- a.txt` / `git clean -fd` / `git reset --hard` | **deny** |
+  | `implementer` | `git add -- a`, `git commit -m "x"`, `pytest` | **deny** (read-only git verbs only) |
+  | `gate-runner` | `pytest`, `tests/validate.sh` | **deny**; only the entry point is allowed |
+  | `run-scribe` | `git commit -m "x"` | **deny** |
+
+  Every emitted `bash` map **begins `"*": deny`**, and every narrowing deny
+  falls **after** the allow it narrows — verified by reading, not assumed.
+  Two allow patterns the emitter's length ordering places *after* a deny were
+  checked specifically (`git commit -m *` at 15 chars vs `git clean -f*` at
+  13): they match disjoint commands, so no deny is inverted.
+
+  **3. `git commit -m *`, not `git commit*`, in both the closer and the
+  intended `git-ops` fix.** `git commit*` would admit `git commit -am`, which
+  stages every tracked modification and walks straight around the `git add`
+  boundary — the same hole in a different verb. `--amend` falls out denied
+  too, which is correct: amending is a history rewrite and `AGENTS.md`
+  requires authorization in the task file. Narrowing an allowlist is not the
+  widening `B-021`'s entry forbids.
+
+  **4. The `gate-runner`'s one choke point needed a name, and naming it is a
+  constraint on every binding.** The binding slot is `gate_entry_point`
+  (`skills/unattended-ops/templates/binding.md`), filled per project, so the
+  role cannot know the path; but `bash_allow` must be a concrete pattern. The
+  role allowlists **`'*run-gate.sh*'`** and its body states the convention:
+  the binding's `gate_entry_point` must invoke a script named `run-gate.sh`,
+  and **status polling goes through the same script**, so the boundary stays
+  one line. **S10.1 must satisfy this or change the role's allowlist here, at
+  authoring time, with a reason** — never widen it to fit a binding. A
+  leading-wildcard pattern was chosen over an anchored one only because the
+  path is unknowable at authoring time; it is in the class the authoring
+  guide blesses (`*pytest*`), and the ceiling is the guide's own: the term
+  bounds what the agent may type, not what the script executes.
+
+  **5. `gate-runner` is `read-only` and still owns step 7 — the same shape as
+  `park-steward`.** `read-only` gates the **edit and write tools**; the
+  evidence file is written by the entry point as the gate runs
+  (`references/long-gates.md`: *"Evidence written by the gate, read by the
+  agent"*), and the role reads and reports it. Its body states the one
+  consequence that matters: **if a gate's result did not reach the evidence
+  file, the remedy is re-running the gate, never transcribing it.** This is a
+  second constraint S10.1's bindings inherit.
+
+  **6. `park-steward`'s journal line is `run-scribe`'s to write.** Loop step
+  11 expects *"one journal line"*; step 12 gives the journal one owner. The
+  role therefore **reports** the stash message and the captured paths and does
+  not write them, which is what makes `read-only` coherent rather than a
+  contradiction to work around.
+
+  **7. `closer` versus `git-ops`: they overlap on the git verbs and nothing
+  else, and neither should be retired.** `git-ops` is `read-only` (`edit:
+  deny`, `write: deny`) so it **cannot** do the task-file and tracker half of
+  a close; its `git push` is `ask`, which is right with a human present and
+  **auto-denies with a false human attribution** without one; and it is a
+  `subagent` serving two interactive loops. The closer is `primary`,
+  driver-invoked on an `accept` only, holds edit rights, and has `git push`
+  **absent from its allowlist and therefore denied** — stated in its body so
+  the absence of `push-requires-confirmation` does not read as an oversight.
+
+  **8. `B-021` is not closed by this task — and it was already closed by
+  `TASK-0071`.** The brief's acceptance criterion asks this file to *"state
+  plainly that B-021 is not closed"*; the accurate statement is that
+  `gate-runner`'s one-choke-point shape **routes around** the defect class
+  (`references/long-gates.md` says so in those words) and closes nothing,
+  while `B-021` itself — `qa-test`'s description overstating its boundary —
+  was closed by `TASK-0071`'s `test-allowlist` term, per `TODO.md`. `qa-test`
+  is untouched here.
+
+  **9. `git-ops` was NOT fixed. The edit was refused by the session's
+  permission layer, twice, as *"Modify Shared Resources"*.** Nothing about
+  the fix changed; the file is byte-identical to `master`. So **`git add -A`,
+  `git add .`, `git checkout -- <path>` and `git stash drop` remain permitted
+  for `git-ops` today**, exactly as `TASK-0055` recorded them. Confirmed by
+  re-resolving its emitted map: `git add -A` → **allow**, `git stash drop` →
+  **allow**, `git checkout -- a.txt` → **allow**, `git clean -fd` → deny,
+  `git push` → ask.
+
+  The intended replacement, ready to apply verbatim, is:
+
+  ```yaml
+  bash_allow:
+    - 'git status*'
+    - 'git diff*'
+    - 'git log*'
+    - 'git show*'
+    - 'git branch*'
+    - 'git remote*'
+    - 'git rev-parse*'
+    - 'git add -- *'
+    - 'git commit -m *'
+  ```
+
+  **Both shipped loops were re-checked against it and still work.**
+  `loops/project-build/` step 7 and `loops/design-brief/` step 7 need
+  `git status`, `git diff --stat`, `git log --oneline -1`, explicit staging
+  and one `git commit -m …` — all present. `git push*` is deliberately
+  **not** in the list: `push-requires-confirmation` emits `"git push*": ask`,
+  which is longer than `"*"` and wins under last-match-wins, so push keeps
+  asking exactly as it does today. The two loops' bodies would need one
+  sentence each only if they ever relied on `git add <path>` without `--`,
+  and neither states a staging form.
+
+  **Carried over as an acceptance criterion that is NOT met.** This is a
+  behaviour change to a role two shipped loops use, so it wants a human's
+  hand on it in any case; it should not be smuggled into a later task's diff.
+
+  **10. Stale or wrong things found, not edited (out of scope).**
+  - This brief's **Outputs** table forecasts *"Fifteen agent rows; eight
+    showing opencode only"*. Fifteen rows is right; the opencode-only count
+    is **eleven** (`closer`, `designer-manager`, `gate-runner`, `git-ops`,
+    `implementer`, `park-steward`, `preflight`, `qa-test`, `refuter`,
+    `review`, `run-scribe`). Eight was never reachable — six roles were
+    already OpenCode-only before this task. The **seven of nine** claim in
+    `loops/unattended-run/loop.md` is the one that matters, and it is now
+    **true**: `task-planner` and `adjudicator` are the two portable ones.
+  - This brief's **Minimal context** sentence about `subagent_depth`, whose
+    premise the `mode` correction removes — annotated above rather than
+    deleted.
+  - Nothing in `loops/unattended-run/loop.md` or `skills/unattended-ops/` was
+    found wrong.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` → `validate.sh: OK`.
+  - `python3 scripts/emit-agents.py opencode <scratch>` → exit **0**, fifteen
+    roles emitted.
+  - `python3 scripts/emit-agents.py claude-code <scratch>` → exit **0**, four
+    emitted (`adjudicator`, `critic`, `ideator`, `task-planner`), eleven
+    reported `agent skipped: … (not in its clients list)`.
+  - **Refusal proof.** On a scratch **copy** of `agents/`, all five roles'
+    `clients` widened to include `claude-code`, then
+    `python3 scripts/emit-agents.py claude-code out` → exit **1**, five
+    refusals on stderr, and **no file written for any of the five** (`out/`
+    held only `adjudicator.md`, `critic.md`, `ideator.md`,
+    `task-planner.md`). Verbatim, for `closer`:
+
+    > `  EMISSION REFUSED: role 'closer' declares 'bash-allowlist', which
+    > Claude Code cannot enforce per-agent (tools/disallowedTools gate whole
+    > tools and have no 'ask' state). Narrow its 'clients' list to opencode,
+    > or see ADR-0018 clause 8.4 before adding a workaround.`
+
+    Identical for `gate-runner`, `implementer`, `park-steward` and
+    `run-scribe`, only the role name changing. `bash-allowlist` is the term
+    that fires first for all five, so `no-force-push` is never reached — the
+    refusal is per-role, not per-term.
+  - `scripts/sync-registry.sh` then re-run → `docs/registry.md` idempotent;
+    five new rows, all `opencode`.
+  - Not run: `scripts/install.sh`. Nothing was emitted to `~/.claude/agents/`
+    or `~/.config/opencode/agents/`, so those targets are **stale** with
+    respect to this commit and nothing in this repo can detect that
+    (`ADR-0018` clause 4).
+
+- Result: all acceptance criteria met **except** the `git-ops` one, which is
+  blocked on a permission refusal rather than on a decision — see observation
+  9, which carries the exact replacement and the re-check of both loops.
+- Commit: recorded by a follow-up commit, since a commit cannot contain its
+  own hash.
+- Push: not attempted. This work is in a per-session worktree and is landed on
+  `master` by the human operator (`ADR-0023`); pushing is theirs.
+
+### What the bindings must know (for `REVIEW-0011` and S10)
+
+- **F4 confirmed**: the closer stages itself with `git add -- <path>`; the
+  driver does **not** stage. No new vocabulary term was needed.
+- **`gate_entry_point` must invoke a script named `run-gate.sh`**, and the
+  poll must go through the same script. This is the only convention these five
+  roles impose on a binding.
+- **The gate entry point writes the evidence file**; the `gate-runner` reads
+  it and never hand-writes a result.
+- **`worktree-only` is still open** (`TASK-0040`). It costs nothing here —
+  all five roles are `opencode`, where the term is `external_directory: deny`
+  and unambiguous. It would bite immediately if any of them were ever widened
+  to `claude-code`, because `isolation: worktree` gives an isolated **copy**,
+  which is the wrong confinement for a role whose output the next role must
+  see and whose commit must reach the real tree.
+- **`git-ops` still permits `git add -A`.** Unfixed here; see observation 9.
