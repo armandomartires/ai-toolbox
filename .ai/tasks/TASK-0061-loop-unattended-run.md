@@ -104,23 +104,25 @@ Gated column, and which is exactly why they must be right by hand.
 
 ## Acceptance criteria
 
-- [ ] The three required headings are present and the gate passes.
-- [ ] `name` matches the directory; `description` is one line and not folded.
-- [ ] Every step is numbered, names its actor, and states an Expected.
-- [ ] `## Trigger` states what the loop is **not** for, and names both sibling
+- [x] The three required headings are present and the gate passes.
+- [x] `name` matches the directory; `description` is one line and not folded.
+- [x] Every step is numbered, names its actor, and states an Expected.
+- [x] `## Trigger` states what the loop is **not** for, and names both sibling
       loops as the alternatives.
-- [ ] The human-in-session requirement is stated in all three tenses.
-- [ ] The 2-attempt bound is stated **with its reason and its divergence from 3
+- [x] The human-in-session requirement is stated in all three tenses.
+- [x] The 2-attempt bound is stated **with its reason and its divergence from 3
       acknowledged**.
-- [ ] Every failure path carries a bound or an escalation.
-- [ ] Commit-without-push is stated, with the note that push is the operator's.
-- [ ] No rule from `AGENTS.md` or from the skill is restated — only linked.
-- [ ] `docs/registry.md` regenerated.
+- [x] Every failure path carries a bound or an escalation.
+- [x] Commit-without-push is stated, with the note that push is the operator's.
+- [x] No rule from `AGENTS.md` or from the skill is restated — only linked.
+- [x] `docs/registry.md` regenerated.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` then `git diff --exit-code docs/registry.md`
+- [x] `tests/validate.sh` — `validate.sh: OK`, exit 0.
+- [x] `scripts/sync-registry.sh` then `git diff --exit-code docs/registry.md`
+      — the script is idempotent; a second run produced no further change, and
+      the only diff against `HEAD` is the one new Loops row.
 
 ## Risks and rollback
 
@@ -137,32 +139,153 @@ Gated column, and which is exactly why they must be right by hand.
 
 ## Outputs / handover
 
-*Forecast until verified.*
+*Verified 2026-09-23.*
 
 | Artifact | End state |
 |----------|-----------|
-| `loops/unattended-run/loop.md` | Fourteen numbered steps with Expecteds; trigger with negatives and the three-tense human statement; exit conditions with bounds and the escalate-without-retry list |
-| `docs/registry.md` | One new Loops row |
-| `agents/` | Unchanged — the roles are 0063/0064 |
+| `loops/unattended-run/loop.md` | Fourteen numbered steps with Expecteds; trigger with negatives and the three-tense human statement; exit conditions with bounds and the escalate-without-retry list. **Verified.** |
+| `docs/registry.md` | One new Loops row (`unattended-run`). **Verified.** |
+| `agents/` | Unchanged — the roles are 0063/0064. **Verified.** |
 
 **Next task starts here**: `TASK-0062` writes `skills/unattended-ops/` to own
-the method this loop links to. Record here every link the loop makes to a skill
-reference that does not exist yet — those are `TASK-0062`'s required contents,
-not suggestions.
+the method this loop links to.
+
+### What the loop links to in `skills/unattended-ops/` and does not yet exist
+
+These are `TASK-0062`'s **required contents**, not suggestions. Each is a live
+dangling reference from `loops/unattended-run/loop.md` today:
+
+1. **The harness's five rules.** Named in the loop's header list, defined
+   nowhere in this repo. `ADR-0022` describes two of them in passing (rule 2,
+   the gate-command boundary made structural; rule 3, the detaching gate entry
+   point behind `F7`) but does not enumerate all five.
+2. **The five verdict definitions** — `accept`, `retry`, `park`,
+   `raise-adhoc`, `halt-run`. Step 9 requires *"exactly one of the five
+   verdicts defined in `skills/unattended-ops/`"* and deliberately does not
+   define them, so the enum has one owner. Until the skill lands, step 9 cites
+   an enum that exists only in `ADR-0022`'s Context section and in
+   `asset-management`'s `ADJUDICATION_SCHEMA`.
+3. **The evidence rule** — that the run's evidence file is the only admissible
+   source for a figure, and that a gate nobody read there did not run. Steps 7,
+   8 and 10 all depend on it.
+4. **The binding contract** — what a binding must supply, and that every
+   unfilled slot reads `unknown`, which is a stop (`PLAN-0006`).
+5. **The binding-completeness checker** — the script asserting that a binding
+   declares every numbered step of this loop and states no rule of its own
+   (`ADR-0022` clause 1.4, and its Consequences: *"the skill ships a checker
+   asserting a binding declares every numbered step"*). Note `ADR-0022` leaves
+   **where the binding templates live inside the skill** and **whether the
+   checker is gated** open, and requires the checker to carry the negative
+   wiring-claim form or `validate.sh`'s wiring-claim check fails the commit.
+
+### What the loop names in `agents/` and does not yet exist
+
+`TASK-0063` and `TASK-0064` own these. The loop names **nine** roles, matching
+`ADR-0022`'s and `PLAN-0006`'s count, and says so in the file so a tenth is a
+divergence to reconcile rather than an addition to absorb:
+
+`preflight`, `task-planner`, `implementer`, `gate-runner`, `refuter`,
+`adjudicator`, `closer`, `park-steward`, `scribe`.
+
+Three of these names are fixed by `ADR-0022` itself (`task-planner`,
+`adjudicator`, `gate-runner`); the other six are set here, by the loop, which
+is the point of authoring the loop first. `scribe` owns **both** the
+append-only journal (step 12) and the re-derived handover (step 14) so the
+record and its summary have one owner — the choice that keeps the count at
+nine rather than ten.
+
+Two constraints the roles inherit from this loop rather than from the ADR:
+`closer` is the **only** role with git or tracker rights and runs only after an
+`accept`; and every role the driver invokes must be selectable as a *primary*
+agent (`ADR-0022` clause 5.1), which the loop makes a **preflight check**
+rather than an assumption.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-23
 - Updated: 2026-09-23
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-23
+- Agent: Claude Opus 5 (1M context), in worktree `t0061` on branch `agent/t0061`
+  (`ADR-0023`; two other sessions were live in sibling worktrees).
 - Actions:
+  - Verified the input gate: `.ai/decisions/0022-*.md` reads
+    **`Accepted — 2026-09-23`**, ratified as written, with a fifth Decision
+    clause added after the spikes. Gate cleared.
+  - Read both sibling loops (`design-brief`, `project-build`) and
+    `release-check` for voice, structure and exit-condition vocabulary; the
+    Loops section of `docs/development/authoring-guide.md` for the gated
+    schema; `loops/_template/loop.md`; `ADR-0019` clauses 1–3 in full;
+    `PLAN-0006`.
+  - Read `asset-management/.claude/workflows/arm-autopilot.js` **read-only**,
+    for its control flow only — preflight, the `while (attempt < 2)` cycle,
+    `parkCleanup`, `journal`, the batched stage gates, the handover. Its
+    prompts were not copied; they are a binding's content and are
+    Claude-Code-shaped (`ADR-0022` clause 1.4).
+  - Wrote `loops/unattended-run/loop.md`: frontmatter, a header link list, a
+    provenance section, `## Trigger`, fourteen numbered steps each naming an
+    actor and stating an Expected, and `## Exit conditions`.
+  - Ran `scripts/sync-registry.sh`, then `tests/validate.sh`.
 - Observations:
+  - **Two ADR facts are structural in the loop rather than described by it.**
+    The null refuter is made to **fail closed** at step 8 — the driver
+    synthesises `refuted: true` on a null, empty or unparseable return and
+    passes it on as an objection — and this is explicitly *not* a mechanical
+    failure and *not* retried, so it cannot be silently re-rolled into a pass.
+    The `ask`-auto-denies finding is placed in `## Trigger`'s "during" tense,
+    as the reason asking is not merely useless unattended but actively
+    misleading: it records a human decision that never happened. The loop
+    therefore states that boundaries are declared as explicit denials, never
+    as prompts, and never uses the word "confirm" for an unattended step.
+  - **Three bounds exist and are deliberately not merged**: 2 acceptance
+    attempts per task, 3 mechanical retries of a failing step, 1 reprompt of an
+    unparseable adjudicator verdict. The 2 is stated with its reason and with
+    its divergence from this repo's standing 3 acknowledged in the loop file,
+    per `design-brief`'s precedent that the number has one owner.
+  - **A mechanical failure parks the task and continues the run**; it does not
+    end the run. Only `halt-run`, a preflight halt, and a secret already
+    committed this run end it. `halt-run` still runs step 14, because a halted
+    run with no handover is indistinguishable from a crashed one.
+  - **`git add -- <path>` is written into step 10 as a command *form***, with
+    the reason (`git add ./sub/file` is denied for want of the `--`), because a
+    role told only "stage what you changed" will be blocked doing the right
+    thing and may conclude staging is broken.
+  - **Preflight checks the two silent failures**, since neither is visible once
+    the run is under way: an unresolvable model (hangs with no output, no
+    error, no exit) and a non-primary role (silently replaced by the default
+    agent, well-formed output, exit 0).
+  - **Deliberately not in the loop.** The five rules, the five verdict
+    definitions, the evidence rule, the binding contract and its checker —
+    all `skills/unattended-ops/` (`TASK-0062`), linked not restated. The roles'
+    permission maps and `mode:` values — `TASK-0063`/`TASK-0064`. Any gate
+    command, any worklist, any tracker path, any commit-message shape — a
+    binding's. `AGENTS.md`'s rules are cited, never copied.
+  - **Nothing stale found in the brief.** Its one forecast that needed
+    resolving was the role count: `ADR-0022` and `PLAN-0006` both say nine, and
+    the sequence as written naturally wanted ten, so journalling and the
+    handover were given to a single `scribe`. Recorded in Outputs rather than
+    silently absorbed.
+  - The registry conflict the brief predicted is real but not mine to resolve:
+    this commit adds one Loops row; another session is changing the Agents
+    section of the same generated file in parallel.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `bash tests/validate.sh` → `validate.sh: OK`, exit 0.
+  - `bash scripts/sync-registry.sh` → `Registry written to docs/registry.md`;
+    diff against `HEAD` is exactly one added Loops row; a second run produced
+    no further change (idempotent).
+  - Secret scan of the diff: nothing found. No command, credential, path
+    outside this repo, or client-specific string was introduced.
+  - No new validation was added, so `release-check` step 2 (prove a new check
+    bites) does not apply.
+- Result: acceptance criteria met; `loops/unattended-run/loop.md` and the
+  regenerated `docs/registry.md` are the whole change. `agents/` untouched.
+- Commit: `792eb12` — *Add loops/unattended-run for ADR-0022 unattended task
+  runs* (hash written back and the commit amended, per
+  `loops/release-check/` step 8).
+- Push: **not pushed, deliberately.** This work was done in worktree `t0061`
+  on `agent/t0061` under `ADR-0023`; the operator lands all three concurrent
+  branches serially by rebase and pushes from `master`. Recorded as a stated
+  handover step rather than a missing one.
