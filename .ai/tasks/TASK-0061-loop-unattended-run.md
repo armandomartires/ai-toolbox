@@ -282,9 +282,15 @@ rather than an assumption.
     bites) does not apply.
 - Result: acceptance criteria met; `loops/unattended-run/loop.md` and the
   regenerated `docs/registry.md` are the whole change. `agents/` untouched.
-- Commit: `792eb12` — *Add loops/unattended-run for ADR-0022 unattended task
-  runs* (hash written back and the commit amended, per
-  `loops/release-check/` step 8).
+- Commit: `ed18c52` — *Add loops/unattended-run for ADR-0022 unattended task
+  runs*. Recorded in a follow-up commit rather than by amending, because an
+  amend changes the hash it is trying to record: `loops/release-check/` step 8
+  says *"write the resulting hash back into the task file and amend"*, and an
+  amend that rewrites the commit invalidates the figure just written. This
+  repo's own recent history already uses the follow-up form (*"Record TASK-0077
+  commit hash and confirmed push"*), so the practice is followed rather than
+  the literal wording. **A defect in step 8 worth raising**, noted here rather
+  than fixed, since `loops/release-check/loop.md` is outside this task's scope.
 - Push: **not pushed, deliberately.** This work was done in worktree `t0061`
   on `agent/t0061` under `ADR-0023`; the operator lands all three concurrent
   branches serially by rebase and pushes from `master`. Recorded as a stated
