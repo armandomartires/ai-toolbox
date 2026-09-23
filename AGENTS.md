@@ -31,8 +31,14 @@ services, secrets.
 - Shell: Bash, POSIX-safe where possible. Repo developed on WSL.
 
 ## Commands
-- Prerequisites: Bash and `python3` (the scripts below parse
-  `server.json` manifests with it; do not grep JSON).
+- Prerequisites: Bash and **`python3` ≥ 3.11**. The scripts below parse
+  `server.json` manifests with it (do not grep JSON), and since `TASK-0059`
+  `tests/validate.sh` also parses `pyproject.toml` with `tomllib`, which is
+  standard library only from **3.11**. On an older interpreter the gate
+  **fails loudly rather than skipping that check** — a gate that quietly does
+  nothing is worse than no gate, because it is still trusted (`ADR-0009`).
+  This is the floor for *running the gate*; it is unrelated to the
+  `requires-python = ">=3.10"` an authored MCP server targets.
 - Environment: copy `.env.example` to `.env` (gitignored — **never commit
   it**) or export the variables from your shell. All of it is optional for
   local work; `tests/validate.sh` is hermetic and passes with nothing set.

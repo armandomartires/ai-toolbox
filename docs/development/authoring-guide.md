@@ -77,14 +77,64 @@ mcp-servers/_template/
 | Entry point | `[project.scripts] template-mcp-server = "template_mcp_server.server:main"`, with `main()` calling `mcp.run()`. | **no** |
 | Tests | `tests/test_server.py`, importing the tool function directly. **pytest is not declared anywhere and nothing in this repository runs it** — "tests required" is a convention here, not a gate. | **no** |
 
-**What `tests/validate.sh` checks on an authored server is the marker file,
-and nothing else.** It never reads `pyproject.toml`. In particular the
-destructive-capability gate and the `.env.example` completeness check both
-parse `server.json`, so they **never see an authored server at all** — raised
-as `B-024`. The first authored server this repo plans to ship is a command
-runner, the most destructive surface it could have, which is why `ADR-0022`
-makes closing `B-024` an acceptance criterion of that server's own task
-rather than a follow-up.
+### `[tool.ai-toolbox]` — the authored shape's declarations, and they are gated
+
+**This section read *"what `tests/validate.sh` checks on an authored server is
+the marker file, and nothing else… it never reads `pyproject.toml`"* until
+`TASK-0059` closed `B-024`.** That is now false in both halves, and it is
+corrected here rather than left, because a guide asserting a gate does *not*
+check something is the same false-wiring-claim class this guide polices. The
+order was also inverted — the gate was written before this section defined
+what it enforces, against `ADR-0008` — so what follows is read back off the
+implementation rather than prescribed to it.
+
+An authored server declares in `pyproject.toml`, under `[tool.ai-toolbox]`,
+the same facts an external server declares in `server.json`:
+
+| Key | Meaning | Gated |
+|---|---|---|
+| `capabilities.destructive` | Required. A **real TOML boolean**, not the string `"true"` — the gate rejects the quoted form by name, because a string is truthy and would pass a laxer check silently. | **yes** |
+| `capabilities.destructive_tools` | Required and non-empty when `destructive` is true. | **yes** |
+| `authorization.granted` | Must be `true` when `destructive` is true. | **yes** |
+| `authorization.by`, `.date` | Required when `destructive` is true. | **yes** |
+| `authorization.task` | Repo-relative path to the task file carrying the authorization; the gate asserts **the file exists**. An authorization pointing at nothing is not an authorization. | **yes** |
+| `environment.<VAR>.required` | Every variable marked required must appear in `.env.example`. | **yes** |
+
+`mcp-servers/_template/pyproject.toml` models the block, placed **below
+`[project]`** so `sync-registry.sh`'s first-match `grep '^name = '` still
+reads the project's name rather than the tool table's.
+
+**The gate parses this with `tomllib`, and refuses to skip.** If `tomllib` is
+absent (python3 < 3.11) the pass **fails loudly** rather than passing quietly:
+a gate that does nothing on an older interpreter is a gate that cannot fail.
+That raises this repo's floor for *running the gate* to **python3 ≥ 3.11** —
+stated in `AGENTS.md`'s Commands section. It does **not** change the
+`requires-python = ">=3.10"` an authored server targets; those are different
+questions, and conflating them would be a third false claim in this section.
+
+**Not grepped, deliberately.** Nesting and booleans are not grep-shaped
+questions: `^destructive = false` would match that text in a comment, in an
+unrelated `[tool.*]` table, or in a `[project]` key of the same name.
+`sync-registry.sh`'s line-prefix `grep` is the live precedent for why —
+it is sound only for a single-line double-quoted value at column 1.
+
+**No shape rule is weakened.** A directory carrying both marker files still
+fails `AMBIGUOUS SHAPE` (`ADR-0005`), which was the resolution `B-024`
+explicitly forbade taking.
+
+**One asymmetry, carried deliberately:** the destructive half runs on
+`_template*` directories (parity with the external manifest check, which also
+validates the template for schema drift); the `.env.example` half does not
+(parity with the external environment loop). Verified by fixture rather than
+assumed.
+
+> **Still `server.json`-only, and it will go false when the first authored
+> server ships:** the *wiring-section* gate added by `TASK-0073` — the one
+> behind *"The first two triggers are checked"* under **When a server owes a
+> per-client wiring section** — reads manifests only. An authored server with
+> a required variable or a destructive tool would owe a wiring section and not
+> be asked for one. Found by `TASK-0059` and named rather than scope-crept;
+> `TASK-0067` is the task that makes it matter.
 
 **`tests/smoke-mcp.sh` skips authored servers entirely.** It iterates
 `mcp-servers/*/` and `continue`s past any directory without a `server.json`,
@@ -358,12 +408,24 @@ reasons.
    does with `delegation-allowlist` on it. Admitting a schema value on a third
    of the evidence is what `ADR-0008`'s definition-first order exists to stop.
 
-**The rejection is loud, and it fires in the right place.**
-`tests/validate.sh` fails the commit with `mode 'all' is not one of: primary,
-subagent` — in this repository, at authoring time, rather than in a client at
-run time. Gated: **yes**, by `MODES` in `tests/validate.sh` as it stands.
-`TASK-0059` changes no value in that set; what it owes is that the message
-reads as a deliberate rejection rather than an unrecognised string.
+**The rejection is loud, and it fires in the right place** — in this
+repository, at authoring time, rather than in a client at run time. Gated:
+**yes**. `TASK-0059` changed no value in `MODES`; it added `REJECTED_MODES`
+beside it, so `all` now fails as a **named refusal** rather than as a caught
+typo:
+
+> `mode 'all' is a real client value this repo REJECTS ON PURPOSE, not an
+> unrecognised string. OpenCode accepts 'all' and this repo rejects it
+> deliberately: 'all' means BOTH primary and subagent, so a role carrying
+> 'delegation-allowlist' would have that boundary enforced or silently widened
+> depending on how it happened to be invoked… Do not widen MODES to make this
+> pass.`
+
+An actual typo — `mode: primry` — still gets the original
+`is not one of: primary, subagent`, which is the distinction the split exists
+to make. This paragraph quoted the old message verbatim until `TASK-0059`
+landed; corrected here, since a guide quoting a string the gate no longer
+emits is a claim the repository falsifies.
 
 **What would reopen it**, so this is a decision with a condition rather than a
 wall: a role that genuinely must be *both* a driver target and a delegate.
