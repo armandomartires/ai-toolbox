@@ -8,6 +8,47 @@ closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`);
 then S9's two spikes and `ADR-0022`'s reconciliation (`TASK-0055`,
 `TASK-0056`, `TASK-0057`).
 
+## S9 is complete but NOT closed — one exit criterion is unmet
+
+**`REVIEW-0011`, 2026-09-23.** The sprint delivered its portable core: one
+loop, one skill with seven references and a working checker, nine roles, two
+vocabulary decisions, three closed backlog items, and a twelfth capability
+term that exists because the sprint caught itself shipping a boundary that
+did not hold.
+
+**Six of seven exit criteria are met. Criterion 7 is not** — and it is the one
+the pre-committed question targeted. `skills/unattended-ops/SKILL.md` states
+the OpenCode-first asymmetry plainly; **none of the three
+`configs/*/README.md` mentions the unattended harness at all.** The question
+guarded against describing three clients as equivalent; what happened is
+**silence, which reads as equivalent by omission**. A Claude Code user reading
+their own wiring snapshot learns nothing about seven roles they will never
+receive.
+
+**`REVIEW-0011` recommends fixing that before closing S9**, rather than
+closing over a stated exit criterion. **Closure is a human decision**, as
+promotion was.
+
+**The sprint's defining finding: the false-boundary defect class appeared four
+times** — `qa-test` (`B-021`), `designer-manager` (`B-028`), `read-only` not
+stopping a shell, and `git-ops`'s `no-force-push` covering push only. Four
+mechanisms, one shape: a component's self-description outrunning its
+enforcement. **Three were caught by resolving what a declaration actually
+produces rather than reading the declaration**, which should now be the
+standard move for capability work.
+
+**Three holes remain open** and affect two roles: a prefix glob cannot
+constrain a trailing flag, so `git commit -m x --amend`,
+`git commit -m x --no-verify` and **`git add -- .`** all resolve to *allow*.
+The last bulk-stages through the pattern meant to prevent bulk staging.
+Closing them means editing `no-force-push`'s map in the emitter, changing four
+roles' boundaries — a decision, not a task.
+
+**`ADR-0023` now has its evidence.** Five concurrent sessions ran in their own
+worktrees and landed serially by rebase, with no index collision — the failure
+it was written for, which had happened twice before the mechanism existed. It
+is still `Proposed`.
+
 ## Three S9 tasks ran in parallel and landed
 
 **2026-09-23.** `TASK-0058`, `TASK-0060` and `TASK-0061` ran **concurrently,

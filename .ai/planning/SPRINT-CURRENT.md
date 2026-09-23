@@ -94,7 +94,7 @@ Neither was raised by this plan; both block it.
 | `TASK-0062` | 0061 | planned | `skills/unattended-ops/` — `SKILL.md` plus seven references. |
 | `TASK-0063` | 0059, 0061 | planned | The four **thinking** roles: `preflight`, `task-planner`, `refuter`, `adjudicator`. |
 | `TASK-0064` | 0060, 0063 | planned | The five **acting** roles: `implementer`, `gate-runner`, `closer`, `park-steward`, `run-scribe`. |
-| `REVIEW-0011` | all | planned | Checkpoint. |
+| `REVIEW-0011` | all | **done** | Checkpoint. **Six of seven exit criteria met; criterion 7 is NOT** — the asymmetry is stated in the skill and in none of the three wiring snapshots. Recommends fixing it before closure. |
 
 ## Three tasks ran in parallel, 2026-09-23 — and what they decided
 

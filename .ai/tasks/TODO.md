@@ -580,7 +580,24 @@ brief says they are *"not blocked by this ADR at all"*.
       not the closed set (done)
 - [x] TASK-0061 — `loops/unattended-run/loop.md`: 14 steps, nine roles, three
       unmerged retry bounds, null refuter **fails closed** (done)
-- [ ] TASK-0059, TASK-0062, TASK-0063, TASK-0064 — **remaining.** Promotion is a
+- [x] TASK-0059 — **B-024**: the authored MCP shape's destructive and
+      `.env.example` declarations are gated, read from `[tool.ai-toolbox]`
+      with `tomllib`; `mode: all` now fails as a named refusal (done)
+- [x] TASK-0062 — `skills/unattended-ops/`: SKILL.md, seven references, the
+      binding template and a completeness checker proved red-then-green (done)
+- [x] TASK-0063 — The four thinking roles. Reported that `read-only` did not
+      bind a shell, which is why `TASK-0078` exists (done)
+- [x] TASK-0064 — The five acting roles. Seven of nine roles OpenCode-only,
+      two portable, as the sprint claimed (done)
+- [x] TASK-0078 — **`no-bash`**, the twelfth capability term, so `read-only`
+      means what it says (done)
+- [x] TASK-0079 — Narrow `git-ops`, on human authorization. Records three
+      trailing-flag holes it did **not** close (done)
+- [x] REVIEW-0011 — S9's checkpoint. **6 of 7 exit criteria met**; criterion 7
+      (the asymmetry in all three wiring snapshots) is **not**, which is the
+      gap the pre-committed question was written to catch (done)
+- [ ] **S9 closure — a human decision.** `REVIEW-0011` recommends fixing
+      criterion 7 first rather than closing over an unmet exit criterion. Promotion is a
       separate human decision and needs `ROADMAP.md`'s Phase 9 in the same
       change (`SPRINT-CURRENT.md` steps 3 and 4)
 
