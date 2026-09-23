@@ -8,6 +8,28 @@ closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`);
 then S9's two spikes and `ADR-0022`'s reconciliation (`TASK-0055`,
 `TASK-0056`, `TASK-0057`).
 
+## Sprint S10 is OPEN
+
+**`TASK-0085`, 2026-09-23.** Promoted with **Phase 10** added in the same
+commit. Both ADRs it rests on are `Accepted`; `ADR-0023` matters here
+specifically, because S10 will run concurrent sessions and now rests on a
+ratified rule for doing so.
+
+**S10 executes where S9 declared.** It ships runnable code, registers a server
+that can launch a seventy-minute build, and ends with a real unattended run.
+**Nothing has run unattended yet** — S9's core is inert without a binding, and
+every binding is here.
+
+**Four stale claims were corrected at promotion**, two of which would have
+cost real work: **S10.1's contract, checker and fixtures already ship**
+(`TASK-0062`, with the red-then-green proof already run), so only the
+**OpenCode driver** remains; `TASK-0059` is done; Bionic's snapshot already
+records its coverage, so S10.4 owes *establishing* the orchestration claim
+rather than writing the section; and half the pre-committed checkpoint
+question was already answered in S9 and has been **replaced** with one that is
+still open — whether a binding reintroduces what the role boundary denies,
+given `git add -- .` survives only as prose.
+
 ## Sprint S9 is CLOSED
 
 **`TASK-0081`, 2026-09-23.** Closed on `REVIEW-0011`, archived to

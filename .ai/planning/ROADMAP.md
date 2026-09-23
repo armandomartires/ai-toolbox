@@ -691,6 +691,52 @@ about a third-party client that nobody checked.
   describing S9's completion as "unattended runs work" is overstating it, in
   the same way `ADR-0019` warned about end-to-end autonomy.
 
+## Phase 10 — Unattended runs: bindings, the gate server, and the pilot (OPEN 2026-09-23)
+
+> **Opened 2026-09-23 by `TASK-0085`**, in the same commit as this section.
+> Planned by `PLAN-0006`; held in `SPRINT-CURRENT.md`. Delivers the three
+> client bindings, this repo's **first authored (Python) MCP server**, the
+> wiring snapshots, and **one live pilot run**.
+
+**What makes this phase different from Phase 9, and why it carries more
+risk.** S9 was documentation and declaration. **S10 executes**: it ships
+runnable code, registers a server that can launch a seventy-minute build, and
+ends with a real unattended run against a real repository.
+
+**Nothing has run unattended yet.** S9's portable core is inert without a
+binding, and every binding is here. Phase 10 is where the capability either
+works or is shown not to.
+
+### Exit criteria — written now, so the checkpoint is judged against them
+
+| # | Criterion | How it will be judged |
+|---|---|---|
+| 1 | The **human authorization block** exists before any destructive capability is declared | `mcp-servers/gates/`'s `[tool.ai-toolbox]` carries `authorization.granted`, `by`, `date` and a `task` path that **exists** — and `tests/validate.sh` now enforces exactly that for the authored shape (`TASK-0059`). The gate is mechanical; the signature is not |
+| 2 | `ADR-0010` is **superseded on its own terms**, with its three obligations discharged | A superseding ADR; `smoke-mcp.sh` authored-shape support; the guide's authored section verified against a server that has actually run — not against the template, which is all `TASK-0059` could do |
+| 3 | The OpenCode driver enforces rather than asks | Demonstrated against an **emitted file and a real run**, not asserted |
+| 4 | **A binding reintroduces nothing the role boundary denies** | `git add -- .` is **not closable at the glob layer** (`TASK-0083`) and survives as prose in two role bodies. A binding that stages on a role's behalf would bypass even that. Show it does not |
+| 5 | A null refuter **fails closed** in every binding | `refuted: true` synthesised on a null return — a silent refuter is not a clean bill of health |
+| 6 | No binding states a rule of its own | `skills/unattended-ops/scripts/check-binding.sh` already exists and already fails on cue; run it against each of the three |
+| 7 | **The pilot runs, and is believed only if it finds something** | One real run of at most two tasks: dry-run first, then live, watched. S7's pilot found twelve false self-claims in one skill; **treat a pilot that finds nothing as a reason to doubt the pilot** |
+
+### Pre-committed checkpoint question
+
+> **Did the OpenCode port actually enforce what the Claude one only asks for —
+> demonstrated against an emitted file and a real run, not asserted?**
+
+**One half of the original specific was already answered in S9 and has been
+replaced** — `git add -A` was observed denied by `TASK-0055` and re-verified
+by `TASK-0083`, so asking it again would let this checkpoint pass on another
+sprint's work. What remains open is above, criteria 3 and 4.
+
+### What this phase inherits already built
+
+**Two of S10.1's three parts ship already.** `TASK-0062` delivered the binding
+contract, the completeness checker and both fixtures, with the red-then-green
+proof run. **Only the OpenCode driver remains.** Recorded here because the
+sprint file said otherwise until promotion corrected it, and a session
+rebuilding a working checker is the most expensive kind of stale claim.
+
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec
   evolution. Mitigations: configs/ snapshots, ADR-0002, spec templates.

@@ -605,7 +605,23 @@ brief says they are *"not blocked by this ADR at all"*.
 met, criterion 7 having been closed by `TASK-0080` **before** closure rather
 than closing over it.
 
-## Post-S9 (no sprint open)
+## Sprint S10 — Bindings, the gate server, the pilot (OPEN — promoted 2026-09-23)
+
+**Promoted by `TASK-0085`**, in the same commit as `ROADMAP.md`'s Phase 10.
+Both ADRs it rests on are `Accepted`. It **allocates no task ids** — one is
+taken when a brief is written. **Next free: `TASK-0086`.**
+
+- [ ] S10.1 — **only the OpenCode driver remains**; the contract, checker and
+      fixtures already ship from `TASK-0062`
+- [ ] S10.2 — the Claude Code Workflow binding
+- [ ] S10.3 — `mcp-servers/gates/`, the first authored server. **Highest
+      risk; needs a human authorization block.** Independent of S10.1/S10.2
+- [ ] S10.4 — the Bionic binding; *establish* the orchestration claim or drop
+      it, since the snapshot already records the established coverage
+- [ ] S10.5 / S10.6 / S10.7 — wiring snapshots, registry, **the pilot**
+- [ ] REVIEW — checkpoint
+
+## Post-S9 (superseded by the promotion above)
 
 Promoting S10 is a human decision. The outstanding queue lives in
 `.ai/planning/SPRINT-CURRENT.md`: two decisions waiting on a human (the three
