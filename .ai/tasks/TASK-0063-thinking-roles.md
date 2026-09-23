@@ -290,6 +290,7 @@ recognise it.
     (`ADR-0018` clause 4).
 
 - Result: acceptance criteria met, with the `mode` correction recorded above.
-- Commit: see the landing commit on `agent/t0063`.
+- Commit: `02c1cb2` on `agent/t0063` (recorded by a follow-up commit, the
+  same shape as `229d65c`, because a commit cannot contain its own hash).
 - Push: not attempted. This work was done in a per-session worktree and is
   landed on `master` by the human operator (`ADR-0023`); pushing is theirs.
