@@ -8,6 +8,24 @@ closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`);
 then S9's two spikes and `ADR-0022`'s reconciliation (`TASK-0055`,
 `TASK-0056`, `TASK-0057`).
 
+## Sprint S9 is OPEN
+
+**`TASK-0077`, 2026-09-23.** Promoted, with `ROADMAP.md`'s **Phase 9** added
+in the **same commit** — the only control that exists for that pairing, since
+`validate.sh` has no roadmap/sprint check and is not getting one. All seven
+outstanding briefs (`TASK-0058`…`0064`) were confirmed present by counting
+them, which is step 4's precondition.
+
+`sprints/SPRINT-S9-unattended-runs.md` is **deleted**; its content now lives
+in `SPRINT-CURRENT.md` and returns to `sprints/` at closure, the way S6 and
+S8 moved. **Five stale claims were corrected rather than inherited** — most
+importantly *"six of the ten capability terms"* (now seven of eleven) and
+`TASK-0059`'s `delegates_to` check, which `TASK-0075` already built.
+
+**Three front doors are open at once:** `TASK-0058`, `TASK-0060` and
+`TASK-0061` all depend only on the cleared gate. Two sessions working them in
+parallel need **one worktree each** (`ADR-0023`).
+
 ## S9's spikes have run and `ADR-0022` is ratified
 
 **`TASK-0055`/`0056`/`0057`, 2026-09-23.** S9 is **not promoted** — the

@@ -498,18 +498,14 @@ any agent or human can understand, trust, and deploy.
 > to be cut. Recorded as an untested commitment rather than a vindicated
 > one.
 >
-> **No Phase 9 section exists in this file yet**, and `SPRINT-CURRENT.md`
-> holds an explicit no-sprint-open state rather than a closed sprint.
-> **S9 and S10 do exist as plans** — `PLAN-0006` (unattended task runs)
-> produced `sprints/SPRINT-S9-unattended-runs.md` and
-> `sprints/SPRINT-S10-unattended-bindings.md`, both queued. S9 rests on
-> `ADR-0022`, which was `Proposed` and blocked on its own two spikes and is
-> **`Accepted` as of 2026-09-23** (`TASK-0076`) — so the *decision* gate is
-> cleared and promoting the sprint is still a human decision, separate from
-> it. **Whoever promotes it adds the Phase 9
-> section here in the same change** — this file has had two phases go
-> missing after the fact, and adding one now, ahead of the promotion, would
-> be the third variation of the same defect rather than a fix for it.
+> **Phase 9 now exists below**, added 2026-09-23 by `TASK-0077` **in the same
+> commit that promoted S9** — which is the whole point. This block used to say
+> no Phase 9 existed and that whoever promoted the sprint had to add one here
+> in the same change, because this file has had two phases go missing after
+> the fact. There is still no *mechanism* enforcing that (`tests/validate.sh`
+> has no roadmap/sprint agreement check and is not getting one — it is a
+> judgment call), so the **atomic commit was the control**. Verify it with
+> `git show --stat` on that commit if you doubt it.
 
 *Everything below is the section as written at plan time.*
 
@@ -597,6 +593,61 @@ without vendoring, and without auto-installing anything.
   (B-020), not in a third party: `smoke-mcp.sh` cannot distinguish an unmet
   precondition from a protocol failure, which affects any future server
   with state requirements.
+
+## Phase 9 — Unattended runs: the decision and the portable core (OPEN 2026-09-23)
+
+> **Opened 2026-09-23 by `TASK-0077`**, in the same commit as this section.
+> Planned by `PLAN-0006`; held in `SPRINT-CURRENT.md`. Delivers `ADR-0022`
+> **(already `Accepted`, `TASK-0076`)** and the client-agnostic half of an
+> unattended-run harness: one loop, one skill, nine agent roles. The three
+> client bindings and this repo's first authored MCP server are **S10**,
+> deliberately split so a checkpoint can say which half worked.
+>
+> **Three of its twelve items are already done**, before the phase opened —
+> the two spikes and the ADR they fed. That is unusual and deliberate: they
+> change no component file, and `TASK-0055`'s brief said explicitly that they
+> were *"not blocked by this ADR at all"*. The evidence had to exist before
+> the decision could be signed.
+
+**The headline fact, stated before the work rather than discovered by the
+checkpoint:** **seven of the nine roles will be OpenCode-only**, under
+`ADR-0018` clause 8.3. Seven of the eleven capability terms have no per-agent
+Claude Code expression, and they are the seven carrying the safety value. The
+two that port — `task-planner` and `adjudicator` — are **the two that only
+think**. This harness is **OpenCode-first**, and the docs must say so rather
+than describe three clients as equivalent.
+
+### Exit criteria — written now, so the checkpoint is judged against them
+
+| # | Criterion | How it will be judged |
+|---|---|---|
+| 1 | `ADR-0022` ratified on evidence | **Already met** — `Accepted` 2026-09-23 after both spikes ran and falsified **F1** |
+| 2 | The `mode` question **decided explicitly** | `ADR-0022` clause 5.2: `mode: all` is admitted to `MODES` or rejected on purpose. *"Deciding it by leaving `MODES` alone is a decision; making it silently is not"* |
+| 3 | `worktree-only`'s Claude Code emission settled **or explicitly recorded as not settled** | `TASK-0058`. `TASK-0056` already tried and was **confounded**; a second confounded attempt is an acceptable outcome only if it says so |
+| 4 | The registry shows client coverage | `TASK-0060` closes `B-026` / `ADR-0018` clause 8.5, and **must land before `TASK-0064`** or the registry advertises OpenCode-only roles as universal |
+| 5 | The loop is authored **before** the roles | Commit order, checkable in `git log` |
+| 6 | Nine roles emit for their declared clients, and emission **refuses** when one is widened | Run `install.sh` for both clients; **prove the refusal**, do not infer it from a pass |
+| 7 | The OpenCode-first asymmetry stated plainly in the skill and both wiring snapshots | `REVIEW-0011`'s pre-committed question |
+
+### Pre-committed checkpoint question
+
+> **Did the documentation state the OpenCode-first asymmetry plainly, or did
+> it describe three clients as if they were equivalent?**
+
+Committed before the work per `ADR-0012`, so the checkpoint cannot be written
+to whatever the sprint happens to produce. The failure mode it targets is the
+one `ADR-0020` recorded costing four tasks and two reviews: a capability claim
+about a third-party client that nobody checked.
+
+### What this phase does not do
+
+- **It does not ship a binding.** No driver, no workflow script, no gate
+  server — those are S10, which deliberately allocates **no task ids** after
+  two sessions collided inside a reserved range in one afternoon.
+- **It does not make an unattended run possible yet.** The portable core is
+  reviewable on its own; without a binding nothing executes it. Anyone
+  describing S9's completion as "unattended runs work" is overstating it, in
+  the same way `ADR-0019` warned about end-to-end autonomy.
 
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec

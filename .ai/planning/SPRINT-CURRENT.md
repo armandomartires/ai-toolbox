@@ -1,102 +1,160 @@
-# No sprint is open
+# Sprint S9 — Unattended runs: the decision and the portable core
 
-**As of 2026-09-23.** Sprint S8 closed on `REVIEW-0009` and is archived at
-`.ai/planning/sprints/SPRINT-S8-third-party-extensions.md`. Nothing has been
-promoted to replace it, and **that is a state, not an oversight**.
+**OPEN. Promoted 2026-09-23** by `TASK-0077`, in the same commit that added
+**Phase 9** to `ROADMAP.md` — the control that file asks for, since no
+mechanism enforces the pairing.
 
-**S9 and S10 exist as plans, and neither is current.** `PLAN-0006` —
-unattended task runs — was written alongside S8's closure and produced
-`.ai/planning/sprints/SPRINT-S9-unattended-runs.md` (the portable core: a
-loop, a skill, nine roles) and
-`.ai/planning/sprints/SPRINT-S10-unattended-bindings.md` (the three client
-bindings). **Both are queued, not open**, which in this repo means a file in
-`sprints/` rather than here.
+Planned by `PLAN-0006`. Delivers `ADR-0022` and the client-agnostic half of an
+unattended-run harness: a loop, a skill and nine agent roles. The three client
+bindings and this repo's first authored MCP server are **S10**, deliberately.
 
-**S9's blocking gate is now cleared, and it is still not open.** It rested on
-`ADR-0022`, which was `Proposed` and blocked on two spikes whose evidence
-decided whether this repo's agent schema needed changing at all. Both spikes
-ran on 2026-09-23 and **`ADR-0022` was ratified the same day** (`TASK-0076`).
+> **This file was `sprints/SPRINT-S9-unattended-runs.md` until promotion.**
+> That copy is deleted rather than kept in sync — one owner per fact. It comes
+> back to `sprints/` at closure, which is how S6 and S8 moved.
+>
+> **Five claims it carried have been corrected here rather than inherited**,
+> because a promoted sprint file is read as current: it said no sprint could
+> displace it and that it *"does not promote itself"* (spent); *"six of the
+> ten capability terms"* (now **seven of eleven** — `TASK-0071` added
+> `test-allowlist`); that `TASK-0059` owes the `delegates_to` cross-client
+> check (**already built** by `TASK-0075`); that `B-021` is not closed by this
+> sprint (**true, but because `TASK-0071` closed it** outside the sprint); and
+> that `worktree-only` is simply open (it is, **and `TASK-0056` has now tried
+> and been confounded**, which is different from untouched).
 
-**The evidence changed the decision before it was signed.** `TASK-0055`
-**falsified F1** — `opencode run --agent` cannot select a `subagent`-mode role
-and silently falls back to the default agent — so the ADR gained a fifth
-clause and this repo owes a `mode`-schema decision. Ratifying ahead of that
-would indeed have been ratifying a guess.
+## Why the split
 
-**Promotion remains a separate decision, and is what is still missing.**
+The portable core is useful and reviewable on its own. The bindings are three
+client-specific artifacts plus an authored MCP server that carries its own ADR
+supersession (`ADR-0010`) and its own human authorization step. Bundling them
+would produce one sprint whose checkpoint could not say which half worked.
 
-**So promoting S9 is a human decision, not bookkeeping** — the same call
-`TASK-0052` made for S6-versus-S8. `ROADMAP.md` also has no Phase 9 section
-yet; adding one belongs to whoever promotes the sprint, in the same change,
-because this file has twice had a phase go missing after the fact.
+## The binding constraint
 
-**This file exists to say so explicitly.** Leaving a closed sprint sitting
-in `SPRINT-CURRENT.md` is the false-present-tense defect `REVIEW-0008` had
-to sweep across four files, and it is cheaper to state the gap than to let
-the next reader infer it.
+**Seven of the nine roles will be OpenCode-only**, under `ADR-0018` clause
+8.3. **Seven of the eleven** capability terms have no per-agent Claude Code
+expression, and they are the seven that carry the safety value. The two that
+port — `task-planner` and `adjudicator` — are **the two that only think**.
 
-> **Note for whoever reads S9's file next.** Its header was written while S8
-> was still open and states that *"`ADR-0021` is still `Proposed` and
-> `REVIEW-0009` is unwritten"*. **Both are now false** — the review is
-> written and `ADR-0021` was ratified 2026-09-23. The S9 file is a plan in
-> progress, so it is left for its author to correct rather than edited from
-> here.
+This is the sprint's headline fact, and `REVIEW-0011`'s pre-committed question
+is whether the docs stated it plainly or described three clients as if they
+were equivalent.
 
-## What is outstanding, for whoever plans next
+## What the spikes changed before the sprint opened
 
-Nothing below is scheduled. It is the honest queue.
+Both ran 2026-09-23, ahead of promotion, because they change no component file
+and the ADR could not be signed without them.
 
-### Backlog items that are `ready`
+- **F1 was falsified.** `opencode run --agent` **cannot** select a
+  `subagent`-mode role: it warns on stderr and **falls back to the default
+  agent**, returning well-formed stdout with exit 0. A driver reading stdout
+  or the JSON stream cannot tell the wrong agent answered. So every
+  driver-invoked role must be `primary`, and **`mode: all` turns out to be a
+  real third value** OpenCode accepts and `MODES` rejects — `ADR-0022` clause
+  5.2 makes `TASK-0058` decide that **explicitly**.
+- **F5 was confirmed**, and it was a live defect: a dead name inside a Claude
+  Code `Agent(...)` allowlist is **silent**. Fixed and gated by `TASK-0075`
+  (`B-028`), which is why `TASK-0059` now owes less than its brief says.
+- **Two things that will bite a binding author**, both found by failure:
+  `opencode run` with no configured default model and no TTY **hangs forever
+  with no output, no error and no exit**; and an `ask` permission headless
+  **auto-denies while reporting *"The user rejected permission"*** with no
+  user present. Unattended, every `ask` is a `deny` carrying a false
+  attribution.
 
-Full entries in `.ai/planning/BACKLOG.md`.
+## Two standing defects this sprint must clear
 
-| Item | One line |
-|---|---|
-| **B-018** | Deploy skills to Bionic — its Agent Skills target exists, is unused, and global installs are approval-gated |
-| **B-021** | `qa-test` cannot run tests while its own description says it does. **Highest-value open item**; needs a decision about a test-command allowlist term, not a widened one |
-| **B-023** | graphify has a manifest and a registry row but no `configs/` wiring section. Blocked on a rule that does not exist yet: does *every* MCP server owe three client sections? |
+Neither was raised by this plan; both block it.
 
-### Follow-ups from `REVIEW-0009`
+- **`ADR-0018` clause 8.5 is unsatisfied.** The registry's Agents section is
+  `| Name | Description | Path |` and cannot say a role is OpenCode-only.
+  Raised as `B-026`, closed by `TASK-0060`, and it must land **before**
+  `TASK-0064`. **`TASK-0075` made this worse, not better** — four of six
+  existing roles are now OpenCode-only while the registry presents all six
+  identically.
+- **`worktree-only` has no settled Claude Code emission** (`ADR-0018` clause
+  7's leftover, assigned to `TASK-0040`, still open). All nine roles declare
+  it, and for the *acting* roles an isolated copy is the wrong confinement.
+  **`TASK-0056` attempted it and the run was confounded** by permission
+  denials, so it could not distinguish isolation from refusal. `TASK-0058`
+  must settle it or say explicitly that it has not.
 
-1. **Two stale second-hand gate claims.** `tests/smoke-mcp.sh:10` says
-   `validate.sh` runs in *~0.4s*; measured 572 ms native, 1008 ms on
-   `/mnt/c`. `docs/operations/runbook.md:60` says *"sub-second"* without
-   naming the surface. Small and mechanical.
-2. **Should a capability claim cite the artifact it was read from?**
-   `ADR-0021` clause 5 requires a provenance label but not a source file,
-   and that gap let a hook count read from one client's manifest propagate
-   as a fact about another. **Offered at ratification and declined**, so it
-   is open rather than settled — reopening it means amending an `Accepted`
-   ADR.
-3. **B-023's underlying rule** (above).
-4. **An untested commitment, carried forward deliberately.** *"If a sprint
-   shrinks, the honest cut is a product, never the spike"* has now been
-   stated by two sprints and exercised by neither. It should be restated in
-   the next plan that risks shrinking, not quietly retired as vindicated.
+## Tasks
 
-### Inherited from `REVIEW-0010`, still open
+| Task | Depends on | Status | What |
+|---|---|---|---|
+| `TASK-0055` | — | **done** | **Spike.** OpenCode driver surface: F1, F2, F4 against `opencode 1.18.31`. **F1 falsified.** |
+| `TASK-0056` | — | **done** | **Spike.** Claude Code delegation and boundary surface. **F5 confirmed**; raised `B-028`; `isolation: worktree` left unsettled. |
+| `TASK-0057` | 0055, 0056 | **done** | Author `ADR-0022` from that evidence. Six corrections made visibly; **clause 5 added because F1 was falsified**. |
+| *gate* | 0057 | **CLEARED 2026-09-23** | **Human ratification of `ADR-0022`.** A gate, not a task — `TASK-0076`. Ratified **as written**. |
+| `TASK-0058` | gate | **ready** | Authoring guide: settle `worktree-only` for Claude Code; the `delegates_to` cross-client rule; the authored-MCP section verified against reality (`ADR-0010` obligation 2); **the `mode` row, which F1 now forces**. |
+| `TASK-0059` | 0058 | **ready (reduced)** | `validate.sh`: extend the destructive-capability and `.env.example` gates to the **authored** shape (`B-024`). **Its `delegates_to` check already exists** — built by `TASK-0075`, observed firing on the real defect. What remains is re-reading it against whatever `TASK-0058` settles about `mode`. |
+| `TASK-0060` | gate | **ready** | `sync-registry.sh`: Agents section gains a Clients column. Closes `B-026` / `ADR-0018` clause 8.5. **Must land before `TASK-0064`.** |
+| `TASK-0061` | gate | **ready** | `loops/unattended-run/loop.md`. Authored **before** the roles. |
+| `TASK-0062` | 0061 | planned | `skills/unattended-ops/` — `SKILL.md` plus seven references. |
+| `TASK-0063` | 0059, 0061 | planned | The four **thinking** roles: `preflight`, `task-planner`, `refuter`, `adjudicator`. |
+| `TASK-0064` | 0060, 0063 | planned | The five **acting** roles: `implementer`, `gate-runner`, `closer`, `park-steward`, `run-scribe`. |
+| `REVIEW-0011` | all | planned | Checkpoint. |
 
-5. **`ansible-core`'s version is recorded in nine places and has moved.**
-6. **`skills/ansible-ops/` has never been exercised against a live estate.**
-   Its closing item (B-010) was closed *with this limitation stated* — a
+**Three front doors are open at once.** `TASK-0058` and `TASK-0060` both
+depend only on the cleared gate and are independent of each other;
+`TASK-0061` sits on a third. That suits `ADR-0012` Decision 2 — one task per
+session is the default, not a rule — and `ADR-0023` if two sessions run, which
+requires **one worktree each** (`scripts/worktree.sh`).
+
+## Backlog items raised by this sprint
+
+| ID | Title | Status |
+|---|---|---|
+| `B-024` | The authored MCP shape has no destructive-capability gate and no `.env.example` gate | **ready** — `TASK-0059` |
+| `B-025` | No vocabulary term for "may call only this MCP server" | **ready** — waiting on a *second* role that wants it; one instance is a case, two is a vocabulary |
+| `B-026` | `ADR-0018` clause 8.5 unsatisfied — the registry shows no client coverage | **ready** — `TASK-0060` |
+
+**`B-021` is not closed by this sprint**, and the reason has changed: it was
+**closed 2026-09-23 by `TASK-0071`**, outside the sprint, by adding the
+`test-allowlist` term. Do not record it as an S9 deliverable.
+
+## Pre-committed checkpoint question
+
+> **Did the documentation state the OpenCode-first asymmetry plainly, or did
+> it describe three clients as if they were equivalent?**
+
+Committed before the work, per `ADR-0012`, so the checkpoint cannot be written
+to whatever the sprint happened to produce. The failure mode it targets is the
+one `ADR-0020` recorded costing four tasks and two reviews: a capability claim
+about a third-party client that nobody checked.
+
+## Carried forward — open, and not S9's scope
+
+These outlived the no-sprint period and are **not** scheduled here. Listed so
+they are not lost, and so nobody re-opens a closed one.
+
+1. **Should a capability claim cite the artifact it was read from?**
+   `ADR-0021` clause 5 requires a provenance label but not a source file, and
+   that gap let a hook count read from one client's manifest propagate as a
+   fact about another. **Offered at ratification and declined**, so reopening
+   it means amending an `Accepted` ADR.
+2. **An untested commitment, carried forward deliberately.** *"If a sprint
+   shrinks, the honest cut is a product, never the spike"* has been stated by
+   two sprints and exercised by neither. **S9 risks shrinking** — it is nine
+   roles, a loop and a skill — so it is restated here rather than quietly
+   retired as vindicated.
+3. **`ansible-core`'s version is recorded in several places and has moved.**
+   `REVIEW-0010` said nine; a count on 2026-09-23 found **five**, so
+   `TASK-0069`'s sweep reduced but did not close it. Re-count before acting.
+4. **`skills/ansible-ops/` has never been exercised against a live estate.**
+   Its closing item (`B-010`) was closed *with this limitation stated* — a
    closed item is not a claim of quality.
 
-## How to open the next sprint
+**Closed since the no-sprint queue was written, and not to be re-raised:**
+`B-018` (`TASK-0072`), `B-021` (`TASK-0071`), `B-023` (`TASK-0073`), `B-027`
+(`TASK-0074`), `B-028` (`TASK-0075`), and `REVIEW-0009`'s two stale gate-cost
+claims (`TASK-0069`).
 
-`PLAN-0006` already did step 1 for S9. What remains:
+## S10 is still queued
 
-1. ~~Write a `PLAN-####` in `.ai/planning/plans/`.~~ **Done for S9/S10** —
-   `PLAN-0006`.
-2. ~~**Settle `ADR-0022`.**~~ **Done 2026-09-23** (`TASK-0076`). Both
-   blocking spikes ran (`TASK-0055`, `TASK-0056`), `TASK-0057` reconciled the
-   draft against what they found, and the human ratified it **as written**.
-   `ADR-0022` is **`Accepted`**. Note what that did *not* do: it unblocked
-   `TASK-0058`, `TASK-0060` and `TASK-0061` without scheduling them, and it
-   did not promote the sprint — steps 3 and 4 below are still outstanding.
-3. Add the phase to `ROADMAP.md` **in the same change** as promotion — that
-   file has had two phases go missing after the fact, both diagnosed as
-   needing a mechanism, and no mechanism was ever added.
-4. Move the sprint file here, and confirm its task briefs exist in
-   `.ai/tasks/` **before** any code is written. `PLAN-0006` reserves
-   **TASK-0055…TASK-0067**; the next free number after that range is
-   **TASK-0069** (`TASK-0068` closed S8).
+`sprints/SPRINT-S10-unattended-bindings.md` — the three client bindings and
+`mcp-servers/gates/`. It **allocates no task ids**, deliberately, after two
+sessions collided inside a reserved range in one afternoon. Its ids are
+allocated when its briefs are written, which is when `.ai/tasks/` can be read
+to see what is free. **Next free number after this task: `TASK-0078`.**

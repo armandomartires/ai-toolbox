@@ -552,10 +552,11 @@ spikes. The outstanding queue lives in `.ai/planning/SPRINT-CURRENT.md`.
       the two decidable triggers. graphify documented as exempt. **No
       graphify sections were written** — that was the decision (done)
 
-## Sprint S9 — Unattended runs (NOT PROMOTED; spikes run ahead of the gate)
+## Sprint S9 — Unattended runs (OPEN — promoted 2026-09-23)
 
-S9 is **still not open**. These three ran because they are the evidence the
-`ADR-0022` gate needs and they change no component file — `TASK-0055`'s own
+**Promoted by `TASK-0077`**, in the same commit as `ROADMAP.md`'s Phase 9.
+The first three ran *before* promotion, because they are the evidence the
+`ADR-0022` gate needed and they change no component file — `TASK-0055`'s own
 brief says they are *"not blocked by this ADR at all"*.
 
 - [x] TASK-0055 — **Spike.** OpenCode driver surface. **F1 FALSIFIED** —
