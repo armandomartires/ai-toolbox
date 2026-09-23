@@ -115,7 +115,7 @@ shaped by the sequence rather than the reverse.
 
 **Nine roles, named here and nowhere else yet:** `preflight`,
 `task-planner`, `implementer`, `gate-runner`, `refuter`, `adjudicator`,
-`closer`, `park-steward` and `scribe`. Nine is the count `ADR-0022` and
+`closer`, `park-steward` and `run-scribe`. Nine is the count `ADR-0022` and
 `PLAN-0006` both state, so a tenth appearing later is a divergence to
 reconcile rather than an addition to absorb.
 
@@ -150,7 +150,7 @@ leaves an honest tracker rather than a half-ticked one.
    Record the strings verbatim — the open form varies between files, so
    nothing here may be matched against a fixed literal.
 
-3. **Open the run.** (driver, then `scribe`.) Record the run identifier,
+3. **Open the run.** (driver, then `run-scribe`.) Record the run identifier,
    the starting commit and the resolved queue.
    Expected: one appended line in the run journal before any task is
    touched. Everything after this point is reconstructable from that file
@@ -250,7 +250,7 @@ leaves an honest tracker rather than a half-ticked one.
     `git checkout --`, `git reset --hard`, `git clean` and `git stash drop`
     are never used here — see **Exit conditions**.
 
-12. **Journal every outcome.** (`scribe`, or the driver where it has
+12. **Journal every outcome.** (`run-scribe`, or the driver where it has
     filesystem access.) Append one line per event — run start, blocked,
     adjudication with its overrides, close with its hash, close refused,
     park, halt.
@@ -269,7 +269,7 @@ leaves an honest tracker rather than a half-ticked one.
     once**: a second timeout is a finding for the operator, not a flake.
     Nothing here is committed — this step verifies the commits already made.
 
-14. **Write the handover, then stop.** (`scribe`, the same role that owns
+14. **Write the handover, then stop.** (`run-scribe`, the same role that owns
     the journal, so the record and its summary have one owner.)
     **Re-derive** the handover from the journal and the evidence file, not
     from the driver's summary of them.

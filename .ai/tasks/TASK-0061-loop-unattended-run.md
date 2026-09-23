@@ -185,11 +185,11 @@ dangling reference from `loops/unattended-run/loop.md` today:
 divergence to reconcile rather than an addition to absorb:
 
 `preflight`, `task-planner`, `implementer`, `gate-runner`, `refuter`,
-`adjudicator`, `closer`, `park-steward`, `scribe`.
+`adjudicator`, `closer`, `park-steward`, `run-scribe`.
 
 Three of these names are fixed by `ADR-0022` itself (`task-planner`,
 `adjudicator`, `gate-runner`); the other six are set here, by the loop, which
-is the point of authoring the loop first. `scribe` owns **both** the
+is the point of authoring the loop first. `run-scribe` owns **both** the
 append-only journal (step 12) and the re-derived handover (step 14) so the
 record and its summary have one owner — the choice that keeps the count at
 nine rather than ten.
@@ -266,7 +266,7 @@ rather than an assumption.
   - **Nothing stale found in the brief.** Its one forecast that needed
     resolving was the role count: `ADR-0022` and `PLAN-0006` both say nine, and
     the sequence as written naturally wanted ten, so journalling and the
-    handover were given to a single `scribe`. Recorded in Outputs rather than
+    handover were given to a single `run-scribe`. Recorded in Outputs rather than
     silently absorbed.
   - The registry conflict the brief predicted is real but not mine to resolve:
     this commit adds one Loops row; another session is changing the Agents
@@ -291,6 +291,23 @@ rather than an assumption.
   commit hash and confirmed push"*), so the practice is followed rather than
   the literal wording. **A defect in step 8 worth raising**, noted here rather
   than fixed, since `loops/release-check/loop.md` is outside this task's scope.
+
+### Correction applied at landing (main session, 2026-09-23)
+
+The loop named the ninth role **`scribe`**, while `PLAN-0006`,
+`SPRINT-CURRENT.md` and **`TASK-0064`'s own brief** all name it
+**`run-scribe`**. Left as written, `TASK-0064` would have authored
+`agents/run-scribe/` while this loop cited a role that does not exist — a
+claim an artifact makes about its own wiring, falsified by the artifact, which
+is the defect class `TASK-0046` found twelve times and `TASK-0075` gated for
+`delegates_to`.
+
+Renamed to `run-scribe` here rather than renaming it in three planning
+documents, because the planned name is the one the unwritten task will follow.
+The consolidation this role represents — journal and handover are two acts
+given to one role, so the count stays nine — is **unchanged and still worth
+`TASK-0063`/`TASK-0064`'s attention**, as the report flagged.
+
 - Push: **not pushed, deliberately.** This work was done in worktree `t0061`
   on `agent/t0061` under `ADR-0023`; the operator lands all three concurrent
   branches serially by rebase and pushes from `master`. Recorded as a stated
