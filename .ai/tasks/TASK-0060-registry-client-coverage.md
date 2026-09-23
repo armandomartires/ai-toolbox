@@ -14,9 +14,16 @@ OpenCode-only role is visible as such rather than appearing universal. Closes
 > visible as such rather than appearing universal."*
 
 It has never been implemented. The Agents section is
-`| Name | Description | Path |`, and **three of the six existing roles are
-OpenCode-only** — `git-ops`, `qa-test` and `review` — while the registry
-presents all six identically.
+`| Name | Description | Path |`, and **~~three~~ FOUR of the six existing roles
+are OpenCode-only** — `designer-manager`, `git-ops`, `qa-test` and `review` —
+while the registry presents all six identically.
+
+**Corrected during execution, not planning.** This brief and `B-026` both said
+three. `TASK-0075` narrowed `designer-manager` to `clients: [opencode]` earlier
+the same day, because it delegates to `git-ops`, which cannot have a Claude Code
+form. The count was found wrong by re-reading all six `agents/*/agent.md` files
+rather than by trusting either document — the check this brief itself demands
+below. The defect was therefore *worse* than scoped, not smaller.
 
 **This sprint makes it actively misleading rather than merely incomplete.**
 `TASK-0064` adds five more OpenCode-only roles, taking the total to eight of
@@ -98,17 +105,20 @@ section's own header row, and the header detection matches on `| Name `.
 
 ## Acceptance criteria
 
-- [ ] The Agents section carries a Clients column.
-- [ ] `git-ops`, `qa-test` and `review` show `opencode` only; the other three
-      show both clients.
-- [ ] `docs/registry.md` is regenerated and
-      `git diff --exit-code docs/registry.md` is clean afterwards.
-- [ ] `validate.sh`'s registry checks pass, including the column-count and
-      `_template*` assertions.
-- [ ] `sync-registry.sh`'s header records why `clients` gets a column and `mode`
-      does not.
-- [ ] `ADR-0018` clause 8.5 is satisfied, and this task names it as closed.
-- [ ] `B-026` is `done`.
+- [x] The Agents section carries a Clients column.
+- [x] `designer-manager`, `git-ops`, `qa-test` and `review` show `opencode`
+      only; `critic` and `ideator` show both. **Criterion amended**: it named
+      three roles and two are not what it expected — see Minimal context.
+- [x] `docs/registry.md` is regenerated and re-running the generator produces
+      no further diff (idempotent). Only the Agents section changed; the MCP
+      separator row was briefly widened by a first cut and restored, so the
+      committed diff touches one section.
+- [x] `validate.sh`'s registry checks pass, including the column-count and
+      `_template*` assertions. No `validate.sh` change was needed.
+- [x] `sync-registry.sh`'s header records why `clients` gets a column and
+      `mode` does not — and corrects the reason this brief gave.
+- [x] `ADR-0018` clause 8.5 is satisfied, and this task names it as closed.
+- [x] `B-026` is `done`.
 
 ## Mandatory validations
 
@@ -128,32 +138,95 @@ section's own header row, and the header detection matches on `| Name `.
 
 ## Outputs / handover
 
-*Forecast until verified.*
+*Verified 2026-09-23.*
 
 | Artifact | End state |
 |----------|-----------|
-| `scripts/sync-registry.sh` | Agents section emits a Clients column; header records the `clients`-vs-`mode` distinction |
-| `docs/registry.md` | Regenerated; six agent rows with client coverage visible |
-| `.ai/planning/BACKLOG.md` | `B-026` done |
-| `agents/*/agent.md` | Unchanged |
+| `scripts/sync-registry.sh` | Agents section emits a Clients column via a labelled third-column mechanism shared with MCP's Shape; header records the `clients`-vs-`mode` distinction **and corrects the closed-set half of the reason this brief gave** |
+| `docs/registry.md` | Regenerated; six agent rows, four showing `opencode` alone |
+| `.ai/planning/BACKLOG.md` | `B-026` done, with the stale three-of-six count corrected in the closure record |
+| `agents/*/agent.md` | Unchanged — read only |
+| `tests/validate.sh` | Unchanged — the derived column count needed no edit, as forecast |
 
 **Next task starts here**: `TASK-0064` may add five OpenCode-only roles to a
 registry that can say so. `ADR-0018` clause 8.5 is satisfied and should not be
 re-raised.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-23
 - Updated: 2026-09-23
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-23
+- Agent: Claude Opus 5 (1M context), worktree `agent/t0060`
 - Actions:
+  1. Confirmed `ADR-0022` reads **Accepted — 2026-09-23** (ratified as written
+     by `TASK-0076`). Precondition met.
+  2. Read `tests/validate.sh`'s registry checks. The expected column count is
+     derived per section from that section's own `| Name ` header row, so
+     widening a section needs no check edit. Confirmed before changing anything.
+  3. Re-read all six `agents/*/agent.md` for their real `clients` lists. **Found
+     the brief and `B-026` stale**: four OpenCode-only roles, not three.
+  4. `scripts/sync-registry.sh`: added `fm_seq()`, a frontmatter block-sequence
+     reader deliberately accepting the same shape as `validate.sh`'s `seq()`
+     (block sequences only, matching-pair unquoting, trailing whitespace after
+     the key tolerated), so a list the generator cannot read is one the gate
+     would reject anyway. `extract()` returns `clients` as a third field for
+     `kind=agent`, **sorted** rather than in frontmatter order, so two roles with
+     equal coverage cannot render differently by accident.
+  5. Generalised `emit_section`'s fourth argument from the literal `shape` flag
+     to a column *label*, since two sections now carry a third column with
+     different headers. `Shape` and `Clients` are now the same mechanism.
+  6. Wrote the `clients`-versus-`mode` paragraph into the header, immediately
+     under the existing `mode` paragraph it must not appear to contradict.
+  7. Regenerated, validated, demonstrated (below), closed `B-026`.
 - Observations:
+  - **The brief's own justification was wrong, and is corrected in the script
+    rather than copied into it.** Both the brief and `B-026` distinguish
+    `clients` from `mode` by two reasons: the emitter acts on `clients`, *and*
+    `validate.sh` constrains it to a closed set. **The second reason does not
+    separate them.** `tests/validate.sh` line 444 defines
+    `MODES = {"primary", "subagent"}` one line above `CLIENTS`, and checks
+    `mode` against it exactly as it checks `clients`. Had that reason been
+    written into the header as instructed, the header would have contained an
+    argument a reader can falsify in one grep — worse than no argument.
+  - **The real distinction is the emitter, and only the emitter**, and it is
+    sharper than "acts on": `scripts/emit-agents.py` line 268 *carries `mode`
+    through* into the OpenCode role and drops it for Claude Code, so a wrong
+    `mode` still produces a file that looks right; line 372 uses `clients` as
+    the **gate** — a role not naming a client is skipped and **no file is
+    written**. A registry is an index of deployable components, so `clients` is
+    the field the index is *about*. The header says this, and also says plainly
+    what is *not* the argument, so the `mode` decision reads as upheld with a
+    test attached rather than silently reversed.
+  - A first cut sized the separator row from the label alone, which silently
+    narrowed the **MCP** separator from 7 dashes to 5 — an unrelated section
+    changed by a change scoped to Agents. Caught by reading the diff rather than
+    the output. Width is now label + 2 padding spaces, matching every other
+    separator cell, and the committed diff touches the Agents section only.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` → `validate.sh: OK`, exit 0.
+  - `scripts/sync-registry.sh` run twice → identical output; second run adds no
+    diff.
+  - **The column is demonstrated, not asserted.** `python3
+    scripts/emit-agents.py claude-code <scratch>` emits exactly `critic.md` and
+    `ideator.md` — the same two roles, and only those, that the new column shows
+    as reaching Claude Code. `opencode` emits all six. The registry now
+    *predicts* the emitter's output rather than describing it.
+  - **The integrity check was shown to still guard the widened section.** A
+    stale three-column row appended to Agents fails with
+    `REGISTRY INTEGRITY: line 36 (Agents): 5 columns, header declares 6 — a
+    missing cell, or a format change applied to the header but not the rows?`,
+    exit 1 — the correct diagnosis direction. Restored, `OK` again. The check
+    needed no edit, confirming the brief's expectation about how the width is
+    derived.
+- Result: **done.** `ADR-0018` clause 8.5 satisfied; `B-026` closed. `TASK-0064`
+  may now add OpenCode-only roles to a registry that can say so.
+- Commit: COMMIT_SHA_PLACEHOLDER
+- Push: **not pushed by this session, by instruction.** This task ran in the
+  `agent/t0060` worktree alongside two concurrent sessions (`ADR-0023`); the
+  coordinating session lands and pushes all three branches serially and records
+  the push result.
