@@ -60,10 +60,23 @@ Four role directories, each with frontmatter and a system-prompt body.
 
 | Role | mode | capabilities | clients |
 |---|---|---|---|
-| `preflight` | subagent | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only`, `bash-allowlist` | opencode |
-| `task-planner` | subagent | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only` | claude-code, opencode |
-| `refuter` | subagent | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only`, `bash-allowlist` | opencode |
-| `adjudicator` | subagent | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only` | claude-code, opencode |
+| `preflight` | **primary** | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only`, `bash-allowlist` | opencode |
+| `task-planner` | **primary** | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only` | claude-code, opencode |
+| `refuter` | **primary** | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only`, `bash-allowlist` | opencode |
+| `adjudicator` | **primary** | `read-only`, `no-delegation`, `no-webfetch`, `worktree-only` | claude-code, opencode |
+
+> **The `mode` column read `subagent` for all four when this brief was
+> written, and that was wrong.** `ADR-0022` clause 5.1 is explicit: *every*
+> role a driver invokes via `opencode run --agent` must be `primary`, because
+> a `subagent`-mode role is **silently replaced by the default agent**, which
+> answers with well-formed output and exit 0. All four of these roles are
+> invoked by the driver — `loops/unattended-run/loop.md` names the driver as
+> the actor holding control flow at steps 1, 2, 5, 8 and 9, and no role in the
+> run delegates to another. The loop's own step 1 makes `preflight` check this
+> property of every role the run will invoke, so shipping four roles that fail
+> it would have made the run's first check fail on the run's own roles.
+> Corrected here rather than obeyed; `TASK-0064`'s five acting roles are
+> subject to the same clause and are all driver-invoked too.
 
 `bash_allow` for `preflight` and `refuter`: read-only git verbs only
 (`git status*`, `git rev-parse*`, `git log*`, `git diff*`, plus `git show*` for
@@ -116,26 +129,26 @@ Two bodies carry a specific obligation:
 
 ## Acceptance criteria
 
-- [ ] Four role directories exist, each `name` matching its directory.
-- [ ] Every capability term is from the closed vocabulary; no client-native key
+- [x] Four role directories exist, each `name` matching its directory.
+- [x] Every capability term is from the closed vocabulary; no client-native key
       appears in any file.
-- [ ] `task-planner` and `adjudicator` emit for **both** clients; `preflight` and
+- [x] `task-planner` and `adjudicator` emit for **both** clients; `preflight` and
       `refuter` for **opencode only**.
-- [ ] **The emitter was observed refusing** a deliberately widened role, and the
+- [x] **The emitter was observed refusing** a deliberately widened role, and the
       output is recorded verbatim in this file.
-- [ ] Emitted OpenCode `bash` maps begin with `"*": deny`.
-- [ ] `refuter`'s body names `review` and states the difference.
-- [ ] `adjudicator`'s body states the `overrides` obligation and the
+- [x] Emitted OpenCode `bash` maps begin with `"*": deny`.
+- [x] `refuter`'s body names `review` and states the difference.
+- [x] `adjudicator`'s body states the `overrides` obligation and the
       title-only rule for `raise-adhoc`.
-- [ ] No role's description claims a capability its `capabilities` list does not
+- [x] No role's description claims a capability its `capabilities` list does not
       permit — the `B-021` test, applied before shipping rather than after.
-- [ ] The registry shows the client split.
+- [x] The registry shows the client split.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` then `git diff --exit-code docs/registry.md`
-- [ ] `python3 scripts/emit-agents.py` for both clients into a scratch directory
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` then `git diff --exit-code docs/registry.md`
+- [x] `python3 scripts/emit-agents.py` for both clients into a scratch directory
 
 ## Risks and rollback
 
@@ -154,14 +167,14 @@ Two bodies carry a specific obligation:
 
 ## Outputs / handover
 
-*Forecast until verified.*
+*Verified, 2026-09-23 — see the execution log.*
 
 | Artifact | End state |
 |----------|-----------|
 | `agents/{preflight,task-planner,refuter,adjudicator}/agent.md` | Authored; two portable, two OpenCode-only |
 | `docs/registry.md` | Four new Agents rows with client coverage |
 | This task file | The emitter's verbatim refusal output |
-| `~/.claude/agents/`, `~/.config/opencode/agents/` | Updated only if `install.sh` was run — say which, since nothing verifies freshness |
+| `~/.claude/agents/`, `~/.config/opencode/agents/` | **Not updated.** `install.sh` was not run; emission was proved into a scratch directory only, so both targets are stale for these four roles and nothing here can detect that (`ADR-0018` clause 4) |
 
 **Next task starts here**: `TASK-0064` authors the five acting roles, where every
 hard boundary decision lives. Record here whether `worktree-only` was settled or
@@ -169,18 +182,114 @@ inherited open, and the exact emitter refusal message — `TASK-0064` will need 
 recognise it.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-23
 - Updated: 2026-09-23
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
+- Date: 2026-09-23
+- Agent: Claude Opus 5, in worktree `ai-toolbox-worktrees/t0063` on `agent/t0063`
+  (ADR-0023).
 - Actions:
+  - Authored `agents/{preflight,task-planner,refuter,adjudicator}/agent.md`
+    from `agents/_template/`, capabilities and `clients` exactly as the Scope
+    table specifies, `mode: primary` for all four (see the correction above).
+  - Ran `scripts/emit-agents.py` for both clients into a scratch directory and
+    read the emitted frontmatter rather than assuming it.
+  - Proved the refusal path on a scratch **copy** of `agents/` before trusting
+    the pass, per `ADR-0018` clause 8.2.
+  - `scripts/sync-registry.sh`; four new Agents rows with the client split.
+
 - Observations:
+
+  **1. The emitter's refusal, verbatim.** `preflight`'s `clients` widened to
+  include `claude-code` in a scratch copy of `agents/`, then
+  `python3 scripts/emit-agents.py claude-code <scratch>`:
+
+  > `  EMISSION REFUSED: role 'preflight' declares 'bash-allowlist', which
+  > Claude Code cannot enforce per-agent (tools/disallowedTools gate whole
+  > tools and have no 'ask' state). Narrow its 'clients' list to opencode, or
+  > see ADR-0018 clause 8.4 before adding a workaround.`
+
+  Exit code **1**. The refusal is on **stderr**; the emitter **continues** to
+  the remaining roles and no `preflight.md` is written — so the signal is the
+  exit code plus the stderr line, not the absence of later output.
+  `TASK-0064` will meet this exact string for `no-force-push`,
+  `push-requires-confirmation` and `test-files-only` as well as
+  `bash-allowlist` — only the quoted term changes.
+
+  **2. Emission, both clients.** OpenCode: all four emitted, exit 0.
+  Claude Code: `task-planner` and `adjudicator` emitted, `preflight` and
+  `refuter` reported `agent skipped: … (not in its clients list)`, exit 0.
+  Every emitted OpenCode `bash` map begins with `"*": deny`, then the git
+  verbs in length order — verified by reading the files, not assumed.
+
+  **3. `task-planner` and `adjudicator` really are portable — and the price
+  is that they carry no command boundary at all.** Their emitted OpenCode
+  frontmatter has `edit`, `write`, `task`, `webfetch`, `websearch` and
+  `external_directory` denied and **no `bash` key**; their Claude Code
+  frontmatter has `disallowedTools: Write, Edit, NotebookEdit, Agent,
+  WebFetch, WebSearch` and no `tools` restriction. So `read-only` binds at the
+  **tool** layer only: neither role is prevented from writing a file through a
+  shell. That is not a defect in this task's profiles — it is the trade
+  `ADR-0022`'s "the two that only think" claim rests on, since adding
+  `bash-allowlist` to either would make it OpenCode-only and falsify the
+  claim. Recorded so the next reader does not discover it as a surprise:
+  **their read-only-ness is instructed in the body, not enforced against
+  bash.** `TASK-0064`'s acting roles do not have this option and must not
+  copy the shape.
+
+  **4. `preflight` cannot perform half of loop step 1 itself, and its body
+  says so.** Step 1 asks it to confirm the driver resolves an explicit model
+  and that every role is selectable as a *primary* agent. Neither is a git
+  command, and the emitted role files live outside the worktree, so
+  `bash-allowlist` (git verbs only) and `worktree-only` both exclude it. The
+  body resolves this the way `skills/unattended-ops/` rule 2 resolves gate
+  commands — **the driver runs the check and hands `preflight` the output to
+  read** — and states that output not being supplied is itself a `halt`. This
+  is a constraint on the binding, and `TASK-0065`'s binding templates should
+  carry it.
+
+  **5. `worktree-only` is inherited OPEN, not settled.** `TASK-0058` left it
+  open and the authoring guide says so in the present tense as of 2026-09-23:
+  `emit-agents.py` emits `isolation: worktree` for Claude Code and flags the
+  mapping `partial`, which is *behaviour persisting in code*, not a decision.
+  Both portable roles here carry it, so both carry the unresolved mapping —
+  confirmed in their emitted Claude Code files (`isolation: worktree`). The
+  guide's own caveat — *do not declare `worktree-only` on a Claude Code role
+  whose job is to commit* — does **not** bite here, because neither role
+  commits; it will bite `TASK-0064`'s `closer`. Owner remains `TASK-0040`.
+
+  **6. Two documentation discrepancies found, not edited (out of scope).**
+  - `scripts/emit-agents.py`'s module docstring says *"Six of the eleven
+    capability terms cannot be enforced per-agent in Claude Code"*, while the
+    authoring guide says *"The other seven are enforceable in OpenCode only"*.
+    Both are true and neither is wrong: the **refusal set** is six (the terms
+    whose `claude_code` entry is `None`); the seventh, `worktree-only`, is
+    OpenCode-only in *enforcement* but emits a partial Claude Code mapping
+    instead of refusing. A reader taking either number as the refusal count
+    gets `worktree-only` wrong in one direction or the other. Worth one
+    clarifying clause in the guide's "Four of the eleven" paragraph.
+  - This brief's Scope table, corrected above. Nothing in the loop or in
+    `skills/unattended-ops/` was found wrong.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` → `validate.sh: OK`.
+  - `scripts/sync-registry.sh` → four Agents rows added; `preflight` and
+    `refuter` show `opencode`, `task-planner` and `adjudicator` show
+    `claude-code, opencode`.
+  - `python3 scripts/emit-agents.py opencode <scratch>` → exit 0, four roles.
+  - `python3 scripts/emit-agents.py claude-code <scratch>` → exit 0, two
+    roles, two skipped.
+  - Refusal path → exit 1, message quoted above.
+  - Not run: `scripts/install.sh`. Nothing was emitted to `~/.claude/agents/`
+    or `~/.config/opencode/agents/`, so those targets are **stale** with
+    respect to this commit and nothing in this repo can detect that
+    (`ADR-0018` clause 4).
+
+- Result: acceptance criteria met, with the `mode` correction recorded above.
+- Commit: see the landing commit on `agent/t0063`.
+- Push: not attempted. This work was done in a per-session worktree and is
+  landed on `master` by the human operator (`ADR-0023`); pushing is theirs.
