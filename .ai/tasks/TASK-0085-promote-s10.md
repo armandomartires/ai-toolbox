@@ -169,5 +169,5 @@ declared. **Next free id: `TASK-0086`.**
   - `git status --porcelain` — `.ai/` only; no component file changed
   - `sprints/` holds **S1–S9**; S10 is no longer queued
 - Result: **done.** Sprint S10 is **open**, with the four claims corrected.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `60b491d`. Pre-commit hook ran `tests/validate.sh`: OK. **Verified atomic:** `git show --stat` lists `ROADMAP.md` (+46) and the deletion of `sprints/SPRINT-S10-unattended-bindings.md` (-81) together.
+- Push: **confirmed** — `origin/master` `a4d4bfc..60b491d`.
