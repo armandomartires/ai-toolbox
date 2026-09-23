@@ -181,5 +181,5 @@ trusting the table.
   - Phase 9 and the sprint move are in **one commit**
 - Result: **done.** Sprint S9 is **open**. `TASK-0058`, `TASK-0060` and
   `TASK-0061` are ready and unstarted.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `7f21c2c` — *Promote sprint S9 and add Phase 9 in the same commit*. Pre-commit hook ran `tests/validate.sh`: OK. **Verified atomic:** `git show --stat` lists `ROADMAP.md` (+75) and the deletion of `sprints/SPRINT-S9-unattended-runs.md` (-91) in the same commit.
+- Push: **confirmed** — pushed to `origin/master`.
