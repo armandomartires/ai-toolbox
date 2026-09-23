@@ -320,5 +320,5 @@ error and no exit.
   - Global agent directories re-listed: **no `zz*` fixture in either client**
 - Result: **done.** All three claims carry verdicts with commands and
   observed output. `TASK-0057` can now author `ADR-0022` on evidence.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `c9bc83d`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — pushed to `origin/master`.

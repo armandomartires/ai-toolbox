@@ -191,8 +191,8 @@ tasks the final clause set unblocks, so the next session does not re-derive it.
 - Result: **done.** `ADR-0022` is reconciled with evidence and left
   `Proposed`. **This task did not ratify it and authored nothing it
   unblocks.** The next step is a human decision, not a task.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `de22cd2`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — pushed to `origin/master`.
 
 ### Attempt 1 (template scaffold, retained)
 ### Attempt 1

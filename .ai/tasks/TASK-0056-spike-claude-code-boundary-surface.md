@@ -291,5 +291,5 @@ acting roles must commit**, so this cannot be decided by reasoning.
     `ideator.md` — **no fixture left behind**
 - Result: **done.** F5 confirmed on evidence, so `TASK-0059`'s check is
   earned. Two questions handed forward rather than guessed.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `c9bc83d`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — pushed to `origin/master`.
