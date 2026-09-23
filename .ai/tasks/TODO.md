@@ -552,10 +552,31 @@ spikes. The outstanding queue lives in `.ai/planning/SPRINT-CURRENT.md`.
       the two decidable triggers. graphify documented as exempt. **No
       graphify sections were written** — that was the decision (done)
 
-**Backlog after TASK-0073:** `B-018`, `B-021` and `B-023` are all closed —
-the unscheduled queue is down to **B-027** alone. Ready but already scoped
-into S9 briefs: **B-024** (`TASK-0059`), **B-026** (`TASK-0060`). Waiting on
-a second instance rather than on a planner: **B-025**.
+## Sprint S9 — Unattended runs (NOT PROMOTED; spikes run ahead of the gate)
+
+S9 is **still not open**. These three ran because they are the evidence the
+`ADR-0022` gate needs and they change no component file — `TASK-0055`'s own
+brief says they are *"not blocked by this ADR at all"*.
+
+- [x] TASK-0055 — **Spike.** OpenCode driver surface. **F1 FALSIFIED** —
+      `run --agent` cannot select a `subagent`; it falls back to the default
+      agent with normal stdout and exit 0. F2 confirmed, F4 confirmed with a
+      constraint. `mode: all` is real and `MODES` rejects it (done)
+- [x] TASK-0056 — **Spike.** Claude Code boundary surface. **F5 CONFIRMED** —
+      a dead `Agent(...)` reference is silent; raised **B-028**.
+      `isolation: worktree` left **unsettled**, attempt confounded (done)
+- [x] TASK-0057 — `ADR-0022` reconciled with the evidence, six corrections
+      made visibly, clause 5 added, **left `Proposed`** (done)
+- [ ] **GATE — human ratification of `ADR-0022`.** Not a task. `TASK-0058`,
+      `TASK-0060`, `TASK-0061` and S10's gate server each open with a gate
+      requiring it `Accepted`.
+- [ ] TASK-0058…TASK-0064 — blocked on the gate above
+
+**Backlog after TASK-0073 and the spikes:** `B-018`, `B-021` and `B-023` are
+all closed. Unscheduled: **B-027** and **B-028** (raised by `TASK-0056` from
+a live defect). Ready but already scoped into S9 briefs: **B-024**
+(`TASK-0059`), **B-026** (`TASK-0060`). Waiting on a second instance rather
+than on a planner: **B-025**.
 
 **Task numbering:** `PLAN-0006` reserved **TASK-0055…TASK-0067** for S9/S10,
 but only **TASK-0055…TASK-0064** were ever written, and

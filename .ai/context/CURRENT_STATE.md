@@ -4,8 +4,47 @@ Last updated 2026-09-23. **Sprint S8 is CLOSED. No sprint is open, and S9/S10
 are planned but not promoted.** Since then: `TASK-0069` (stale-claims sweep),
 `TASK-0070` (a worktree per agent session), `TASK-0071` (the
 `test-allowlist` term, closing `B-021`), `TASK-0072` (Bionic project skills,
-closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`).
-**The unscheduled backlog queue is down to one item, `B-027`.**
+closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`);
+then S9's two spikes and `ADR-0022`'s reconciliation (`TASK-0055`,
+`TASK-0056`, `TASK-0057`).
+
+## S9's spikes have run. `ADR-0022` is corrected and still `Proposed`
+
+**`TASK-0055`/`0056`/`0057`, 2026-09-23.** S9 is **not promoted** — the
+spikes ran because they are the evidence its gate needs and they change no
+component file. **The gate that remains is a human signature on `ADR-0022`.**
+
+**F1 is FALSIFIED, and it is the finding with teeth.** `opencode run --agent`
+**cannot** select a `mode: subagent` role: it warns on stderr, **falls back to
+the default agent**, and returns well-formed output with exit 0. A driver
+reading stdout or the JSON stream **cannot tell the wrong agent answered**.
+Every driver-invoked role must be `primary`. `mode: all` turns out to be a
+real third value OpenCode accepts and `tests/validate.sh`'s `MODES` rejects,
+so `TASK-0058`/`TASK-0059` now owe a schema decision.
+
+**F5 is CONFIRMED and it is a live defect, raised as `B-028`.**
+`~/.claude/agents/designer-manager.md` ships `tools: Agent(ideator, critic,
+git-ops)` while `git-ops.md` does not exist for that client, and Claude Code
+says **nothing**. A control naming only an absent delegate got 0 bytes of
+stderr and ended up with **no delegates at all**. The silence is real, not an
+artifact: `claude -p --agent <absent>` fails loudly with exit 1.
+
+**Two things that will bite a binding author, both found by failure:**
+`opencode run` with no configured default model and no TTY **hangs forever —
+no output, no error, no exit**; and an `ask` permission headless **auto-denies
+and reports "The user rejected permission" with no user present**, so
+unattended every `ask` is a `deny` wearing a false attribution.
+
+**F4 confirms the closer's staging boundary and constrains it:** `git add -A`
+and `git add .` are denied as intended, but so is `git add ./sub/b.txt` — the
+allowlist mandates the `--` form for *every* legitimate staging command.
+
+**`isolation: worktree` is still open**, and now openly so: `TASK-0056` tried
+and the attempt was confounded by permission denials. All nine S9 roles
+declare `worktree-only` and the acting roles must commit, so it cannot be
+reasoned out.
+
+**The unscheduled backlog queue is `B-027` and `B-028`.**
 
 ## A server owes a wiring section only under three conditions
 

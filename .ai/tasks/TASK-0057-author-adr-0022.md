@@ -131,12 +131,70 @@ ADR-0022 reads `Accepted`, and none may start before it does. Record here which
 tasks the final clause set unblocks, so the next session does not re-derive it.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-23
 - Updated: 2026-09-23
 
 ## Execution log
+### Attempt 1
+- Date: 2026-09-23
+- Agent: Claude Opus 5 (1M context)
+- Actions:
+  1. Read both spike files in full, including what each left unsettled.
+  2. Read the draft claim by claim against them.
+  3. **Corrected in place and visibly** — a `## Corrections made after the
+     spikes` section listing six corrections with their source, plus inline
+     block quotes at each corrected passage, the handling `ADR-0018` used.
+  4. Added the evidence stamp (`opencode 1.18.31`, `claude 2.1.246`, both
+     observed 2026-09-23) per `ADR-0018`'s practice.
+  5. Re-checked the four Decision clauses against the evidence. Three survive
+     unchanged; **clause 4.1's stated reason did not survive and was rewritten**
+     (see below). **Added clause 5**, because F1's falsification imposes
+     schema consequences the draft had no clause for.
+  6. Gave every row of the Falsifiable claims table a **Verdict** column: four
+     settled, five explicitly marked `UNTESTED` so a reader cannot mistake a
+     claim for a finding.
+- Observations:
+  - **Six corrections**, the material ones being: F1 assumed true and false;
+    `mode: all` real and rejected by this repo's `MODES`; the capability count
+    stale at "six of ten" (now seven of eleven — `TASK-0071` changed it hours
+    after the draft was written); and F4 confirmed but constraining the
+    command *form*.
+  - **Clause 4.1 is the interesting correction, because its conclusion
+    survived while its argument did not.** The draft rejected `ask` on the
+    grounds that unattended it is *"either a hang or … an approval."* Neither
+    occurs: it **auto-denies** and reports *"The user rejected permission"*
+    **with no user present**. The clause now argues from that misattribution,
+    which is a stronger reason than the one it replaced — an unattended run
+    would otherwise log a human decision that never happened. It also puts a
+    claim on `push-requires-confirmation`: the term is **meaningless** in an
+    unattended run.
+  - **Clause 5 is the only clause in this ADR that exists because a claim was
+    falsified rather than because a design was chosen.** It carries the four
+    consequences: driver-invoked roles must be `primary`; `all` must be
+    admitted or rejected **explicitly**; a binding must pass `-m` or hang
+    forever; the closer stages with `git add -- <path>`, always.
+  - **Status is unchanged at `Proposed`, and the closing section now says what
+    that means.** The spikes settled *facts*. They did not decide whether this
+    repo accepts a narrowing of `ADR-0019` clauses 2.5 and 3, which is the
+    actual gate. F1 arguably raises the stakes on that decision rather than
+    lowering them, and the ADR says so.
+  - `isolation: worktree` remains open; the ADR now records **that
+    `TASK-0056` tried and why the attempt was confounded**, rather than
+    leaving an unexplained gap.
+- Validation:
+  - `tests/validate.sh` — **OK**
+  - Structure re-checked: status still `Proposed`; five clause headings; all
+    nine claim rows carry 5 cells matching the header
+  - No component file changed
+- Result: **done.** `ADR-0022` is reconciled with evidence and left
+  `Proposed`. **This task did not ratify it and authored nothing it
+  unblocks.** The next step is a human decision, not a task.
+- Commit: *pending — recorded in the follow-up commit*
+- Push: *pending*
+
+### Attempt 1 (template scaffold, retained)
 ### Attempt 1
 - Date:
 - Agent:
