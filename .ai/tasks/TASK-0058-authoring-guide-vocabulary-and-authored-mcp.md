@@ -256,7 +256,10 @@ mapping. Settling it needs a run, owned by `TASK-0040`.
   in the guide: `mode: all` **rejected**, `worktree-only` **explicitly left
   open** with its scope. The `delegates_to` cross-client rule now states what
   the gate already enforces, so definition and enforcement agree.
-- Commit: `73ec4be`
+- Commit: `c39a37b` — *Decide mode: all, scope worktree-only, verify
+  authored-MCP section*. Recorded by a following commit, the convention this
+  repo already uses (`3e664c2`, `12a3bff`): a task file cannot carry the hash
+  of the commit that contains it.
 - Push: **not pushed, deliberately.** This task ran in worktree `t0058`
   alongside two concurrent sessions; the human lands all three branches
   serially onto `master` to keep it linear (`ADR-0023`), and instructed this
