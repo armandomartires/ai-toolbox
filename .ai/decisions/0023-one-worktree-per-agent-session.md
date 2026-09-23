@@ -2,16 +2,52 @@
 
 ## Status
 
-**Proposed**, 2026-09-23. Opened by `TASK-0070`.
+**Accepted — 2026-09-23**, ratified by the human **as written** (`TASK-0084`),
+after the mechanism had been exercised rather than merely built.
 
-**Proposed rather than accepted, deliberately.** Clause 2 below **changes a
-stated rule in `AGENTS.md`** — work stops going straight onto `master` and
-starts arriving by `git push origin HEAD:master` from a session branch.
-Changing a stated requirement is the human's call, not the agent's, which is
-the rule `ADR-0019` set and `ADR-0022` is currently following. The mechanism
-(clauses 1, 3, 4) is already built and safe to use; **clause 2 is what needs
-a signature**, because it is the one a reader could mistake for the repo
-having quietly acquired a branching workflow.
+**What ratification covers.** All five Decision clauses. **Clause 2 is the one
+that needed the signature**, and it is the one that changes a stated rule in
+`AGENTS.md`: work stops going straight onto `master` and arrives by
+`git push origin HEAD:master` from a session branch. `AGENTS.md` is updated in
+the same change, so the stated rule and the decision agree rather than
+disagreeing silently.
+
+**The evidence it was ratified on, which did not exist when it was proposed.**
+Sprint S9 ran **five concurrent sessions** in their own worktrees —
+`TASK-0058`/`0060`/`0061` in parallel, then `TASK-0059`/`0062` — each landing
+serially by rebase onto a linear `master`. **No index collision. No
+cross-session staging.** One registry conflict arose, between a task changing
+the Agents section and a task adding a Loops row, and **resolved cleanly on
+rebase**. The failure this ADR was written for happened **twice on 2026-09-23
+before the mechanism existed and not once since.**
+
+**What ratification does not do.**
+
+- **It adds no check, and clause 5 is ratified as part of the decision rather
+  than despite it.** Where a human points a session is not something this repo
+  can observe, and a check that cannot fail is its most-repeated lesson. The
+  control is the runbook and this document.
+- **It does not make this a branching workflow.** `master` still takes one
+  commit per task, still linear, still gated. No PR, no review gate, no merge
+  commits — `ADR-0007` keeps this repo trunk-based and clause 2 adds a rebase,
+  not a process.
+- **It does not claim the second observed collision is fixed.** The
+  Consequences section already says only one of the two is solved outright;
+  that limitation survives ratification.
+
+> **Superseded status text, 2026-09-23, preserved rather than deleted:**
+>
+> > **Proposed**, 2026-09-23. Opened by `TASK-0070`.
+> >
+> > **Proposed rather than accepted, deliberately.** Clause 2 below **changes
+> > a stated rule in `AGENTS.md`** — work stops going straight onto `master`
+> > and starts arriving by `git push origin HEAD:master` from a session
+> > branch. Changing a stated requirement is the human's call, not the
+> > agent's, which is the rule `ADR-0019` set and `ADR-0022` is currently
+> > following. The mechanism (clauses 1, 3, 4) is already built and safe to
+> > use; **clause 2 is what needs a signature**, because it is the one a
+> > reader could mistake for the repo having quietly acquired a branching
+> > workflow.
 
 ## Context
 

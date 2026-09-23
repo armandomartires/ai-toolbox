@@ -196,5 +196,5 @@ output.
   decision rests on observation rather than on a reimplemented matcher. A
   second finding was produced that nobody was looking for: a role's
   self-report about its own permissions is unreliable.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `fa1d588`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `ac6f9c3..fa1d588`.

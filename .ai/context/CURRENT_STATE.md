@@ -25,10 +25,13 @@ teaches the next sprint that criteria are advisory.**
 unattended yet**: S9 delivered the portable core, every binding is S10, and
 none exists — all three `configs/*/README.md` now say so.
 
-**Two decisions wait on a human**, both in `SPRINT-CURRENT.md`: the three
-trailing-flag holes affecting `git-ops` and `closer`, and ratifying
-`ADR-0023`, which earned its evidence this sprint — five concurrent sessions
-in their own worktrees, landed serially, no index collision.
+**Both post-S9 decisions are now taken.** `TASK-0083` closed two of the three
+trailing-flag holes (`--amend` into `no-force-push`, `--no-verify` into a new
+`no-bypass` term) and recorded the third — `git add -- .` — as **not closable
+at the glob layer**, after verifying that an equal-length deny loses. And
+**`ADR-0023` is `Accepted`** (`TASK-0084`), ratified on the evidence S9
+produced: five concurrent sessions in their own worktrees, landed serially, no
+index collision. `AGENTS.md`'s git rule was updated in the same change.
 
 ## What S9 delivered, and the finding that outlived it
 

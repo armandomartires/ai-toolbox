@@ -76,7 +76,9 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   locking between sessions, so the failure mode is one session committing
   another's half-finished work — which no gate here can detect, because it
   produces a *green* commit. Each concurrent session takes its own worktree
-  and lands by rebase (ADR-0023, **`Proposed`**; runbook has the steps).
+  and lands by rebase (**ADR-0023, `Accepted` 2026-09-23**; runbook has the
+  steps). `master` still takes **one commit per task** and stays linear —
+  the rebase is an added step, not a branching workflow.
   Observed twice on 2026-09-23 before the decision existed.
 - Every project has a local git repository. A remote (GitHub, GitLab) is
   recommended but not mandatory (ADR-0007). **This repo now has one:**

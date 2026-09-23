@@ -30,52 +30,46 @@ all three `configs/*/README.md` now say so.
 
 Nothing below is scheduled. It is the honest queue.
 
-### Decisions waiting on a human
+### Known limitations, not decisions
 
-1. **The three trailing-flag holes.** A prefix glob cannot constrain a
-   trailing flag, so for **both** `git-ops` and `closer`,
-   `git commit -m x --amend`, `git commit -m x --no-verify` and — worst —
-   **`git add -- .`** all resolve to **allow**. The last bulk-stages through
-   the pattern meant to prevent bulk staging; `--no-verify` bypasses the
-   mandatory commit gate. **Not a one-line fix:** `bash_allow` emits allows
-   only, so closing them means editing `no-force-push`'s map in
-   `scripts/emit-agents.py`, which changes the boundary of **four** roles at
-   once. Found by `TASK-0079`; `git-ops`'s body warns the role meanwhile and
-   says plainly that prose is weaker than a gate.
-2. **Ratify `ADR-0023`** (one worktree per agent session). Still `Proposed`,
-   and it now has the evidence it was waiting for: **five concurrent sessions**
-   ran in their own worktrees during S9 and landed serially by rebase, with no
-   index collision and one registry conflict that resolved cleanly. The
-   failure it was written for happened **twice** on 2026-09-23 before the
-   mechanism existed and **not once since**. Cheapest open item.
+1. **`git add -- .` cannot be closed at the glob layer**, and is a stated
+   limitation rather than an open fix. `TASK-0083` closed the other two
+   trailing-flag holes — `--amend` into `no-force-push`, `--no-verify` into
+   the new `no-bypass` — and **verified all of it against the client**. The
+   bulk-stage form is 12 characters and so is the allow it must beat; an
+   equal-length deny **lost**, observed, and any longer pattern also matches
+   legitimate dotfile paths like `.ai/tasks/x.md`. The deny was **removed
+   rather than shipped non-firing**, and the rule lives in `git-ops`'s and
+   `closer`'s bodies, labelled as weaker than a gate. Reopen only if OpenCode's
+   matcher changes.
 
 ### Carried forward, still open
 
-3. **`worktree-only` has no settled Claude Code emission.** `ADR-0018` clause
+2. **`worktree-only` has no settled Claude Code emission.** `ADR-0018` clause
    7's leftover, owned by `TASK-0040`. `TASK-0056` attempted it and the run
    was **confounded** by permission denials, so it could not distinguish
    isolation from refusal. `TASK-0058` then left it open *explicitly*, which
    is the honest outcome. The single question that settles it: **does a
    `worktree`-isolated *subagent's* commit reach the real tree?** All nine S9
    roles declare the term.
-4. **`B-025`** — no vocabulary term for *"may call only this MCP server"*. The
+3. **`B-025`** — no vocabulary term for *"may call only this MCP server"*. The
    only `ready` backlog row. Waiting on a **second** role that wants it: one
    instance is a case, two is a vocabulary.
-5. **The wiring-section gate is `server.json`-only.** `TASK-0073`'s check
+4. **The wiring-section gate is `server.json`-only.** `TASK-0073`'s check
    behind *"The first two triggers are checked"* reads manifests, so an
    authored server with a required variable or a destructive tool would owe a
    section and never be asked for one. Goes false when `TASK-0067` ships the
    first authored server. Found by `TASK-0059`.
-6. **`loops/release-check/` step 8 says to write a commit hash back *"and
+5. **`loops/release-check/` step 8 says to write a commit hash back *"and
    amend"***, which changes the hash just recorded. This repo's own recent
    history uses the follow-up-commit form instead. Found by `TASK-0061`.
-7. **`ansible-core`'s version is recorded in several places and has moved.**
+6. **`ansible-core`'s version is recorded in several places and has moved.**
    `REVIEW-0010` said nine; a count on 2026-09-23 found **five**, so
    `TASK-0069`'s sweep reduced but did not close it. Re-count before acting.
-8. **`skills/ansible-ops/` has never been exercised against a live estate.**
+7. **`skills/ansible-ops/` has never been exercised against a live estate.**
    Its closing item (`B-010`) was closed *with this limitation stated* — a
    closed item is not a claim of quality.
-9. **An untested commitment, stated a third time.** *"If a sprint shrinks, the
+8. **An untested commitment, stated a third time.** *"If a sprint shrinks, the
    honest cut is a product, never the spike"* has now been stated by three
    sprints and exercised by none. S9 did not shrink either. It should be
    restated in the next plan that risks shrinking, not retired as vindicated.
@@ -87,10 +81,11 @@ Nothing below is scheduled. It is the honest queue.
 
 1. ~~Write a `PLAN-####` in `.ai/planning/plans/`.~~ **Done for S10** —
    `PLAN-0006`.
-2. **Settle any ADR the sprint rests on.** S10 rests on no unratified
-   decision: `ADR-0022` is `Accepted`. But `ADR-0023` is `Proposed` and S10
-   will run concurrent sessions, so ratifying it belongs *with* the promotion
-   rather than after it.
+2. **Settle any ADR the sprint rests on.** ~~Outstanding for S10.~~ **Both are
+   settled**: `ADR-0022` `Accepted` (`TASK-0076`) and **`ADR-0023` `Accepted`
+   2026-09-23** (`TASK-0084`), the latter ratified on S9's own evidence — five
+   concurrent sessions, landed serially, no index collision. S10 will run
+   concurrent sessions and now rests on a ratified rule for doing so.
 3. Add the phase to `ROADMAP.md` **in the same change** as promotion. No
    mechanism enforces this — `tests/validate.sh` has no roadmap/sprint check
    and is not getting one, because it is a judgment call — so **the atomic
@@ -98,4 +93,4 @@ Nothing below is scheduled. It is the honest queue.
    on `7f21c2c` is the proof.
 4. Move the sprint file here, and confirm its task briefs exist in
    `.ai/tasks/` **before** any code is written — by counting them, not by
-   reading the sprint's own table. **Next free number: `TASK-0082`.**
+   reading the sprint's own table. **Next free number: `TASK-0085`.**

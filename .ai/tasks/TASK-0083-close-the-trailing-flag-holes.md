@@ -216,5 +216,5 @@ as success would have shipped the false boundary.
 - Result: **done.** `--amend` and `--no-verify` are closed and observed
   closed. `git add -- .` is **not closable at the glob layer** and is recorded
   as a limitation rather than papered over.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `3a3faa2`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `fa1d588..3a3faa2`.
