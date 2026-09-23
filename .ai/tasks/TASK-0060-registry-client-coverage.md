@@ -225,7 +225,8 @@ re-raised.
     derived.
 - Result: **done.** `ADR-0018` clause 8.5 satisfied; `B-026` closed. `TASK-0064`
   may now add OpenCode-only roles to a registry that can say so.
-- Commit: COMMIT_SHA_PLACEHOLDER
+- Commit: `8ef2cb9` — *Show each role's client coverage in the registry* (branch
+  `agent/t0060`). `tests/validate.sh` ran as the pre-commit hook and passed.
 - Push: **not pushed by this session, by instruction.** This task ran in the
   `agent/t0060` worktree alongside two concurrent sessions (`ADR-0023`); the
   coordinating session lands and pushes all three branches serially and records
