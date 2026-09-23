@@ -572,7 +572,15 @@ brief says they are *"not blocked by this ADR at all"*.
       recorded by `TASK-0076`. Ratified **as written**, after the spikes had
       corrected the draft. It unblocked the tasks below **without scheduling
       them**, and **did not promote S9**
-- [ ] TASK-0058…TASK-0064 — **unblocked, unscheduled.** Promotion is a
+- [x] TASK-0058 — Authoring guide: **`mode: all` REJECTED** with a reopening
+      condition; `worktree-only` for Claude Code **left open, explicitly**;
+      authored-MCP section verified against the template by reading (done)
+- [x] TASK-0060 — Registry gains a **Clients** column; `B-026` closed. Also
+      corrected `B-026`'s own justification — the separator is the emitter,
+      not the closed set (done)
+- [x] TASK-0061 — `loops/unattended-run/loop.md`: 14 steps, nine roles, three
+      unmerged retry bounds, null refuter **fails closed** (done)
+- [ ] TASK-0059, TASK-0062, TASK-0063, TASK-0064 — **remaining.** Promotion is a
       separate human decision and needs `ROADMAP.md`'s Phase 9 in the same
       change (`SPRINT-CURRENT.md` steps 3 and 4)
 

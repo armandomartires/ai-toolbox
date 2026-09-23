@@ -87,14 +87,59 @@ Neither was raised by this plan; both block it.
 | `TASK-0056` | — | **done** | **Spike.** Claude Code delegation and boundary surface. **F5 confirmed**; raised `B-028`; `isolation: worktree` left unsettled. |
 | `TASK-0057` | 0055, 0056 | **done** | Author `ADR-0022` from that evidence. Six corrections made visibly; **clause 5 added because F1 was falsified**. |
 | *gate* | 0057 | **CLEARED 2026-09-23** | **Human ratification of `ADR-0022`.** A gate, not a task — `TASK-0076`. Ratified **as written**. |
-| `TASK-0058` | gate | **ready** | Authoring guide: settle `worktree-only` for Claude Code; the `delegates_to` cross-client rule; the authored-MCP section verified against reality (`ADR-0010` obligation 2); **the `mode` row, which F1 now forces**. |
+| `TASK-0058` | gate | **done** | Authoring guide: settle `worktree-only` for Claude Code; the `delegates_to` cross-client rule; the authored-MCP section verified against reality (`ADR-0010` obligation 2); **the `mode` row, which F1 now forces**. |
 | `TASK-0059` | 0058 | **ready (reduced)** | `validate.sh`: extend the destructive-capability and `.env.example` gates to the **authored** shape (`B-024`). **Its `delegates_to` check already exists** — built by `TASK-0075`, observed firing on the real defect. What remains is re-reading it against whatever `TASK-0058` settles about `mode`. |
-| `TASK-0060` | gate | **ready** | `sync-registry.sh`: Agents section gains a Clients column. Closes `B-026` / `ADR-0018` clause 8.5. **Must land before `TASK-0064`.** |
-| `TASK-0061` | gate | **ready** | `loops/unattended-run/loop.md`. Authored **before** the roles. |
+| `TASK-0060` | gate | **done** | `sync-registry.sh`: Agents section gains a Clients column. Closes `B-026` / `ADR-0018` clause 8.5. **Must land before `TASK-0064`.** |
+| `TASK-0061` | gate | **done** | `loops/unattended-run/loop.md`. Authored **before** the roles. |
 | `TASK-0062` | 0061 | planned | `skills/unattended-ops/` — `SKILL.md` plus seven references. |
 | `TASK-0063` | 0059, 0061 | planned | The four **thinking** roles: `preflight`, `task-planner`, `refuter`, `adjudicator`. |
 | `TASK-0064` | 0060, 0063 | planned | The five **acting** roles: `implementer`, `gate-runner`, `closer`, `park-steward`, `run-scribe`. |
 | `REVIEW-0011` | all | planned | Checkpoint. |
+
+## Three tasks ran in parallel, 2026-09-23 — and what they decided
+
+`TASK-0058`, `TASK-0060` and `TASK-0061` ran **concurrently, one worktree
+each** (`ADR-0023`), and landed serially by rebase so `master` stayed linear
+with one task per commit. Three decisions came out of them that the rest of
+the sprint depends on:
+
+- **`mode: all` is REJECTED** (`TASK-0058`, discharging `ADR-0022` clause
+  5.2's requirement to decide *explicitly*). `mode` here is a portability
+  declaration, not a passthrough, and it is load-bearing for a safety rule:
+  `delegation-allowlist` is valid only with `primary`, because Claude Code
+  ignores an `Agent(...)` allowlist inside a subagent definition. **`all`
+  means both**, so such a role's boundary would be enforced or silently
+  widened *depending on how it was invoked* — unknowable from the file.
+  `MODES` is unchanged; **`TASK-0059` owes only a message that reads as a
+  deliberate refusal** rather than an unrecognised string.
+- **`worktree-only` for Claude Code is still NOT settled**, explicitly and
+  with the reason written into the guide. Deciding *emit* would ratify
+  current emitter behaviour on confounded evidence; deciding *refuse* would
+  break `critic` and `ideator` on the same confounded evidence. The single
+  question that settles it: **does a `worktree`-isolated subagent's commit
+  reach the real tree?** Owner stays `TASK-0040`.
+- **The registry now shows client coverage** (`TASK-0060`, closing `B-026`
+  and `ADR-0018` clause 8.5): `| Name | Clients | Description | Path |`,
+  four of six roles visibly `opencode`-only. **It also corrected the
+  justification `B-026` itself gave** — "`validate.sh` constrains `clients`
+  to a closed set" does *not* separate it from `mode`, since `MODES` is
+  closed-set checked too. The real separator is the emitter: `clients` is the
+  **gate** (a role omitting a client gets **no file written**), while `mode`
+  is merely carried through. So the `mode` decision reads as upheld-with-a-
+  test, not reversed.
+
+**Two defects found in passing, both recorded rather than fixed in scope:**
+`loops/release-check/` step 8 instructs an author to write a commit hash back
+*"and amend"*, which changes the hash just recorded; and `install.sh`'s
+printed authored-MCP launch command has **two** form discrepancies, not one
+(both assigned to `TASK-0067`).
+
+**One correction applied at landing:** the loop named its ninth role
+`scribe` while `PLAN-0006`, this file and `TASK-0064`'s brief all say
+**`run-scribe`**. Renamed in the loop, since the planned name is what the
+unwritten task will follow. The *consolidation* it represents — journal and
+handover are two acts given to one role, keeping the count at nine — stands,
+and `TASK-0063`/`TASK-0064` should look at it.
 
 **Three front doors are open at once.** `TASK-0058` and `TASK-0060` both
 depend only on the cleared gate and are independent of each other;

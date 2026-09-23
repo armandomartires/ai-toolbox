@@ -8,6 +8,46 @@ closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`);
 then S9's two spikes and `ADR-0022`'s reconciliation (`TASK-0055`,
 `TASK-0056`, `TASK-0057`).
 
+## Three S9 tasks ran in parallel and landed
+
+**2026-09-23.** `TASK-0058`, `TASK-0060` and `TASK-0061` ran **concurrently,
+one git worktree each** (`ADR-0023`) and landed serially by rebase, so
+`master` stayed linear with one commit per task. First real use of the
+worktree mechanism `TASK-0070` built.
+
+- **`mode: all` is REJECTED** — `ADR-0022` clause 5.2 required the decision to
+  be explicit, and this is it. `mode` is a portability declaration, not a
+  passthrough of OpenCode's field, and it is load-bearing for a safety rule:
+  `delegation-allowlist` is valid only with `primary` because Claude Code
+  ignores an `Agent(...)` allowlist inside a subagent definition. **`all`
+  means both**, so the boundary would be enforced or silently widened
+  depending on how the role happened to be invoked. `MODES` is unchanged.
+- **`worktree-only` for Claude Code remains unsettled, explicitly.** Both
+  available answers would have been decided on `TASK-0056`'s confounded
+  evidence. The question that settles it is now written down: **does a
+  `worktree`-isolated subagent's commit reach the real tree?**
+- **The registry shows client coverage** — `| Name | Clients | Description |
+  Path |`, closing `B-026` and `ADR-0018` clause 8.5. Four of six roles are
+  visibly `opencode`-only. **`B-026`'s own stated justification was wrong and
+  was corrected:** "`validate.sh` constrains `clients` to a closed set" does
+  not separate it from `mode`, which is closed-set checked too. The separator
+  is the **emitter** — `clients` gates emission (a role omitting a client gets
+  **no file written**) while `mode` is merely carried through.
+- **`loops/unattended-run/loop.md` exists** — 14 steps, nine roles, three
+  deliberately unmerged retry bounds, and a **null refuter that fails closed**
+  (the driver synthesises `refuted: true` rather than reading silence as
+  consent).
+
+**One correction applied at landing:** the loop named its ninth role `scribe`
+while `PLAN-0006`, `SPRINT-CURRENT.md` and `TASK-0064`'s brief all say
+**`run-scribe`** — left alone, `TASK-0064` would have authored a role the loop
+never cites. Renamed in the loop.
+
+**Two defects found in passing, recorded not fixed:**
+`loops/release-check/` step 8 says to write a commit hash back *"and amend"*,
+which changes the hash just recorded; and `install.sh`'s authored-MCP launch
+line has **two** form discrepancies, both assigned to `TASK-0067`.
+
 ## Sprint S9 is OPEN
 
 **`TASK-0077`, 2026-09-23.** Promoted, with `ROADMAP.md`'s **Phase 9** added
