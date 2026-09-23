@@ -158,5 +158,5 @@ decision, and `ADR-0023`'s ratification is the cheapest open item.
   - `git status --porcelain` — `.ai/` only; no component file changed
 - Result: **done.** Sprint S9 is closed. No sprint is open, stated as a state
   rather than an oversight.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `74e8aef`. Pre-commit hook ran `tests/validate.sh`: OK. **Verified atomic:** `git show --stat` lists the Phase 9 change and the sprint-file rename together.
+- Push: **confirmed** — `origin/master` `a754827..74e8aef`.
