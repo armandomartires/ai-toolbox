@@ -594,9 +594,51 @@ without vendoring, and without auto-installing anything.
   precondition from a protocol failure, which affects any future server
   with state requirements.
 
-## Phase 9 — Unattended runs: the decision and the portable core (OPEN 2026-09-23)
+## Phase 9 — Unattended runs: the decision and the portable core (COMPLETE 2026-09-23)
 
-> **Opened 2026-09-23 by `TASK-0077`**, in the same commit as this section.
+> **Closed 2026-09-23 on `REVIEW-0011`** (`TASK-0081`), archived at
+> `.ai/planning/sprints/SPRINT-S9-unattended-runs.md` — the path this section
+> predicted. **All seven exit criteria met**, and the order in which the last
+> one was met is the point: `REVIEW-0011` found **criterion 7 unmet** and
+> recommended fixing it *before* closure rather than closing over it.
+> `TASK-0080` did. A sprint that closes over its own unmet criterion teaches
+> the next sprint that criteria are advisory.
+>
+> | Exit criterion | Evidence |
+> |---|---|
+> | 1 — `ADR-0022` ratified on evidence | **`Accepted` 2026-09-23** (`TASK-0076`), after both spikes ran. **F1 was falsified**, adding clause 5 — what was signed is *more* cautious than the draft |
+> | 2 — the `mode` question decided **explicitly** | **`mode: all` rejected** (`TASK-0058`), three reasons and a reopening condition. `MODES` unchanged; the gate now refuses `all` **by name** rather than as a typo |
+> | 3 — `worktree-only` settled **or** explicitly recorded open | **Recorded open**, with the reason (`TASK-0056`'s run was confounded) and the one question that settles it |
+> | 4 — registry shows client coverage | **Mechanical:** `\| Name \| Clients \| Description \| Path \|`; eleven of fifteen rows read `opencode` |
+> | 5 — loop authored **before** the roles | **Mechanical, in `git log`:** loop `e28e2da` → thinking roles `02c1cb2` → acting roles `69e6eb2` |
+> | 6 — nine roles emit; emission **refuses** when widened | **Mechanical:** `opencode` exit 0/15 files, `claude-code` exit 0/4 files with five skipped. Refusal observed **twice**, exit 1, no file written |
+> | 7 — asymmetry stated in the skill **and all three snapshots** | **Not met at checkpoint; met by `TASK-0080`.** Each snapshot now names its own coverage: Claude Code two of nine, OpenCode all nine, Bionic **zero** |
+>
+> **The sprint's defining finding: the false-boundary defect class appeared
+> four times** — `qa-test` (`B-021`), `designer-manager` (`B-028`),
+> `read-only` not stopping a shell, and `git-ops`'s `no-force-push` covering
+> push only. Four mechanisms, one shape: **a component's self-description
+> outrunning its enforcement.** Three of the four were caught by *resolving
+> what a declaration actually produces* rather than reading the declaration,
+> which is now this repo's standard move for capability work.
+>
+> **`ADR-0023` earned its evidence here.** Five concurrent sessions ran in
+> their own worktrees and landed serially by rebase — no index collision, one
+> registry conflict that resolved cleanly. The failure it was written for
+> happened twice on 2026-09-23 before the mechanism existed and not once
+> since. **It is still `Proposed`.**
+>
+> **Three holes remain open**, affecting `git-ops` and `closer` identically: a
+> prefix glob cannot constrain a trailing flag, so `git commit -m x --amend`,
+> `--no-verify` and **`git add -- .`** all resolve to *allow*. Closing them
+> means editing `no-force-push`'s map, which moves four roles' boundaries — a
+> decision, not a task.
+>
+> **Nothing runs unattended yet.** S9 delivered the portable core; **every
+> binding is S10**, and none exists.
+>
+> **Originally opened 2026-09-23 by `TASK-0077`**, in the same commit as this
+> section.
 > Planned by `PLAN-0006`; held in `SPRINT-CURRENT.md`. Delivers `ADR-0022`
 > **(already `Accepted`, `TASK-0076`)** and the client-agnostic half of an
 > unattended-run harness: one loop, one skill, nine agent roles. The three

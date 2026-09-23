@@ -596,8 +596,21 @@ brief says they are *"not blocked by this ADR at all"*.
 - [x] REVIEW-0011 — S9's checkpoint. **6 of 7 exit criteria met**; criterion 7
       (the asymmetry in all three wiring snapshots) is **not**, which is the
       gap the pre-committed question was written to catch (done)
-- [ ] **S9 closure — a human decision.** `REVIEW-0011` recommends fixing
-      criterion 7 first rather than closing over an unmet exit criterion. Promotion is a
+- [x] TASK-0080 — Exit criterion 7: the OpenCode-first asymmetry now stated
+      in all three `configs/*/README.md`, each naming its own coverage (done)
+- [x] TASK-0081 — **Sprint S9 CLOSED** on `REVIEW-0011`, archived to
+      `sprints/`, Phase 9 marked COMPLETE in the same commit (done)
+
+**Sprint S9 complete.** Checkpoint: `REVIEW-0011`. All seven exit criteria
+met, criterion 7 having been closed by `TASK-0080` **before** closure rather
+than closing over it.
+
+## Post-S9 (no sprint open)
+
+Promoting S10 is a human decision. The outstanding queue lives in
+`.ai/planning/SPRINT-CURRENT.md`: two decisions waiting on a human (the three
+trailing-flag holes; ratifying `ADR-0023`, which now has its evidence) and
+seven carried-forward items. **Next free number: `TASK-0082`.** Promotion is a
       separate human decision and needs `ROADMAP.md`'s Phase 9 in the same
       change (`SPRINT-CURRENT.md` steps 3 and 4)
 

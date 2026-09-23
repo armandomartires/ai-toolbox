@@ -8,7 +8,29 @@ closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`);
 then S9's two spikes and `ADR-0022`'s reconciliation (`TASK-0055`,
 `TASK-0056`, `TASK-0057`).
 
-## S9 is complete but NOT closed — one exit criterion is unmet
+## Sprint S9 is CLOSED
+
+**`TASK-0081`, 2026-09-23.** Closed on `REVIEW-0011`, archived to
+`.ai/planning/sprints/SPRINT-S9-unattended-runs.md`, with **Phase 9 marked
+COMPLETE in the same commit** — the same atomic-commit control the promotion
+used, since nothing mechanical enforces roadmap/sprint agreement.
+
+**All seven exit criteria met, and the order matters.** `REVIEW-0011` found
+**criterion 7 unmet** — the OpenCode-first asymmetry was stated in the skill
+and in none of the three wiring snapshots — and recommended fixing it before
+closure. `TASK-0080` did. **A sprint that closes over its own unmet criterion
+teaches the next sprint that criteria are advisory.**
+
+**No sprint is open.** S10 is queued and allocates no task ids. **Nothing runs
+unattended yet**: S9 delivered the portable core, every binding is S10, and
+none exists — all three `configs/*/README.md` now say so.
+
+**Two decisions wait on a human**, both in `SPRINT-CURRENT.md`: the three
+trailing-flag holes affecting `git-ops` and `closer`, and ratifying
+`ADR-0023`, which earned its evidence this sprint — five concurrent sessions
+in their own worktrees, landed serially, no index collision.
+
+## What S9 delivered, and the finding that outlived it
 
 **`REVIEW-0011`, 2026-09-23.** The sprint delivered its portable core: one
 loop, one skill with seven references and a working checker, nine roles, two
