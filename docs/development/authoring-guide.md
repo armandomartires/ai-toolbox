@@ -38,12 +38,92 @@ cannot drift out of sync with the directory's actual contents;
 
 - **Authored (Python)**: Python 3.10+, src layout, hatchling, FastMCP.
   One tool per concern; document every argument; tests required. Copy
-  from `mcp-servers/_template/`.
+  from `mcp-servers/_template/`. Verified against the template below.
 - **External (npm, PyPI CLI, etc.)**: no source vendored. Described by a
   `server.json` manifest (schema below). Copy from
   `mcp-servers/_template-external/`. Per-client wiring goes in
   `configs/*/README.md`; the manifest, not the wiring snippet, is the
   machine-readable source of truth.
+
+### Authored (Python) servers, read from `mcp-servers/_template/`
+
+**No authored server exists in this repo yet.** `mcp-servers/ansible` and
+`mcp-servers/graphify` are both external, so `_template/` holds the only
+`pyproject.toml` here and everything below is read from scaffolding rather
+than from a server that has run. That is `ADR-0010`'s deferral arriving and
+its **obligation 2** — *"the authored-server section gets verified against
+reality rather than assumption"* — being discharged by reading. `TASK-0067`
+walks the path for the first time and will find what reading cannot.
+
+The template is **three files**, with no `README.md` and no `__init__.py`:
+
+```
+mcp-servers/_template/
+  pyproject.toml
+  src/template_mcp_server/server.py
+  tests/test_server.py
+```
+
+| Element | What the template actually does | Gated |
+|---|---|---|
+| Shape marker | `pyproject.toml` present, `server.json` absent. The shape is derived from the marker, never self-declared. | **yes** |
+| Python | `requires-python = ">=3.10"`. | **no** |
+| Build backend | `hatchling`, declared in `[build-system]`. | **no** |
+| Layout | src layout — `src/<package>/server.py`, the package being the project name with hyphens as underscores, which is what hatchling auto-detects. **There is no `__init__.py`.** Nothing here has built the template, so whether hatchling packages it as it stands is **unverified**; `TASK-0067` finds out. | **no** |
+| Dependencies | Exactly one: `mcp>=1.0`. | **no** |
+| "FastMCP" | `from mcp.server.fastmcp import FastMCP` — the FastMCP **bundled in the official `mcp` SDK**, not the standalone `fastmcp` distribution on PyPI. They are different packages on different version lines, and the bare word "FastMCP" in this guide has always meant the bundled one. | **no** |
+| One tool per concern | One `@mcp.tool()`, on `echo(text: str) -> str`. | **no** |
+| Document every argument | A Google-style `Args:` block in the tool's docstring. FastMCP derives the argument schema from the annotated signature and the tool description from the docstring, so an undocumented argument reaches the client unexplained. | **no** |
+| Entry point | `[project.scripts] template-mcp-server = "template_mcp_server.server:main"`, with `main()` calling `mcp.run()`. | **no** |
+| Tests | `tests/test_server.py`, importing the tool function directly. **pytest is not declared anywhere and nothing in this repository runs it** — "tests required" is a convention here, not a gate. | **no** |
+
+**What `tests/validate.sh` checks on an authored server is the marker file,
+and nothing else.** It never reads `pyproject.toml`. In particular the
+destructive-capability gate and the `.env.example` completeness check both
+parse `server.json`, so they **never see an authored server at all** — raised
+as `B-024`. The first authored server this repo plans to ship is a command
+runner, the most destructive surface it could have, which is why `ADR-0022`
+makes closing `B-024` an acceptance criterion of that server's own task
+rather than a follow-up.
+
+**`tests/smoke-mcp.sh` skips authored servers entirely.** It iterates
+`mcp-servers/*/` and `continue`s past any directory without a `server.json`,
+with the comment *"authored Python servers: none yet"*. That is `ADR-0010`'s
+**obligation 1**, still open and owned by `TASK-0067`.
+
+**`scripts/sync-registry.sh` reads the registry row out of `pyproject.toml`
+by line prefix** — `grep '^name = '` and `grep '^description = '`, first match
+of each, quotes stripped. So both must be single-line, double-quoted values
+starting at column 1. A folded, multi-line or single-quoted `description`
+reaches the registry mangled: the same defect class as the skills' single-line
+`description` rule, in a different file format.
+
+#### Two launch-form discrepancies, both owned by `TASK-0067`
+
+Named here rather than fixed — this section defines, `TASK-0067` resolves
+(`ADR-0008`).
+
+1. **`cd` versus `--directory`.** `scripts/install.sh` prints
+   `cd mcp-servers/<name> && uv run <name>`. That is a correct instruction for
+   a human at a shell and **not usable in a client config**: an MCP client
+   launches the command with a working directory of its own choosing, so a
+   config needs the cwd-independent form `uv --directory <absolute-path> run
+   <name>`. One of the two must change, or both must be stated with which is
+   for which. `ADR-0010`'s obligation 1 anticipated `uv run <name>` as the
+   authored launch convention and did not anticipate this split.
+2. **`uv run <name>` names the console script, not the directory.**
+   `install.sh` prints `uv run $(basename "$d")`, so the printed command only
+   works when the `[project.scripts]` entry point **equals the directory
+   name**. The template does not model that: its directory is `_template` and
+   its script is `template-mcp-server`. There is no rule that they match — the
+   external shape requires `name` to equal the directory name, the authored
+   shape has no such requirement and nothing checks one. A server copied
+   verbatim from the template into `mcp-servers/foo/` gets an `install.sh`
+   line that does not run.
+
+Neither is settled here. Both are facts about the repository as it stood on
+2026-09-23, read from `install.sh`, `sync-registry.sh`, `smoke-mcp.sh`,
+`validate.sh` and the template itself.
 
 ### `server.json` schema (external servers)
 All keys below are required unless marked optional. `scripts/install.sh`
@@ -235,14 +315,62 @@ surface to emit into (ADR-0020).
 | Frontmatter delimiters | `---` on line 1, terminated by a closing `---`. Claude Code reads a file whose opening `---` is not line 1 as having no frontmatter and silently treats it as documentation. |
 | `name` | Required, non-empty, **must equal the directory name**. It determines the emitted filename and the Claude Code `name:` field, so a mismatch deploys a role the client cannot find. `_template*` is exempt from the equality rule only. |
 | `description` | Required, non-empty, **single line**. It renders into one registry cell, and it is also what each client shows the delegating model — a folded (`>`) or block (`\|`) scalar breaks the row. |
-| `mode` | Required. `primary` or `subagent`. Not inferred: OpenCode has an explicit `mode` field while Claude Code has none, so the emitter must be told rather than guess. An interactive role **must** be `primary` — Claude Code strips `AskUserQuestion` from every subagent regardless of its tool list, and OpenCode's default `subagent_depth: 1` stops a subagent spawning workers. |
+| `mode` | Required. `primary` or `subagent`, and **only** those two — OpenCode accepts a third value, `all`, which this repo rejects deliberately; see below. Not inferred: OpenCode has an explicit `mode` field while Claude Code has none, so the emitter must be told rather than guess. An interactive role **must** be `primary` — Claude Code strips `AskUserQuestion` from every subagent regardless of its tool list, and OpenCode's default `subagent_depth: 1` stops a subagent spawning workers. A role a driver invokes with `opencode run --agent` must **also** be `primary`: a `subagent`-mode role is not refused, it is **silently replaced by OpenCode's default agent**, which answers with well-formed stdout and exit 0 (`TASK-0055`, `ADR-0022` clause 5.1). |
 | `capabilities` | Required, non-empty list drawn **only** from the vocabulary below. This is the role's safety boundary, stated in abstract terms because the emitter has to translate it into two different permission models — a boundary written in one client's syntax cannot be translated into the other's, and is silently discarded rather than rejected. |
-| `delegates_to` | *Required **iff** `capabilities` includes `delegation-allowlist`; forbidden otherwise.* A non-empty **block list** of role names this role may invoke — one `- name` per line. The inline flow form (`[a, b]`) is **not read** and fails the gate. Held in its own key rather than inside `capabilities` because every vocabulary term is a plain string and the parsers read flat sequences; nesting a parameter would change the schema's shape for one term. Stated as `iff` because it is checkable in both directions, and both are checked. |
+| `delegates_to` | *Required **iff** `capabilities` includes `delegation-allowlist`; forbidden otherwise.* A non-empty **block list** of role names this role may invoke — one `- name` per line. The inline flow form (`[a, b]`) is **not read** and fails the gate. Held in its own key rather than inside `capabilities` because every vocabulary term is a plain string and the parsers read flat sequences; nesting a parameter would change the schema's shape for one term. Stated as `iff` because it is checkable in both directions, and both are checked. Every name must resolve to a role in `agents/` that is emitted for **every** client the delegating role declares — see *A delegate must exist for every client the caller declares* below. |
 | `bash_allow` | *Required **iff** `capabilities` includes `bash-allowlist`; forbidden otherwise.* A non-empty **block list** of command patterns this role may run — one `- 'git *'` per line, quoted because a glob is not a bare YAML scalar. Everything not matched is **denied**, not prompted. Same block-list-only rule as `delegates_to`, for the same parser reason. Entries are gated: see *Both command allowlists are constrained* below. |
 | `test_allow` | *Required **iff** `capabilities` includes `test-allowlist`; forbidden otherwise.* A non-empty **block list** of test-command patterns, same quoting, block-list-only rule and **entry guards** as `bash_allow`. Merges into the same emitted `bash` map, so a role may hold both keys. |
 | `clients` | Required. List of clients this role is emitted for: `claude-code`, `opencode`, or both. Declared rather than derived, because a role asking for a capability a client cannot enforce is a **scoping decision**, not something the emitter should silently resolve. |
 | `model` | *Optional.* A **tier name**, never a client-native model ID. The two clients' model formats are mutually invalid — OpenCode wants `provider/model-id`, Claude Code wants an alias, a full ID or `inherit` — and OpenCode accepts a foreign value at parse time and **fails only at run time**. **Omit it: no tier resolver exists in this repo** — see the note below. |
 | Body | Required, non-empty. Everything after the frontmatter is the system prompt, emitted verbatim to both clients. It is the one part of a role that is genuinely portable. |
+
+#### `mode: all` is rejected on purpose, not overlooked
+
+OpenCode accepts a **third** mode. At `opencode 1.18.31`, `opencode agent
+list` reports `(all)` beside `(primary)` and `(subagent)`, and
+`opencode run --agent` selects an `all` role correctly — a discriminating
+result, since the same fixture shape under `mode: subagent` fell back to the
+default agent (`TASK-0055`). `tests/validate.sh` admits `primary` and
+`subagent` only.
+
+**That is a decision taken here, not an omission.** `ADR-0022` clause 5.2
+required it to be made explicitly: *"deciding it by leaving `MODES` alone is a
+decision; making it silently is not."* The decision is **reject**, for three
+reasons.
+
+1. **`mode` is a portability declaration, not a passthrough of OpenCode's
+   field, and it is load-bearing for a safety rule.**
+   `delegation-allowlist` is valid only with `mode: primary`, because Claude
+   Code honours an `Agent(...)` allowlist for a main-thread agent and
+   **ignores it inside a subagent definition**. `all` means *both*. A role
+   declaring it would carry a boundary that is enforced or silently widened
+   **depending on how it happens to be invoked**, which no reader can
+   determine from the file. Preventing exactly that is what this field is
+   for.
+2. **Nothing needs it.** Every role a driver invokes must be `primary`
+   (`ADR-0022` clause 5.1), and no role in this repo is both a driver target
+   and a delegate. `ADR-0018` clause 8.1: *a term is not admitted merely
+   because it can be written* — and "OpenCode accepts it" is that argument in
+   another form.
+3. **What `all` does beyond selection is untested.** `TASK-0055` established
+   that `--agent` selects an `all` role. It did **not** establish that
+   OpenCode's `task` tool offers one as a delegate, nor what either client
+   does with `delegation-allowlist` on it. Admitting a schema value on a third
+   of the evidence is what `ADR-0008`'s definition-first order exists to stop.
+
+**The rejection is loud, and it fires in the right place.**
+`tests/validate.sh` fails the commit with `mode 'all' is not one of: primary,
+subagent` — in this repository, at authoring time, rather than in a client at
+run time. Gated: **yes**, by `MODES` in `tests/validate.sh` as it stands.
+`TASK-0059` changes no value in that set; what it owes is that the message
+reads as a deliberate rejection rather than an unrecognised string.
+
+**What would reopen it**, so this is a decision with a condition rather than a
+wall: a role that genuinely must be *both* a driver target and a delegate.
+Admitting `all` then requires, in this order — a run establishing whether an
+`all` role appears in OpenCode's `task` delegate set and what each client does
+with `delegation-allowlist` on it; this section rewritten to say so; and only
+then the gate widened.
 
 #### Known gap: `model` has no resolver in this repo
 
@@ -320,6 +448,43 @@ expressible in both (omit `Agent` from `tools`). At OpenCode's default
 `no-delegation` on a subagent is belt-and-braces rather than redundant —
 the depth limit is global config a user can raise, while the role's own
 boundary travels with the role.
+
+#### A delegate must exist for every client the caller declares
+
+**The rule, in two halves, both checked.** If role `A`'s `delegates_to` names
+`B`, then:
+
+1. `B` must be a role directory under `agents/`; and
+2. every client in `A`'s `clients` must also appear in `B`'s `clients`.
+
+**The reason is evidence, not analogy.** Claude Code validates the top-level
+`--agent` **loudly** — `claude -p --agent <absent>` exits 1 with 182 bytes of
+stderr naming every available agent — and does **not** validate the names
+inside an agent definition's `tools: Agent(...)` allowlist. A control fixture
+naming only an absent delegate produced **0 bytes of stderr**, exit 0, and a
+role that reported having **no delegates at all** (`TASK-0056`, `claude
+2.1.246`). The second control is what makes the first meaningful: the warning
+channel works, so the silence is a finding rather than a client that never
+warns.
+
+So a role whose entire purpose is delegation can load, run and look correct
+while being unable to delegate — `ADR-0018` clause 8's invisible degradation,
+occurring inside Claude Code's own mechanism.
+
+**The emitter cannot catch this.** `scripts/emit-agents.py` sees one role at a
+time and has no reason to doubt a name, so the check belongs at source, before
+emission.
+
+**Gated: yes.** `tests/validate.sh` enforces both halves and reports
+`INVALID DELEGATION: …`. Added by `TASK-0075`, which closed `B-028` — the live
+instance was `agents/designer-manager/`, declaring `clients: [claude-code,
+opencode]` while delegating to the OpenCode-only `git-ops`; it was narrowed to
+`opencode` only.
+
+**Either side may move, and the author decides which.** Narrow the caller's
+`clients`, or widen the delegate's. Widening a delegate that exists to enforce
+an OpenCode-only capability is not an option — the emitter refuses it (clause
+8), which is the intended outcome, so in practice the caller narrows.
 
 **Emitted glob order matters.** OpenCode's `permission` rules are
 last-match-wins, so the emitter writes `"*": "deny"` first and the allowed
@@ -427,10 +592,42 @@ tool calls touching paths outside the working directory**. Claude Code's
 repository** and checks that its commands stay inside it — confinement by
 redirection rather than refusal, and its check covers the whole repository
 containing the launch directory. Both narrow blast radius; neither is a
-drop-in translation of the other. TASK-0040 must decide explicitly whether
-`worktree-only` emits `isolation: worktree` for Claude Code or refuses the
-client, and record which — it is the term every existing role declares, so
-resolving it silently would affect all of them.
+drop-in translation of the other.
+
+**Still unsettled as of 2026-09-23, and recorded as such deliberately.**
+`ADR-0018` clause 7 assigned the question to `TASK-0040`; it is still open,
+and `TASK-0056` **tried and failed** to settle it, which is worth stating so
+the gap does not read later as one nobody looked at.
+
+`TASK-0056`'s run was **confounded**. A fixture declaring `isolation:
+worktree` had every write refused by the *permission* layer, across three
+different mechanisms, so the run could not distinguish isolation from denial.
+Its `pwd` and `git rev-parse --show-toplevel` both returned the **real**
+directory rather than a copy, which points *against* a copy being made — but
+that fixture ran as a main-thread `claude -p` agent, and the behaviour
+described above concerns **subagents**, which the run never exercised.
+**Nothing in it is a verdict**, and it must not be cited as one.
+
+**What the repo does today is behaviour, not a decision.**
+`scripts/emit-agents.py` emits `isolation: worktree` for Claude Code and flags
+the mapping `partial`. Read that as the unresolved state persisting in code,
+not as the question having been answered in favour of emitting.
+
+**One question settles it**: does a commit made by a `worktree`-isolated
+**subagent** reach the real repository? It needs a run in an environment where
+writes are permitted. It cannot be reasoned out, and this guide does not.
+
+**Scope, stated so nobody has to re-derive it.** Every role in `agents/`
+declares `worktree-only` — all six. Two of them, `critic` and `ideator`, are
+emitted for Claude Code today, so they are the roles carrying the unresolved
+mapping right now. All nine roles planned for the unattended-run set declare
+it too (`ADR-0022`), and for the *acting* roles among them the difference is
+material: **an isolated copy is the wrong confinement for a role that must
+commit to the real tree.** Until this is settled, do not declare
+`worktree-only` on a Claude Code role whose job is to commit — either narrow
+that role to `opencode`, or wait for the answer.
+
+Owner: `TASK-0040`, unchanged.
 
 ### A role file must not contain client-native syntax
 A role file must **not** contain a `permission:` block, the string
