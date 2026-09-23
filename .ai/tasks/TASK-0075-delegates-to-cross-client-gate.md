@@ -214,5 +214,5 @@ next step is the `ADR-0022` ratification gate.
   - `git status --porcelain` — fixtures removed
 - Result: **done.** `B-028` closed: the live instance fixed and the class
   gated. The unscheduled backlog queue is now **empty**.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `607a955`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — pushed to `origin/master`.

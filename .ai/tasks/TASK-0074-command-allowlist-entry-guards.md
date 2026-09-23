@@ -168,5 +168,5 @@ of them pass.
   - `git status --porcelain` — fixtures removed; `agents/` untouched
 - Result: **done.** `B-027` closed, its counter-argument retracted, and a
   `TASK-0071` over-restriction corrected in the same change.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `d0d5051`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — pushed to `origin/master`.
