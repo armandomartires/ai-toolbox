@@ -186,5 +186,5 @@ it and this task should stop rather than overwrite.
   - `git status --porcelain` — **`.ai/` only**; no component file changed
 - Result: **done.** `ADR-0022` is `Accepted`. `TASK-0058`, `TASK-0060` and
   `TASK-0061` are unblocked and unscheduled.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `4e79693` — *Ratify ADR-0022 as written; do not promote S9*. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `0b0cac8..4e79693`.
