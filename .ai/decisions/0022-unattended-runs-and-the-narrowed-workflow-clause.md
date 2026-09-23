@@ -2,27 +2,78 @@
 
 ## Status
 
-**Proposed**, 2026-09-23. Opened by `PLAN-0006` (sprint S9).
+**Accepted — 2026-09-23**, ratified by the human **as written**, after both
+blocking spikes had run and the document had been reconciled against what they
+found (`TASK-0076`).
 
-**Proposed rather than accepted, deliberately.** This decision **narrows two
-clauses of an accepted ADR**, and ADR-0019 set the rule for exactly this
-situation: it was itself *"`proposed` rather than `accepted` at authoring time
-because it **narrows a stated requirement**, and narrowing a requirement is the
-human's call, not the agent's."* The same applies here, twice over, and nothing
-this ADR unblocks may be authored until it is ratified.
+**What ratification covers.** The **five Decision clauses**. Clauses 1 and 2
+narrow `ADR-0019` clauses 3 and 2.5 for unattended runs only; clause 3
+instantiates `ADR-0019`'s undefined *"locked plan"* as the committed task file;
+clause 4 is the boundary none of them move; **clause 5 exists because a claim
+was falsified**, and is the only one of the five not chosen as a design.
 
-**Blocked on two spikes** (`TASK-0055`, `TASK-0056`), unlike ADR-0019 and like
-ADR-0018. Three of the nine falsifiable claims below can only be settled against
-the installed clients, and one of them — **F1** — decides every role's `mode:`
-field and therefore whether this repo's agent schema needs changing at all. An
-ADR ratified ahead of F1 would be ratifying a guess.
+**What ratification does *not* do.**
 
-> **Both spikes have now run (2026-09-23).** F1 is **falsified**, F2 and F5 are
-> **confirmed**, F4 is **confirmed with a constraint the draft did not
-> anticipate**, and this document has been corrected in place where the
-> evidence disagreed with it. **The ADR remains `Proposed`** — running the
-> spikes settled the facts; it did not narrow the requirement, and narrowing a
-> requirement is still the human's call.
+- **It does not make the falsified claims retroactively true.** F1 was
+  **falsified** and F4 confirmed only with a constraint the draft did not
+  anticipate. Those verdicts, the six corrections and the superseded draft text
+  are **left exactly as written**. Rewriting them would erase the evidence that
+  the spikes were load-bearing, and this file is a dated record rather than a
+  live status page (`ADR-0006`'s annotation, applied here as `ADR-0021` applied
+  it to itself).
+- **It does not promote sprint S9.** `SPRINT-CURRENT.md` lists four steps to
+  open a sprint; this is **step 2 only**. Adding a Phase 9 to `ROADMAP.md` and
+  moving the sprint file remain a separate human decision, and that file is
+  explicit that doing them piecemeal is how a phase has twice gone missing.
+- **It does not schedule anything.** `TASK-0058`, `TASK-0060` and `TASK-0061`
+  become **unblocked**, not started.
+
+**Two open questions were carried into ratification rather than resolved by
+it**, and are recorded here so neither reads later as settled:
+
+1. **Whether `mode: all` is admitted to this repo's schema.** OpenCode accepts
+   a third mode and `tests/validate.sh`'s `MODES` rejects it. Clause 5.2
+   requires `TASK-0058` to decide this **explicitly** — *"deciding it by
+   leaving `MODES` alone is a decision; making it silently is not."*
+2. **Whether `push-requires-confirmation` should remain in the vocabulary at
+   all.** Clause 4.1's correction establishes that an unattended `ask`
+   auto-denies while reporting *"The user rejected permission"* with no user
+   present, which makes the term **meaningless in an unattended run**. The ADR
+   requires roles in this set to declare an explicit denial instead; whether
+   the term survives for *attended* use is not decided here.
+
+**A third thing stays open and is not a question but a gap:** `isolation:
+worktree` is still uncharacterised — `TASK-0056` attempted it and the run was
+**confounded** by permission denials, so it could not distinguish isolation
+from refusal. All nine S9 roles declare `worktree-only` and the acting roles
+must commit, so this cannot be reasoned out and must be run.
+
+> **Superseded status text, 2026-09-23, preserved rather than deleted.** This
+> block previously read:
+>
+> > **Proposed**, 2026-09-23. Opened by `PLAN-0006` (sprint S9).
+> >
+> > **Proposed rather than accepted, deliberately.** This decision **narrows
+> > two clauses of an accepted ADR**, and ADR-0019 set the rule for exactly
+> > this situation: it was itself *"`proposed` rather than `accepted` at
+> > authoring time because it **narrows a stated requirement**, and narrowing
+> > a requirement is the human's call, not the agent's."* The same applies
+> > here, twice over, and nothing this ADR unblocks may be authored until it
+> > is ratified.
+> >
+> > **Blocked on two spikes** (`TASK-0055`, `TASK-0056`), unlike ADR-0019 and
+> > like ADR-0018. Three of the nine falsifiable claims below can only be
+> > settled against the installed clients, and one of them — **F1** — decides
+> > every role's `mode:` field and therefore whether this repo's agent schema
+> > needs changing at all. An ADR ratified ahead of F1 would be ratifying a
+> > guess.
+>
+> Both spikes then ran (2026-09-23): F1 **falsified**, F2 and F5
+> **confirmed**, F4 **confirmed with a constraint**. The document was
+> corrected in place before being signed, so what was ratified is **more
+> cautious than the draft**, not less — F1's falsification means an unattended
+> driver invoking the wrong agent is invisible from stdout, which raises the
+> stakes on this decision rather than lowering them.
 
 **Evidence stamp** (ADR-0018's practice — record what was read, on what, when):
 
@@ -431,14 +482,16 @@ that produce its evidence and must run first. They change no component file.
 **Both are now `done` (2026-09-23)** and their verdicts are in the table above.
 The gate they represented is cleared; the one that remains is a signature.
 
-**What ratification now means, stated plainly so it is not mistaken for
-bookkeeping.** The facts are settled and the ADR has been corrected against
-them. What is *not* settled is whether this repo accepts a **narrowing of
-ADR-0019 clauses 2.5 and 3** — that is a judgment about how much autonomy the
-repo is willing to define, and no amount of spike evidence decides it. Clause 5
-sharpens the question rather than softening it: F1's falsification means an
-unattended driver invoking the wrong agent is **invisible from stdout**, so the
-blast radius of getting this wrong is larger than the draft assumed.
+**Ratified 2026-09-23.** The question this section framed — whether this repo
+accepts a **narrowing of `ADR-0019` clauses 2.5 and 3** — was a judgment no
+amount of spike evidence could decide, and it has now been answered by the
+human: **yes, as written.** Clause 5 sharpened rather than softened it, F1's
+falsification having shown that an unattended driver invoking the wrong agent
+is **invisible from stdout**.
+
+**So the gate below is cleared, and the list is now a list of what is
+available rather than what is waiting.** Note what did *not* happen: the
+sprint was not promoted, and no task was scheduled. See the Status block.
 
 **Not settled here, and named so it is not assumed handled:**
 

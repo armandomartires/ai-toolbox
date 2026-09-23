@@ -567,10 +567,13 @@ brief says they are *"not blocked by this ADR at all"*.
       `isolation: worktree` left **unsettled**, attempt confounded (done)
 - [x] TASK-0057 — `ADR-0022` reconciled with the evidence, six corrections
       made visibly, clause 5 added, **left `Proposed`** (done)
-- [ ] **GATE — human ratification of `ADR-0022`.** Not a task. `TASK-0058`,
-      `TASK-0060`, `TASK-0061` and S10's gate server each open with a gate
-      requiring it `Accepted`.
-- [ ] TASK-0058…TASK-0064 — blocked on the gate above
+- [x] **GATE — human ratification of `ADR-0022`. CLEARED 2026-09-23**,
+      recorded by `TASK-0076`. Ratified **as written**, after the spikes had
+      corrected the draft. It unblocked the tasks below **without scheduling
+      them**, and **did not promote S9**
+- [ ] TASK-0058…TASK-0064 — **unblocked, unscheduled.** Promotion is a
+      separate human decision and needs `ROADMAP.md`'s Phase 9 in the same
+      change (`SPRINT-CURRENT.md` steps 3 and 4)
 
 - [x] TASK-0074 — **B-027**: one entry guard for `bash_allow` *and*
       `test_allow`, and a correction to `TASK-0071` — its wildcard rule

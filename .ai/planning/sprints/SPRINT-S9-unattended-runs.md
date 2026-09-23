@@ -52,10 +52,10 @@ Neither was raised by this plan; both block it.
 
 | Task | Depends on | Status | What |
 |---|---|---|---|
-| `TASK-0055` | — | planned | **Spike.** OpenCode driver surface: F1, F2, F4 against the installed `opencode 1.18.31`. Read-only, scratch project, per-claim markers and negative controls. **Critical path.** |
-| `TASK-0056` | — | planned | **Spike.** Claude Code delegation and boundary surface: F5 against the live `designer-manager` emission; whether any command boundary is expressible per-agent there at all. Parallel with 0055. |
-| `TASK-0057` | 0055, 0056 | planned | Author `ADR-0022` from that evidence; leave `Proposed`. |
-| *gate* | 0057 | — | **Human ratification of `ADR-0022`.** A gate, not a task. |
+| `TASK-0055` | — | **done** | **Spike.** OpenCode driver surface: F1, F2, F4 against the installed `opencode 1.18.31`. Read-only, scratch project, per-claim markers and negative controls. **Critical path.** |
+| `TASK-0056` | — | **done** | **Spike.** Claude Code delegation and boundary surface: F5 against the live `designer-manager` emission; whether any command boundary is expressible per-agent there at all. Parallel with 0055. |
+| `TASK-0057` | 0055, 0056 | **done** | Author `ADR-0022` from that evidence; leave `Proposed`. Six corrections made visibly; clause 5 added because **F1 was falsified**. |
+| *gate* | 0057 | **CLEARED 2026-09-23** | **Human ratification of `ADR-0022`.** A gate, not a task — recorded by `TASK-0076`. The sprint is still **not promoted**; ratification unblocked the rows below without scheduling them. |
 | `TASK-0058` | gate | planned | Authoring guide: settle `worktree-only` for Claude Code; the `delegates_to` cross-client rule; the authored-MCP section verified against reality (`ADR-0010` obligation 2); the `mode` row if F1 forces it. |
 | `TASK-0059` | 0058 | planned | `validate.sh`: the `delegates_to` cross-client check **with a fixture proving it fails before it passes**; extend the destructive-capability and `.env.example` gates to the authored shape (`B-024`). |
 | `TASK-0060` | gate | planned | `sync-registry.sh`: Agents section gains a Clients column. Closes `B-026` / `ADR-0018` clause 8.5. |

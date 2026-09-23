@@ -503,8 +503,10 @@ any agent or human can understand, trust, and deploy.
 > **S9 and S10 do exist as plans** — `PLAN-0006` (unattended task runs)
 > produced `sprints/SPRINT-S9-unattended-runs.md` and
 > `sprints/SPRINT-S10-unattended-bindings.md`, both queued. S9 rests on
-> `ADR-0022`, which is `Proposed` and blocked on its own two spikes, so
-> promoting it is a human decision. **Whoever promotes it adds the Phase 9
+> `ADR-0022`, which was `Proposed` and blocked on its own two spikes and is
+> **`Accepted` as of 2026-09-23** (`TASK-0076`) — so the *decision* gate is
+> cleared and promoting the sprint is still a human decision, separate from
+> it. **Whoever promotes it adds the Phase 9
 > section here in the same change** — this file has had two phases go
 > missing after the fact, and adding one now, ahead of the promotion, would
 > be the third variation of the same defect rather than a fix for it.

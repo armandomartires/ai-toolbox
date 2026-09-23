@@ -12,10 +12,18 @@ loop, a skill, nine roles) and
 bindings). **Both are queued, not open**, which in this repo means a file in
 `sprints/` rather than here.
 
-**S9 cannot start yet, and its own file says why:** it rests on `ADR-0022`,
-which is `Proposed` and **blocked on two spikes** whose evidence decides
-whether this repo's agent schema needs changing at all. Ratifying it ahead
-of that evidence would be ratifying a guess.
+**S9's blocking gate is now cleared, and it is still not open.** It rested on
+`ADR-0022`, which was `Proposed` and blocked on two spikes whose evidence
+decided whether this repo's agent schema needed changing at all. Both spikes
+ran on 2026-09-23 and **`ADR-0022` was ratified the same day** (`TASK-0076`).
+
+**The evidence changed the decision before it was signed.** `TASK-0055`
+**falsified F1** — `opencode run --agent` cannot select a `subagent`-mode role
+and silently falls back to the default agent — so the ADR gained a fifth
+clause and this repo owes a `mode`-schema decision. Ratifying ahead of that
+would indeed have been ratifying a guess.
+
+**Promotion remains a separate decision, and is what is still missing.**
 
 **So promoting S9 is a human decision, not bookkeeping** — the same call
 `TASK-0052` made for S6-versus-S8. `ROADMAP.md` also has no Phase 9 section
@@ -79,8 +87,12 @@ Full entries in `.ai/planning/BACKLOG.md`.
 
 1. ~~Write a `PLAN-####` in `.ai/planning/plans/`.~~ **Done for S9/S10** —
    `PLAN-0006`.
-2. **Settle `ADR-0022`.** It is `Proposed` and blocked on S9's own two
-   spikes, so this is not a signature that can be given in advance.
+2. ~~**Settle `ADR-0022`.**~~ **Done 2026-09-23** (`TASK-0076`). Both
+   blocking spikes ran (`TASK-0055`, `TASK-0056`), `TASK-0057` reconciled the
+   draft against what they found, and the human ratified it **as written**.
+   `ADR-0022` is **`Accepted`**. Note what that did *not* do: it unblocked
+   `TASK-0058`, `TASK-0060` and `TASK-0061` without scheduling them, and it
+   did not promote the sprint — steps 3 and 4 below are still outstanding.
 3. Add the phase to `ROADMAP.md` **in the same change** as promotion — that
    file has had two phases go missing after the fact, both diagnosed as
    needing a mechanism, and no mechanism was ever added.

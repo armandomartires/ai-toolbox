@@ -8,11 +8,26 @@ closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`);
 then S9's two spikes and `ADR-0022`'s reconciliation (`TASK-0055`,
 `TASK-0056`, `TASK-0057`).
 
-## S9's spikes have run. `ADR-0022` is corrected and still `Proposed`
+## S9's spikes have run and `ADR-0022` is ratified
 
 **`TASK-0055`/`0056`/`0057`, 2026-09-23.** S9 is **not promoted** — the
 spikes ran because they are the evidence its gate needs and they change no
-component file. **The gate that remains is a human signature on `ADR-0022`.**
+component file. **That gate is now cleared: `ADR-0022` was ratified as
+written on 2026-09-23** (`TASK-0076`), after the spikes had run and the draft
+had been corrected against them — so what was signed is **more cautious than
+the draft**, not less.
+
+**Ratification unblocked `TASK-0058`, `TASK-0060` and `TASK-0061` without
+scheduling them, and did not promote the sprint.** Promotion is a separate
+decision and needs `ROADMAP.md`'s Phase 9 written in the same change.
+
+**Two questions were carried into ratification rather than closed by it:**
+whether `mode: all` is admitted to this repo's schema (clause 5.2 makes
+`TASK-0058` decide it **explicitly**), and whether
+`push-requires-confirmation` survives in the vocabulary at all, now that an
+unattended `ask` is known to auto-deny while blaming an absent human. A third
+item is a gap rather than a question — **`isolation: worktree` is still
+uncharacterised**, and all nine S9 roles declare `worktree-only`.
 
 **F1 is FALSIFIED, and it is the finding with teeth.** `opencode run --agent`
 **cannot** select a `mode: subagent` role: it warns on stderr, **falls back to
@@ -247,7 +262,7 @@ Before it: S6's closure with S8 promoted to current (`TASK-0054`).
 
 **`PLAN-0006`, 2026-09-23.** Planning only — **no component file changed**, and
 that boundary was the human's instruction rather than a scoping choice. What
-exists is `ADR-0022` (**`Proposed`**), two sprint files, ten task briefs
+exists is `ADR-0022` (**`Accepted` 2026-09-23**), two sprint files, ten task briefs
 (`TASK-0055`…`0064`) and three backlog items. Nothing in `loops/`, `skills/`,
 `agents/`, `mcp-servers/`, `configs/`, `scripts/` or `tests/` was touched.
 
@@ -268,7 +283,8 @@ put `git-ops`, `qa-test` and `review` in the same position. **This harness is
 OpenCode-first**, and under Claude Code and Bionic it runs with boundaries that
 are weaker by construction, not equivalent.
 
-**`ADR-0022` narrows two clauses and is deliberately unratified.** Clause 3
+**`ADR-0022` narrows two clauses and was deliberately unratified until
+2026-09-23**, when the human ratified it as written (`TASK-0076`). Clause 3
 (dynamic workflows) is narrowed to the *component* layer: still forbidden as a
 component, permitted as a **binding** that carries no rule of its own. Ground 1
 ("no mid-run user input") is inapplicable to an unattended run by construction
@@ -338,7 +354,7 @@ observed failing when deliberately broken.
 **Nothing was promoted to replace S8.** `ROADMAP.md` has no Phase 9 section,
 and while **S9 and S10 exist as plans** (`PLAN-0006` — unattended task runs,
 written concurrently with this closure) both are queued in `sprints/`, and S9
-is gated on `ADR-0022`, which is `Proposed` and blocked on its own two
+is gated on `ADR-0022`, which was `Proposed` and blocked on its own two
 spikes. `SPRINT-CURRENT.md` now says that explicitly and carries the
 outstanding queue — three `ready` backlog
 items (**B-018**, **B-021**, **B-023**), four `REVIEW-0009` follow-ups and
