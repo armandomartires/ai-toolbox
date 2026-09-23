@@ -609,13 +609,13 @@ than closing over it.
 
 **Promoted by `TASK-0085`**, in the same commit as `ROADMAP.md`'s Phase 10.
 Both ADRs it rests on are `Accepted`. It **allocates no task ids** — one is
-taken when a brief is written. **Next free: `TASK-0086`.**
+taken when a brief is written. **Next free: `TASK-0089`.**
 
-- [ ] S10.1 — **only the OpenCode driver remains**; the contract, checker and
+- [ ] TASK-0086 — S10.1 — **only the OpenCode driver remains**; the contract, checker and
       fixtures already ship from `TASK-0062`
-- [ ] S10.2 — the Claude Code Workflow binding
-- [ ] S10.3 — `mcp-servers/gates/`, the first authored server. **Highest
-      risk; needs a human authorization block.** Independent of S10.1/S10.2
+- [ ] TASK-0087 — S10.2 — the Claude Code Workflow binding
+- [ ] TASK-0088 — S10.3 — `mcp-servers/gates/`, the first authored server.
+      **Highest risk; `blocked` until a human fills its Authorization section.** Independent of S10.1/S10.2
 - [ ] S10.4 — the Bionic binding; *establish* the orchestration claim or drop
       it, since the snapshot already records the established coverage
 - [ ] S10.5 / S10.6 / S10.7 — wiring snapshots, registry, **the pilot**
