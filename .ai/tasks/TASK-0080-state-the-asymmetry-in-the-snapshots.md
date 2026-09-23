@@ -175,5 +175,5 @@ unmet exit criterion standing against it.
     names its own coverage
 - Result: **done.** Exit criterion 7 is met. **All seven Phase 9 criteria are
   now met**, and nothing stands against closing S9 but the decision.
-- Commit: *pending — recorded in the follow-up commit*
-- Push: *pending*
+- Commit: `0a85818`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `0b2a2ea..0a85818`.
