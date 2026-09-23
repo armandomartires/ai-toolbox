@@ -40,7 +40,22 @@ one and would have been missed by a checkpoint written afterwards, which is
 the argument for pre-committing the question rather than a vindication of the
 particular wording.
 
-**This is exit criterion 7, and it is NOT met.**
+**This is exit criterion 7, and it was NOT met when this checkpoint was
+written.**
+
+> **Closed 2026-09-23 by `TASK-0080`**, on the human's instruction, before S9
+> was closed — rather than closing the sprint over its own unmet criterion.
+> Each snapshot now names **its own** coverage: Claude Code two of nine (with
+> the seven it does not get), OpenCode all nine as the reference client,
+> Bionic **zero** — the last stated on `ADR-0020`'s established
+> no-agent-directory finding rather than on `SPRINT-S10`'s not-yet-established
+> claim that Bionic cannot orchestrate. All three link the skill rather than
+> restating its reasoning, and all three say plainly that **no binding exists
+> yet, so nothing runs unattended on any client**.
+>
+> **The finding above is left exactly as written.** It is what the checkpoint
+> found, and a review rewritten to match its own follow-up stops being
+> evidence that the pre-committed question worked.
 
 ## Diff summary
 
@@ -72,7 +87,7 @@ produced.
 | 4 | Registry shows client coverage | **Met.** `\| Name \| Clients \| Description \| Path \|`; eleven of fifteen rows read `opencode` |
 | 5 | Loop authored **before** the roles | **Met, checkable in `git log`:** loop `e28e2da` 19:37 → thinking roles `02c1cb2` 20:07 → acting roles `69e6eb2` 21:02 |
 | 6 | Nine roles emit; emission **refuses** when one is widened | **Met.** `opencode` exit 0, 15 files; `claude-code` exit 0, 4 files, five skipped. Refusal observed twice, in `TASK-0063` and `TASK-0064`, with exit 1 and no file written |
-| 7 | Asymmetry stated plainly in the skill **and both wiring snapshots** | **NOT MET** — see above |
+| 7 | Asymmetry stated plainly in the skill **and both wiring snapshots** | **NOT MET at checkpoint time. Met 2026-09-23 by `TASK-0080`** — see the closing note |
 
 **Seven of nine roles are OpenCode-only and two port**, exactly as the sprint
 claimed. That claim survived a real challenge rather than being asserted: see
@@ -210,13 +225,17 @@ with a stated exit criterion unmet. It is small, it is the sprint's own
 commitment, and a sprint that closes over its own unmet criterion teaches the
 next sprint that criteria are advisory.
 
+> **Taken, 2026-09-23.** `TASK-0080` closed criterion 7. **All seven exit
+> criteria are now met**, and nothing stands against closing S9 but the
+> decision itself.
+
 **Closing the sprint is a human decision**, as promoting it was.
 
 ## Follow-up tasks
 
 | # | Item | Why it is not in this sprint |
 |---|---|---|
-| 1 | **State the OpenCode-first asymmetry in all three `configs/*/README.md`**, including that Bionic cannot orchestrate | Exit criterion 7. **Recommended before closure.** |
+| 1 | ~~State the asymmetry in all three `configs/*/README.md`~~ | **Done 2026-09-23, `TASK-0080`.** Bionic's section states the *established* fact (zero roles, `ADR-0020`) rather than S10.4's unestablished orchestration claim |
 | 2 | **Decide the trailing-flag holes** — whether `no-force-push`'s emitter map gains `--amend`, `--no-verify` and `git add -- .` denies | Changes four roles' boundaries; a vocabulary-behaviour decision, not a task's to take |
 | 3 | **Ratify `ADR-0023`** | Now has the evidence five concurrent sessions provide |
 | 4 | `worktree-only`'s Claude Code emission | Still `TASK-0040`'s; needs a run where writes are permitted |

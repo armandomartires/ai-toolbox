@@ -107,7 +107,33 @@ emission **fail loudly** rather than emit a file with the boundary dropped
 - **Nothing prunes a stale emitted file.** Deleting a role from the repo
   leaves `~/.claude/agents/<role>.md` in place. Remove it by hand.
 
-## Third-party extensions
+### The unattended-run harness is OpenCode-first — this client gets two of nine roles
+
+`loops/unattended-run/` and `skills/unattended-ops/` (sprint S9) ship **nine
+agent roles**. **Seven of them are never emitted here.** Checkable in
+`docs/registry.md`'s Clients column rather than taken on trust:
+
+| Emitted for this client | Not emitted here |
+|---|---|
+| `task-planner`, `adjudicator` — **the two that only think** | `preflight`, `refuter`, `implementer`, `gate-runner`, `closer`, `park-steward`, `run-scribe` |
+
+**The reason is structural and is not going to change.** Each of the seven
+needs a per-agent *command* boundary — "only these git verbs", "only the gate
+script" — and `tools`/`disallowedTools` gate **whole tools**, with no
+intra-tool granularity and no `ask` state (`ADR-0018` clause 8.3). So
+`install.sh` **skips** them here, cleanly and with exit 0, rather than
+emitting a role whose declared boundary this client cannot hold.
+
+**What that means in practice.** The method is portable and the *enforcement*
+is not: under this client the same run would proceed on **prompt-level rules,
+which are weaker by construction** — not equivalent, and not to be described
+as equivalent. `skills/unattended-ops/SKILL.md` owns that reasoning; it is
+linked rather than repeated here, so there is one owner of it.
+
+> **Nothing runs unattended on any client yet.** The loop, the skill and the
+> roles are the portable core; **every binding — the thing that actually
+> drives a run — is S10**, and none exists. A reader finding these components
+> installed should not conclude the capability is available.
 
 Extensions that are **not components of this repo** and are wired through
 the client's own mechanism (`ADR-0021` clause 2). Nothing here is installed,

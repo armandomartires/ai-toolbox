@@ -116,7 +116,36 @@ Those are separate acts needing their own authorization.
 - **Nothing prunes a stale emitted file.** Deleting a role from the repo
   leaves `~/.config/opencode/agents/<role>.md` in place. Remove it by hand.
 
-## Third-party extensions
+### The unattended-run harness is OpenCode-first — this is the reference client
+
+`loops/unattended-run/` and `skills/unattended-ops/` (sprint S9) ship **nine
+agent roles, and all nine emit here.** Seven of them emit **only** here:
+`preflight`, `refuter`, `implementer`, `gate-runner`, `closer`,
+`park-steward` and `run-scribe`. Only `task-planner` and `adjudicator` — the
+two that only think — also reach Claude Code.
+
+**That is not a preference for this client; it is where the enforcement
+exists.** Each of the seven declares a per-agent *command* boundary, and
+OpenCode's `permission` model is the only one of the three clients that can
+express one (`ADR-0018` clause 8.3). Under the other clients the same method
+runs on **prompt-level rules, weaker by construction**.
+`skills/unattended-ops/SKILL.md` owns that reasoning and is linked rather than
+restated, so it has one owner.
+
+**Two consequences worth knowing here**, both observed rather than reasoned
+(`TASK-0055`, against `opencode 1.18.31`):
+
+- **A driver must pass `-m <provider/model>` explicitly**, or guarantee a
+  configured default. With neither, `opencode run` **hangs indefinitely — no
+  output, no error, no exit** — which is what a nightly run would do at 3am
+  with nothing in the log.
+- **Every role the driver invokes must be `mode: primary`.** A
+  `subagent`-mode role is not refused: it is **silently replaced by the
+  default agent**, which answers with well-formed stdout and exit 0.
+
+> **Nothing runs unattended yet, on this client either.** The loop, the skill
+> and the roles are the portable core; **every binding is S10**, and none
+> exists.
 
 Extensions that are **not components of this repo** and are wired through
 the client's own mechanism (`ADR-0021` clause 2). Nothing here is installed,

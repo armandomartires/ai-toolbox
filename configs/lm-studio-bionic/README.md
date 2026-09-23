@@ -171,6 +171,32 @@ if Bionic's documentation describes a user-agent directory. Do not infer one
 from a directory name — that inference is exactly what produced the
 `hub/skills` error corrected above.
 
+### The unattended-run harness — this client receives none of the nine roles
+
+`loops/unattended-run/` and `skills/unattended-ops/` (sprint S9) ship **nine
+agent roles. Bionic gets zero of them**, and the reason is the one already
+established above rather than anything specific to the harness: **no
+user-authored agent-role directory has been found in this client**
+(`ADR-0020`), so there is no surface to emit into. Claude Code gets two of the
+nine and OpenCode gets all nine; this client gets none.
+
+**What Bionic *can* hold is the skill.** `skills/unattended-ops/` deploys as a
+**project** skill through
+`scripts/install.sh --client lm-studio-bionic --bionic-project DIR`, the path
+`TASK-0072` opened. So the *method* is readable here while none of its
+*enforcement* is — which is the OpenCode-first asymmetry
+`skills/unattended-ops/SKILL.md` describes, at its sharpest on this client.
+That reasoning is linked, not restated.
+
+> **Stated narrowly on purpose.** `SPRINT-S10`'s row S10.4 plans to establish
+> and record that Bionic **cannot orchestrate** a run at all. That is not yet
+> established, so it is not claimed here. What *is* established is the
+> narrower fact above — zero roles, for want of a directory — and it is
+> sufficient for a reader deciding what this client gives them.
+>
+> **Nothing runs unattended on any client yet**: every binding is S10, and
+> none exists.
+
 ## Third-party extensions
 
 Extensions that are **not components of this repo** and would be wired
