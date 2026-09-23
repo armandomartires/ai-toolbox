@@ -46,16 +46,50 @@ TASK-0036, not from documentation alone. It is created under an existing
 `~/.claude`; if `~/.claude` is absent the client is skipped and nothing is
 created.
 
-**Currently deployed: three of six roles** — `designer-manager` (primary),
-`ideator` and `critic` (TASK-0043). `agents/_template/` is never emitted.
+**Currently deployed: two of six roles** — `ideator` and `critic`
+(TASK-0043). `agents/_template/` is never emitted.
 
-**The three production roles are deliberately absent.** `qa-test`, `review`
-and `git-ops` declare `clients: [opencode]` because each needs a command
+**The four remaining roles are deliberately absent.** `qa-test`, `review` and
+`git-ops` declare `clients: [opencode]` because each needs a command
 allowlist or a path-scoped edit, and neither has a per-agent expression here
 — `tools`/`disallowedTools` gate whole tools, so "git commands only" cannot
 be said at all. `install.sh` **skips** them for this client (exit 0), rather
 than emitting a `git-ops` that could run any command. See ADR-0018 clause 8
 and `agents/git-ops/agent.md`'s scope note.
+
+### The design-brief loop is OpenCode-only, and that is new
+
+**`designer-manager` was narrowed to `clients: [opencode]` by `TASK-0075`,
+closing `B-028`.** It is the primary that orchestrates
+`loops/design-brief/`, so **this client now has the workers and no loop** —
+`ideator` and `critic` are still emitted, but nothing here drives them
+through the seven steps.
+
+**That is a real reduction in capability, and it is the accurate one.** Until
+this change the role *was* emitted here, carrying
+`tools: Agent(ideator, critic, git-ops)` while `~/.claude/agents/git-ops.md`
+**did not exist** — and `TASK-0056` observed that Claude Code says **nothing**
+about a dead name inside an `Agent(...)` allowlist: no warning, no error,
+exit 0. A control naming only an absent delegate ended up with **no delegates
+at all**, silently. So the loop did not work here before; it only looked as
+though it did.
+
+`git-ops` cannot be given a Claude Code form — it exists to enforce
+`bash-allowlist` — and `designer-manager` needs it for `ADR-0019`'s lock
+commit. Per-client `delegates_to` was considered and declined as a schema
+change belonging inside a sprint. `tests/validate.sh` now **rejects** any role
+whose delegate is not emitted for every client the caller is.
+
+> **One stale file this repo cannot clean up.** Nothing prunes an emitted
+> agent (`ADR-0018` clause 4 forbids a freshness check, and `ADR-0009`
+> forbids validating runtime presence), so
+> `~/.claude/agents/designer-manager.md` **survives this change on any
+> machine that installed it**. Re-running `install.sh` will not remove it.
+> Delete it by hand:
+>
+> ```bash
+> rm ~/.claude/agents/designer-manager.md
+> ```
 
 Capability terms map to `disallowedTools` plus, for `worktree-only`,
 `isolation: worktree`. Five of the nine terms — `test-files-only`,

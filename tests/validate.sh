@@ -689,6 +689,74 @@ sys.exit(1 if bad else 0)
 PY
 done
 
+# A delegate must exist, and must be emitted for every client its CALLER is
+# emitted for (TASK-0075, closing B-028).
+#
+# WHY THIS IS A SEPARATE PASS: it is the only agent rule that is CROSS-ROLE.
+# The per-role loop above cannot see other roles, and this defect is invisible
+# from inside either file — designer-manager is valid, git-ops is valid, and
+# the pair is broken.
+#
+# WHY IT EXISTS, from evidence rather than analogy (TASK-0056, claude 2.1.246):
+# Claude Code validates the top-level `--agent` LOUDLY (exit 1, names the
+# available agents) and does NOT validate names inside an agent definition's
+# `tools: Agent(...)` allowlist. A dead delegate there is silent - a control
+# fixture naming only an absent delegate produced 0 bytes of stderr and a role
+# that reported having no delegates at all. A role whose purpose is delegation
+# can therefore load, run and look correct while being unable to delegate.
+#
+# This is ADR-0018 clause 8's invisible degradation, and the emitter cannot
+# catch it: emit-agents.py sees one role at a time and has no reason to doubt
+# a name. So it is caught here, at source, before emission.
+python3 - <<'PY' || fail=1
+import os, re
+
+def field(text, key):
+    m = re.search(r"(?m)^%s:\s*$" % re.escape(key), text)
+    if not m:
+        return None
+    out = []
+    for line in text[m.end():].split("\n")[1:]:
+        if not line.strip() or not line[0] in " \t":
+            break
+        im = re.match(r"^\s+-\s+(.*)$", line)
+        if not im:
+            break
+        out.append(im.group(1).strip().strip("\"'"))
+    return out
+
+roles = {}
+for name in sorted(os.listdir("agents")):
+    path = os.path.join("agents", name, "agent.md")
+    if name.startswith("_template") or not os.path.isfile(path):
+        continue
+    with open(path, encoding="utf-8") as fh:
+        text = fh.read()
+    roles[name] = (field(text, "clients") or [], field(text, "delegates_to"))
+
+bad = []
+for name, (clients, delegates) in sorted(roles.items()):
+    for delegate in delegates or []:
+        if delegate not in roles:
+            bad.append("agents/%s/agent.md: delegates_to names '%s', which is "
+                       "not a role in agents/" % (name, delegate))
+            continue
+        missing = [c for c in clients if c not in roles[delegate][0]]
+        if missing:
+            bad.append(
+                "agents/%s/agent.md: delegates_to names '%s', which is not "
+                "emitted for %s — the caller IS emitted for %s, so that "
+                "client gets an Agent(%s) allowlist naming an agent it does "
+                "not have, and neither client warns (TASK-0056). Narrow the "
+                "caller's clients, or widen the delegate's."
+                % (name, delegate, ", ".join(missing), ", ".join(missing),
+                   delegate))
+
+for msg in bad:
+    print("INVALID DELEGATION: %s" % msg)
+raise SystemExit(1 if bad else 0)
+PY
+
 # Every client scripts/install.sh can deploy to must have a wiring
 # snapshot, so a new client cannot be added to the script without one.
 # The client list is read from install.sh itself to keep them in sync.

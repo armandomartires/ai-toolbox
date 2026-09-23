@@ -577,9 +577,14 @@ brief says they are *"not blocked by this ADR at all"*.
       rejected `*pytest*`, which its own justification did not support.
       Narrowed to the bare `*` while being extended to the second key (done)
 
+- [x] TASK-0075 — **B-028**: `designer-manager` narrowed to opencode, and a
+      **cross-role** `delegates_to` gate added — written before the fix and
+      **observed firing on the real defect**. `loops/design-brief/` is now
+      OpenCode-only, which is the accurate state rather than a new loss (done)
+
 **Backlog after TASK-0073 and the spikes:** `B-018`, `B-021` and `B-023` are
-all closed. Unscheduled: **B-027** and **B-028** (raised by `TASK-0056` from
-a live defect). Ready but already scoped into S9 briefs: **B-024**
+all closed. Unscheduled: **none** — `B-027` closed by `TASK-0074`,
+`B-028` by `TASK-0075`. Ready but already scoped into S9 briefs: **B-024**
 (`TASK-0059`), **B-026** (`TASK-0060`). Waiting on a second instance rather
 than on a planner: **B-025**.
 

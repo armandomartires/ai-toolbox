@@ -67,11 +67,22 @@ is created.
 (primary), `ideator`, `critic` (TASK-0043). Production stage — `qa-test`,
 `review`, `git-ops` (TASK-0045). `agents/_template/` is never emitted.
 
-**Three of the six are OpenCode-only** (`qa-test`, `review`, `git-ops`):
-each needs a command allowlist or a path-scoped edit, and neither has a
-per-agent expression in Claude Code. `install.sh` **skips** them for that
-client — a clean skip with exit 0, because their `clients` list says so,
-rather than a refusal.
+**Four of the six are OpenCode-only** (`qa-test`, `review`, `git-ops`,
+`designer-manager`): the first three each need a command allowlist or a
+path-scoped edit, and neither has a per-agent expression in Claude Code.
+`install.sh` **skips** them for that client — a clean skip with exit 0,
+because their `clients` list says so, rather than a refusal.
+
+**`designer-manager` joined that list on 2026-09-23** (`TASK-0075`, closing
+`B-028`), for a different reason: it *delegates to* `git-ops`, which is
+OpenCode-only. It was previously emitted for Claude Code carrying
+`tools: Agent(ideator, critic, git-ops)` while that client had no `git-ops`,
+and `TASK-0056` observed Claude Code says **nothing** about a dead name
+inside an `Agent(...)` allowlist. **So `loops/design-brief/` is now
+OpenCode-only in the registry as well as in practice** — it never worked on
+the other client; it only looked as though it did. `tests/validate.sh` now
+rejects any role whose delegate is not emitted for every client the caller
+is.
 
 ### `git-ops` may exist twice on this machine, by design
 

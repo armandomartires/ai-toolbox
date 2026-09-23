@@ -44,7 +44,33 @@ and the attempt was confounded by permission denials. All nine S9 roles
 declare `worktree-only` and the acting roles must commit, so it cannot be
 reasoned out.
 
-**The unscheduled backlog queue is `B-027` and `B-028`.**
+**The unscheduled backlog queue is empty.**
+
+## A delegate must exist for every client its caller is emitted for
+
+**`TASK-0075`, 2026-09-23.** `B-028` closed — the live instance fixed and the
+class gated. `agents/designer-manager/agent.md` is now `clients: [opencode]`,
+and `tests/validate.sh` gained a **cross-role** pass: the only agent rule that
+must see two files at once, because `designer-manager` was valid, `git-ops`
+was valid, and the *pair* was broken.
+
+**The check was written before the fix and fired on the real defect**, exit 1.
+A check first demonstrated on an invented fixture has only been shown to catch
+inventions.
+
+**`loops/design-brief/` is now OpenCode-only**, and that is a real capability
+loss stated in both wiring snapshots rather than buried. `git-ops` cannot have
+a Claude Code form (`bash-allowlist`, `ADR-0018` clause 8.3) and `ADR-0019`'s
+lock commit needs it. The honest framing: **the loop did not work on Claude
+Code before; it only looked as though it did.**
+
+**Two things left behind deliberately.** `~/.claude/agents/designer-manager.md`
+is now stale on any machine that installed it and **`install.sh` will not
+remove it** (clause 4 forbids a freshness check) — the snapshot carries the
+`rm` command, and the task did not delete from the user's client config
+itself. And this **made `B-026` worse**: four of six roles are now
+OpenCode-only while `docs/registry.md` still presents all six identically, so
+`TASK-0060` is more urgent than when it was scoped.
 
 ## One guard pair for both command allowlists, and a self-correction
 

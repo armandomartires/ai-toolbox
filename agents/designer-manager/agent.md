@@ -6,7 +6,6 @@ capabilities:
   - delegation-allowlist
   - worktree-only
 clients:
-  - claude-code
   - opencode
 delegates_to:
   - ideator

@@ -12,6 +12,32 @@ before any passing result from it is trusted:
 
 The second closes `B-024` and is a precondition for `TASK-0067`.
 
+> ## Check 1 was already built — read this before writing it again
+>
+> **`TASK-0075` (2026-09-23) implemented check 1** while closing `B-028`,
+> outside this sprint and ahead of the `ADR-0022` gate. That was a deliberate
+> partial pull-forward, authorised by the same human decision that closed
+> `B-028`, on the grounds that the defect was **live** and `TASK-0056` had
+> already produced the evidence justifying the check.
+>
+> **What exists now**, as a cross-role pass in `tests/validate.sh`
+> (`INVALID DELEGATION:`), separate from the per-role loop because it is the
+> only agent rule that needs to see two files at once:
+> - a `delegates_to` entry naming a role that does not exist → fails;
+> - a delegate not emitted for a client the **caller** is emitted for → fails.
+>
+> **Both were observed failing**, and the first observation is the one worth
+> keeping: the check was written *before* the fix and **fired on the real
+> `designer-manager` defect**, not on an invented fixture.
+>
+> **What this task still owes:** check 2 in full (`B-024`, the authored-MCP
+> shape), and a re-read of check 1 against whatever `TASK-0058` settles about
+> the `delegates_to` cross-client rule and the `mode` row — `TASK-0055`
+> falsified **F1**, so `MODES` may gain `all`, and if a role can be `all` the
+> delegation rule may need to say something about it. **Do not assume check 1
+> is finished; assume it is written and unreviewed against S9's schema
+> changes.**
+
 ## Minimal context
 
 **The second check is the urgent one.** `validate.sh`'s manifest checks —
