@@ -145,18 +145,27 @@ artifacts. A finding is the expected outcome, not a failure.
   the same commit, and was denied two `bash` calls. The loop did what it says:
   an unverified lock is a halt, not something to interpret.
 - Findings (the pilot's product; none fixed here):
-  1. **The preflight role could not see files the driver saw.** Unverified
-     hypothesis: OpenCode's glob tool skips dot-directories, and this repo's
-     task files live under `.ai/`. A throwaway-repo test of exactly that was
-     attempted and stalled (finding 2), so it is **not established**.
-  2. **`opencode run` stalls before any model contact, intermittently.**
-     From 17:20Z on, every run whose prompt asked for tool use — four of four,
-     in the worktree and in neutral directories, with and without
-     `--agent` — logged `init` and then nothing, never reaching
-     `event connected`, until killed at 180–600 s. Every tool-free prompt in
-     the same window returned (8–123 s). Not a stale `*.lock` in OpenCode's
-     snapshot store, not a stray process, not a literal `*` in the prompt
-     (tested). Cause **unestablished**. This is `ADR-0022` clause 5.3's
+  1. **The preflight role could not see files the driver saw — CONFIRMED:
+     OpenCode's glob tool does not see dot-directories.** In a throwaway
+     repository holding the same file at `.hidden/TASK-1-x.md` and
+     `visible/TASK-1-x.md`, the glob tool returned *"No files found"* for
+     `.hidden/TASK-1-*.md` and the file for `visible/TASK-1-*.md` (opencode
+     1.18.31, default agent). This repository's task files live under
+     `.ai/`, so any role told to *glob* its task file cannot find it; reading
+     by exact path works (the role read `TODO.md`). The driver already
+     resolves each task file structurally (step 2), so the paths it hands the
+     role are sufficient — the role must read them, not glob.
+  2. **`opencode run` stalls silently, intermittently, on tool-using
+     prompts.** From 17:20Z, eight tool-using runs stalled (`init`, then
+     nothing, never `event connected`, killed at 90–600 s) across **three
+     providers** — Perplexity, GitHub Copilot, and an `anthropic/…` model id
+     that turned out not to be configured — with and without `--agent`, in
+     the worktree and in neutral directories, with and without
+     `--print-logs`. **One identical tool-using run succeeded** in the middle
+     of them. Every tool-free prompt returned (8–123 s). Ruled out by test:
+     a stale `*.lock` in OpenCode's snapshot store, a stray process, a `*` or
+     a slash-plus-`*` path in the prompt, the provider. Cause
+     **unestablished**. This is `ADR-0022` clause 5.3's
      symptom — silent hang after `init` — **with `-m` passed**, so a missing
      model is not the only cause of it.
   3. **At `role_timeout: 30m` and a mechanical bound of 3, one such stall
