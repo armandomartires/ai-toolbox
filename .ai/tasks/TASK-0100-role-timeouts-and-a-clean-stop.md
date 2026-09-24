@@ -140,5 +140,5 @@ suite 35 tests, green.
   edit landed. Cited `loops/unattended-run/loop.md` step 14; checker test
   OK; full suite re-run on the final files.
 - Result: **done.**
-- Commit: *(follow-up commit)*
-- Push: *(follow-up commit)*
+- Commit: `7851af0`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `f9f0aa3..7851af0`, local and remote hash equal.
