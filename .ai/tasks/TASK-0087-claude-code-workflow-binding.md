@@ -227,5 +227,6 @@ entry point, so one gate map and one evidence format serve both bindings.
   - `tests/validate.sh`: OK. `scripts/sync-registry.sh`: no diff.
   - **Not validated, and not claimed:** any real Workflow run.
 - Result: **done** — against a stub.
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `3ad2ead`. Pre-commit hook ran `tests/validate.sh`: OK. Full
+  suite re-run after the commit: `# tests 23`, `# pass 23`, `# fail 0`.
+- Push: **confirmed** — `origin/master` `485c48c..3ad2ead`.
