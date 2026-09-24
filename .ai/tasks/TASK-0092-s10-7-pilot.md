@@ -214,4 +214,20 @@ artifacts. A finding is the expected outcome, not a failure.
   8. Roles still try shell commands outside their allowlists (`echo`, `ls`)
      and are denied, as declared; harmless, but each denial is a wasted
      model turn.
+
+### Attempt 3 — the third dry run, `s10-7-dry3` (2026-09-24)
+- On worktree `2a26063` (after `TASK-0096`). **Driver exit 0; completed.**
+- Journal, in order: `run-start` (queue `TASK-0093`, `TASK-0094`; start
+  `2a26063`); a plan per task, each naming exactly the files its brief allows
+  (`loops/release-check/loop.md` + `.ai/planning/SPRINT-CURRENT.md`; and
+  `.ai/context/CURRENT_STATE.md` alone); four gates, every one `PASSED` and
+  `recorded: true`; `run-end` with nothing closed, parked or pushed.
+- Evidence file, verbatim (run root shortened to `<P>`):
+  `GATE TASK-0093.a1.validate NAME=validate STATE=PASSED EXIT=0 ELAPSED=3s …`,
+  `GATE TASK-0093.a1.registry NAME=registry STATE=PASSED EXIT=0 ELAPSED=1s …`,
+  `GATE TASK-0094.a1.validate NAME=validate STATE=PASSED EXIT=0 ELAPSED=3s …`,
+  `GATE TASK-0094.a1.registry NAME=registry STATE=PASSED EXIT=0 ELAPSED=2s …`.
+- Worktree clean, HEAD unchanged. Denied tool calls: one `bash` each for
+  `preflight` and `run-scribe`, one `read` for `task-planner` (finding 8's
+  pattern). Awaiting the human's go for the live run.
 - Commit: *(this record)*
