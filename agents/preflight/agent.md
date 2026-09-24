@@ -65,6 +65,10 @@ either one from the run starting successfully.
   several, or that has no acceptance criteria, is an **unlocked** task and a
   `halt` for the run — not a task to be resolved, and not a task to skip
   past. Deciding what an ambiguous task means is the human's.
+- **Do not glob for a task file you were given a path to.** Read it at that
+  exact path. OpenCode's glob tool does not see directories whose names start
+  with a dot, such as `.ai/`, so a glob reports a present file as absent —
+  observed in the S10.7 dry run (`TASK-0092`), which halted on exactly that.
 - **Do not match a status against a fixed literal.** The open form varies
   between files, so record the strings verbatim and let a human compare
   them. A normalised status is an invented one.

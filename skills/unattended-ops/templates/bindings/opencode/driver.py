@@ -337,8 +337,10 @@ class Driver:
             task["file"] = hits[0]
         verdict = self.ask("preflight", prompt(
             "preflight", "Steps 1 and 2 of loops/unattended-run/loop.md. Establish one "
-            "writer and verify the lock on every queued task: acceptance criteria present, "
-            "and its status read verbatim from both the task file and the tracker.",
+            "writer and verify the lock on every queued task. The driver has already "
+            "resolved each task's file to exactly one committed match: read each at its "
+            "given path, and report whether its acceptance criteria are present and its "
+            "status, read verbatim from both the task file and the tracker.",
             {"tasks": [{"id": t["id"], "file": t["file"]} for t in queue],
              "tracker": self.b.tracker},
             '{"verdict": "proceed" | "halt", "branch": "...", "head": "...", '
@@ -694,8 +696,14 @@ def fail(message):
 
 def prompt(role, instruction, inputs, shape):
     """The one prompt shape. Inputs are paths and reports — never a gate command."""
+    # Paths are read, never globbed for: OpenCode's glob tool does not see
+    # dot-directories such as .ai/, so a globbed task file reads as absent
+    # (TASK-0092 finding 1, TASK-0095).
     return ("You are the %s role of an unattended run (loops/unattended-run/loop.md; "
             "your boundary and duties are in your agent definition). %s\n\n"
+            "Every path in the inputs below is exact: read it directly, and never glob "
+            "or list a directory to find it — the glob tool does not see directories "
+            "whose names start with a dot, such as .ai/.\n\n"
             "Inputs:\n```json\n%s\n```\n\n"
             "End your reply with exactly one JSON object in a ```json fenced block, shaped:\n%s\n"
             % (role, instruction, json.dumps(inputs, indent=2, sort_keys=True), shape))

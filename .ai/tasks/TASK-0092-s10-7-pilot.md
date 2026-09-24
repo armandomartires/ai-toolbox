@@ -164,8 +164,17 @@ artifacts. A finding is the expected outcome, not a failure.
      `--print-logs`. **One identical tool-using run succeeded** in the middle
      of them. Every tool-free prompt returned (8–123 s). Ruled out by test:
      a stale `*.lock` in OpenCode's snapshot store, a stray process, a `*` or
-     a slash-plus-`*` path in the prompt, the provider. Cause
-     **unestablished**. This is `ADR-0022` clause 5.3's
+     a slash-plus-`*` path in the prompt, the provider.
+     **Root cause found — the human spotted it:** the runs were opening the
+     OpenCode *desktop app*. The user's config loads the plugin
+     `opencode-arcade-hub`, which wraps a hosted MCP gateway needing a
+     one-time OAuth; a run that loads it attempts that auth, which hands off
+     to the desktop app and blocks before the model is reached
+     (`mcp-auth.json` was rewritten during the stalled runs; a desktop-app
+     `opencode serve --hostname 0.0.0.0` process appeared). With
+     `opencode run --pure` ("run without external plugins") the same
+     stalling prompt ran **2 of 2** in 15–16 s with both tool calls, left
+     `mcp-auth.json` untouched, and spawned no `serve`. This is `ADR-0022` clause 5.3's
      symptom — silent hang after `init` — **with `-m` passed**, so a missing
      model is not the only cause of it.
   3. **At `role_timeout: 30m` and a mechanical bound of 3, one such stall

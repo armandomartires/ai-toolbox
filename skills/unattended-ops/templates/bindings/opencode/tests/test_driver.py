@@ -216,6 +216,17 @@ class TestHappyPath(Harness):
             for s in SENTINELS:
                 self.assertNotIn(s, argv[-1], "a gate command reached a prompt")
 
+    def test_roles_are_told_to_read_resolved_paths_never_glob(self):
+        # TASK-0092 finding 1: OpenCode's glob tool does not see dot-directories,
+        # so a role that globs for .ai/tasks/ finds nothing (TASK-0095).
+        self.make_repo()
+        self.run_driver(happy())
+        for argv in self.invocations():
+            self.assertIn("never glob", argv[-1])
+        pre = self.invocations("preflight")[0]
+        self.assertIn(".ai/tasks/TASK-0001-demo.md", pre[-1])
+        self.assertIn("already resolved", pre[-1])
+
     def test_every_invocation_carries_the_model(self):
         self.make_repo()
         self.run_driver(happy())

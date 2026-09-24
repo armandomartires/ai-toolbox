@@ -139,7 +139,10 @@ leaves an honest tracker rather than a half-ticked one.
    (clause 5.1). Neither is visible from stdout once the run is under way.
 
 2. **Preflight: verify the lock on every queued task.** (`preflight`,
-   read-only.) For each task, glob its file and read its acceptance
+   read-only.) For each task, resolve its file — the driver does this
+   wherever it has a filesystem, and hands the role the exact path, which the
+   role reads rather than globs for (an agent's glob tool may not see
+   dot-directories such as `.ai/`; `TASK-0095`) — and read its acceptance
    criteria and its status, verbatim, from **both** its own file and any
    tracker that claims to know its state.
    Expected: exactly one file per task, criteria present, and the two
