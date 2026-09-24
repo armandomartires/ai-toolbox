@@ -471,12 +471,8 @@ The lesson worth keeping:
 
 ### gates (authored — `mcp-servers/gates/pyproject.toml`)
 
-> **Not wired into this client, deliberately.** The human authorization for
-> this server (`.ai/tasks/TASK-0088-gates-mcp-server.md`, 2026-09-24) carries
-> one condition: *not wired into clients* by that task. Wiring is S10.5's.
-> This section exists because `tests/validate.sh` requires one for a server
-> with a required variable or a destructive tool, and a section that says
-> "not yet" is the honest content until then.
+> **Not wired into this client, and not verified here.** `TASK-0090` verified
+> the connection in Claude Code and OpenCode only; Bionic is S10.4.
 >
 > **Destructive capabilities.** `start_gate` runs whatever command the
 > consuming repository's gate map declares for a name; `kill_gate` terminates

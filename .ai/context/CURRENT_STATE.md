@@ -49,6 +49,18 @@ say the gate-runner invokes the entry point; `ADR-0022` and
 `references/gate-map.md` say the driver does. The binding follows the ADR (the
 loop says the ADR wins) and records it as deviation 1.
 
+## S10.5: installed for both clients; gates connects in both, and is wired in neither
+
+**`TASK-0090`, 2026-09-24, on the human's choices** (`link`, both clients;
+verify then unwire; pilot target ai-toolbox itself). `install.sh link` exit 0:
+`unattended-ops` in both skill dirs, `task-planner` + `adjudicator` in
+`~/.claude/agents/`, all nine roles in `~/.config/opencode/agents/`, each
+`(primary)` in `opencode agent list`. The emitter's refusal path was proven
+first. `gates` reported connected in Claude Code and OpenCode, then both
+registrations were removed; `opencode.jsonc` untouched. `ADR-0022` F6
+**confirmed**, F8 two of three clients. **Found:** `~/.claude/agents/designer-manager.md`
+is a stale emission — install never prunes.
+
 ## Who starts a gate is decided — `ADR-0025`
 
 **`TASK-0089`, 2026-09-24, the human's decision.** The driver starts a gate

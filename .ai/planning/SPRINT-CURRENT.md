@@ -48,7 +48,7 @@ Three things therefore carry unusual weight:
 | S10.2 | S9 | **done** (against a stub) — `TASK-0087` | The Claude Code Workflow binding: `arm-autopilot.js` de-domained into a template carrying no rule of its own. |
 | S10.3 | S9 (`TASK-0059` **done**) | **done** — `TASK-0088`; `ADR-0024` supersedes `ADR-0010`; **not wired** until S10.5 | `mcp-servers/gates/` — first authored Python server; `smoke-mcp.sh` authored-shape support; supersede `ADR-0010`; **human authorization block**. Highest risk; independent of S10.1/S10.2. |
 | S10.4 | S10.3 | planned | **[corrected]** The Bionic binding. `configs/lm-studio-bionic/README.md` **already records this client's coverage** (`TASK-0080`) — and states only the *established* fact: **zero** of the nine roles, for want of a user-authored agent directory (`ADR-0020`). So what this row owes is **establishing** that Bionic cannot orchestrate, or dropping the claim — not writing the section. |
-| S10.5 | S10.1, S10.2, S10.3 | planned | `configs/claude-code/` and `configs/opencode/`; run `install.sh` for both clients and record the emission output **verbatim** (F6). |
+| S10.5 | S10.1, S10.2, S10.3 | **done** — `TASK-0090` | `configs/claude-code/` and `configs/opencode/`; run `install.sh` for both clients and record the emission output **verbatim** (F6). |
 | S10.6 | S10.5 | planned | Regenerate `docs/registry.md`; update `.ai/context/CURRENT_STATE.md`. |
 | S10.7 | S10.5, S10.1 | planned | **Pilot.** One real unattended run of at most two tasks: dry-run first, then live, watched. |
 | review | all | planned | Sprint checkpoint. |
@@ -159,4 +159,5 @@ promotion rule — briefs must exist before **code**, not before promotion.
 
 **Briefs written 2026-09-23:** `TASK-0086` (S10.1), `TASK-0087` (S10.2),
 `TASK-0088` (S10.3); `TASK-0089` (the gate-invoker rule, `ADR-0025`, outside the
-deliverable table). **Next free id: `TASK-0090`.**
+deliverable table); `TASK-0090` (S10.5). **Next free id: `TASK-0091`.**
+**Pilot target (S10.7), the human's choice 2026-09-24: ai-toolbox itself.**

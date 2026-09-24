@@ -304,12 +304,19 @@ Notes:
 
 ### gates (authored — `mcp-servers/gates/pyproject.toml`)
 
-> **Not wired into this client, deliberately.** The human authorization for
-> this server (`.ai/tasks/TASK-0088-gates-mcp-server.md`, 2026-09-24) carries
-> one condition: *not wired into clients* by that task. Wiring is S10.5's.
-> This section exists because `tests/validate.sh` requires one for a server
-> with a required variable or a destructive tool, and a section that says
-> "not yet" is the honest content until then.
+> **Not wired into this client — verified, then unwired** (`TASK-0090`,
+> 2026-09-24, the human's choice). Registered temporarily at local scope from
+> a scratch directory, with the harmless fixture map; `claude mcp get gates`
+> reported **`Status: ✔ Connected`**; then `claude mcp remove gates -s local`,
+> after which `claude mcp get gates` reports *No MCP server named "gates"* and
+> `~/.claude.json` holds no `gates` entry in any scope. No tool was invoked.
+> The snippet that connected, for whoever wires it for real:
+>
+> ```bash
+> claude mcp add --scope local --transport stdio gates \
+>   --env GATES_MAP=<consumer gate map> --env GATES_RUN_ROOT=<gitignored dir> \
+>   -- uv --directory <absolute path to mcp-servers/gates> run gates
+> ```
 >
 > **Destructive capabilities.** `start_gate` runs whatever command the
 > consuming repository's gate map declares for a name; `kill_gate` terminates
@@ -323,3 +330,34 @@ Notes:
 > **Launch form, for reference only:** `uv --directory <absolute path to
 > mcp-servers/gates> run gates` — cwd-independent, so it is the form a client
 > config needs (`tests/smoke-mcp.sh` uses it).
+
+## Install record — 2026-09-24 (`TASK-0090`)
+
+`scripts/install.sh link`, exit **0**. The lines for this client, verbatim
+(home directory shortened to `~`):
+
+```
+skill deployed: ansible-ops -> claude-code (link)
+skill deployed: design-flow -> claude-code (link)
+skill deployed: project-migration -> claude-code (link)
+skill deployed: project-workflow -> claude-code (link)
+skill deployed: unattended-ops -> claude-code (link)
+  agent emitted: adjudicator -> claude-code (~/.claude/agents/adjudicator.md)
+  agent skipped: closer -> claude-code (not in its clients list)
+  agent emitted: critic -> claude-code (~/.claude/agents/critic.md)
+  agent skipped: designer-manager -> claude-code (not in its clients list)
+  agent skipped: gate-runner -> claude-code (not in its clients list)
+  agent skipped: git-ops -> claude-code (not in its clients list)
+  agent emitted: ideator -> claude-code (~/.claude/agents/ideator.md)
+  agent skipped: implementer -> claude-code (not in its clients list)
+  agent skipped: park-steward -> claude-code (not in its clients list)
+  agent skipped: preflight -> claude-code (not in its clients list)
+  agent skipped: qa-test -> claude-code (not in its clients list)
+  agent skipped: refuter -> claude-code (not in its clients list)
+  agent skipped: review -> claude-code (not in its clients list)
+  agent skipped: run-scribe -> claude-code (not in its clients list)
+  agent emitted: task-planner -> claude-code (~/.claude/agents/task-planner.md)
+```
+
+Resulting additions, from a before/after listing: `unattended-ops` in the
+skills directory; `adjudicator.md` and `task-planner.md` in `~/.claude/agents/` — exactly the two of nine that declare `claude-code`. **`~/.claude/agents/designer-manager.md` is a stale file** from an earlier install: the role is OpenCode-only now (`agent skipped … not in its clients list`), and nothing removes the old emission. **Nothing is pruned**, as install.sh itself states.

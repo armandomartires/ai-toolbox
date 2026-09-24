@@ -320,12 +320,19 @@ Notes:
 
 ### gates (authored — `mcp-servers/gates/pyproject.toml`)
 
-> **Not wired into this client, deliberately.** The human authorization for
-> this server (`.ai/tasks/TASK-0088-gates-mcp-server.md`, 2026-09-24) carries
-> one condition: *not wired into clients* by that task. Wiring is S10.5's.
-> This section exists because `tests/validate.sh` requires one for a server
-> with a required variable or a destructive tool, and a section that says
-> "not yet" is the honest content until then.
+> **Not wired into this client — verified, then unwired** (`TASK-0090`,
+> 2026-09-24, the human's choice). Registered temporarily in a scratch
+> directory's project-level `opencode.json` — the global
+> `~/.config/opencode/opencode.jsonc` was **not edited** (sha256 identical
+> before and after) — with the harmless fixture map; `opencode mcp list`
+> reported **`✓ gates connected`**; the file was then removed and `gates` no
+> longer listed. No tool was invoked. The block that connected:
+>
+> ```json
+> "mcp": { "gates": { "type": "local", "enabled": true,
+>   "command": ["uv", "--directory", "<absolute path to mcp-servers/gates>", "run", "gates"],
+>   "environment": { "GATES_MAP": "<consumer gate map>", "GATES_RUN_ROOT": "<gitignored dir>" } } }
+> ```
 >
 > **Destructive capabilities.** `start_gate` runs whatever command the
 > consuming repository's gate map declares for a name; `kill_gate` terminates
@@ -339,3 +346,34 @@ Notes:
 > **Launch form, for reference only:** `uv --directory <absolute path to
 > mcp-servers/gates> run gates` — cwd-independent, so it is the form a client
 > config needs (`tests/smoke-mcp.sh` uses it).
+
+## Install record — 2026-09-24 (`TASK-0090`)
+
+`scripts/install.sh link`, exit **0**. The lines for this client, verbatim
+(home directory shortened to `~`):
+
+```
+skill deployed: ansible-ops -> opencode (link)
+skill deployed: design-flow -> opencode (link)
+skill deployed: project-migration -> opencode (link)
+skill deployed: project-workflow -> opencode (link)
+skill deployed: unattended-ops -> opencode (link)
+  agent emitted: adjudicator -> opencode (~/.config/opencode/agents/adjudicator.md)
+  agent emitted: closer -> opencode (~/.config/opencode/agents/closer.md)
+  agent emitted: critic -> opencode (~/.config/opencode/agents/critic.md)
+  agent emitted: designer-manager -> opencode (~/.config/opencode/agents/designer-manager.md)
+  agent emitted: gate-runner -> opencode (~/.config/opencode/agents/gate-runner.md)
+  agent emitted: git-ops -> opencode (~/.config/opencode/agents/git-ops.md)
+  agent emitted: ideator -> opencode (~/.config/opencode/agents/ideator.md)
+  agent emitted: implementer -> opencode (~/.config/opencode/agents/implementer.md)
+  agent emitted: park-steward -> opencode (~/.config/opencode/agents/park-steward.md)
+  agent emitted: preflight -> opencode (~/.config/opencode/agents/preflight.md)
+  agent emitted: qa-test -> opencode (~/.config/opencode/agents/qa-test.md)
+  agent emitted: refuter -> opencode (~/.config/opencode/agents/refuter.md)
+  agent emitted: review -> opencode (~/.config/opencode/agents/review.md)
+  agent emitted: run-scribe -> opencode (~/.config/opencode/agents/run-scribe.md)
+  agent emitted: task-planner -> opencode (~/.config/opencode/agents/task-planner.md)
+```
+
+Resulting additions, from a before/after listing: `unattended-ops` in the
+skills directory; all nine unattended-run roles in `~/.config/opencode/agents/`, and `opencode agent list` reports each as `(primary)` — the check the OpenCode driver's preflight makes, observed against the real client. **Nothing is pruned**, as install.sh itself states.
