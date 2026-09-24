@@ -117,9 +117,10 @@ listed so closing a sprint did not quietly drop it.
    is the honest outcome. The single question that settles it: **does a
    `worktree`-isolated *subagent's* commit reach the real tree?** All nine S9
    roles declare the term.
-3. **`B-025`** — no vocabulary term for *"may call only this MCP server"*. The
-   only `ready` backlog row. Waiting on a **second** role that wants it: one
-   instance is a case, two is a vocabulary.
+3. **`B-025`** — no vocabulary term for *"may call only this MCP server"*.
+   **`waiting`** since 2026-09-25 (was `ready`; the human's choice to leave it
+   open). Waiting on a **second** role that wants it: one instance is a case,
+   two is a vocabulary.
 4. **~~The wiring-section gate is `server.json`-only.~~ CLOSED 2026-09-24 by
    `TASK-0088`** — it reads both shapes now, and was observed failing on
    `gates` before its sections existed. Kept for the record: `TASK-0073`'s check
