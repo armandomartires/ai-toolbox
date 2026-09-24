@@ -80,12 +80,22 @@ sprint already named.
 > nothing is invented. Until every field is filled by a person, this task is
 > `blocked` and no destructive capability may be declared.
 
-- Granted: `<HUMAN: yes / no>`
-- By: `<HUMAN: name>`
-- Date: `<HUMAN: YYYY-MM-DD>`
-- Scope authorized: `<HUMAN: e.g. "start_gate and kill_gate as specified in the Design table above, no wider">`
-- Design table above: `<HUMAN: confirmed as written / amended as follows: …>`
-- Conditions, if any: `<HUMAN>`
+- Granted: **yes**
+- By: **Armando Martires**
+- Date: **2026-09-24**
+- Scope authorized: **`start_gate` and `kill_gate` as specified in the Design
+  table above, no wider** — `kill_gate` limited to process groups the server
+  itself started.
+- Design table above: **confirmed as written** (the version amended
+  2026-09-24, commit `691f157`).
+- Conditions: **Not wired into clients** — this task registers the server in
+  no client (Claude Code, OpenCode, Bionic); wiring waits for S10.5.
+
+> **Provenance.** Every value above was chosen by the human in the session
+> of 2026-09-24, as answers to multiple-choice questions the agent put
+> (name and date proposed from the git user and the day, and not
+> corrected). The agent transcribed the chosen options; it chose none of
+> them.
 
 The server's `pyproject.toml` will carry
 `[tool.ai-toolbox.authorization] task = ".ai/tasks/TASK-0088-gates-mcp-server.md"`,
@@ -138,8 +148,9 @@ and its `by` / `date` must match what is written here.
 
 ## Execution plan
 
-0. **Stop unless the Authorization section is complete.** Status stays
-   `blocked` until it is.
+0. **Stop unless the Authorization section is complete.** Completed
+   2026-09-24; re-read it before declaring the capability, and honour its
+   condition (no client wiring).
 1. Copy `_template/`; write the server against the confirmed design.
 2. Tests with a fixture map: pass, fail, timeout, kill, missing gate, map
    absent, a caller trying to pass a command. Watch each fail first.
@@ -206,7 +217,7 @@ and its `by` / `date` must match what is written here.
 **Next task starts here**: —
 
 ## Status
-- Status: blocked   # awaiting the human Authorization section above
+- Status: ready   # authorization signed 2026-09-24
 - Owner: agent (implementation) / human (authorization)
 - Created: 2026-09-23
 - Updated: 2026-09-23
