@@ -85,6 +85,15 @@ upstream report, the human files it.
 - **`B-032` closed — `TASK-0103`.** The Claude Code binding now halts on a
   closed commit holding an undeclared path, as the OpenCode driver does
   (`TASK-0097`); the file list comes from the preflight witness.
+- **`B-025` re-statused `waiting`** (its second-role condition is unmet).
+- **Re-emitted** with `scripts/install.sh link` (exit 0): nine roles to
+  `~/.config/opencode/agents/`, three to `~/.claude/agents/`; the live
+  `closer.md` carries the generated command list and `log_lines`, and both
+  clients' `adjudicator.md` the revised standard paragraph — checked by grep.
+
+**Open after the pass:** `B-035` (`ready` — the adjudicator's standard, the
+human's route) and `B-025` (`waiting`); the drafted OpenCode report in
+`TASK-0102`, unfiled; and S10.4, which still keeps the sprint open.
 
 ## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
 
