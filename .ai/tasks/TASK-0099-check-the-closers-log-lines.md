@@ -128,5 +128,5 @@ tests, green.
   `stray.txt` by name; put back to the pilot's exact `git add -- .` before
   running, so that test still reproduces finding 18.
 - Result: **done.**
-- Commit: *(follow-up commit)*
-- Push: *(follow-up commit)*
+- Commit: `706643e`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `75ce882..706643e`, local and remote hash equal.
