@@ -140,5 +140,6 @@ cannot know a name it no longer has; that limit is stated, not solved.
   `designer-manager.md` gone from `~/.claude/agents/`; `opencode.jsonc`
   unchanged. `tests/validate.sh` OK.
 - Result: **done.**
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `9037c47` (test script committed `100755`). Pre-commit hook ran
+  `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `7b4e0e6..9037c47`.
