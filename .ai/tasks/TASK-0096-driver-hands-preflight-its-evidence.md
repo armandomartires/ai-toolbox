@@ -98,5 +98,5 @@ fast-forwarded to this commit.
 - Validation: new test red → green; revert → `FAILED (failures=1)`, restored
   and `cmp`-verified; OpenCode suite OK; `tests/validate.sh` OK.
 - Result: **done.**
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `879dbf9`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** (see the follow-up commit's push line).
