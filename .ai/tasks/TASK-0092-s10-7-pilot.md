@@ -230,4 +230,36 @@ artifacts. A finding is the expected outcome, not a failure.
 - Worktree clean, HEAD unchanged. Denied tool calls: one `bash` each for
   `preflight` and `run-scribe`, one `read` for `task-planner` (finding 8's
   pattern). Awaiting the human's go for the live run.
+
+### Attempt 4 — the first live run, `s10-7-live` (2026-09-24), stopped by the human
+- **Go given by the human.** Preflight `proceed`; TASK-0093 planned and
+  implemented — exactly the two declared files, and the diff met the brief on
+  reading; `validate` and `registry` both `PASSED` on the changed tree.
+- **The refuter timed out three times at `role_timeout: 10m`** — not the
+  earlier stall: OpenCode's log shows it working, 27–40 model rounds per
+  attempt. (The human noted a parallel LM Studio job was loading the machine.)
+  On the third timeout the driver did what `ADR-0022` requires for a silent
+  refuter: journalled `refuter-mechanical` then **`refuter-synthesised`** —
+  `refuted: true` carried into adjudication. **The fail-closed path ran live
+  for the first time, and behaved as specified.**
+- The adjudicator was deciding over that objection when **the human chose to
+  stop**, raise the timeout and rerun. Stopped by PID: the adjudicator call
+  (whose kill made the driver retry once — that retry, an orphan after the
+  driver died, was stopped too) and the driver (exit 143, so no handover was
+  written). TASK-0093's work **stashed by hand, never discarded**:
+  `stash@{0}` on `agent/pilot`, *"unattended/s10-7-live/TASK-0093 stopped by
+  the human: …"*; a `stopped-by-human` line appended to the journal.
+- Findings:
+  9. **`role_timeout: 10m` is too short for a thorough refuter** on this
+     model. Raised to 30m for the rerun, by the human's choice.
+  10. **Rule 2 is structural in prompts, not against the filesystem.** The
+      refuter **read `.pilot-scratch/s10-7/gates.json`** (the gate map, with
+      its commands) and `binding.md` with its `read` tool. No prompt carried a
+      command, but a role with file access can open the map. This bears on
+      the sprint's checkpoint question; OpenCode could deny it with a
+      per-role `read` rule for the map's path.
+  11. **Killing a role call mid-flight triggers the driver's mechanical
+      retry**, which starts a fresh call; stopping a run cleanly means
+      stopping the driver first. The driver has no stop signal and writes no
+      handover when killed.
 - Commit: *(this record)*
