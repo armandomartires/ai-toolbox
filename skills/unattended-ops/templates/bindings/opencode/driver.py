@@ -529,13 +529,14 @@ class Driver:
     def step10_close(self, task, impl):
         """Step 10 — closer stages, commits and reports; the driver verifies."""
         before = self.git("rev-parse", "HEAD")
+        declared = sorted(set(impl.get("files_changed", []) + [task["file"]] + (
+            [] if self.b.tracker == "not-applicable" else [self.b.tracker])))
         got = self.ask("closer", prompt(
             "closer", "Step 10. Close task %s: re-check the porcelain against the declared "
             "paths, update the task file and the tracker row from the evidence file, stage "
             "each path with `git add -- <path>`, commit, report the hash. Push nothing." % task["id"],
             {"task_file": task["file"], "tracker": self.b.tracker,
-             "declared_paths": sorted(set(impl.get("files_changed", []) + [task["file"]] + (
-                 [] if self.b.tracker == "not-applicable" else [self.b.tracker]))),
+             "declared_paths": declared,
              "evidence_file": self.b.evidence, "commit_shape": self.b.commit_shape},
             '{"commit": "<hash>"} or {"refused": "<what was found>"}'))
         after = self.git("rev-parse", "HEAD")
@@ -558,7 +559,15 @@ class Driver:
             # `git log --grep <task id>` resume guard reads.
             raise Halt("closer's commit for %s does not verify (claimed %r, HEAD %s)"
                        % (task["id"], claimed, after))
-        files = self.git("show", "--name-only", "--format=", "HEAD").split("\n")
+        files = [f for f in self.git("show", "--name-only", "--format=", "HEAD").split("\n") if f]
+        undeclared = sorted(set(files) - set(declared))
+        if undeclared:
+            # The closer's glob boundary admits `git add -- .` (TASK-0092
+            # finding 18; TASK-0083), so the commit's contents are checked
+            # here. The commit exists, and undoing it is a history rewrite,
+            # which is the human's (loop.md, "Escalate without retrying").
+            raise Halt("closer's commit for %s contains undeclared paths: %s"
+                       % (task["id"], ", ".join(undeclared)))
         self.closed.append({"id": task["id"], "commit": after[:12], "files": files})
         self.journal("close", task=task["id"], commit=after[:12])
 

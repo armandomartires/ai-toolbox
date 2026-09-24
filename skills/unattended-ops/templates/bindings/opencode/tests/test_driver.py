@@ -308,6 +308,20 @@ class TestVerdictDispatch(Harness):
         self.assertEqual(self.events("close"), [])
         self.assertIn("no overrides", self.events("park")[0]["reason"])
 
+    def test_a_bulk_staged_commit_halts_the_run(self):
+        # TASK-0097 / TASK-0092 finding 18: the closer's permissions allow
+        # `git add -- .`, so the driver checks the commit's file list.
+        self.make_repo()
+        agents = happy()
+        agents["implementer"] = [{"sh": ["echo change >> src/a.txt", "echo stray > stray.txt"],
+                                  "text": fence({"status": "done", "files_changed": ["src/a.txt"],
+                                                 "unsatisfied_criteria": []})}]
+        agents["closer"] = [{"sh": ["git add -- .", "git commit -q -m '{TASK}: change a'"],
+                             "text": fence({"commit": "{HEAD}"})}]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertIn("stray.txt", self.events("halt")[0]["reason"])
+        self.assertEqual(self.events("close"), [])
+
     def test_closer_refusal_parks_and_is_not_retried(self):
         self.make_repo()
         agents = happy()
