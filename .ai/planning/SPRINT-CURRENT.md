@@ -45,7 +45,7 @@ Three things therefore carry unusual weight:
 | # | Depends on | Status | What |
 |---|---|---|---|
 | S10.1 | S9 | **done** (against a stub) — `TASK-0086` | **[corrected]** **Only the OpenCode driver remains.** The binding contract (`skills/unattended-ops/templates/binding.md`), the checker (`scripts/check-binding.sh`) and both fixtures **already ship** — `TASK-0062` built them and already ran the red-then-green proof: the incomplete fixture exits 1 naming eleven defects, the complete one exits 0. **Do not rebuild them.** |
-| S10.2 | S9 | planned — `TASK-0087` | The Claude Code Workflow binding: `arm-autopilot.js` de-domained into a template carrying no rule of its own. |
+| S10.2 | S9 | **done** (against a stub) — `TASK-0087` | The Claude Code Workflow binding: `arm-autopilot.js` de-domained into a template carrying no rule of its own. |
 | S10.3 | S9 (`TASK-0059` **done**) | ready — authorization signed 2026-09-24 — `TASK-0088` | `mcp-servers/gates/` — first authored Python server; `smoke-mcp.sh` authored-shape support; supersede `ADR-0010`; **human authorization block**. Highest risk; independent of S10.1/S10.2. |
 | S10.4 | S10.3 | planned | **[corrected]** The Bionic binding. `configs/lm-studio-bionic/README.md` **already records this client's coverage** (`TASK-0080`) — and states only the *established* fact: **zero** of the nine roles, for want of a user-authored agent directory (`ADR-0020`). So what this row owes is **establishing** that Bionic cannot orchestrate, or dropping the claim — not writing the section. |
 | S10.5 | S10.1, S10.2, S10.3 | planned | `configs/claude-code/` and `configs/opencode/`; run `install.sh` for both clients and record the emission output **verbatim** (F6). |

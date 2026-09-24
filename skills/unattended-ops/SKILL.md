@@ -4,7 +4,7 @@ description: "The method behind the unattended-run loop - the harness's five rul
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # unattended-ops
@@ -160,11 +160,12 @@ not to be described as equivalent.
   happened in `asset-management`, against a Claude Code workflow. Nothing
   here has yet driven a run from this repo's own artifacts; treat the first
   binding's pilot as the first test (`PLAN-0006`, S10). The OpenCode
-  binding's tests run against a **stub** `opencode` — a model of the client,
-  not the client.
-- **Not a governance framework.** It ships the binding contract, one
-  client binding (OpenCode, `templates/bindings/opencode/`) and a
-  checker. No index, no task IDs, no sprint shape, no status vocabulary
+  binding's tests run against a **stub** `opencode`, and the Claude Code
+  binding's against a **stub** Workflow runtime — models of the clients, not
+  the clients.
+- **Not a governance framework.** It ships the binding contract, two
+  client bindings (`templates/bindings/opencode/` and
+  `templates/bindings/claude-code/`) and a checker. No index, no task IDs, no sprint shape, no status vocabulary
   beyond the five verdicts and a binding's slot values. That layer is
   `project-workflow` and `project-migration`, which are two deliberately
   divergent frameworks — `ADR-0013`; do not add a third.
@@ -182,6 +183,7 @@ not to be described as equivalent.
 | `references/park-and-recover.md` | What a park must leave behind so the next task starts clean, and what a human needs to finish it |
 | `templates/binding.md` | The binding contract: one slot per thing a run cannot derive, and `unknown` is a stop |
 | `templates/bindings/opencode/` | The OpenCode binding: `driver.py`, the `run-gate.sh` entry point, `binding.md`, and hermetic tests against a stub `opencode`. Nothing in this repository runs those tests |
+| `templates/bindings/claude-code/` | The Claude Code binding: the `unattended-run.js` Workflow template, `binding.md`, and tests against a stub Workflow runtime. **Weaker by construction** than the OpenCode one — its binding says where. Nothing in this repository runs those tests |
 | `scripts/check-binding.sh` | Read-only checker: a binding declares every numbered step of the loop and states no uncited rule. Nothing in this repository runs it |
 | `fixtures/` | The checker observed failing for the right reason, then observed passing |
 

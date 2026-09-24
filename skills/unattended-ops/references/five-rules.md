@@ -155,7 +155,7 @@ that is a decision rather than an omission. Two reasons:
    an unwired checker for the same reason.
 2. **A binding lives in a consuming repository.** There is nothing here for a
    gate to point at — the binding templates under `templates/bindings/`
-   (the OpenCode one ships, `TASK-0086`) are themselves templates, whose
+   (OpenCode, `TASK-0086`; Claude Code, `TASK-0087`) are themselves templates, whose
    consumer slots are placeholders by design and which a checker is
    *expected* to reject.
 

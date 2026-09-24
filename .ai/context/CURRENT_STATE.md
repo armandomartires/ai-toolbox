@@ -49,6 +49,19 @@ say the gate-runner invokes the entry point; `ADR-0022` and
 `references/gate-map.md` say the driver does. The binding follows the ADR (the
 loop says the ADR wins) and records it as deviation 1.
 
+## S10.2: the Claude Code binding ships — weaker by construction, and says where
+
+**`TASK-0087`, 2026-09-24.** `skills/unattended-ops/templates/bindings/claude-code/`
+holds the `unattended-run.js` Workflow template, `binding.md` and 23 tests
+against a stub runtime; skill `1.2.0`. `task-planner` and `adjudicator` run as
+their own agent definitions via `agentType`; the other seven are prompt-level.
+Rule 2 is **instructed** here, not structural. Both bindings share
+`run-gate.sh` and one evidence format.
+
+**The gate-invoker disagreement is now resolved in opposite directions** by
+the two bindings, each for a stated reason — still a decision for the human.
+**`node --check` is vacuous** on a workflow-shaped file; do not cite it.
+
 ## Sprint S9 is CLOSED
 
 **`TASK-0081`, 2026-09-23.** Closed on `REVIEW-0011`, archived to

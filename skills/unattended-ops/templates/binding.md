@@ -56,8 +56,8 @@ in the body is uncited.
 Copy this file to `templates/bindings/<client>/binding.md` when authoring one
 for a client in this repository, or into the consuming repository beside the
 driver it describes. **The OpenCode binding ships under
-`templates/bindings/opencode/` (`TASK-0086`); the Claude Code one is
-`TASK-0087`, and Bionic's is S10.4.**
+`templates/bindings/opencode/` (`TASK-0086`) and the Claude Code one under
+`templates/bindings/claude-code/` (`TASK-0087`); Bionic's is S10.4.**
 
 ## The one rule that makes the rest of it mean something
 

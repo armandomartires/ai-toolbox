@@ -102,27 +102,37 @@ must be separated:
 
 ## Acceptance criteria
 
-- [ ] `check-binding.sh` exits 0 on a consumer-filled copy of `binding.md` and
+- [x] `check-binding.sh` exits 0 on a consumer-filled copy of `binding.md` and
       non-zero on the unfilled template.
-- [ ] `node --check` (or equivalent parse) passes on the template.
-- [ ] A grep over the template finds **none** of the source's project
-      identifiers (list the patterns in the log).
-- [ ] Stub harness: a null, an empty and an unparseable refuter return each
+- [x] ~~`node --check` (or equivalent parse) passes on the template.~~
+      **`node --check` was found vacuous and is not evidence**: it exits 0 on a
+      file with `export` plus top-level `return`, and on a plainly broken file
+      (node 22.23.2, observed). Replaced by the "equivalent parse": the harness
+      builds the body as an async function — the shape the runtime runs — with
+      a control showing the same check throws `SyntaxError` on a broken body.
+- [x] A grep over the template finds **none** of the source's project
+      identifiers. Patterns, over non-comment lines: `S02\d`, `\bA1\d\d\b`,
+      `Invoke-Gate`, `excel` (i), `workbook` (i), `\.ps1`, `PowerQuery` (i),
+      `\bVBA\b`, `docs/ai/`, `ARM-`. The provenance comment names
+      `arm-autopilot.js` and A119 on purpose.
+- [x] Stub harness: a null, an empty and an unparseable refuter return each
       reach the adjudicator as `refuted: true`, with no retry.
-- [ ] Stub harness: a null or out-of-enum verdict dispatches to `park`.
-- [ ] Stub harness: no stage other than the closer's prompt asks for
+- [x] Stub harness: a null or out-of-enum verdict dispatches to `park`.
+- [x] Stub harness: no stage other than the closer's prompt asks for
       `git add`/`commit`; no prompt asks for `git push`.
-- [ ] The template refuses to run without a passed-in run id.
-- [ ] `binding.md` states which rules Claude Code enforces and which are
-      prompt-level, **and whether rule 2 is structural or instructed** here.
-- [ ] Each new test **fails when its behaviour is reverted** (recorded).
+- [x] The template refuses to run without a passed-in run id — and on any
+      blank, `unknown` or `<FILL>` slot, before any agent runs.
+- [x] `binding.md` states which rules Claude Code enforces and which are
+      prompt-level, **and whether rule 2 is structural or instructed** here
+      (*instructed*).
+- [x] Each new test **fails when its behaviour is reverted** (recorded).
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] The stub harness (record the exact command)
-- [ ] `scripts/sync-registry.sh` (commit any diff)
-- [ ] `git status --porcelain` clean after commit
+- [x] `tests/validate.sh` — OK
+- [x] Stub harness: `node --test skills/unattended-ops/templates/bindings/claude-code/tests/unattended-run.test.mjs` — **23 tests, 23 pass**. (Passing the *directory* to `node --test` fails with `MODULE_NOT_FOUND` on node 22; pass the file.)
+- [x] `scripts/sync-registry.sh` — no diff
+- [x] `git status --porcelain` clean after commit
 
 ## Risks and rollback
 
@@ -136,27 +146,86 @@ must be separated:
 
 ## Outputs / handover
 
-*Not yet written — forecast until verified.*
-
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `skills/unattended-ops/templates/bindings/claude-code/unattended-run.js` | The Workflow template: every consumer value from `args`, refusal before any agent on an unanswered slot, one function per loop step citing it, `agentType` for `task-planner` and `adjudicator` only |
+| `…/claude-code/binding.md` | Client slots answered, consumer slots `<FILL>`; the `args` shape; the enforced-vs-asked table; **eight deviations**, 1–6 numbered to match the OpenCode binding |
+| `…/claude-code/tests/unattended-run.test.mjs` | 23 tests against a stub runtime whose `Date`/`Math.random` throw as the real ones do |
+| `skills/unattended-ops/SKILL.md` | `1.2.0`; both bindings listed |
+| `templates/binding.md`, `references/five-rules.md` | "The Claude Code one is `TASK-0087`" made past tense |
+| `asset-management` | **Unchanged** |
 
-**Next task starts here**: —
+**Next task starts here**: two bindings exist, both proven against stubs
+only. The Claude Code one uses the OpenCode binding's `run-gate.sh` as its
+gate entry point; `TASK-0088`'s server is a possible later alternative, and
+this template does not depend on it.
+
+**Deviations from the Plan:** the `node --check` criterion was replaced (above);
+the Claude Code binding *reuses* `run-gate.sh` rather than defining its own
+entry point, so one gate map and one evidence format serve both bindings.
 
 ## Status
-- Status: planned
+- Status: done
 - Owner: agent
 - Created: 2026-09-23
-- Updated: 2026-09-23
+- Updated: 2026-09-24
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
+- Date: 2026-09-24
+- Agent: Claude Opus 5.5 (1M context)
+- Actions: read `arm-autopilot.js` end to end (700 lines) and tabulated it as
+  the brief asked — domain → `args` slot (`WORKLIST`, `CMD`, `STATIC_GATES`,
+  `STAGE_GATES`, `GATE`, `RUN_ROOT`, `HOUSE_RULES`, the commit shape), rule →
+  citation (the five-rules comment block, `GATE_HOWTO`), control flow → kept.
+  Re-read the Workflow runtime reference for the current API. Wrote the
+  template, the binding and the stub harness; ran 18 revert proofs.
 - Observations:
+  1. **`agentType` changes what "portable" buys.** The runtime can run a
+     workflow agent *as* a custom subagent definition, so `task-planner` and
+     `adjudicator` — the two roles with a Claude Code emission — run under
+     their own bodies and tool boundaries here, not as paraphrases. The other
+     seven run as default subagents with prompt-level boundaries. **Untested
+     against a real session:** neither role is emitted to `~/.claude/agents/`
+     yet (S10.5), and what `agent()` does with an unknown `agentType` is not
+     documented; the template treats a throw as a halt (deviation 8).
+  2. **Deviation 1 is the mirror image of the OpenCode binding's.** A Workflow
+     script has no shell, so the *gate-runner* invokes `run-gate.sh`, as
+     loop.md step 7 says — where the OpenCode driver invokes it, as `ADR-0022`
+     says. The same three-way disagreement recorded in `TASK-0086`, now
+     resolved in opposite directions by the two bindings for a reason each
+     states. It still needs a human decision.
+  3. **Dropped from the source, intentionally, each for a stated reason:**
+     `HOUSE_RULES` (the consumer's `AGENTS.md`, not the harness's); the Excel
+     process and lock-file report (domain); `operatorGated` (a consumer
+     encodes that as a task whose criteria need a human, which parks); the
+     stage-close bookkeeping in the closer prompt (tracker-specific);
+     `STATUS.md` in the handover (the loop asks for one handover); and
+     `model: 'sonnet'` per agent (inherited). Kept as citations rather than
+     text: the five rules, the gate how-to, the evidence rule.
+  4. **Two corrections to the source**, both from `ADR-0022`: the null
+     refuter fails closed (in the source it reached the adjudicator as
+     `JSON.stringify(null)`), and `accept` over a refutation needs a named
+     override. Plus one the source could not have: the closer's commit is
+     cross-checked by a second agent before and after (`verifyHead()`).
+  5. **`node --check` cannot fail on this file shape** — see the struck
+     criterion. Found by pointing it at a deliberately broken file, which is
+     the check every validation should get before it is trusted.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - Harness: **23/23 pass**.
+  - **Fails-when-reverted, 18 behaviours, all red**, each run alone via
+    `--test-name-pattern` (one test selected, one failing): null-refuter
+    synthesis; findings force `refuted`; unparseable verdict → park; no retry
+    on attempt 2; accept over refutation needs overrides; refusal before any
+    agent; `agentType` for the two thinking roles; a thrown `agent()` halts;
+    closer refusal not retried; commit verification; a dirty park halts; dirty
+    tree at preflight; unreported gate → `NOT-RUN`; dependency check; dry run;
+    `halt-run` ends the run; long gates for the touched group; git writes only
+    in the closer's prompt. Template restored and `cmp`-verified.
+  - `check-binding.sh`: the template fails on its consumer placeholders only;
+    a filled copy passes (a test asserts both).
+  - `tests/validate.sh`: OK. `scripts/sync-registry.sh`: no diff.
+  - **Not validated, and not claimed:** any real Workflow run.
+- Result: **done** — against a stub.
+- Commit: *(recorded in the follow-up commit)*
+- Push: *(recorded in the follow-up commit)*
