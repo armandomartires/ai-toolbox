@@ -609,7 +609,7 @@ than closing over it.
 
 **Promoted by `TASK-0085`**, in the same commit as `ROADMAP.md`'s Phase 10.
 Both ADRs it rests on are `Accepted`. It **allocates no task ids** — one is
-taken when a brief is written. **Next free: `TASK-0096`.**
+taken when a brief is written. **Next free: `TASK-0097`.**
 
 - [x] TASK-0086 — S10.1 — the OpenCode driver, `run-gate.sh` and binding (done —
       proven against a **stub** `opencode` only; 23 tests, 18 reverts red)
@@ -630,6 +630,7 @@ taken when a brief is written. **Next free: `TASK-0096`.**
 - [ ] TASK-0093 — release-check step 8: record the hash in a follow-up commit, never amend
 - [ ] TASK-0094 — refresh the stale opening paragraph of CURRENT_STATE.md
 - [x] TASK-0095 — roles read resolved paths, never glob (done — dry-run halt cause)
+- [x] TASK-0096 — driver hands preflight its step-1 evidence (done — second dry-run halt)
 - [ ] S10.6 — registry and state (effectively done by TASK-0090)
 - [ ] REVIEW — checkpoint
 

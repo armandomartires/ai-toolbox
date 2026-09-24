@@ -187,4 +187,31 @@ artifacts. A finding is the expected outcome, not a failure.
      17:13Z, before the pilot started — not started by this session; left
      alone. Whether it relates to finding 2 is unknown.
 - Live run: **not started** — the dry run halted, and go-live is the human's.
+
+### Attempt 2 — the second dry run, `s10-7-dry2` (2026-09-24)
+- Between runs: `TASK-0095` (read resolved paths, never glob); the human
+  **uninstalled the `opencode-arcade-hub` plugin** — three tool-using runs
+  then passed in 14–17 s without `--pure` (the `plugin` line remains in the
+  user's config, harmlessly; the `arcade` MCP entry now only warns
+  `needs_auth`); worktree fast-forwarded to `1dd381e`.
+- Result: **halted at preflight, correctly, one step further.** Both task
+  files found at their given paths, criteria present, sources agreeing
+  (`'ready'` vs an unchecked tracker row). The role halted because *"the two
+  silent-failure checks the driver must run and hand to preflight per
+  ADR-0022 clauses 5.1/5.3 … were not supplied … An absent check is not a
+  passed check."*
+- Findings:
+  6. **The driver ran step 1's two silent-failure checks and handed the role
+     neither result** — a real gap between the driver and
+     `agents/preflight/`, which forbids inferring them. Fixed by `TASK-0096`
+     (the human's choice: pass the evidence; the role is not relaxed).
+  7. **Roles cannot read the `unattended-ops` skill.** OpenCode's
+     `external_directory` rule denied reads under
+     `~/.config/opencode/skills/unattended-ops/`, while role bodies say to
+     read `references/return-schemas.md` there. Not blocking — the driver's
+     prompts carry every return shape. **Recorded, to be decided after the
+     pilot** (the human's choice).
+  8. Roles still try shell commands outside their allowlists (`echo`, `ls`)
+     and are denied, as declared; harmless, but each denial is a wasted
+     model turn.
 - Commit: *(this record)*

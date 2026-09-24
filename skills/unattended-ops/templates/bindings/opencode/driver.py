@@ -197,6 +197,7 @@ class Driver:
         self.opencode = shutil.which("opencode")
         self.closed, self.parked, self.adhoc, self.overrides = [], [], [], []
         self.halted = None
+        self.agent_lines = {}
         self.start_head = None
         self.upstream = None
 
@@ -300,6 +301,9 @@ class Driver:
             if modes.get(name) != "primary":
                 raise Halt("agent %r for role %s is %s in `opencode agent list`, not "
                            "primary (ADR-0022 clause 5.1)" % (name, role, modes.get(name, "absent")))
+            # Kept verbatim for preflight: an absent check is not a passed
+            # check, so the role is handed the evidence (TASK-0096).
+            self.agent_lines[role] = "%s (%s)" % (name, modes[name])
         self.start_head = self.git("rev-parse", "--short", "HEAD")
         up = self.sh(["git", "rev-parse", "--verify", "-q", "@{upstream}"])
         self.upstream = up.stdout.strip() if up.returncode == 0 else None
@@ -342,7 +346,14 @@ class Driver:
             "given path, and report whether its acceptance criteria are present and its "
             "status, read verbatim from both the task file and the tracker.",
             {"tasks": [{"id": t["id"], "file": t["file"]} for t in queue],
-             "tracker": self.b.tracker},
+             "tracker": self.b.tracker,
+             # Step 1's structural checks, run by the driver before this call
+             # (ADR-0022 clauses 5.1, 5.3), handed over as evidence (TASK-0096).
+             "driver_checks": {
+                 "model": self.b.model,
+                 "model_passed_as": "-m on every opencode run call this run makes",
+                 "agent_list": self.agent_lines,
+                 "agent_list_source": "`opencode agent list`, read by the driver at step 1"}},
             '{"verdict": "proceed" | "halt", "branch": "...", "head": "...", '
             '"porcelain": "<verbatim>", "tasks": [{"id": "...", "criteria_present": true, '
             '"status_task_file": "<verbatim>", "status_tracker": "<verbatim>", '

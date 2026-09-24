@@ -227,6 +227,17 @@ class TestHappyPath(Harness):
         self.assertIn(".ai/tasks/TASK-0001-demo.md", pre[-1])
         self.assertIn("already resolved", pre[-1])
 
+    def test_preflight_is_handed_the_drivers_own_checks(self):
+        # TASK-0096: the second dry run halted because the driver ran the
+        # model and primary-mode checks and handed the role neither result.
+        self.make_repo()
+        self.run_driver(happy())
+        checks = self.prompt_inputs(self.invocations("preflight")[0])["driver_checks"]
+        self.assertEqual(checks["model"], "stub/model-1")
+        self.assertEqual(set(checks["agent_list"]), set(ROLES))
+        for role in ROLES:
+            self.assertEqual(checks["agent_list"][role], "%s (primary)" % role)
+
     def test_every_invocation_carries_the_model(self):
         self.make_repo()
         self.run_driver(happy())
