@@ -39,15 +39,22 @@ Nothing in `PLAN-0006` or `ADR-0022` fixes the tool surface. This is the
 proposal; **a change here is a change to the brief, made by the human, before
 the commit that locks it.**
 
+> **Amended 2026-09-24, at the human's request and before signature**, to match
+> `run-gate.sh` (`TASK-0086`), which was built after this table was written:
+> `SKIPPED` added to the states and `skip_exit` to the map entry (the original
+> would have reported a skip as a fail, against `references/gate-map.md`
+> rule D), and the evidence line aligned to `run-gate.sh`'s format (`NAME=`,
+> `ELAPSED=<n>s`). Nothing else changed.
+
 | Decision | Proposal | Why |
 |---|---|---|
 | Map source | A JSON file in the **consuming** repo, path in env var `GATES_MAP` (required). No map → server refuses to start | Rule 2: the map is the consumer's, never a task file's and never a tool argument. JSON, not TOML, because the server targets `requires-python >= 3.10` and `tomllib` is 3.11+ |
-| Map entry | `name → {argv: [...], cwd, timeout_seconds}` | **argv list, no shell** — Invoke-Gate's "no generated code" lesson: quoting through a shell is exactly where its first cut broke on a path with a space |
+| Map entry | `name → {argv: [...], cwd, timeout_seconds, skip_exit}` — the same entry shape `run-gate.sh` reads (`TASK-0086`), so one map serves both | **argv list, no shell** — Invoke-Gate's "no generated code" lesson: quoting through a shell is exactly where its first cut broke on a path with a space. `skip_exit`, optional, is the exit code that means SKIP rather than FAIL |
 | Tools (one per concern) | `list_gates()`, `start_gate(name)`, `wait_gate(handle, max_wait_seconds ≤ 420)`, `gate_status(handle)`, `kill_gate(handle)` | Mirrors `Start`/`Wait`/`Status`/`Kill`. **No tool accepts a command string** — a caller can only name a gate |
 | Destructive tools | `start_gate`, `kill_gate` | `start_gate` runs consumer commands; `kill_gate` terminates processes |
 | Kill scope | Only the process group the server itself started. **Never by name** | Invoke-Gate's Excel hygiene: an operator's own open workbook must never be touched |
-| Evidence | One line per finished gate appended to `$GATES_RUN_ROOT/gates.txt`: `GATE <name> STATE=<s> EXIT=<n> ELAPSED=<s> LOG=<path>` | The evidence rule: this file is the only admissible source for a gate's outcome |
-| States | `RUNNING`, `PASSED`, `FAILED`, `TIMEOUT`, `KILLED`, `MISSING` | Same as the source, so an evidence file reads the same across clients |
+| Evidence | One line per finished gate appended to `$GATES_RUN_ROOT/gates.txt`: `GATE <handle> NAME=<gate> STATE=<state> EXIT=<n> ELAPSED=<n>s LOG=<path>` — **byte-for-byte the format `run-gate.sh` writes** | The evidence rule: this file is the only admissible source for a gate's outcome. One format across both entry points, so an evidence file reads the same whichever produced it |
+| States | `RUNNING`, `PASSED`, `FAILED`, `SKIPPED`, `TIMEOUT`, `KILLED`, `MISSING` | `references/gate-map.md` rule D: PASS, FAIL and SKIP are distinct and a SKIP is not a pass. Same set as `run-gate.sh` |
 | Watchdog | Survives the calling agent; owns the timeout | A gate stays bounded even if its caller dies |
 
 ### `ADR-0010`'s obligations, now due (`ADR-0022` Consequences)
@@ -155,7 +162,10 @@ and its `by` / `date` must match what is written here.
 - [ ] Timeout → `TIMEOUT`; `kill_gate` → `KILLED`, and a **sibling process the
       server did not start survives** the kill.
 - [ ] Every terminal state appends exactly one evidence line in the stated
-      format.
+      format — **the same line `run-gate.sh` writes for the same gate**,
+      asserted by running one fixture map through both.
+- [ ] A gate exiting its `skip_exit` code reports `SKIPPED` — not `FAILED`,
+      and not `PASSED`.
 - [ ] Missing `GATES_MAP` → server refuses to start with a stated reason.
 - [ ] `tests/smoke-mcp.sh --server gates` reports **PASS** (not SKIP).
 - [ ] The wiring gate now reads authored servers, proven red-then-green.
