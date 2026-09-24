@@ -125,5 +125,5 @@ diagnosed in `TASK-0092` and awaits the human's choice on plugins.
   `tests/validate.sh` OK.
 - Result: **done** — prompt-level, as the brief's risk says; the next dry run
   is where a role that globs anyway would show.
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `a2d616e`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `35841bb..a2d616e`.
