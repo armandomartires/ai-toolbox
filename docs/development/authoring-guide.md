@@ -358,7 +358,7 @@ surface to emit into (ADR-0020).
 | `test_allow` | *Required **iff** `capabilities` includes `test-allowlist`; forbidden otherwise.* A non-empty **block list** of test-command patterns, same quoting, block-list-only rule and **entry guards** as `bash_allow`. Merges into the same emitted `bash` map, so a role may hold both keys. |
 | `clients` | Required. List of clients this role is emitted for: `claude-code`, `opencode`, or both. Declared rather than derived, because a role asking for a capability a client cannot enforce is a **scoping decision**, not something the emitter should silently resolve. |
 | `model` | *Optional.* A **tier name**, never a client-native model ID. The two clients' model formats are mutually invalid — OpenCode wants `provider/model-id`, Claude Code wants an alias, a full ID or `inherit` — and OpenCode accepts a foreign value at parse time and **fails only at run time**. **Omit it: no tier resolver exists in this repo** — see the note below. |
-| Body | Required, non-empty. Everything after the frontmatter is the system prompt, emitted verbatim to both clients. It is the one part of a role that is genuinely portable. |
+| Body | Required, non-empty. Everything after the frontmatter is the system prompt, emitted verbatim to both clients. It is the one part of a role that is genuinely portable. **One generated addition, OpenCode only:** a role declaring `bash-allowlist` or `test-allowlist` gets a *Shell commands you may run* section appended, listing its `bash_allow`/`test_allow` patterns (`TASK-0102`). Do not hand-write that list into the body — the frontmatter is its one owner. |
 
 #### `mode: all` is rejected on purpose, not overlooked
 

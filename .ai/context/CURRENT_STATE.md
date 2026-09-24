@@ -78,6 +78,10 @@ upstream report, the human files it.
   exposed:** the adjudicator's decision standard (`verdicts.md`,
   `evidence.md`) is not in its prompt either — it never reached the role in
   the pilot — and that route is the human's.
+- **`B-034` closed — `TASK-0102`.** Emitted OpenCode roles with a shell
+  allowlist now end with a generated list of the commands they may run and
+  *quote path arguments*. **An upstream report for OpenCode is drafted in
+  `TASK-0102`, not filed** — filing is the human's.
 
 ## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
 
