@@ -153,5 +153,5 @@ of its sentences said the gate-runner writes the file.
   `check-binding.sh` on placeholders only (no uncited rule);
   `scripts/sync-registry.sh` no diff.
 - Result: **done.**
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `8c5bbe0`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `4099981..8c5bbe0`.
