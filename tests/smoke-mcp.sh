@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Smoke-test external MCP servers: launch each one and confirm it actually
+# Smoke-test MCP servers, both shapes: launch each one and confirm it actually
 # speaks MCP, by performing a real JSON-RPC `initialize` handshake over
 # stdio and asserting on the reply.
 #
@@ -53,13 +53,56 @@ for d in mcp-servers/*/; do
   d="${d%/}"
   name=$(basename "$d")
   case "$name" in _template*) continue ;; esac
-  [ -f "$d/server.json" ] || continue   # authored Python servers: none yet
   if [ -n "$WANT_SERVER" ] && [ "$name" != "$WANT_SERVER" ]; then continue; fi
+
+  # The manifest the rest of this loop reads. External servers carry one.
+  # AUTHORED servers (pyproject.toml, ADR-0005) get one synthesised from
+  # `[project.scripts]` and `[tool.ai-toolbox]` - ADR-0010 obligation 1,
+  # discharged by TASK-0088. Launch convention, cwd-independent so the same
+  # form works in a client config: `uv --directory <abs dir> run <dir name>`.
+  # The console script must therefore be named after the directory; a server
+  # whose script is not is a FAIL, because install.sh prints that command too.
+  if [ -f "$d/server.json" ]; then
+    manifest="$d/server.json"
+  elif [ -f "$d/pyproject.toml" ]; then
+    manifest=$(mktemp)
+    synth=$(python3 - "$d" "$manifest" <<'SYNTH'
+import json, os, sys
+try:
+    import tomllib
+except ModuleNotFoundError:
+    print("FAILREASON python3 >= 3.11 (tomllib) is needed to read pyproject.toml")
+    raise SystemExit(0)
+d, out = sys.argv[1], sys.argv[2]
+name = os.path.basename(d)
+data = tomllib.load(open(os.path.join(d, "pyproject.toml"), "rb"))
+scripts = (data.get("project") or {}).get("scripts") or {}
+if name not in scripts:
+    print("FAILREASON [project.scripts] has no entry named '%s' (has: %s); the "
+          "authored launch is `uv --directory <dir> run <dir name>`"
+          % (name, ", ".join(sorted(scripts)) or "none"))
+    raise SystemExit(0)
+meta = (data.get("tool") or {}).get("ai-toolbox") or {}
+smoke = (meta.get("smoke_test") or {}).get("env") or {}
+json.dump({"launch": {"transport": "stdio",
+                      "command": ["uv", "--directory", os.path.abspath(d), "run", name]},
+           "environment": meta.get("environment") or {},
+           "smoke_env": {k: os.path.join(os.path.abspath(d), v) for k, v in smoke.items()}},
+          open(out, "w"))
+SYNTH
+)
+    case "$synth" in
+      FAILREASON*) rm -f "$manifest"; matched=$((matched + 1)); echo "FAIL $name: ${synth#FAILREASON }"
+                   failed=$((failed + 1)); continue ;;
+    esac
+  else
+    continue
+  fi
   matched=$((matched + 1))
 
   # The launch command, its transport, and the env it needs all come from
   # the manifest - nothing about this server is hard-coded here.
-  transport=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["launch"].get("transport",""))' "$d/server.json")
+  transport=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["launch"].get("transport",""))' "$manifest")
   if [ "$transport" != "stdio" ]; then
     echo "SKIP $name: transport '$transport' not supported by this harness (stdio only)"
     skipped=$((skipped + 1))
@@ -68,7 +111,7 @@ for d in mcp-servers/*/; do
 
   # Runtime presence check, so a missing interpreter is a SKIP (cannot
   # attempt) rather than a FAIL (server is broken).
-  cmd0=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["launch"]["command"][0])' "$d/server.json")
+  cmd0=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["launch"]["command"][0])' "$manifest")
   if ! command -v "$cmd0" >/dev/null 2>&1; then
     echo "SKIP $name: launcher '$cmd0' not on PATH"
     skipped=$((skipped + 1))
@@ -87,7 +130,7 @@ for d in mcp-servers/*/; do
   missing_pre=$(python3 -c 'import json, os, sys
 m = json.load(open(sys.argv[1]))
 req = (m.get("smoke_test") or {}).get("requires_paths") or []
-print(", ".join(p for p in req if not os.path.exists(p)))' "$d/server.json")
+print(", ".join(p for p in req if not os.path.exists(p)))' "$manifest")
   if [ -n "$missing_pre" ]; then
     echo "SKIP $name: precondition unmet, server never started: missing $missing_pre"
     skipped=$((skipped + 1))
@@ -95,7 +138,7 @@ print(", ".join(p for p in req if not os.path.exists(p)))' "$d/server.json")
   fi
 
   echo "--- $name: initialize handshake (timeout ${TIMEOUT}s)"
-  out=$(python3 - "$d/server.json" "$TIMEOUT" <<'PY'
+  out=$(python3 - "$manifest" "$TIMEOUT" <<'PY'
 import json, os, subprocess, sys, threading
 
 manifest, timeout = sys.argv[1], int(sys.argv[2])
@@ -103,6 +146,9 @@ m = json.load(open(manifest))
 cmd = m["launch"]["command"]
 
 env = dict(os.environ)
+# Authored servers only: the manifest-declared handshake environment
+# (`[tool.ai-toolbox.smoke_test] env`), applied before the required check.
+env.update(m.get("smoke_env") or {})
 missing = []
 for var, spec in (m.get("environment") or {}).items():
     if not spec.get("required"):
@@ -222,6 +268,8 @@ print("PASSREASON serverInfo.name=%s version=%s protocol=%s capabilities=%s"
 PY
 )
   rc=$?
+  # A synthesised (authored) manifest is a temp file; the external one is not.
+  [ "$manifest" = "$d/server.json" ] || rm -f "$manifest"
   if [ $rc -ne 0 ]; then
     echo "FAIL $name: harness error (python3 exited $rc)"
     failed=$((failed + 1))
@@ -238,7 +286,7 @@ PY
 done
 
 if [ -n "$WANT_SERVER" ] && [ "$matched" -eq 0 ]; then
-  echo "unknown server: $WANT_SERVER (no mcp-servers/$WANT_SERVER/server.json)" >&2
+  echo "unknown server: $WANT_SERVER (no mcp-servers/$WANT_SERVER/server.json or pyproject.toml)" >&2
   exit 2
 fi
 

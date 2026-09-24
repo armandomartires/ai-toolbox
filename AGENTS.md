@@ -55,7 +55,8 @@ services, secrets.
   the network (launchers fetch upstream), so it is deliberately *not* part
   of `tests/validate.sh`. Reports PASS / FAIL / SKIP as three distinct
   outcomes; a SKIP is not a pass.
-- Run a Python server: `cd mcp-servers/<name> && uv run <name>`. External
+- Run a Python server: `uv --directory mcp-servers/<name> run <name>` (the
+  console script is named after the directory; ADR-0024). External
   servers: `scripts/install.sh` prints the launch command from the
   manifest; per-client wiring is in `configs/*/README.md`.
 - Session isolation: `scripts/worktree.sh add|list|remove <name>` — one

@@ -615,7 +615,8 @@ taken when a brief is written. **Next free: `TASK-0089`.**
       proven against a **stub** `opencode` only; 23 tests, 18 reverts red)
 - [x] TASK-0087 — S10.2 — the Claude Code Workflow binding (done — stub runtime only;
       23 tests, 18 reverts red)
-- [ ] TASK-0088 — S10.3 — `mcp-servers/gates/`, the first authored server.
+- [x] TASK-0088 — S10.3 — `mcp-servers/gates/`, the first authored server (done —
+      14 tests, 15 reverts red, smoke PASS; **not wired**, by the authorization).
       **Highest risk; authorization signed 2026-09-24** (not wired into clients). Independent of S10.1/S10.2
 - [ ] S10.4 — the Bionic binding; *establish* the orchestration claim or drop
       it, since the snapshot already records the established coverage

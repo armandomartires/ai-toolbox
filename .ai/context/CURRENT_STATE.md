@@ -49,6 +49,22 @@ say the gate-runner invokes the entry point; `ADR-0022` and
 `references/gate-map.md` say the driver does. The binding follows the ADR (the
 loop says the ADR wins) and records it as deviation 1.
 
+## S10.3: the first authored MCP server ships — and the template it was copied from was broken
+
+**`TASK-0088`, 2026-09-24.** `mcp-servers/gates/` runs a consuming
+repository's gates by **name**, detached behind a watchdog, with evidence
+byte-compatible with `run-gate.sh`. Destructive (`start_gate`, `kill_gate`),
+**authorized by the human** in its task file, and — by that authorization's
+one condition — **wired into no client**; S10.5 wires it. `ADR-0024`
+supersedes `ADR-0010`; `ADR-0022` F8 is **partly** settled (harness PASS, no
+client yet).
+
+**Walking the authored path found what reading could not:** the template
+could be neither built (no `__init__.py`) nor imported (`mcp>=1.0` now
+resolves to mcp 2.x). Both fixed. `smoke-mcp.sh` now handshakes authored
+servers, the wiring gate reads both shapes (carried item 4, closed), and the
+launch form is `uv --directory <dir> run <dir>` everywhere.
+
 ## S10.2: the Claude Code binding ships — weaker by construction, and says where
 
 **`TASK-0087`, 2026-09-24.** `skills/unattended-ops/templates/bindings/claude-code/`

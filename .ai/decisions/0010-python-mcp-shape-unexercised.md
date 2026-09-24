@@ -1,6 +1,10 @@
 # ADR-0010 — The authored (Python) MCP server shape stays unexercised until a real use case exists
 
 ## Status
+**Superseded by `ADR-0024` — 2026-09-24** (`TASK-0088`), on this ADR's own
+terms: its reopen trigger fired and its three obligations were discharged.
+The text below is the dated record, unchanged.
+
 Accepted — 2026-09-13. Closes a candidate item that had appeared in three
 consecutive sprint candidate lists without being scoped.
 

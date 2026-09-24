@@ -3,14 +3,24 @@ name = "template-mcp-server"
 version = "0.1.0"
 description = "One-line description of the server's tools"
 requires-python = ">=3.10"
-dependencies = ["mcp>=1.0"]
+# `<2` is load-bearing: mcp 2.x renamed the bundled FastMCP to MCPServer, so
+# `mcp>=1.0` alone resolves to a version where `mcp.server.fastmcp` does not
+# exist (observed 2026-09-24, mcp 2.2.0; TASK-0088).
+dependencies = ["mcp>=1.0,<2"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
+# Name the script after the server's DIRECTORY when you copy this: the launch
+# convention is `uv --directory mcp-servers/<dir> run <dir>`, and
+# tests/smoke-mcp.sh FAILs a server whose script is named otherwise.
 template-mcp-server = "template_mcp_server.server:main"
+
+[dependency-groups]
+# So `uv run pytest` works from the server directory.
+dev = ["pytest>=8"]
 
 # --- Repo metadata: the authored shape's answer to server.json -------------
 #

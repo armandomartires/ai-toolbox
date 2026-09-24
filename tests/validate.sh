@@ -1025,13 +1025,29 @@ for d in mcp-servers/*/; do
   # declares a REQUIRED variable and would otherwise demand three sections
   # for a server nobody runs.
   case "$name" in _template*) continue ;; esac
-  [ -f "$d/server.json" ] || continue
-  owes=$(python3 - "$d/server.json" <<'PY'
+  # BOTH SHAPES. This read `server.json` only until TASK-0088 shipped the
+  # first authored server, which has a required variable AND a destructive
+  # tool and so would have owed three sections nobody asked for — the hole
+  # TASK-0059 named in advance. The authored declarations live in
+  # `[tool.ai-toolbox]`, key for key the same as server.json's.
+  if [ -f "$d/server.json" ]; then
+    marker="$d/server.json"
+  elif [ -f "$d/pyproject.toml" ]; then
+    marker="$d/pyproject.toml"
+  else
+    continue
+  fi
+  owes=$(python3 - "$marker" <<'PY'
 import json, sys
-m = json.load(open(sys.argv[1]))
-req = any(v.get("required") for v in m.get("environment", {}).values()
+path = sys.argv[1]
+if path.endswith(".toml"):
+    import tomllib   # the authored-manifest pass above already fails loudly without it
+    m = (tomllib.load(open(path, "rb")).get("tool") or {}).get("ai-toolbox") or {}
+else:
+    m = json.load(open(path))
+req = any(v.get("required") for v in (m.get("environment") or {}).values()
           if isinstance(v, dict))
-print("yes" if req or m.get("capabilities", {}).get("destructive") is True
+print("yes" if req or (m.get("capabilities") or {}).get("destructive") is True
       else "no")
 PY
 )

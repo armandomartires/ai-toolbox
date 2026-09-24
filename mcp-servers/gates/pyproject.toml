@@ -1,0 +1,62 @@
+[project]
+name = "gates"
+version = "0.1.0"
+description = "Runs named verification gates from a consuming repository's gate map, detached behind a watchdog and polled in bounded calls; no tool accepts a command"
+requires-python = ">=3.10"
+# `<2` is load-bearing: mcp 2.x renamed the bundled FastMCP to MCPServer, and
+# `mcp>=1.0` alone now resolves to 2.x, where `mcp.server.fastmcp` does not
+# exist (observed 2026-09-24, mcp 2.2.0; TASK-0088).
+dependencies = ["mcp>=1.0,<2"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+# Equal to the directory name, so `uv --directory mcp-servers/gates run gates`
+# and install.sh's printed line both name a script that exists.
+gates = "gates.server:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+# --- Repo metadata: the authored shape's answer to server.json -------------
+# Read and enforced by tests/validate.sh (TASK-0059); kept below [project] so
+# sync-registry.sh's first-match `^name = ` reads the project's name.
+
+[tool.ai-toolbox.capabilities]
+destructive = true
+# start_gate runs whatever the consumer's map names; kill_gate terminates the
+# process group of a gate this server started, and nothing else.
+destructive_tools = ["start_gate", "kill_gate"]
+
+# The human authorization, recorded in the task file named below (AGENTS.md:
+# "MCP servers must not expose destructive capabilities without explicit human
+# authorization in the task file"). by/date must match that file.
+[tool.ai-toolbox.authorization]
+granted = true
+by = "Armando Martires"
+date = "2026-09-24"
+task = ".ai/tasks/TASK-0088-gates-mcp-server.md"
+
+[tool.ai-toolbox.environment.GATES_MAP]
+required = true
+description = "Path of the consuming repository's gate map (JSON). The server refuses to start without it"
+
+[tool.ai-toolbox.environment.GATES_RUN_ROOT]
+required = true
+description = "Directory for per-gate state and logs; gates.txt there is the run's evidence file. Must be gitignored in the consuming repository"
+
+[tool.ai-toolbox.environment.GATES_REPO_ROOT]
+required = false
+description = "Root a map entry's cwd is relative to. Defaults to the gate map's directory"
+
+[tool.ai-toolbox.environment.GATES_TIMEOUT_SECONDS]
+required = false
+description = "Watchdog default for a gate with no timeout_seconds of its own. Defaults to 3600"
+
+# tests/smoke-mcp.sh: environment for the initialize handshake only, paths
+# relative to this directory. The fixture map runs nothing harmful, and the
+# handshake invokes no tool anyway.
+[tool.ai-toolbox.smoke_test]
+env = { GATES_MAP = "tests/fixtures/gates.json" }

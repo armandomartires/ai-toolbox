@@ -38,44 +38,46 @@ cannot drift out of sync with the directory's actual contents;
 
 - **Authored (Python)**: Python 3.10+, src layout, hatchling, FastMCP.
   One tool per concern; document every argument; tests required. Copy
-  from `mcp-servers/_template/`. Verified against the template below.
+  from `mcp-servers/_template/`. Verified against `mcp-servers/gates/` and
+  the template below (`ADR-0024`).
 - **External (npm, PyPI CLI, etc.)**: no source vendored. Described by a
   `server.json` manifest (schema below). Copy from
   `mcp-servers/_template-external/`. Per-client wiring goes in
   `configs/*/README.md`; the manifest, not the wiring snippet, is the
   machine-readable source of truth.
 
-### Authored (Python) servers, read from `mcp-servers/_template/`
+### Authored (Python) servers — verified against a server that has run
 
-**No authored server exists in this repo yet.** `mcp-servers/ansible` and
-`mcp-servers/graphify` are both external, so `_template/` holds the only
-`pyproject.toml` here and everything below is read from scaffolding rather
-than from a server that has run. That is `ADR-0010`'s deferral arriving and
-its **obligation 2** — *"the authored-server section gets verified against
-reality rather than assumption"* — being discharged by reading. `TASK-0067`
-walks the path for the first time and will find what reading cannot.
+**One authored server exists: `mcp-servers/gates/` (`TASK-0088`).** Everything
+in this section was checked on 2026-09-24 by **building, testing and
+launching** both it and `mcp-servers/_template/`, not by reading them. That
+discharges `ADR-0010`'s obligation 2, and it paid for itself: the template as
+it stood **could not be built and could not be imported**, two defects that
+the reading-only version of this section (`TASK-0059`) had correctly flagged
+as "unverified" and could not find. `ADR-0024` supersedes `ADR-0010`.
 
-The template is **three files**, with no `README.md` and no `__init__.py`:
+The template is **four files**:
 
 ```
 mcp-servers/_template/
   pyproject.toml
+  src/template_mcp_server/__init__.py
   src/template_mcp_server/server.py
   tests/test_server.py
 ```
 
-| Element | What the template actually does | Gated |
+| Element | What the template does, verified | Gated |
 |---|---|---|
 | Shape marker | `pyproject.toml` present, `server.json` absent. The shape is derived from the marker, never self-declared. | **yes** |
 | Python | `requires-python = ">=3.10"`. | **no** |
 | Build backend | `hatchling`, declared in `[build-system]`. | **no** |
-| Layout | src layout — `src/<package>/server.py`, the package being the project name with hyphens as underscores, which is what hatchling auto-detects. **There is no `__init__.py`.** Nothing here has built the template, so whether hatchling packages it as it stands is **unverified**; `TASK-0067` finds out. | **no** |
-| Dependencies | Exactly one: `mcp>=1.0`. | **no** |
+| Layout | src layout — `src/<package>/`, the package being the project name with hyphens as underscores. **`__init__.py` is required:** without it hatchling's wheel auto-detection fails (*"Unable to determine which files to ship inside the wheel"*) — observed on the template as it shipped until `TASK-0088`, which added the file. | **no** |
+| Dependencies | `mcp>=1.0,<2`. **The upper bound is load-bearing:** mcp 2.x renamed the bundled FastMCP to `MCPServer`, so the unbounded `mcp>=1.0` the template carried resolved to mcp 2.2.0, where `mcp.server.fastmcp` does not exist. Verified working at mcp 1.30.0. | **no** |
 | "FastMCP" | `from mcp.server.fastmcp import FastMCP` — the FastMCP **bundled in the official `mcp` SDK**, not the standalone `fastmcp` distribution on PyPI. They are different packages on different version lines, and the bare word "FastMCP" in this guide has always meant the bundled one. | **no** |
 | One tool per concern | One `@mcp.tool()`, on `echo(text: str) -> str`. | **no** |
 | Document every argument | A Google-style `Args:` block in the tool's docstring. FastMCP derives the argument schema from the annotated signature and the tool description from the docstring, so an undocumented argument reaches the client unexplained. | **no** |
-| Entry point | `[project.scripts] template-mcp-server = "template_mcp_server.server:main"`, with `main()` calling `mcp.run()`. | **no** |
-| Tests | `tests/test_server.py`, importing the tool function directly. **pytest is not declared anywhere and nothing in this repository runs it** — "tests required" is a convention here, not a gate. | **no** |
+| Entry point | `[project.scripts]` naming `<package>.server:main`, with `main()` calling `mcp.run()`. **Name the script after the server's directory** — `gates = "gates.server:main"` — because the launch convention below names the directory. `tests/smoke-mcp.sh` FAILs a server whose script is named otherwise; nothing in `tests/validate.sh` checks it. | **no**; smoke only |
+| Tests | `tests/test_server.py`, importing the tool function directly; pytest declared in `[dependency-groups] dev`, so `uv run pytest` works from the server directory. **Nothing in this repository runs it automatically** — "tests required" is a convention here, not a gate. | **no** |
 
 ### `[tool.ai-toolbox]` — the authored shape's declarations, and they are gated
 
@@ -99,6 +101,7 @@ the same facts an external server declares in `server.json`:
 | `authorization.by`, `.date` | Required when `destructive` is true. | **yes** |
 | `authorization.task` | Repo-relative path to the task file carrying the authorization; the gate asserts **the file exists**. An authorization pointing at nothing is not an authorization. | **yes** |
 | `environment.<VAR>.required` | Every variable marked required must appear in `.env.example`. | **yes** |
+| `smoke_test.env` | Optional. Variables `tests/smoke-mcp.sh` sets for the `initialize` handshake only, values relative to the server directory — for a server that refuses to start without, say, a config file, which the harness's name-based fallback cannot guess. The authored counterpart of the external shape's `smoke_test.requires_paths`. | **no**; read by smoke only |
 
 `mcp-servers/_template/pyproject.toml` models the block, placed **below
 `[project]`** so `sync-registry.sh`'s first-match `grep '^name = '` still
@@ -128,18 +131,15 @@ validates the template for schema drift); the `.env.example` half does not
 (parity with the external environment loop). Verified by fixture rather than
 assumed.
 
-> **Still `server.json`-only, and it will go false when the first authored
-> server ships:** the *wiring-section* gate added by `TASK-0073` — the one
-> behind *"The first two triggers are checked"* under **When a server owes a
-> per-client wiring section** — reads manifests only. An authored server with
-> a required variable or a destructive tool would owe a wiring section and not
-> be asked for one. Found by `TASK-0059` and named rather than scope-crept;
-> `TASK-0067` is the task that makes it matter.
+**The wiring-section gate reads both shapes** (`TASK-0088`). It read
+`server.json` only until the first authored server shipped with a required
+variable and a destructive tool — the hole `TASK-0059` named in advance. The
+extended check was observed failing on `gates` in all three snapshots before
+their sections existed.
 
-**`tests/smoke-mcp.sh` skips authored servers entirely.** It iterates
-`mcp-servers/*/` and `continue`s past any directory without a `server.json`,
-with the comment *"authored Python servers: none yet"*. That is `ADR-0010`'s
-**obligation 1**, still open and owned by `TASK-0067`.
+**`tests/smoke-mcp.sh` handshakes authored servers** (`ADR-0010` obligation 1,
+`TASK-0088`). It synthesises a manifest from `[project.scripts]` and
+`[tool.ai-toolbox]` and launches `uv --directory <absolute dir> run <dir>`.
 
 **`scripts/sync-registry.sh` reads the registry row out of `pyproject.toml`
 by line prefix** — `grep '^name = '` and `grep '^description = '`, first match
@@ -148,32 +148,18 @@ starting at column 1. A folded, multi-line or single-quoted `description`
 reaches the registry mangled: the same defect class as the skills' single-line
 `description` rule, in a different file format.
 
-#### Two launch-form discrepancies, both owned by `TASK-0067`
+#### The launch convention — two discrepancies, resolved by `TASK-0088`
 
-Named here rather than fixed — this section defines, `TASK-0067` resolves
-(`ADR-0008`).
-
-1. **`cd` versus `--directory`.** `scripts/install.sh` prints
-   `cd mcp-servers/<name> && uv run <name>`. That is a correct instruction for
-   a human at a shell and **not usable in a client config**: an MCP client
-   launches the command with a working directory of its own choosing, so a
-   config needs the cwd-independent form `uv --directory <absolute-path> run
-   <name>`. One of the two must change, or both must be stated with which is
-   for which. `ADR-0010`'s obligation 1 anticipated `uv run <name>` as the
-   authored launch convention and did not anticipate this split.
-2. **`uv run <name>` names the console script, not the directory.**
-   `install.sh` prints `uv run $(basename "$d")`, so the printed command only
-   works when the `[project.scripts]` entry point **equals the directory
-   name**. The template does not model that: its directory is `_template` and
-   its script is `template-mcp-server`. There is no rule that they match — the
-   external shape requires `name` to equal the directory name, the authored
-   shape has no such requirement and nothing checks one. A server copied
-   verbatim from the template into `mcp-servers/foo/` gets an `install.sh`
-   line that does not run.
-
-Neither is settled here. Both are facts about the repository as it stood on
-2026-09-23, read from `install.sh`, `sync-registry.sh`, `smoke-mcp.sh`,
-`validate.sh` and the template itself.
+1. **`cd` versus `--directory`: `--directory`.** An MCP client launches with a
+   working directory of its own choosing, so the only form that works in a
+   client config is `uv --directory <absolute path> run <name>`.
+   `scripts/install.sh` now prints that form (quoted — this repository's path
+   contains a space), and `tests/smoke-mcp.sh` launches with it, so the
+   printed line is the tested one.
+2. **Script name versus directory name: they must be equal.** Both the printed
+   line and the smoke launch name the directory, so the console script is
+   named after it. `mcp-servers/gates/` does this; the template's comment says
+   to.
 
 ### `server.json` schema (external servers)
 All keys below are required unless marked optional. `scripts/install.sh`

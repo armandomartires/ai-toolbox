@@ -468,3 +468,28 @@ The lesson worth keeping:
   obvious.
 - Verifying a *value* is a separate act from verifying a *connection*. Step 7
   of the runbook procedure exists because of this finding.
+
+### gates (authored — `mcp-servers/gates/pyproject.toml`)
+
+> **Not wired into this client, deliberately.** The human authorization for
+> this server (`.ai/tasks/TASK-0088-gates-mcp-server.md`, 2026-09-24) carries
+> one condition: *not wired into clients* by that task. Wiring is S10.5's.
+> This section exists because `tests/validate.sh` requires one for a server
+> with a required variable or a destructive tool, and a section that says
+> "not yet" is the honest content until then.
+>
+> **Destructive capabilities.** `start_gate` runs whatever command the
+> consuming repository's gate map declares for a name; `kill_gate` terminates
+> the process group of a gate **this server started**, and refuses any other.
+> No tool accepts a command, an argv or a path — a caller can only name a gate.
+>
+> **Required environment:** `GATES_MAP` (the consuming repository's gate map)
+> and `GATES_RUN_ROOT` (state, logs and the evidence file `gates.txt`; keep it
+> gitignored). Optional: `GATES_REPO_ROOT`, `GATES_TIMEOUT_SECONDS`.
+>
+> **Launch form, for reference only:** `uv --directory <absolute path to
+> mcp-servers/gates> run gates` — cwd-independent, so it is the form a client
+> config needs (`tests/smoke-mcp.sh` uses it).
+>
+> **Bionic's MCP support is inferred, not verified** (`ADR-0020`); nothing
+> here upgrades that.

@@ -1,0 +1,10 @@
+{
+  "gates": {
+    "ok": {"argv": ["sh", "-c", "echo 241 passed, 0 failed"]},
+    "bad": {"argv": ["false"]},
+    "skip": {"argv": ["sh", "-c", "exit 77"], "skip_exit": 77},
+    "slow": {"argv": ["sleep", "30"], "timeout_seconds": 2},
+    "long": {"argv": ["sleep", "60"]},
+    "literal": {"argv": ["printf", "%s\\n", "a b; echo INJECTED"]}
+  }
+}

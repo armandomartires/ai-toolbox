@@ -162,34 +162,42 @@ and its `by` / `date` must match what is written here.
 
 ## Acceptance criteria
 
-- [ ] Authorization section filled **by the human**; `pyproject.toml`'s block
+- [x] Authorization section filled **by the human**; `pyproject.toml`'s block
       matches it; `tests/validate.sh` passes with it and **fails with
-      `granted = false`** (observed, recorded).
-- [ ] No tool accepts a command, argv or path to execute — asserted by a test
-      over the tool schemas.
-- [ ] A fixture gate that outlives `wait_gate`'s cap is still `RUNNING` on the
+      `granted = false`** (observed, recorded). *(Also observed failing with
+      `task` pointed at a nonexistent file.)*
+- [x] No tool accepts a command, argv or path to execute — asserted by a test
+      over the tool schemas. *(Parameters are only `name`, `handle`,
+      `max_wait_seconds`; `list_gates` returns no argv either.)*
+- [x] A fixture gate that outlives `wait_gate`'s cap is still `RUNNING` on the
       next poll, then reaches its terminal state; `wait_gate` never blocks past
-      its bound.
-- [ ] Timeout → `TIMEOUT`; `kill_gate` → `KILLED`, and a **sibling process the
-      server did not start survives** the kill.
-- [ ] Every terminal state appends exactly one evidence line in the stated
+      its bound. *(Terminal via `kill_gate` in that test, via the watchdog in
+      the timeout test; the 420 s bound is schema-enforced, test tightened —
+      see observation 4.)*
+- [x] Timeout → `TIMEOUT`; `kill_gate` → `KILLED`, and a **sibling process the
+      server did not start survives** the kill. *(And a handle the server did
+      not start is refused outright, its process left running.)*
+- [x] Every terminal state appends exactly one evidence line in the stated
       format — **the same line `run-gate.sh` writes for the same gate**,
-      asserted by running one fixture map through both.
-- [ ] A gate exiting its `skip_exit` code reports `SKIPPED` — not `FAILED`,
+      asserted by running one fixture map through both. *(Equal after
+      normalising the run root and the measured elapsed time, the only two
+      fields that legitimately differ.)*
+- [x] A gate exiting its `skip_exit` code reports `SKIPPED` — not `FAILED`,
       and not `PASSED`.
-- [ ] Missing `GATES_MAP` → server refuses to start with a stated reason.
-- [ ] `tests/smoke-mcp.sh --server gates` reports **PASS** (not SKIP).
-- [ ] The wiring gate now reads authored servers, proven red-then-green.
-- [ ] `ADR-0024` exists and `ADR-0010` says it is superseded by it.
-- [ ] Each new test **fails when its behaviour is reverted** (recorded).
+- [x] Missing `GATES_MAP` → server refuses to start with a stated reason
+      (exit 2, *"gates: refusing to start: GATES_MAP is not set"*).
+- [x] `tests/smoke-mcp.sh --server gates` reports **PASS** (not SKIP).
+- [x] The wiring gate now reads authored servers, proven red-then-green.
+- [x] `ADR-0024` exists and `ADR-0010` says it is superseded by it.
+- [x] Each new test **fails when its behaviour is reverted** (recorded).
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `cd mcp-servers/gates && uv run pytest`
-- [ ] `tests/smoke-mcp.sh --server gates`
-- [ ] `scripts/sync-registry.sh` (commit the regenerated registry)
-- [ ] `git status --porcelain` clean after commit
+- [x] `tests/validate.sh` — OK
+- [x] `cd mcp-servers/gates && uv run pytest` — **14 passed**
+- [x] `tests/smoke-mcp.sh --server gates` — `PASS gates: serverInfo.name=gates version=1.30.0 protocol=2024-11-05`; the full run: ansible PASS, gates PASS, graphify SKIP (its declared precondition), unchanged for the external servers
+- [x] `scripts/sync-registry.sh` — one row added, `gates | python`
+- [x] `git status --porcelain` clean after commit
 
 ## Risks and rollback
 
@@ -208,27 +216,96 @@ and its `by` / `date` must match what is written here.
 
 ## Outputs / handover
 
-*Not yet written — forecast until verified.*
-
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `mcp-servers/gates/` | `pyproject.toml` (`mcp>=1.0,<2`, script `gates`, the `[tool.ai-toolbox]` block with the human's authorization and a `smoke_test.env`), `src/gates/{__init__,server,watchdog}.py`, `tests/` with a harmless fixture map, `uv.lock`. Five tools; `start_gate` and `kill_gate` destructive |
+| **`mcp-servers/_template/`** | **Two defects fixed, not forecast:** `__init__.py` added (it could not be built) and `mcp` bounded `<2` (it could not be imported); pytest declared; a comment on naming the script after the directory |
+| `tests/smoke-mcp.sh` | Handshakes authored servers from a synthesised manifest; FAILs a script not named after its directory |
+| `tests/validate.sh` | Wiring-section gate reads both shapes |
+| `scripts/install.sh` | Prints the cwd-independent, quoted launch line |
+| `configs/*/README.md` | A `gates` section in each, saying it is **not wired**, by the authorization's condition |
+| `.env.example` | `GATES_MAP`, `GATES_RUN_ROOT` and the two optional variables, names and meanings only |
+| `docs/development/authoring-guide.md`, `AGENTS.md` | Authored section rewritten from what ran; launch form updated |
+| `.ai/decisions/0024-*.md` | New, `Accepted`; `ADR-0010` marked superseded; `ADR-0022` F8 **partly settled** |
+| Any client configuration | **Unchanged**, per the authorization's condition |
 
-**Next task starts here**: —
+**Next task starts here**: `gates` exists, runs and is authorized, and is wired
+into **no** client. S10.5 wires it (and the nine roles); `ADR-0022` F8 closes
+only when a client, not the harness, has launched it.
+
+**Deviations from the Plan:** the template fixes, the `install.sh` change and
+the `smoke_test.env` key were not in the brief's scope list; each was forced
+by walking the path (`ADR-0024` Decision 2–4). `GATES_REPO_ROOT` and
+`GATES_TIMEOUT_SECONDS` are two optional variables the design table did not
+name; neither widens the destructive surface.
 
 ## Status
-- Status: ready   # authorization signed 2026-09-24
+- Status: done
 - Owner: agent (implementation) / human (authorization)
 - Created: 2026-09-23
-- Updated: 2026-09-23
+- Updated: 2026-09-24
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
+- Date: 2026-09-24
+- Agent: Claude Opus 5.5 (1M context)
+- Actions: re-read the Authorization section before declaring anything and
+  kept its condition (no client wiring). Read `validate.sh`'s authored and
+  wiring checks, `smoke-mcp.sh`, the guide's authored section and the
+  template. Built the server against the confirmed design; walked the template
+  through build and test in a scratch copy; extended the smoke harness and the
+  wiring gate; wrote `ADR-0024`.
 - Observations:
+  1. **The authored template could be neither built nor imported** — the
+     payoff `ADR-0010` deferred and `ADR-0022` F8 predicted. No `__init__.py`,
+     so hatchling's wheel detection fails; and `mcp>=1.0` now resolves to mcp
+     2.2.0, where `mcp.server.fastmcp` no longer exists. Both were invisible to
+     `TASK-0059`'s careful *reading*, which correctly marked the layout
+     "unverified". Fixed in the template, recorded in `ADR-0024`.
+  2. **The smoke harness could not have passed this server as it stood.** Its
+     fallback for a required variable supplies the repo root only for names
+     containing `WORKSPACE`, `ROOT` or `DIR`, so `GATES_MAP` would have been a
+     SKIP. Solved by a declared `smoke_test.env`, not by widening the name
+     heuristic — a heuristic that guesses a *file* path is how a smoke test
+     starts reporting PASS for a server pointed at a directory.
+  3. **The printed launch line had a second latent defect**: this repository's
+     path contains a space, so the unquoted `--directory $PWD/...` form would
+     not paste. Quoted.
+  4. **One revert proof survived, and the test was vacuous.**
+     `test_schema_bounds_are_enforced` ran without the configured environment,
+     so every call failed on configuration and `pytest.raises(Exception)` was
+     satisfied whatever the schema said — removing the 420 s bound left it
+     green. Rewritten to run configured, to match the validation error for the
+     named field, and with a control call inside the bounds. Its corrected
+     first run then failed on the unmodified server — `.` does not cross the
+     newline in pydantic's message — which is why an assertion gets watched
+     passing on the real code as well as failing on the reverted one. Now
+     green on the real server and red on each of three reverted bounds.
+  5. **The smoke harness leaked its synthesised manifest** into `/tmp` on every
+     run. Now removed after use; the four stale ones from this task's runs were
+     deleted by content (they contain `smoke_env`), three unrelated `/tmp/tmp.*`
+     files left alone.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `uv run pytest`: **14 passed**.
+  - **Fails-when-reverted, 15 behaviours, all red**: no tool accepts a
+    command; kill by own group only; kill refuses a foreign handle; SKIP
+    distinct from FAIL; watchdog timeout; watchdog in its own session; refusal
+    without a map; argv without a shell; evidence line matches `run-gate.sh`;
+    `list_gates` hides commands; a missing gate is not evidence; and the
+    schema bounds — 420 s, handle pattern, name pattern — each separately.
+  - **Gates observed red, then green:** `validate.sh` with `granted = false`
+    (INVALID AUTHORED MANIFEST … authorization.granted is not true); with
+    `task` → a nonexistent file; the wiring gate on all three snapshots before
+    their sections existed; `smoke-mcp.sh` with the script renamed (FAIL) and
+    with `smoke_test.env` removed (SKIP, not PASS).
+  - `tests/smoke-mcp.sh`: gates **PASS**; ansible PASS and graphify SKIP,
+    unchanged.
+  - `tests/validate.sh`: OK. `scripts/sync-registry.sh`: one row added.
+  - Secrets: none — `.env.example` carries names only; the authorization
+    carries a name and a date.
+  - **Not validated, and not claimed:** any client launching the server (F8's
+    remainder), a real consumer's gate map, `powershell.exe` gates from WSL,
+    or a client's own tool-call timeout against `wait_gate`'s 420 s (F7).
+- Result: **done.**
+- Commit: *(recorded in the follow-up commit)*
+- Push: *(recorded in the follow-up commit)*

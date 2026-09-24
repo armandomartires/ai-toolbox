@@ -251,7 +251,9 @@ for d in mcp-servers/*/; do
   name=$(basename "$d")
   case "$name" in _template*) continue ;; esac
   if [ -f "$d/pyproject.toml" ]; then
-    echo "  cd $d && uv run $name   # then add to .mcp.json / client config"
+    # cwd-independent, so the printed line is also what a client config needs
+    # (TASK-0088; the same form tests/smoke-mcp.sh launches).
+    echo "  uv --directory \"$PWD/$d\" run $name"
   elif [ -f "$d/server.json" ]; then
     # External server (ADR-0005): print the real launch command and the
     # environment it needs, straight from the manifest.
