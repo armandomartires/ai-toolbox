@@ -245,5 +245,8 @@ placeholders" — confirmed: 16 of them, no other defect.
   - **Not validated, and not claimed:** any behaviour of real OpenCode. Phase
     10 criterion 3 stays open until the pilot.
 - Result: **done** — against a stub.
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `f9117b2`. Pre-commit hook ran `tests/validate.sh`: OK. Exec bits
+  set in the index (`100755`) for `driver.py`, `run-gate.sh` and the two test
+  helpers — `core.filemode=false` on `/mnt/c` had staged them `100644`.
+  **Re-verified from a fresh clone** on native ext4: `Ran 23 tests … OK`.
+- Push: **confirmed** — `origin/master` `afa2056..f9117b2`.
