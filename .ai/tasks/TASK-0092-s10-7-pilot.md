@@ -262,4 +262,56 @@ artifacts. A finding is the expected outcome, not a failure.
       retry**, which starts a fresh call; stopping a run cleanly means
       stopping the driver first. The driver has no stop signal and writes no
       handover when killed.
+
+### Attempt 5 — the live rerun, `s10-7-live2` (2026-09-24): both tasks closed
+- `role_timeout: 30m` (the human's choice). **Driver exit 0.** Both tasks
+  planned, implemented, gated, refuted, adjudicated `accept` on attempt 1
+  with no overrides, and closed by the `closer`:
+  - `d80d843` *Rewrite release-check step 8 for follow-up-commit form
+    (TASK-0093)* — `loops/release-check/loop.md`, `SPRINT-CURRENT.md`, the
+    task file, its `TODO.md` row;
+  - `f3ebed3` *Refresh the stale opening paragraph of CURRENT_STATE.md
+    (TASK-0094)* — `CURRENT_STATE.md`, the task file, its `TODO.md` row.
+  Each verified by the driver (one commit, right parent, clean tree, task id
+  in the message). Four gates `PASSED`, every line in the evidence file.
+  **Nothing pushed:** `agent/pilot` has no upstream and no remote branch.
+  `run-scribe`'s handover re-derived all of this from the journal and flagged
+  the `tool-denied` events as unexplained rather than smoothing them over.
+- **92 tool calls were denied**, recovered from OpenCode's log and session
+  database: refuter 41, adjudicator 36, closer 15, implementer 9,
+  task-planner 4, preflight 1, run-scribe 1. **No role attempted
+  `git push`, `git add -A`, `git add .`, a reset or a checkout.**
+- Findings:
+  12. **The permission matcher treats a quoted and an unquoted dot-path
+      differently — a boundary that rewording can cross.** The closer's
+      `git add -- .ai/planning/SPRINT-CURRENT.md` was **denied** ("a rule
+      prevents you from using this specific tool call"); seconds later
+      `git add -- ".ai/planning/SPRINT-CURRENT.md"` was **allowed**. So the
+      allowlist's verdict depends on quoting, not on what the command does.
+      **Untested, and it matters:** whether `git add -- "."` therefore passes
+      the closer's `git add -- *` allow — the bulk-stage `TASK-0083` could
+      not close at the glob layer. That is `ROADMAP.md` Phase 10 criterion 4,
+      and this run neither proves nor disproves it.
+  13. **Skill references are unreadable to every role, and it is costly** —
+      57 of the 92 denials (finding 7) were reads under
+      `~/.claude/skills/unattended-ops/` or
+      `~/.config/opencode/skills/unattended-ops/`, each a wasted model round.
+  14. **The implementer cannot run `tests/validate.sh`** (denied twice) — by
+      design, since gates are the driver's, but it means the implementer
+      works blind until step 7.
+  15. **Something else held the worktree's `index.lock`** once during the
+      close (*"Another git process seems to be running"*) — not the driver,
+      not this session; possibly an editor's git integration on the Windows
+      side watching the folder. The closer retried and succeeded.
+  16. **Every role still reaches for shell utilities** (`cat`, `ls`, `grep`,
+      `sed`, `find /`, `echo`) its allowlist denies — including one
+      `find / -path /proc -prune …` from the closer.
+- **`ADR-0022` F3** (a prompt-stated return schema is honoured often enough
+  to drive control flow) now has evidence: in this run every role return
+  parsed first time — 2 adjudications, 2 refutations, 2 closes — and **zero
+  reprompts** were journalled; in `s10-7-live`, the only failures were
+  timeouts, not unparseable returns. F7 (long gates inside the cap) and F9
+  (interrupted run leaves the tracker untouched) were **not** exercised:
+  every gate took 1–3 s, and the one interruption (attempt 4) came before
+  any close.
 - Commit: *(this record)*
