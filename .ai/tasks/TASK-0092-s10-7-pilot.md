@@ -150,7 +150,7 @@ artifacts. A finding is the expected outcome, not a failure.
      task files live under `.ai/`. A throwaway-repo test of exactly that was
      attempted and stalled (finding 2), so it is **not established**.
   2. **`opencode run` stalls before any model contact, intermittently.**
-     From 17:20Z on, every run whose prompt asked for tool use — five of five,
+     From 17:20Z on, every run whose prompt asked for tool use — four of four,
      in the worktree and in neutral directories, with and without
      `--agent` — logged `init` and then nothing, never reaching
      `event connected`, until killed at 180–600 s. Every tool-free prompt in
