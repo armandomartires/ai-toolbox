@@ -128,5 +128,5 @@ The seven `agents/*/agent.md`, `…/opencode/driver.py`,
   Full suite OK (36); `tests/validate.sh` OK; `sync-registry.sh` left
   `docs/registry.md` unchanged (no description changed).
 - Result: **done.**
-- Commit: *(follow-up commit)*
-- Push: *(follow-up commit)*
+- Commit: `f765180`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `978f580..f765180`, local and remote hash equal.
