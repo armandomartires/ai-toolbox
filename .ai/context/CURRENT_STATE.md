@@ -48,6 +48,16 @@ say the gate-runner invokes the entry point; `ADR-0022` and
 `references/gate-map.md` say the driver does. The binding follows the ADR (the
 loop says the ADR wins) and records it as deviation 1.
 
+## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
+
+**2026-09-24.** Six of Phase 10's seven exit criteria met; **criterion 3
+partly** — the OpenCode port enforces what its roles declare, but two
+declared boundaries do not hold (the closer may `git add -- .`; a role may
+read the gate map). The first is now caught by the driver (`TASK-0097`),
+the second is `B-030`. Six backlog items raised, `B-029`…`B-034`. **S10.4
+(Bionic) has not started**, so closing the sprint or cutting S10.4 is the
+human's call.
+
 ## S10.7: the pilot closed two real tasks unattended — and found eighteen things
 
 **`TASK-0092`, 2026-09-24.** The OpenCode binding ran `loops/unattended-run/`

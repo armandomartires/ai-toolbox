@@ -49,9 +49,9 @@ Three things therefore carry unusual weight:
 | S10.3 | S9 (`TASK-0059` **done**) | **done** — `TASK-0088`; `ADR-0024` supersedes `ADR-0010`; **not wired** until S10.5 | `mcp-servers/gates/` — first authored Python server; `smoke-mcp.sh` authored-shape support; supersede `ADR-0010`; **human authorization block**. Highest risk; independent of S10.1/S10.2. |
 | S10.4 | S10.3 | planned | **[corrected]** The Bionic binding. `configs/lm-studio-bionic/README.md` **already records this client's coverage** (`TASK-0080`) — and states only the *established* fact: **zero** of the nine roles, for want of a user-authored agent directory (`ADR-0020`). So what this row owes is **establishing** that Bionic cannot orchestrate, or dropping the claim — not writing the section. |
 | S10.5 | S10.1, S10.2, S10.3 | **done** — `TASK-0090` | `configs/claude-code/` and `configs/opencode/`; run `install.sh` for both clients and record the emission output **verbatim** (F6). |
-| S10.6 | S10.5 | planned | Regenerate `docs/registry.md`; update `.ai/context/CURRENT_STATE.md`. |
+| S10.6 | S10.5 | **done** — no task of its own: the registry regenerated where a component changed (`TASK-0088`), state updated by every task; confirmed by `REVIEW-0012` | Regenerate `docs/registry.md`; update `.ai/context/CURRENT_STATE.md`. |
 | S10.7 | S10.5, S10.1 | **done** — `TASK-0092`: both pilot tasks closed unattended and landed; 18 findings | **Pilot.** One real unattended run of at most two tasks: dry-run first, then live, watched. |
-| review | all | planned | Sprint checkpoint. |
+| review | all | **done** — `REVIEW-0012`: work approved, criterion 3 partly met; **sprint stays open** for S10.4 | Sprint checkpoint. |
 
 ## Two design decisions carried in from `PLAN-0006`, to be honoured not re-derived
 
