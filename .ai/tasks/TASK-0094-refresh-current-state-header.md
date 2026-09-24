@@ -58,18 +58,18 @@ is one of the two tasks of the S10.7 pilot (`TASK-0092`), chosen by the human.
 
 ## Acceptance criteria
 
-- [ ] The opening paragraph no longer says a sprint is closed or that no
+- [x] The opening paragraph no longer says a sprint is closed or that no
       sprint is open.
-- [ ] It names the open sprint as `SPRINT-CURRENT.md` names it.
-- [ ] Every deliverable row of `SPRINT-CURRENT.md`'s table appears with the
+- [x] It names the open sprint as `SPRINT-CURRENT.md` names it.
+- [x] Every deliverable row of `SPRINT-CURRENT.md`'s table appears with the
       status that row gives — no status that is not in the table.
-- [ ] Its date is the date the task ran.
-- [ ] No `##` section of `CURRENT_STATE.md` changes, and no other file changes.
-- [ ] `tests/validate.sh` passes.
+- [x] Its date is the date the task ran.
+- [x] No `##` section of `CURRENT_STATE.md` changes, and no other file changes.
+- [x] `tests/validate.sh` passes.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
+- [x] `tests/validate.sh`
 
 ## Risks and rollback
 
@@ -78,27 +78,31 @@ is one of the two tasks of the S10.7 pilot (`TASK-0092`), chosen by the human.
 
 ## Outputs / handover
 
-*Not yet written — forecast until verified.*
-
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `.ai/context/CURRENT_STATE.md` | Opening paragraph replaced: `Last updated 2026-09-24. Sprint S10 — Unattended runs: bindings, the gate server, and the pilot is open. Its eight deliverables stand as: S10.1 done (against a stub) — TASK-0086; S10.2 done (against a stub) — TASK-0087; S10.3 done — TASK-0088; ADR-0024 supersedes ADR-0010; not wired until S10.5; S10.4 planned; S10.5 done — TASK-0090; S10.6 planned; S10.7 planned; review planned. The dated ## sections below carry the detail.` Every deliverable row copied from `SPRINT-CURRENT.md`'s table as it stood when this task ran; no `##` section changed. |
 
 **Next task starts here**: —
 
 ## Status
-- Status: ready
+- Status: done
 - Owner: agent (unattended pilot, `TASK-0092`)
 - Created: 2026-09-24
 - Updated: 2026-09-24
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-24
+- Agent: unattended run (S10.7 pilot, `TASK-0092`)
+- Actions: Replaced the opening paragraph of `.ai/context/CURRENT_STATE.md`
+  with the sprint name and per-deliverable statuses copied from
+  `.ai/planning/SPRINT-CURRENT.md`'s deliverables table as it stood at run
+  time; no `##` section touched.
+- Observations: The new paragraph names all eight deliverable rows
+  (S10.1…S10.7 plus review) with the status each row gives, and no longer
+  claims a sprint is closed or that none is open.
+- Validation: `tests/validate.sh` — PASSED, exit 0, 3s. `registry` gate —
+  PASSED, exit 0, 1s. (Gate log paths in the run's evidence file.)
+- Result: All acceptance criteria met.
+- Commit: recorded by the closer role in a follow-up commit.
+- Push: none (not authorized this run).

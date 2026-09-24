@@ -628,7 +628,7 @@ taken when a brief is written. **Next free: `TASK-0097`.**
       `designer-manager.md` pruned from Claude Code by the mechanism)
 - [ ] TASK-0092 — S10.7 — **the pilot**: one unattended run, dry run first (target: ai-toolbox)
 - [x] TASK-0093 — release-check step 8: record the hash in a follow-up commit, never amend (done)
-- [ ] TASK-0094 — refresh the stale opening paragraph of CURRENT_STATE.md
+- [x] TASK-0094 — refresh the stale opening paragraph of CURRENT_STATE.md (done)
 - [x] TASK-0095 — roles read resolved paths, never glob (done — dry-run halt cause)
 - [x] TASK-0096 — driver hands preflight its step-1 evidence (done — second dry-run halt)
 - [ ] S10.6 — registry and state (effectively done by TASK-0090)

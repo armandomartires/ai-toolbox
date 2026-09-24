@@ -1,12 +1,11 @@
 # Current State
 
-Last updated 2026-09-23. **Sprint S8 is CLOSED. No sprint is open, and S9/S10
-are planned but not promoted.** Since then: `TASK-0069` (stale-claims sweep),
-`TASK-0070` (a worktree per agent session), `TASK-0071` (the
-`test-allowlist` term, closing `B-021`), `TASK-0072` (Bionic project skills,
-closing `B-018`) and `TASK-0073` (the wiring-section rule, closing `B-023`);
-then S9's two spikes and `ADR-0022`'s reconciliation (`TASK-0055`,
-`TASK-0056`, `TASK-0057`).
+Last updated 2026-09-24. Sprint S10 — Unattended runs: bindings, the gate
+server, and the pilot is open. Its eight deliverables stand as: S10.1 done
+(against a stub) — `TASK-0086`; S10.2 done (against a stub) — `TASK-0087`;
+S10.3 done — `TASK-0088`; `ADR-0024` supersedes `ADR-0010`; not wired until
+S10.5; S10.4 planned; S10.5 done — `TASK-0090`; S10.6 planned; S10.7
+planned; review planned. The dated `##` sections below carry the detail.
 
 ## Sprint S10 is OPEN
 
