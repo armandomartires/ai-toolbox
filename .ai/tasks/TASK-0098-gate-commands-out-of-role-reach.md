@@ -145,5 +145,5 @@ repository, so the condition is checked, not advised.
   `external_directory` denials of reads outside the worktree, and
   `binding.md` says so.
 - Result: **done.**
-- Commit: *(follow-up commit)*
-- Push: *(follow-up commit)*
+- Commit: `96475c2`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `5bd4951..96475c2`, local and remote hash equal.
