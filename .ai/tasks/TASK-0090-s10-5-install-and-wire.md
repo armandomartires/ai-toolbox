@@ -104,7 +104,7 @@ first, against a copy, then the real install.
 - [x] `tests/validate.sh`
 - [x] `scripts/sync-registry.sh` (expect no diff)
 - [x] `sha256sum ~/.config/opencode/opencode.jsonc` before and after
-- [ ] `git status --porcelain` clean after commit
+- [x] `git status --porcelain` clean after commit
 
 ## Risks and rollback
 
@@ -181,5 +181,5 @@ stale `designer-manager.md`.
     empty — no tool was invoked.
   - `tests/validate.sh` OK; `scripts/sync-registry.sh` no diff.
 - Result: **done.**
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `f0fcdd8`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `173dd20..f0fcdd8`.
