@@ -86,6 +86,25 @@ terminal() {
   esac
 }
 
+# One gate's entry from GATE_MAP as JSON on stdout; exit 3 if it is absent or
+# its argv is not a non-empty list of strings. Written to a pipe, never a file.
+spec() {
+  python3 - "$GATE_MAP" "$1" <<'PY'
+import json, sys
+path, gate = sys.argv[1:3]
+with open(path, encoding="utf-8") as fh:
+    entry = json.load(fh).get("gates", {}).get(gate)
+if not isinstance(entry, dict):
+    sys.exit(3)
+argv = entry.get("argv")
+if not (isinstance(argv, list) and argv and all(isinstance(a, str) for a in argv)):
+    sys.exit(3)
+json.dump({"argv": argv, "cwd": entry.get("cwd", "."),
+           "timeout_seconds": entry.get("timeout_seconds"),
+           "skip_exit": entry.get("skip_exit")}, sys.stdout)
+PY
+}
+
 case "$action" in
   start)
     gate="${3:-}"
@@ -98,23 +117,10 @@ case "$action" in
     fi
     mkdir -p "$dir"
     printf '%s' "$gate" > "$dir/name"
-    if ! python3 - "$GATE_MAP" "$gate" "$dir/spec.json" <<'PY'
-import json, sys
-path, gate, out = sys.argv[1:4]
-with open(path, encoding="utf-8") as fh:
-    entry = json.load(fh).get("gates", {}).get(gate)
-if not isinstance(entry, dict):
-    sys.exit(3)
-argv = entry.get("argv")
-if not (isinstance(argv, list) and argv and all(isinstance(a, str) for a in argv)):
-    sys.exit(3)
-spec = {"argv": argv, "cwd": entry.get("cwd", "."),
-        "timeout_seconds": entry.get("timeout_seconds"),
-        "skip_exit": entry.get("skip_exit")}
-with open(out, "w", encoding="utf-8") as fh:
-    json.dump(spec, fh)
-PY
-    then
+    # Validate only. No copy of the command is written: the handle directory
+    # sits beside the evidence file, inside the tree the roles can read, so a
+    # stored argv would undo keeping the map outside it (B-030, TASK-0098).
+    if ! spec "$gate" >/dev/null; then
       echo MISSING > "$dir/state"
       summary || exit $?
     fi
@@ -125,13 +131,14 @@ PY
     ;;
 
   _watchdog)
-    spec="$dir/spec.json"
-    mapfile -d '' argv < <(python3 -c 'import json,sys
-for a in json.load(open(sys.argv[1]))["argv"]: sys.stdout.write(a + "\0")' "$spec")
-    read -r cwd limit skip < <(python3 -c 'import json,os,sys
-s = json.load(open(sys.argv[1]))
+    # Re-read from the map (GATE_MAP is inherited), never from a stored copy.
+    entry=$(spec "$(cat "$dir/name")")
+    mapfile -d '' argv < <(printf '%s' "$entry" | python3 -c 'import json,sys
+for a in json.load(sys.stdin)["argv"]: sys.stdout.write(a + "\0")')
+    read -r cwd limit skip < <(printf '%s' "$entry" | python3 -c 'import json,os,sys
+s = json.load(sys.stdin)
 print(s["cwd"], s["timeout_seconds"] or os.environ["GATE_TIMEOUT_SECONDS"],
-      "" if s["skip_exit"] is None else s["skip_exit"])' "$spec")
+      "" if s["skip_exit"] is None else s["skip_exit"])')
     cd "$GATE_REPO_ROOT/$cwd"
     set +e
     setsid "${argv[@]}" >"$dir/log" 2>&1 </dev/null &

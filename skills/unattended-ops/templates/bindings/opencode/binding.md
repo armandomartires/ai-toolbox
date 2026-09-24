@@ -11,7 +11,7 @@ model: <FILL: provider/model, passed as -m on every opencode run>
 queue_source: <FILL: path of the queue file, written by a human before the run>
 task_file_glob: <FILL: glob with {id} for the task id, e.g. .ai/tasks/{id}-*.md>
 tracker_path: <FILL: the tracker file the closer updates one row of, or not-applicable>
-gate_map: <FILL: path of the gate map JSON>
+gate_map: <FILL: path of the gate map JSON, outside the repository — the driver refuses one inside>
 gate_entry_point: <FILL: path of run-gate.sh as copied into the repository>
 long_gate_groups: <FILL: [group, ...] naming long_groups in the gate map, or not-applicable>
 watchdog_timeout: <FILL: default gate timeout, e.g. 90m>
@@ -81,7 +81,7 @@ OpenCode is the one client with per-agent command boundaries (`ADR-0022`,
 | Rule (`skills/unattended-ops/`) | Enforced by | Strength |
 |---|---|---|
 | 1 — the tracker moves last, only the closer moves it | The closer is the only role whose allowlist admits `git add -- *` and `git commit -m *` (`agents/closer/`); the driver issues no git write | **Enforced** at the role boundary; the ordering itself is the driver's control flow |
-| 2 — gate commands from a hardcoded map | The driver invokes `run-gate.sh`; prompts carry gate handles and the evidence path, never a command | **Structural** — no agent is handed a command string |
+| 2 — gate commands from a hardcoded map | The driver invokes `run-gate.sh`; prompts carry gate handles and the evidence path, never a command. The driver refuses a map inside the repository, and `run-gate.sh` stores no copy of a command, so no file a role can reach holds one: every role declares `worktree-only`, emitted as `external_directory: deny` (`TASK-0098`) | **Structural** in prompts and on disk — the disk half rests on `external_directory` denying reads outside the worktree, observed for the skill directories (`TASK-0092` findings 7, 13), not yet for a map |
 | 3 — long gates batched and detached | `run-gate.sh` detaches behind a watchdog; step 13 runs groups one at a time | **Enforced** by construction; `ADR-0022` F7 untested |
 | 4 — nothing is invented | Evidence-line cross-check in `Driver.gate_report()`; out-of-enum verdict → `park` | **Partly** — a figure copied into a task file by the closer is prompt-level |
 | 5 — one writer | `Driver.step1_preflight_repo()` refuses a dirty tree before any role runs | **Enforced** at start; a peer session arriving mid-run is not detected |
@@ -93,8 +93,9 @@ so it adds no bypass, but it does not close the hole either.
 
 ## The gate map's format, and its silent-no-op switches
 
-The map is JSON, the consumer's, and it is read by the driver and by
-`run-gate.sh` only — `references/gate-map.md` owns why no agent reads it:
+The map is JSON, the consumer's, kept **outside the repository**, and it is
+read by the driver and by `run-gate.sh` only — `references/gate-map.md` owns
+why no agent reads it:
 
 ```json
 {

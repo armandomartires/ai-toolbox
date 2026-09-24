@@ -14,6 +14,13 @@ run is ever handed a verification command string (rule 2). **The entry point
 writes each gate's line to the run's evidence file**; the `gate-runner` reads
 it and reports, and never composes, corrects or chooses a command.
 
+**Not handed a command is not the same as unable to read one.** In the
+S10.7 pilot no prompt carried a command, and the refuter opened the map
+anyway, with its `read` tool, because the map sat inside the worktree
+(`TASK-0092` finding 10). So where the client confines roles to the
+worktree, the map lives **outside** it, and nothing inside it — no log,
+no per-gate state file — holds a copy of a command (`TASK-0098`).
+
 A gate command taken from the task file being verified is the failure rule 2
 exists to prevent, and it is not a hypothetical: **29 scripts** in one
 project exit 0 silently without a `-Run` guard, **3 more** hang on a

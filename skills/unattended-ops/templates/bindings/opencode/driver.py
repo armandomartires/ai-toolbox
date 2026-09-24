@@ -183,6 +183,14 @@ class Binding:
                 # ADR-0022 clause 5.1.
                 raise Halt("role %s is declared %r, not primary" % (role, mode))
             self.roles[role] = name
+        repo = os.path.realpath(os.getcwd())
+        if os.path.commonpath([os.path.realpath(self.gate_map_path), repo]) == repo:
+            # Rule 2 against the filesystem, not only the prompts (B-030,
+            # TASK-0098): a role with `read` opened a map inside the worktree
+            # (TASK-0092 finding 10). Every role declares worktree-only, so a
+            # map outside the repository is one no role can read.
+            raise Halt("gate map %s is inside the repository, where any role with "
+                       "`read` can open its commands; keep it outside" % self.gate_map_path)
         with open(self.gate_map_path, encoding="utf-8") as fh:
             self.gate_map = json.load(fh)
 

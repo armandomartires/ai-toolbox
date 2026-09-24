@@ -29,6 +29,10 @@ ROLES = ("preflight", "task-planner", "implementer", "gate-runner", "refuter",
 # Strings that appear only inside the gate map's argv. If any reaches a
 # prompt, rule 2 is broken.
 SENTINELS = ("SENTINEL-UNIT-SWITCH", "SENTINEL-BUILD-SWITCH")
+# An argv element the gate never prints (it is `sh -c`'s $0), so it can be
+# found only where a command is stored. If it is anywhere in the repository
+# tree, a role with `read` can open a gate command (B-030, TASK-0098).
+ARGV_ONLY = "SENTINEL-ARGV-ONLY"
 
 FILL = {
     "binding_name": "test-binding",
@@ -116,27 +120,39 @@ class Harness(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def make_repo(self, ids=("TASK-0001",), queue=None, binding=None, gates=None):
+    def make_repo(self, ids=("TASK-0001",), queue=None, binding=None, gates=None,
+                  binding_overrides=None, map_in_repo=False):
         r = lambda *a: subprocess.run([REAL_GIT, *a], cwd=self.repo, check=True,
                                       capture_output=True)
         r("init", "-q", "-b", "master")
         r("config", "user.email", "t@example.invalid")
         r("config", "user.name", "Test")
+        # The map lives outside the repository, where every role's
+        # worktree-only boundary keeps it unreadable (TASK-0098).
+        gate_map = "gates.json" if map_in_repo else os.path.join(self.tmp, "gates.json")
+        if binding is None:
+            binding = filled_binding(dict({"gate_map": gate_map}, **(binding_overrides or {})))
         files = {
             ".gitignore": ".run/\n",
             "src/a.txt": "original\n",
             "TODO.md": "".join("- [ ] %s\n" % i for i in ids),
             "queue.txt": queue if queue is not None else "".join("%s\n" % i for i in ids),
-            "binding.md": binding if binding is not None else filled_binding(),
-            "gates.json": json.dumps(gates or {
-                "gates": {
-                    "unit": {"argv": ["sh", "-c", "echo SENTINEL-UNIT-SWITCH 3 passed, 0 failed"]},
-                    "build": {"argv": ["sh", "-c", "echo SENTINEL-BUILD-SWITCH built"]},
-                },
-                "kinds": {"default": ["unit"]},
-                "long_groups": {"build": {"gates": ["build"], "paths": ["src/*"]}},
-            }),
+            "binding.md": binding,
         }
+        gate_map_text = json.dumps(gates or {
+            "gates": {
+                "unit": {"argv": ["sh", "-c", "echo SENTINEL-UNIT-SWITCH 3 passed, 0 failed",
+                                  ARGV_ONLY]},
+                "build": {"argv": ["sh", "-c", "echo SENTINEL-BUILD-SWITCH built"]},
+            },
+            "kinds": {"default": ["unit"]},
+            "long_groups": {"build": {"gates": ["build"], "paths": ["src/*"]}},
+        })
+        if map_in_repo:
+            files["gates.json"] = gate_map_text
+        else:
+            with open(gate_map, "w") as fh:
+                fh.write(gate_map_text)
         for i in ids:
             files[".ai/tasks/%s-demo.md" % i] = (
                 "# %s\n\n## Acceptance criteria\n- [ ] a.txt changes\n" % i)
@@ -237,6 +253,23 @@ class TestHappyPath(Harness):
         self.assertEqual(set(checks["agent_list"]), set(ROLES))
         for role in ROLES:
             self.assertEqual(checks["agent_list"][role], "%s (primary)" % role)
+
+    def test_no_file_in_the_tree_holds_a_gate_command(self):
+        # TASK-0092 finding 10 / B-030: the refuter read the gate map with its
+        # `read` tool. With the map outside the repository, nothing inside it
+        # may hold a command either — run-gate.sh once copied argv into
+        # <run root>/<handle>/spec.json, inside the tree (TASK-0098).
+        self.make_repo()
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        holders = []
+        for root, dirs, names in os.walk(self.repo):
+            dirs[:] = [d for d in dirs if d != ".git"]
+            for name in names:
+                path = os.path.join(root, name)
+                with open(path, "rb") as fh:
+                    if ARGV_ONLY.encode() in fh.read():
+                        holders.append(os.path.relpath(path, self.repo))
+        self.assertEqual(holders, [], "a gate command is readable inside the tree")
 
     def test_every_invocation_carries_the_model(self):
         self.make_repo()
@@ -364,9 +397,17 @@ class TestIdentityAndPreconditions(Harness):
             with self.subTest(model):
                 self.tearDown()
                 self.setUp()
-                self.make_repo(binding=filled_binding({"model": model}))
+                self.make_repo(binding_overrides={"model": model})
                 self.assertEqual(self.run_driver(happy()), 2)
                 self.assertEqual(self.invocations(), [])
+                self.assertIn("model", self.proc.stderr)
+
+    def test_a_gate_map_inside_the_repository_is_refused(self):
+        # B-030 / TASK-0098: inside the tree, any role with `read` can open it.
+        self.make_repo(map_in_repo=True)
+        self.assertEqual(self.run_driver(happy()), 2)
+        self.assertEqual(self.invocations(), [])
+        self.assertIn("inside the repository", self.proc.stderr)
 
 
 class TestQueue(Harness):

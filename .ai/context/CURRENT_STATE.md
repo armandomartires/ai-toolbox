@@ -1,11 +1,11 @@
 # Current State
 
-Last updated 2026-09-24. Sprint S10 — Unattended runs: bindings, the gate
+Last updated 2026-09-25. Sprint S10 — Unattended runs: bindings, the gate
 server, and the pilot is open. Its eight deliverables stand as: S10.1 done
 (against a stub) — `TASK-0086`; S10.2 done (against a stub) — `TASK-0087`;
-S10.3 done — `TASK-0088`; `ADR-0024` supersedes `ADR-0010`; not wired until
-S10.5; S10.4 planned; S10.5 done — `TASK-0090`; S10.6 planned; S10.7
-planned; review planned. The dated `##` sections below carry the detail.
+S10.3 done — `TASK-0088`; S10.4 planned; S10.5 done — `TASK-0090`; S10.6
+done; S10.7 done — `TASK-0092`; review done — `REVIEW-0012`, the sprint
+staying open for S10.4. The dated `##` sections below carry the detail.
 
 ## Sprint S10 is OPEN
 
@@ -47,6 +47,22 @@ stays open until the pilot. The nine roles are **not yet emitted** to
 say the gate-runner invokes the entry point; `ADR-0022` and
 `references/gate-map.md` say the driver does. The binding follows the ADR (the
 loop says the ADR wins) and records it as deviation 1.
+
+## The post-review backlog pass (2026-09-25)
+
+The human asked for every open backlog item to be completed, and made the
+four design choices in one sitting (multiple choice): `B-029` — stop pointing
+roles at the skill; `B-031` — a fixed commit placeholder the driver checks;
+`B-025` — leave open, its readiness condition unmet; `B-034` — draft the
+upstream report, the human files it.
+
+- **`B-030` closed — `TASK-0098`.** No file a run role can reach holds a gate
+  command: the OpenCode driver refuses a map inside the repository, and
+  `run-gate.sh` no longer copies each gate's argv into the run directory
+  (`spec.json`) — a second leak found while scoping. Rests on
+  `external_directory: deny`, observed for reads outside the worktree by the
+  pilot; a live check against a map specifically **stalled twice** in this
+  session and is not established.
 
 ## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
 

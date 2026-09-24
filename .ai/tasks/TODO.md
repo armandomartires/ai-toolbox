@@ -632,6 +632,7 @@ taken when a brief is written. **Next free: `TASK-0098`.**
 - [x] TASK-0095 — roles read resolved paths, never glob (done — dry-run halt cause)
 - [x] TASK-0096 — driver hands preflight its step-1 evidence (done — second dry-run halt)
 - [x] TASK-0097 — the driver checks a commit's files against the declared paths (done — criterion 4 at the binding layer)
+- [x] TASK-0098 — no file a run role can reach holds a gate command (done — B-030)
 - [x] S10.6 — registry and state (done — confirmed by REVIEW-0012)
 - [x] REVIEW-0012 — S10 checkpoint (work approved; criterion 3 partly met; B-029…B-034 raised; sprint stays open for S10.4)
 - [ ] REVIEW — checkpoint
