@@ -1,6 +1,8 @@
 // Tests for unattended-run.js, against a stub of the Workflow runtime.
 //
-// Run:  node --test skills/unattended-ops/templates/bindings/claude-code/tests/
+// Run:  node --test skills/unattended-ops/templates/bindings/claude-code/tests/unattended-run.test.mjs
+// (the file, not the directory: node 22.23 resolves a directory argument as a
+// module and fails with MODULE_NOT_FOUND — observed, TASK-0103).
 //
 // The template is evaluated as an async function body with fake `agent`,
 // `phase`, `log` and `args`, and with `Date` / `Math.random` that throw as the
@@ -48,7 +50,7 @@ function runtime(over = {}) {
   const defaults = {
     preflight(prompt, opts) {
       if (opts.label === 'preflight:verify') {
-        return { head: state.head, parent: state.parent || 'none', porcelain: '', message: state.message || '' }
+        return { head: state.head, parent: state.parent || 'none', porcelain: '', message: state.message || '', files: state.files || [] }
       }
       const ids = /Tasks: (.*)$/m.exec(prompt)[1].split(', ')
       return { branch: 'master', head: state.head.slice(0, 7), porcelain: '', verdict: 'proceed', reason: '',
@@ -66,6 +68,7 @@ function runtime(over = {}) {
       state.parent = state.head
       state.head = 'c' + String(++state.n).padStart(15, '0')
       state.message = `${id}: change`
+      state.files = ['src/a.txt', `.ai/tasks/${id}-x.md`]
       return { commit: state.head, refused: '' }
     },
     'park-steward': () => ({ porcelain: '', stashEntry: 'stash@{0}', paths: ['src/a.txt'] }),
@@ -225,6 +228,24 @@ test("a commit that does not verify halts the run", async () => {
     closer: (p, o, state, d) => { d.closer(p, o); state.message = 'unrelated message'; return { commit: state.head, refused: '' } },
   })
   assert.match(r.result.halted, /does not verify/)
+})
+
+test('a commit holding an undeclared path halts the run (B-032)', async () => {
+  // TASK-0092 finding 18: the closer's glob boundary admits `git add -- .`,
+  // so the commit's own file list is checked (TASK-0097's OpenCode check).
+  const r = await run(baseArgs(), {
+    closer: (p, o, state, d) => { const got = d.closer(p, o); state.files = state.files.concat(['stray.txt']); return got },
+  })
+  assert.match(r.result.halted, /undeclared paths: stray\.txt/)
+  assert.equal(r.events('close').length, 0)
+})
+
+test('the close verification asks for the commit\'s file list', async () => {
+  const r = await run(baseArgs())
+  const verify = r.s.calls.filter(c => c.opts.label === 'preflight:verify')
+  assert.ok(verify.length >= 2)
+  assert.match(verify[0].prompt, /git show --name-only --format= HEAD/)
+  assert.ok(verify[0].opts.schema.properties.files, 'VERIFY_SCHEMA carries no files list')
 })
 
 test('a park that leaves a dirty tree halts the run', async () => {

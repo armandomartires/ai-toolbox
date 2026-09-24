@@ -205,7 +205,7 @@ const VERDICT_SCHEMA = S({
   adhocTitles: STRS, guidance: STR,
 })
 const CLOSE_SCHEMA = S({ commit: STR, refused: STR })
-const VERIFY_SCHEMA = S({ head: STR, parent: STR, porcelain: STR, message: STR })
+const VERIFY_SCHEMA = S({ head: STR, parent: STR, porcelain: STR, message: STR, files: STRS })
 const PARK_SCHEMA = S({ porcelain: STR, stashEntry: STR, paths: STRS })
 
 function step4Deps(task) {
@@ -322,7 +322,7 @@ async function step9Adjudicate(task, attempt, impl, gates, refutation) {
 
 async function verifyHead() {
   return ask('preflight', 10, 'Close',
-    `Read-only. Report \`git rev-parse HEAD\`, \`git rev-parse HEAD~1\`, \`git status --porcelain\` (verbatim) and \`git log -1 --format=%B\`.`,
+    `Read-only. Report \`git rev-parse HEAD\`, \`git rev-parse HEAD~1\`, \`git status --porcelain\` (verbatim), \`git log -1 --format=%B\`, and as files every line of \`git show --name-only --format= HEAD\`.`,
     VERIFY_SCHEMA, 'verify')
 }
 
@@ -349,6 +349,14 @@ async function step10Close(task, impl) {
   if (!got || !got.commit || after.head.indexOf(got.commit) !== 0 || after.parent !== before.head ||
       (after.porcelain || '').trim() || (after.message || '').indexOf(task.id) === -1) {
     throw new Halt(`closer's commit for ${task.id} does not verify (claimed ${got && got.commit}, HEAD ${after.head})`)
+  }
+  // The closer's glob boundary admits `git add -- .` (TASK-0092 finding 18),
+  // so the commit's own files are checked against the declared paths, as the
+  // OpenCode driver does (TASK-0097). Halt, not park: the commit exists, and
+  // undoing it is a history rewrite (loop.md, "Escalate without retrying").
+  const undeclared = (after.files || []).filter(f => f && !declared.includes(f))
+  if (!Array.isArray(after.files) || undeclared.length) {
+    throw new Halt(`closer's commit for ${task.id} contains undeclared paths: ${undeclared.join(', ') || '(no file list reported)'}`)
   }
   closed.push({ id: task.id, commit: after.head.slice(0, 12), files: declared })
   await journal({ event: 'close', task: task.id, commit: after.head.slice(0, 12) })

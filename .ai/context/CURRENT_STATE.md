@@ -82,6 +82,9 @@ upstream report, the human files it.
   allowlist now end with a generated list of the commands they may run and
   *quote path arguments*. **An upstream report for OpenCode is drafted in
   `TASK-0102`, not filed** — filing is the human's.
+- **`B-032` closed — `TASK-0103`.** The Claude Code binding now halts on a
+  closed commit holding an undeclared path, as the OpenCode driver does
+  (`TASK-0097`); the file list comes from the preflight witness.
 
 ## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
 

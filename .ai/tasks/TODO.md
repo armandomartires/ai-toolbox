@@ -637,6 +637,7 @@ taken when a brief is written. **Next free: `TASK-0098`.**
 - [x] TASK-0100 — per-role timeouts, and a run that stops cleanly on a signal (done — B-033)
 - [x] TASK-0101 — run roles stop being told to read the skill at run time (done — B-029; raised B-035)
 - [x] TASK-0102 — emit each role's allowed shell commands; upstream report drafted (done — B-034)
+- [x] TASK-0103 — the Claude Code binding checks a commit's files against the declared paths (done — B-032)
 - [x] S10.6 — registry and state (done — confirmed by REVIEW-0012)
 - [x] REVIEW-0012 — S10 checkpoint (work approved; criterion 3 partly met; B-029…B-034 raised; sprint stays open for S10.4)
 - [ ] REVIEW — checkpoint
