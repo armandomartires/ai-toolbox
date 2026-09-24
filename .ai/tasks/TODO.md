@@ -611,8 +611,8 @@ than closing over it.
 Both ADRs it rests on are `Accepted`. It **allocates no task ids** — one is
 taken when a brief is written. **Next free: `TASK-0089`.**
 
-- [ ] TASK-0086 — S10.1 — **only the OpenCode driver remains**; the contract, checker and
-      fixtures already ship from `TASK-0062`
+- [x] TASK-0086 — S10.1 — the OpenCode driver, `run-gate.sh` and binding (done —
+      proven against a **stub** `opencode` only; 23 tests, 18 reverts red)
 - [ ] TASK-0087 — S10.2 — the Claude Code Workflow binding
 - [ ] TASK-0088 — S10.3 — `mcp-servers/gates/`, the first authored server.
       **Highest risk; `blocked` until a human fills its Authorization section.** Independent of S10.1/S10.2

@@ -154,9 +154,10 @@ that is a decision rather than an omission. Two reasons:
    execute a skill's script, and `skills/ansible-ops/scripts/` already ships
    an unwired checker for the same reason.
 2. **A binding lives in a consuming repository.** There is nothing here for a
-   gate to point at — the binding templates under `templates/bindings/` are
-   authored in S10.1 and are themselves templates, whose slots read `unknown`
-   by design and which a checker is *expected* to reject.
+   gate to point at — the binding templates under `templates/bindings/`
+   (the OpenCode one ships, `TASK-0086`) are themselves templates, whose
+   consumer slots are placeholders by design and which a checker is
+   *expected* to reject.
 
 **What it costs:** the binding-completeness rule is mechanically unenforced
 in this repository. It fires when somebody runs it against a real binding,

@@ -30,6 +30,25 @@ question was already answered in S9 and has been **replaced** with one that is
 still open — whether a binding reintroduces what the role boundary denies,
 given `git add -- .` survives only as prose.
 
+## S10.1: the OpenCode binding ships — proven against a stub, not a client
+
+**`TASK-0086`, 2026-09-24.** `skills/unattended-ops/templates/bindings/opencode/`
+holds `driver.py`, the `run-gate.sh` entry point, `binding.md`, and 23
+hermetic tests; skill `1.1.0`. Rule 2 is structural (the driver runs the gate;
+prompts carry handles, never a command), a silent refuter fails closed, and the
+driver issues no git write — each shown by a test that fails when the behaviour
+is reverted (18 reverts, all red).
+
+**What this does not establish:** everything runs against a *stub* `opencode`.
+Phase 10 criterion 3 (*"demonstrated against an emitted file and a real run"*)
+stays open until the pilot. The nine roles are **not yet emitted** to
+`~/.config/opencode/agents/` — that is S10.5, and the pilot needs it first.
+
+**A finding for the human, not resolved:** loop step 7 and `agents/gate-runner/`
+say the gate-runner invokes the entry point; `ADR-0022` and
+`references/gate-map.md` say the driver does. The binding follows the ADR (the
+loop says the ADR wins) and records it as deviation 1.
+
 ## Sprint S9 is CLOSED
 
 **`TASK-0081`, 2026-09-23.** Closed on `REVIEW-0011`, archived to

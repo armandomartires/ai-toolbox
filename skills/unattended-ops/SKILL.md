@@ -4,7 +4,7 @@ description: "The method behind the unattended-run loop - the harness's five rul
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # unattended-ops
@@ -96,7 +96,7 @@ outcome rather than a quiet pass.
 Nine roles. The seam is **read-only versus acting**, and every hard boundary
 decision lives on the acting side. **This table is the skill's statement of
 each role's job**; the roles themselves are authored in `agents/`
-(`TASK-0063`, `TASK-0064`) and **do not exist yet** — if a role's boundary and
+(`TASK-0063`, `TASK-0064`) — if a role's boundary and
 this description disagree, that is a defect in one of them, not a judgement
 call at runtime.
 
@@ -159,8 +159,11 @@ not to be described as equivalent.
 - **Not exercised in this repository.** The four live runs behind these rules
   happened in `asset-management`, against a Claude Code workflow. Nothing
   here has yet driven a run from this repo's own artifacts; treat the first
-  binding's pilot as the first test (`PLAN-0006`, S10).
-- **Not a governance framework.** It ships one binding template and a
+  binding's pilot as the first test (`PLAN-0006`, S10). The OpenCode
+  binding's tests run against a **stub** `opencode` — a model of the client,
+  not the client.
+- **Not a governance framework.** It ships the binding contract, one
+  client binding (OpenCode, `templates/bindings/opencode/`) and a
   checker. No index, no task IDs, no sprint shape, no status vocabulary
   beyond the five verdicts and a binding's slot values. That layer is
   `project-workflow` and `project-migration`, which are two deliberately
@@ -178,6 +181,7 @@ not to be described as equivalent.
 | `references/long-gates.md` | Rule 3 in practice: the ten-minute call cap, the detaching entry point, batching, and the one retry |
 | `references/park-and-recover.md` | What a park must leave behind so the next task starts clean, and what a human needs to finish it |
 | `templates/binding.md` | The binding contract: one slot per thing a run cannot derive, and `unknown` is a stop |
+| `templates/bindings/opencode/` | The OpenCode binding: `driver.py`, the `run-gate.sh` entry point, `binding.md`, and hermetic tests against a stub `opencode`. Nothing in this repository runs those tests |
 | `scripts/check-binding.sh` | Read-only checker: a binding declares every numbered step of the loop and states no uncited rule. Nothing in this repository runs it |
 | `fixtures/` | The checker observed failing for the right reason, then observed passing |
 
