@@ -102,5 +102,5 @@ without retrying").
   `stray.txt`); check disabled → `FAILED (failures=1)`, restored and
   `cmp`-verified; OpenCode suite OK; `tests/validate.sh` OK.
 - Result: **done.**
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `577074e`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `4fdec0c..577074e`.
