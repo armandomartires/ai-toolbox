@@ -127,9 +127,10 @@ listed so closing a sprint did not quietly drop it.
    authored server with a required variable or a destructive tool would owe a
    section and never be asked for one. Goes false when `TASK-0067` ships the
    first authored server. Found by `TASK-0059`.
-5. **`loops/release-check/` step 8 says to write a commit hash back *"and
-   amend"***, which changes the hash just recorded. This repo's own recent
-   history uses the follow-up-commit form instead. Found by `TASK-0061`.
+5. **~~`loops/release-check/` step 8 says to write a commit hash back *"and
+   amend"*~~ CLOSED 2026-09-24 by `TASK-0093`**, which changes the hash just
+   recorded. This repo's own recent history uses the follow-up-commit form
+   instead. Found by `TASK-0061`.
 6. **`ansible-core`'s version is recorded in several places and has moved.**
    `REVIEW-0010` said nine; a count on 2026-09-23 found **five**, so
    `TASK-0069`'s sweep reduced but did not close it. Re-count before acting.

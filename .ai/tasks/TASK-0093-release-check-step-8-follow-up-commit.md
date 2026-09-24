@@ -63,20 +63,20 @@ tasks of the S10.7 pilot (`TASK-0092`), chosen by the human.
 
 ## Acceptance criteria
 
-- [ ] `loops/release-check/loop.md` step 8 no longer contains the word
+- [x] `loops/release-check/loop.md` step 8 no longer contains the word
       "amend" except to say the change commit is never amended.
-- [ ] Step 8 describes the hash being recorded in a **separate follow-up
+- [x] Step 8 describes the hash being recorded in a **separate follow-up
       commit**.
-- [ ] Step 8's `Expected:` line describes both commits and a clean
+- [x] Step 8's `Expected:` line describes both commits and a clean
       `git status`.
-- [ ] No other step of `loops/release-check/loop.md` changes.
-- [ ] `SPRINT-CURRENT.md` carried-forward item 5 is marked closed by
+- [x] No other step of `loops/release-check/loop.md` changes.
+- [x] `SPRINT-CURRENT.md` carried-forward item 5 is marked closed by
       `TASK-0093`, its original text kept.
-- [ ] `tests/validate.sh` passes.
+- [x] `tests/validate.sh` passes.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
+- [x] `tests/validate.sh`
 
 ## Risks and rollback
 
@@ -85,27 +85,31 @@ tasks of the S10.7 pilot (`TASK-0092`), chosen by the human.
 
 ## Outputs / handover
 
-*Not yet written — forecast until verified.*
-
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `loops/release-check/loop.md` | Step 8 rewritten: commit the change, then write the hash into the task file and commit that separately as a follow-up commit; the change commit is never amended. `Expected:` line now names two commits and a clean `git status`. No other step changed. |
+| `.ai/planning/SPRINT-CURRENT.md` | Carried-forward item 5 marked `CLOSED 2026-09-24 by TASK-0093`, original text kept. |
 
 **Next task starts here**: —
 
 ## Status
-- Status: ready
+- Status: done
 - Owner: agent (unattended pilot, `TASK-0092`)
 - Created: 2026-09-24
 - Updated: 2026-09-24
 
 ## Execution log
 ### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- Date: 2026-09-24
+- Agent: unattended run (S10.7 pilot, `TASK-0092`)
+- Actions: Rewrote `loops/release-check/loop.md` step 8 to describe the
+  follow-up-commit form and removed the amend instruction (except the
+  clause stating the change commit is never amended); closed
+  carried-forward item 5 in `SPRINT-CURRENT.md`.
+- Observations: Both files match the plan; no other step of the loop
+  changed.
+- Validation: `tests/validate.sh` — PASSED, exit 0. `registry` gate —
+  PASSED, exit 0. (Gate log paths in the run's evidence file.)
+- Result: All acceptance criteria met.
+- Commit: recorded by the closer role in a follow-up commit.
+- Push: none (not authorized this run).

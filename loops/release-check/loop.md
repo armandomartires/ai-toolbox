@@ -63,11 +63,13 @@ land. Not for work in progress: run this when you intend to commit.
    Expected: the task file reflects what actually happened, including
    anything that did not work.
 
-8. **Commit, then record the hash.** Commit with a present-tense
-   imperative subject line, then write the resulting hash back into the
-   task file and amend.
-   Expected: `git log --oneline -1` shows the commit; `git status` is
-   clean.
+8. **Commit, then record the hash in a follow-up commit.** Commit the
+   change with a present-tense imperative subject line. Then write the
+   resulting hash into the task file and commit that separately, as a
+   follow-up commit. The change commit is never amended, because amending
+   changes the hash just recorded.
+   Expected: `git log --oneline -2` shows two commits — the change and the
+   follow-up record — and `git status` is clean.
 
 ## Exit conditions
 
