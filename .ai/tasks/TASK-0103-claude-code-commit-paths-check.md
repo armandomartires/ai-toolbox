@@ -114,5 +114,5 @@ the same header, since this task edits that file.
   direct port of `TASK-0097`, scoped by `B-032`'s row; the order was still
   wrong, and is recorded rather than smoothed over.
 - Result: **done.**
-- Commit: *(follow-up commit)*
-- Push: *(follow-up commit)*
+- Commit: `98ce299`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `5ca7556..98ce299`, local and remote hash equal.
