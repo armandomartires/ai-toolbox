@@ -129,12 +129,44 @@ artifacts. A finding is the expected outcome, not a failure.
 - Updated: 2026-09-24
 
 ## Execution log
-### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+### Attempt 1 — the dry run (2026-09-24)
+- Date: 2026-09-24
+- Agent: Claude Opus 5.5 (1M context), driving `driver.py`; roles on
+  `perplexity-agent/anthropic/claude-sonnet-5`
+- Actions: briefs committed (`e2e8326`); worktree `agent/pilot` created;
+  `.pilot-scratch/s10-7/` written (binding, gate map, queue);
+  `check-binding.sh` → **BINDING OK** (20 slots, 14 steps, no uncited rule);
+  dry run `--run-id s10-7-dry`.
+- Result of the dry run: **halted at preflight, correctly.** Driver exit 1;
+  handover written by `run-scribe`; worktree clean; zero commits; nothing
+  pushed. The driver's own structural lock check (step 2) had **passed** —
+  one committed file per task — but the `preflight` role reported both task
+  files **not found** (`criteria_present: false`) while reading `TODO.md` from
+  the same commit, and was denied two `bash` calls. The loop did what it says:
+  an unverified lock is a halt, not something to interpret.
+- Findings (the pilot's product; none fixed here):
+  1. **The preflight role could not see files the driver saw.** Unverified
+     hypothesis: OpenCode's glob tool skips dot-directories, and this repo's
+     task files live under `.ai/`. A throwaway-repo test of exactly that was
+     attempted and stalled (finding 2), so it is **not established**.
+  2. **`opencode run` stalls before any model contact, intermittently.**
+     From 17:20Z on, every run whose prompt asked for tool use — five of five,
+     in the worktree and in neutral directories, with and without
+     `--agent` — logged `init` and then nothing, never reaching
+     `event connected`, until killed at 180–600 s. Every tool-free prompt in
+     the same window returned (8–123 s). Not a stale `*.lock` in OpenCode's
+     snapshot store, not a stray process, not a literal `*` in the prompt
+     (tested). Cause **unestablished**. This is `ADR-0022` clause 5.3's
+     symptom — silent hang after `init` — **with `-m` passed**, so a missing
+     model is not the only cause of it.
+  3. **At `role_timeout: 30m` and a mechanical bound of 3, one such stall
+     costs a run 90 minutes** before the task parks.
+  4. **OpenCode's shell tool runs `/usr/bin/pwsh`**, not bash, on this
+     machine (logged `shell tool using shell shell=/usr/bin/pwsh`). The
+     allowlists still matched `git …` commands; `cat`/`echo` were denied, as
+     declared.
+  5. An `opencode serve --hostname 0.0.0.0` process (pid 2229) has run since
+     17:13Z, before the pilot started — not started by this session; left
+     alone. Whether it relates to finding 2 is unknown.
+- Live run: **not started** — the dry run halted, and go-live is the human's.
+- Commit: *(this record)*
