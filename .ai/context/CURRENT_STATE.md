@@ -48,6 +48,20 @@ say the gate-runner invokes the entry point; `ADR-0022` and
 `references/gate-map.md` say the driver does. The binding follows the ADR (the
 loop says the ADR wins) and records it as deviation 1.
 
+## S10.7: the pilot closed two real tasks unattended — and found eighteen things
+
+**`TASK-0092`, 2026-09-24.** The OpenCode binding ran `loops/unattended-run/`
+against this repository: three dry runs (two correct halts, each fixed —
+`TASK-0095`, `TASK-0096`), a first live run stopped by the human, and a rerun
+that **closed `TASK-0093` and `TASK-0094`** with verified commits, all gates
+green, nothing pushed; landed on the human's authorization (`57dbd49`,
+`ec0efa4`). **Believed because it found things:** OpenCode's glob tool cannot
+see `.ai/`; a user plugin's OAuth silently stalled runs; roles cannot read the
+skill (57 wasted denials); the closer wrote a false self-claim; and **Phase 10
+criterion 4 is answered no** — the closer's permissions allow `git add -- .`
+(quoted or not), observed live; the driver does not check a commit's file
+list.
+
 ## S10.5: installed for both clients; gates connects in both, and is wired in neither
 
 **`TASK-0090`, 2026-09-24, on the human's choices** (`link`, both clients;

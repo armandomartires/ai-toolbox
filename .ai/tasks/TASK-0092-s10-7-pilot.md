@@ -85,22 +85,27 @@ artifacts. A finding is the expected outcome, not a failure.
 
 ## Acceptance criteria
 
-- [ ] The filled binding passes `check-binding.sh`.
-- [ ] The dry run completes and writes a handover; its outcome is recorded
-      verbatim.
-- [ ] The live run starts only after the human's go, and writes a handover.
-- [ ] Every task attempted ends closed with a hash **or** parked with a
-      stated reason — nothing half-done in the worktree.
-- [ ] Nothing is pushed by the run.
-- [ ] Every finding is recorded, and each falsifiable claim the run touched
-      carries its observed verdict.
+- [x] The filled binding passes `check-binding.sh`.
+- [x] The dry run completes and writes a handover; its outcome is recorded
+      verbatim. *(Third attempt; the first two halted, correctly, and their
+      findings are recorded.)*
+- [x] The live run starts only after the human's go, and writes a handover.
+      *(First live run stopped by the human and journalled; the rerun wrote
+      one.)*
+- [x] Every task attempted ends closed with a hash **or** parked with a
+      stated reason — nothing half-done in the worktree. *(Both closed; the
+      stopped run's work stashed, never discarded.)*
+- [x] Nothing is pushed by the run.
+- [x] Every finding is recorded, and each falsifiable claim the run touched
+      carries its observed verdict. *(F3 supported on a small sample; F7 and
+      F9 stated as not exercised; criterion 4 answered.)*
 
 ## Mandatory validations
 
-- [ ] `check-binding.sh` on the filled binding
-- [ ] `git -C <worktree> status --porcelain` empty after the run
-- [ ] `git log origin/master..agent/pilot` shows only the run's commits
-- [ ] `tests/validate.sh` on `master` after recording
+- [x] `check-binding.sh` on the filled binding — BINDING OK
+- [x] `git -C <worktree> status --porcelain` empty after the run
+- [x] `git log origin/master..agent/pilot` shows only the run's commits (before landing)
+- [x] `tests/validate.sh` on `master` after recording
 
 ## Risks and rollback
 
@@ -114,16 +119,22 @@ artifacts. A finding is the expected outcome, not a failure.
 
 ## Outputs / handover
 
-*Not yet written — forecast until verified.*
-
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `master` | + `57dbd49` (TASK-0093) and `ec0efa4` (TASK-0094), made by the unattended run and landed by the human's authorization |
+| This file | Five attempts, eighteen findings |
+| `.ai/decisions/0022-*.md` | F3 supported (small sample) |
+| Worktree `agent/pilot` | Kept, with `stash@{0}`; `.pilot-scratch/s10-7/` holds the run records (ignored) |
+| Driver, roles, loop | Changed during the pilot by `TASK-0095` and `TASK-0096` only |
 
-**Next task starts here**: —
+**Next task starts here**: the harness has closed real tasks unattended in
+this repository. Open, for the human: a structural commit-paths check in the
+driver (finding 18); the roles' denied skill reads (findings 7, 13); the
+closer's false self-claim going unchecked (finding 17); `role_timeout`
+defaults (finding 9); S10.4 (Bionic) and the sprint review.
 
 ## Status
-- Status: in_progress
+- Status: done
 - Owner: agent (choices and go-live: human)
 - Created: 2026-09-24
 - Updated: 2026-09-24
@@ -314,4 +325,31 @@ artifacts. A finding is the expected outcome, not a failure.
   (interrupted run leaves the tracker untouched) were **not** exercised:
   every gate took 1–3 s, and the one interruption (attempt 4) came before
   any close.
+
+### Landing and the boundary test (2026-09-24, on the human's choices)
+- **Landed** by this session on the human's authorization: `agent/pilot`
+  rebased onto `origin/master` (no conflict), `tests/validate.sh` OK, pushed —
+  `origin/master` `1edd64b..ec0efa4`, confirmed by hash. The run's commits are
+  `57dbd49` (TASK-0093) and `ec0efa4` (TASK-0094) on `master`. `stash@{0}`
+  (the stopped run's work, superseded) **kept**, as the human chose.
+- Findings:
+  17. **The closer wrote a false self-claim into both task files** —
+      *"Commit: recorded by the closer role in a follow-up commit"* — and
+      made no follow-up commit. Corrected, and labelled as a correction, in
+      `53dba10`. Nothing in the loop or the driver checks what the closer
+      writes in the log section; the refuter ran before it.
+  18. **Phase 10 criterion 4 — answered, and the answer is no.** Against the
+      real client, with the closer's exact emitted permission block on a
+      neutral test agent in a throwaway repository:
+      `git add -- "."` → **allowed**, staged every untracked file;
+      `git add -- .` → **allowed**, the same; `git add -A` → denied;
+      `git add -- a.txt` → allowed (control). So **the glob layer does not
+      stop bulk staging**, quoted or not — `TASK-0083`'s recorded limitation,
+      now observed live. What stands between a closer and a bulk stage today
+      is the prose in `agents/closer/` and the closer's own porcelain
+      re-check; **the driver verifies one commit, its parent, a clean tree
+      and the task id — not the commit's file list.** A structural check —
+      the commit's files must be a subset of the declared paths — is the
+      obvious binding-level fix; not taken here. (Finding 12's quoted/unquoted
+      asymmetry applies to `.ai/…` paths; for `.` both forms pass.)
 - Commit: *(this record)*
