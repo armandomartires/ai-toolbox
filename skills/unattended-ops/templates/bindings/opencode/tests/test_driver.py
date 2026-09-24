@@ -11,9 +11,11 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -82,6 +84,12 @@ def closer_sh(lines, add="git add -- src/a.txt .ai/tasks/{TASK}-demo.md"):
     sh = ["printf '%%s\\n' %s >> .ai/tasks/{TASK}-demo.md" % " ".join("'%s'" % l for l in lines)]
     sh += [add, "git commit -q -m '{TASK}: change a'"]
     return {"sh": sh, "text": fence({"commit": "{HEAD}"})}
+
+
+def with_role_timeouts(text, mapping):
+    """Add the optional role_timeouts mapping (TASK-0100) above `roles:`."""
+    block = "role_timeouts:\n" + "".join("  %s: %s\n" % kv for kv in mapping.items())
+    return text.replace("\nroles:\n", "\n" + block + "roles:\n", 1)
 
 
 def preflight_ok(ids):
@@ -176,7 +184,7 @@ class Harness(unittest.TestCase):
         r("add", "-A")
         r("commit", "-q", "-m", "fixture")
 
-    def run_driver(self, agents, agent_list=None, extra=(), run_id="r1"):
+    def driver_argv(self, agents, agent_list=None, extra=(), run_id="r1"):
         if agent_list is None:
             agent_list = "".join("%s (primary)\n  []\n" % r for r in ROLES)
         with open(self.scenario, "w") as fh:
@@ -185,10 +193,25 @@ class Harness(unittest.TestCase):
                    STUB_SCENARIO=self.scenario, STUB_LOG=self.stub_log,
                    STUB_STATE=self.state, GIT_LOG=self.git_log, REAL_GIT=REAL_GIT)
         env.pop("GIT_CALLER", None)
-        self.proc = subprocess.run(
-            [sys.executable, DRIVER, "--binding", "binding.md", "--run-id", run_id, *extra],
-            cwd=self.repo, env=env, capture_output=True, text=True, timeout=300)
+        return [sys.executable, DRIVER, "--binding", "binding.md", "--run-id", run_id, *extra], env
+
+    def run_driver(self, agents, agent_list=None, extra=(), run_id="r1"):
+        argv, env = self.driver_argv(agents, agent_list, extra, run_id)
+        self.proc = subprocess.run(argv, cwd=self.repo, env=env, capture_output=True,
+                                   text=True, timeout=300)
         return self.proc.returncode
+
+    def start_driver(self, agents):
+        argv, env = self.driver_argv(agents)
+        return subprocess.Popen(argv, cwd=self.repo, env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True)
+
+    def wait_for_invocation(self, role, limit=60):
+        deadline = time.time() + limit
+        while not self.invocations(role):
+            if time.time() > deadline:
+                self.fail("%s was never invoked" % role)
+            time.sleep(0.2)
 
     # -- readers --------------------------------------------------------------
 
@@ -445,6 +468,68 @@ class TestIdentityAndPreconditions(Harness):
         self.assertEqual(self.run_driver(happy()), 2)
         self.assertEqual(self.invocations(), [])
         self.assertIn("inside the repository", self.proc.stderr)
+
+
+class TestTimeoutsAndStopping(Harness):
+    """B-033 / TASK-0100: TASK-0092 findings 3, 9 and 11."""
+
+    def test_a_role_timeout_override_applies_to_that_role_only(self):
+        self.make_repo(binding=with_role_timeouts(
+            filled_binding({"gate_map": os.path.join(self.tmp, "gates.json")}),
+            {"refuter": "2s"}))
+        agents = happy()
+        agents["refuter"] = [dict(agents["refuter"][0], sh=["sleep 4"])]
+        self.run_driver(agents)
+        retries = self.events("mechanical-retry")
+        self.assertTrue(retries, "the refuter's own 2s timeout was not applied")
+        for e in retries:
+            self.assertEqual(e["role"], "refuter")
+            self.assertIn("within 2s", e["error"])
+
+    def test_a_bad_role_timeouts_entry_is_refused(self):
+        for mapping in ({"refuterx": "5m"}, {"refuter": "soon"}):
+            with self.subTest(mapping):
+                self.tearDown()
+                self.setUp()
+                self.make_repo(binding=with_role_timeouts(
+                    filled_binding({"gate_map": os.path.join(self.tmp, "gates.json")}), mapping))
+                self.assertEqual(self.run_driver(happy()), 2)
+                self.assertEqual(self.invocations(), [])
+                self.assertIn("role_timeouts", self.proc.stderr)
+
+    def test_sigterm_mid_role_stops_cleanly_with_a_handover(self):
+        # Finding 11: the human's stop left a retried orphan and no handover.
+        self.make_repo()
+        agents = happy()
+        agents["implementer"] = [dict(agents["implementer"][0], sh=["sleep 31.7"])]
+        driver = self.start_driver(agents)
+        try:
+            self.wait_for_invocation("implementer")
+            time.sleep(1)
+            driver.send_signal(signal.SIGTERM)
+            driver.communicate(timeout=60)
+        finally:
+            if driver.poll() is None:
+                driver.kill()
+        self.assertEqual(driver.returncode, 1)
+        self.assertEqual(len(self.invocations("implementer")), 1, "the stopped role was retried")
+        time.sleep(1)
+        left = subprocess.run(["pgrep", "-f", "sleep 31.7"], capture_output=True, text=True)
+        self.assertEqual(left.stdout.strip(), "", "the role's process group outlived the stop")
+        self.assertIn("SIGTERM", self.events("halt")[0]["reason"])
+        self.assertTrue(self.events("run-end"))
+        self.assertEqual(self.invocations("run-scribe"), [], "a stop started another model call")
+        with open(os.path.join(self.repo, ".run/r1/handover.md")) as fh:
+            self.assertIn("STOPPED", fh.read())
+
+    def test_a_role_killed_from_outside_halts_without_a_retry(self):
+        self.make_repo()
+        agents = happy()
+        agents["implementer"] = [dict(agents["implementer"][0], sh=["kill -TERM $PPID"])]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertEqual(len(self.invocations("implementer")), 1, "a killed role was retried")
+        self.assertIn("killed", self.events("halt")[0]["reason"])
+        self.assertTrue(os.path.exists(os.path.join(self.repo, ".run/r1/handover.md")))
 
 
 class TestQueue(Harness):

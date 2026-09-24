@@ -69,6 +69,10 @@ upstream report, the human files it.
   any other `Commit:`/`Push:` entry in the committed task file. **Landing an
   unattended run now owes a follow-up commit** replacing them with the landed
   hash (`docs/operations/runbook.md`).
+- **`B-033` closed — `TASK-0100`.** Optional per-role `role_timeouts:`;
+  **to stop a run, signal the driver** — it kills the role call's process
+  group, retries nothing, and writes a *STOPPED* handover itself; a role
+  killed from outside halts the run instead of being retried.
 
 ## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
 

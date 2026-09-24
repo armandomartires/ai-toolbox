@@ -124,6 +124,35 @@ comment. `kind` selects an entry of the map's `kinds` and defaults to
 `default`; `after` names tasks in the same queue whose close this one waits
 for (loop.md step 4). A dependency closed before the run is not listed.
 
+## Role timeouts, and how to stop a run
+
+`role_timeout` bounds every role call. An optional `role_timeouts:` mapping
+beside it overrides the bound for the roles it names, and the driver refuses
+an unknown role or an unreadable duration (`TASK-0100`):
+
+```yaml
+role_timeouts:
+  refuter: 40m
+  preflight: 5m
+```
+
+**Size them from a measurement, not from these examples.** What the S10.7
+pilot measured, on one model and one loaded machine (`TASK-0092`): a thorough
+refuter took 27–40 model rounds and **did not finish in 10m**, three times
+running; at 30m every role returned. A stall costs the bound × the mechanical
+bound of 3 before the task parks, so a single generous number makes every
+quick role expensive to wait out.
+
+**To stop a run, signal the driver** — `SIGTERM`, `SIGINT` or `SIGHUP` to the
+`driver.py` process, never to an `opencode` process. The driver kills the
+current role call's process group, retries nothing, journals `halt` and
+`run-end`, and writes the handover itself, labelled *STOPPED*, without
+starting another model call — a stop is a halt, and `loops/unattended-run/loop.md`
+step 14 writes a handover on every halt. **Uncommitted work is left in the tree** and
+listed in the handover, never stashed or discarded. A role call killed from
+outside the driver halts the run the same way rather than being retried.
+**Stated limit:** a gate already started keeps running to its own watchdog.
+
 ## Deviations
 
 Each is recorded here because `templates/binding.md` says a deviation is a

@@ -31,6 +31,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -65,6 +66,10 @@ ROLES = ("preflight", "task-planner", "implementer", "gate-runner", "refuter",
 # one: "- Commit: ...", "**Push**: ..." (B-031, TASK-0099).
 LOG_ENTRY = re.compile(r"^[\s>*-]*(commit|push)\**\s*:", re.I)
 
+# 128 + SIGINT, SIGKILL, SIGTERM: a role call whose shell reports it died of
+# a signal (TASK-0100).
+KILLED_EXITS = (130, 137, 143)
+
 GATE_LINE = re.compile(r"^GATE (?P<handle>\S+) NAME=(?P<name>\S+) "
                        r"STATE=(?P<state>[A-Z]+) EXIT=(?P<exit>-?\d+) "
                        r"ELAPSED=(?P<elapsed>\d+)s LOG=(?P<log>.*)$")
@@ -72,6 +77,11 @@ GATE_LINE = re.compile(r"^GATE (?P<handle>\S+) NAME=(?P<name>\S+) "
 
 class Halt(Exception):
     """The run ends (loop.md, `halt-run` and preflight halts); step 14 runs."""
+
+
+class Stopped(Halt):
+    """A signal asked the driver to stop (B-033, TASK-0100): no retry, and no
+    further role call — the driver writes the handover itself."""
 
 
 class Park(Exception):
@@ -168,6 +178,16 @@ class Binding:
         self.entry = os.path.abspath(fm["gate_entry_point"])
         self.watchdog = duration(fm["watchdog_timeout"])
         self.role_timeout = duration(fm["role_timeout"])
+        # Optional per-role overrides (B-033, TASK-0100): one number for every
+        # role was too short for the refuter at 10m (TASK-0092 finding 9) and
+        # made a quick role's stall cost 3 x 30m at 30m (finding 3).
+        overrides = fm.get("role_timeouts", {})
+        if not isinstance(overrides, dict) or any(r not in ROLES for r in overrides):
+            raise Halt("role_timeouts names no role of this loop: %r" % (overrides,))
+        try:
+            self.role_timeouts = {r: duration(v) for r, v in overrides.items()}
+        except Halt as exc:
+            raise Halt("role_timeouts: %s" % exc)
         self.evidence = os.path.abspath(sub(fm["evidence_file"]))
         self.journal_path = os.path.abspath(sub(fm["journal_file"]))
         self.handover = os.path.abspath(sub(fm["handover_path"]))
@@ -212,6 +232,7 @@ class Driver:
         self.agent_lines = {}
         self.start_head = None
         self.upstream = None
+        self.stopped = None
 
     # -- plumbing -----------------------------------------------------------
 
@@ -244,11 +265,26 @@ class Driver:
             raise Mechanical("opencode is not on PATH")
         argv = [self.opencode, "run", "--agent", self.b.roles[role],
                 "-m", self.b.model, "--format", "json", prompt]
+        limit = self.b.role_timeouts.get(role, self.b.role_timeout)
+        # Its own process group, so a timeout or a stop ends everything the
+        # role call spawned, not only its first process (TASK-0100).
+        child = subprocess.Popen(argv, cwd=self.repo, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, start_new_session=True)
         try:
-            proc = subprocess.run(argv, cwd=self.repo, capture_output=True,
-                                  text=True, timeout=self.b.role_timeout)
+            stdout, stderr = child.communicate(timeout=limit)
         except subprocess.TimeoutExpired:
-            raise Mechanical("%s did not return within %ss" % (role, self.b.role_timeout))
+            kill_group(child)
+            raise Mechanical("%s did not return within %ss" % (role, limit))
+        except BaseException:
+            kill_group(child)
+            raise
+        proc = subprocess.CompletedProcess(argv, child.returncode, stdout, stderr)
+        if proc.returncode < 0 or proc.returncode in KILLED_EXITS:
+            # Killed by a signal the driver did not send — a human stopping
+            # the run by PID. Retrying it would start a fresh call behind
+            # their back (TASK-0092 finding 11).
+            raise Halt("role %s was killed from outside the driver (exit %d); stopped, "
+                       "not retried" % (role, proc.returncode))
         if any(m in proc.stderr for m in FALLBACK_MARKERS):
             # Not retried: the wrong agent will answer every time.
             raise Halt("role %s was not run as agent %r — OpenCode fell back to "
@@ -699,17 +735,23 @@ class Driver:
                  "handover_path": self.b.handover, "start_head": self.start_head,
                  "halted": self.halted}
         try:
-            self.ask("run-scribe", prompt(
-                "run-scribe", "Step 14. Re-derive the handover from the journal and the "
-                "evidence file — not from this message — and write it to handover_path.",
-                facts, '{"written": "<path>"}'))
-        except Mechanical as exc:
+            if not self.stopped:
+                # A stop a human asked for starts no further model call.
+                self.ask("run-scribe", prompt(
+                    "run-scribe", "Step 14. Re-derive the handover from the journal and the "
+                    "evidence file — not from this message — and write it to handover_path.",
+                    facts, '{"written": "<path>"}'))
+        except (Mechanical, Stopped) as exc:
             self.journal("handover-mechanical", error=str(exc))
-        if not (os.path.exists(self.b.handover) and os.path.getsize(self.b.handover)):
+        if self.stopped or not (os.path.exists(self.b.handover)
+                                and os.path.getsize(self.b.handover)):
             # A halted run with no handover is indistinguishable from a
             # crashed one (loop.md step 14). The fallback is labelled as such.
+            title = ("STOPPED by %s — written by the driver; run-scribe not invoked, and "
+                     "uncommitted work left in the tree, not stashed" % self.stopped
+                     if self.stopped else "MECHANICAL FALLBACK — run-scribe did not write one")
             with open(self.b.handover, "w", encoding="utf-8") as fh:
-                fh.write("# Handover (MECHANICAL FALLBACK — run-scribe did not write one)\n\n")
+                fh.write("# Handover (%s)\n\n" % title)
                 fh.write("git status --porcelain:\n```\n%s```\n\n" % self.porcelain())
                 if self.start_head:
                     fh.write("git log since start:\n```\n%s\n```\n\n" % self.git(
@@ -718,7 +760,21 @@ class Driver:
                     json.dumps(self.closed), json.dumps(self.parked), self.halted))
                 fh.write("Push: NOT TAKEN — merge and push are the human's.\n")
 
+    def on_signal(self, signum, _frame):
+        """SIGTERM, SIGINT, SIGHUP: stop at once, with a handover (TASK-0100).
+
+        The first signal raises Stopped wherever the driver is — most often
+        inside a role call, whose group invoke() then kills. Later ones are
+        ignored so the handover can be written.
+        """
+        if self.stopped:
+            return
+        self.stopped = signal.Signals(signum).name
+        raise Stopped("stopped by %s" % self.stopped)
+
     def run(self):
+        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            signal.signal(sig, self.on_signal)
         try:
             self.step1_preflight_repo()
             queue = self.read_queue()
@@ -748,6 +804,20 @@ class Driver:
 
 def fail(message):
     raise Mechanical(message)
+
+
+def kill_group(child):
+    """TERM then KILL a role call's process group; never anything by name."""
+    for sig, wait in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
+        try:
+            os.killpg(child.pid, sig)
+        except ProcessLookupError:
+            break
+        try:
+            child.wait(timeout=wait)
+            break
+        except subprocess.TimeoutExpired:
+            continue
 
 
 def prompt(role, instruction, inputs, shape):
