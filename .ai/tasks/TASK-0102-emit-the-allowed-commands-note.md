@@ -179,5 +179,5 @@ may want to reproduce it first.*
   (`fnmatch` against the role's patterns) — checked with a synthetic
   `ls*` allowlist, which drops `ls` from the sentence.
 - Result: **done.**
-- Commit: *(follow-up commit)*
-- Push: *(follow-up commit)*
+- Commit: `78f689d`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `6b25aa8..78f689d`, local and remote hash equal.
