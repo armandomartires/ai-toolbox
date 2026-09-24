@@ -4,7 +4,7 @@ description: "The method behind the unattended-run loop - the harness's five rul
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # unattended-ops
@@ -105,7 +105,7 @@ call at runtime.
 | `preflight` | read-only | Whether the run may start at all, and whether every queued task is locked |
 | `task-planner` | read-only | A step list derived from the task file. Scope comes from the task file; a plan that adds a requirement is out of scope, not an improvement |
 | `implementer` | writes files | The change, in the working tree. **No git, no tracker, no status row, no ticked criterion** |
-| `gate-runner` | runs gates | Running what the map names and **reporting**, per task and again in batch. A runner, not a judge |
+| `gate-runner` | runs gates | **Reporting** each gate from the evidence file, per task and again in batch — and starting them itself only where the driver has no shell (`ADR-0025`). A runner, not a judge |
 | `refuter` | read-only | Trying to **falsify the claim of completeness**. Uncertain means `refuted: true` |
 | `adjudicator` | read-only | One verdict, with reasoning and an **overrides list** |
 | `closer` | git + tracker | The **only** role with git or tracker rights, and only on `accept`. Stages with `git add -- <path>`, commits, reports the hash, pushes nothing |

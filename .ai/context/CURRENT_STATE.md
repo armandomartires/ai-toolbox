@@ -49,6 +49,15 @@ say the gate-runner invokes the entry point; `ADR-0022` and
 `references/gate-map.md` say the driver does. The binding follows the ADR (the
 loop says the ADR wins) and records it as deviation 1.
 
+## Who starts a gate is decided — `ADR-0025`
+
+**`TASK-0089`, 2026-09-24, the human's decision.** The driver starts a gate
+wherever it has a shell; the gate-runner only where it has none; the entry
+point always writes the evidence and the gate-runner only reads it. The loop,
+the role, `gate-map.md`, `evidence.md` and both bindings now say so; no code
+changed. **Open:** `agents/gate-runner/`'s `*run-gate.sh*` allowlist is wider
+than an OpenCode gate-runner now needs — narrowing it is the human's call.
+
 ## S10.3: the first authored MCP server ships — and the template it was copied from was broken
 
 **`TASK-0088`, 2026-09-24.** `mcp-servers/gates/` runs a consuming

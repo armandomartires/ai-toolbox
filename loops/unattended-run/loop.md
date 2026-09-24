@@ -182,9 +182,11 @@ leaves an honest tracker rather than a half-ticked one.
    **An unsatisfied acceptance criterion is reported, never quietly
    dropped.** A `blocked` return goes to step 11 and then to the next task.
 
-7. **Run the gates.** (`gate-runner`.) Run the verification the binding's
-   gate map names for this task's kind, in the order it names, writing every
-   outcome to the run's evidence file.
+7. **Run the gates.** (The driver where it has a shell, otherwise
+   `gate-runner`; `ADR-0025`.) Start, through the binding's one entry point,
+   each gate the binding's map names for this task's kind, in the order it
+   names. **The entry point writes each gate's own line to the run's evidence
+   file**; the `gate-runner` then reads that file and reports from it.
    Expected: per gate — the state, the exit code, the elapsed time, the
    verbatim evidence line, and any figure the task's criteria would want,
    **quoted from the gate's own log, not paraphrased and not rounded**.
@@ -261,7 +263,8 @@ leaves an honest tracker rather than a half-ticked one.
     on resume with a `git log --grep <task id>` guard, in practice rather
     than in theory. Say so rather than implying otherwise.
 
-13. **Run the batched long gates.** (`gate-runner`, once, after the cycle.)
+13. **Run the batched long gates.** (Once, after the cycle; the same
+    actors as step 7, `ADR-0025`.)
     Gates too expensive to run per task run here, once per group the run
     actually touched, **one at a time and never concurrently**.
     Expected: each gate's verbatim evidence line and its key figures, and

@@ -26,7 +26,10 @@ return says "this is fine".
 
 ## One entry point, and why your boundary is one line
 
-You may run **one command**: the binding's gate entry point. You may not run
+**Whether you start the gates depends on the binding** (`ADR-0025`). Where
+the driver has a shell, the driver starts them and you only read the
+evidence file and report. Where it has none, you start them — and then you
+may run **one command**: the binding's gate entry point. Either way you may not run
 the gates individually, and you never see their command strings — the gate
 map is the binding's, keyed by task kind, and the entry point invokes it
 (`skills/unattended-ops/references/gate-map.md`).
@@ -86,7 +89,8 @@ read it and report from it.
 
 That is why this role is `read-only` and still the role that owns step 7: the
 capability gates the **edit and write tools**, and the evidence file is
-written by the command you invoke, not by you typing it back. The two are not
+written by the entry point — whether you or the driver started it — not by
+you typing it back (`ADR-0025`). The two are not
 in tension, and the distinction matters in one direction: **if a gate's
 result did not reach the evidence file, the remedy is running the gate again,
 never transcribing it from what you saw.** A result recovered from a console,

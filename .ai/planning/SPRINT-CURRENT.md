@@ -158,4 +158,5 @@ authoritative*. An id is taken **when a brief is written**, which is when
 promotion rule — briefs must exist before **code**, not before promotion.
 
 **Briefs written 2026-09-23:** `TASK-0086` (S10.1), `TASK-0087` (S10.2),
-`TASK-0088` (S10.3). **Next free id: `TASK-0089`.**
+`TASK-0088` (S10.3); `TASK-0089` (the gate-invoker rule, `ADR-0025`, outside the
+deliverable table). **Next free id: `TASK-0090`.**

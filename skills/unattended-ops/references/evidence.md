@@ -18,7 +18,8 @@ without this rule; this is its mechanism.
 ## What is admissible
 
 - A line **quoted verbatim from the gate's own output**, as written to the
-  evidence file by the `gate-runner` at the moment the gate ran.
+  evidence file by the gate's entry point at the moment the gate ran
+  (`ADR-0025`).
 - For each gate: its state, its **exit code**, its **elapsed time**, the
   verbatim evidence line, and any figure the task's criteria would want.
 
@@ -52,7 +53,8 @@ somewhere with nobody watching.
 
 ## Who depends on this rule
 
-- **The `gate-runner`** writes the evidence file, and is a runner rather than
+- **The `gate-runner`** reads the evidence file its entry point wrote
+  (`ADR-0025`) and reports from it, and is a runner rather than
   a judge. It reports what happened; it does not decide whether the task is
   acceptable.
 - **The `refuter`** checks every acceptance criterion against evidence in the

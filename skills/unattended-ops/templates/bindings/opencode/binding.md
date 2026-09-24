@@ -128,13 +128,10 @@ for (loop.md step 4). A dependency closed before the run is not listed.
 Each is recorded here because `templates/binding.md` says a deviation is a
 defect until a human says otherwise.
 
-1. **The driver invokes the gate entry point; `gate-runner` reads and
-   reports.** loop.md step 7 names `gate-runner` as the actor, and
-   `agents/gate-runner/` says it runs the entry point. `ADR-0022` ("two things
-   the port makes better") and `references/gate-map.md` say the driver
-   invokes it. loop.md says the ADR wins where they disagree, so this binding
-   follows `ADR-0022`. The disagreement between the three sources is a finding
-   for the human, not resolved here.
+1. *Resolved — no longer a deviation.* The driver invokes the gate entry
+   point and `gate-runner` reads and reports, which is what `ADR-0025` now
+   makes the rule for a driver with a shell. Kept as item 1 so the two
+   bindings' lists still read side by side.
 2. **The driver writes the journal itself** (loop.md step 12 permits "the
    driver where it has filesystem access"); `run-scribe` writes only the
    handover.

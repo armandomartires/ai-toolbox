@@ -609,7 +609,7 @@ than closing over it.
 
 **Promoted by `TASK-0085`**, in the same commit as `ROADMAP.md`'s Phase 10.
 Both ADRs it rests on are `Accepted`. It **allocates no task ids** — one is
-taken when a brief is written. **Next free: `TASK-0089`.**
+taken when a brief is written. **Next free: `TASK-0090`.**
 
 - [x] TASK-0086 — S10.1 — the OpenCode driver, `run-gate.sh` and binding (done —
       proven against a **stub** `opencode` only; 23 tests, 18 reverts red)
@@ -618,6 +618,8 @@ taken when a brief is written. **Next free: `TASK-0089`.**
 - [x] TASK-0088 — S10.3 — `mcp-servers/gates/`, the first authored server (done —
       14 tests, 15 reverts red, smoke PASS; **not wired**, by the authorization).
       **Highest risk; authorization signed 2026-09-24** (not wired into clients). Independent of S10.1/S10.2
+- [x] TASK-0089 — the gate-invoker rule, `ADR-0025` (done — human's decision;
+      loop, role, references and both bindings now agree)
 - [ ] S10.4 — the Bionic binding; *establish* the orchestration claim or drop
       it, since the snapshot already records the established coverage
 - [ ] S10.5 / S10.6 / S10.7 — wiring snapshots, registry, **the pilot**

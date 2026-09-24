@@ -140,11 +140,10 @@ defect until a human says otherwise. Numbers 1–6 match the OpenCode binding's
 (`templates/bindings/opencode/binding.md`) so the two can be read side by
 side.
 
-1. **The gate-runner invokes the entry point**, as loop.md step 7 and
-   `agents/gate-runner/` say — the *opposite* of the OpenCode binding, which
-   follows `ADR-0022`'s "the driver invokes it". A Workflow script has no
-   shell, so there is no driver to do it. The three-way disagreement is
-   recorded in `TASK-0086` as a finding for the human.
+1. *Resolved — no longer a deviation.* The gate-runner invokes the entry
+   point because a Workflow script has no shell, which is what `ADR-0025` now
+   makes the rule for a driver without one. The opposite of the OpenCode
+   binding, for the reason that rule states.
 2. **Journal lines are appended by `run-scribe`**, one call per event
    (loop.md step 12), because the script has no filesystem.
 3. **Step 2's tracker-disagreement threshold is zero**, the strictest

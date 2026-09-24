@@ -7,11 +7,12 @@ observed producing a green result that meant nothing.
 
 ## Where it lives and who reads it
 
-The map lives in the **binding**, keyed by task kind, and the **driver**
-invokes it from its own shell. No agent in the run is ever handed a
-verification command string (rule 2). The `gate-runner` receives the
-evidence and writes it to the run's evidence file; it does not compose,
-correct or choose a command.
+The map lives in the **binding**, keyed by task kind. The **driver**
+invokes it through the entry point wherever it has a shell; where it has
+none, the `gate-runner` does, by gate name only (`ADR-0025`). No agent in the
+run is ever handed a verification command string (rule 2). **The entry point
+writes each gate's line to the run's evidence file**; the `gate-runner` reads
+it and reports, and never composes, corrects or chooses a command.
 
 A gate command taken from the task file being verified is the failure rule 2
 exists to prevent, and it is not a hypothetical: **29 scripts** in one
