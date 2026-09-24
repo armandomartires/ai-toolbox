@@ -360,4 +360,4 @@ skill deployed: unattended-ops -> claude-code (link)
 ```
 
 Resulting additions, from a before/after listing: `unattended-ops` in the
-skills directory; `adjudicator.md` and `task-planner.md` in `~/.claude/agents/` — exactly the two of nine that declare `claude-code`. **`~/.claude/agents/designer-manager.md` is a stale file** from an earlier install: the role is OpenCode-only now (`agent skipped … not in its clients list`), and nothing removes the old emission. **Nothing is pruned**, as install.sh itself states.
+skills directory; `adjudicator.md` and `task-planner.md` in `~/.claude/agents/` — exactly the two of nine that declare `claude-code`. **`~/.claude/agents/designer-manager.md` was a stale file** from an earlier install: the role is OpenCode-only now, and at the time nothing removed the old emission. **Pruned 2026-09-24** by the next `install.sh link` (`TASK-0091`, `ADR-0026`): *"agent pruned: designer-manager -> claude-code (… the role no longer declares this client, ADR-0026)"* — the only file removed from either client. **Nothing is pruned**, as install.sh itself states.

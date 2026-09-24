@@ -58,8 +58,10 @@ verify then unwire; pilot target ai-toolbox itself). `install.sh link` exit 0:
 `(primary)` in `opencode agent list`. The emitter's refusal path was proven
 first. `gates` reported connected in Claude Code and OpenCode, then both
 registrations were removed; `opencode.jsonc` untouched. `ADR-0022` F6
-**confirmed**, F8 two of three clients. **Found:** `~/.claude/agents/designer-manager.md`
-is a stale emission — install never prunes.
+**confirmed**, F8 two of three clients. A stale `~/.claude/agents/designer-manager.md`
+was found and, on the human's decision (`TASK-0091`, `ADR-0026`), the emitter
+now prunes a role's file from a client the role no longer declares — which
+removed it.
 
 ## Who starts a gate is decided — `ADR-0025`
 

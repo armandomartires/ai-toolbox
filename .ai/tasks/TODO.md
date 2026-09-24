@@ -609,7 +609,7 @@ than closing over it.
 
 **Promoted by `TASK-0085`**, in the same commit as `ROADMAP.md`'s Phase 10.
 Both ADRs it rests on are `Accepted`. It **allocates no task ids** — one is
-taken when a brief is written. **Next free: `TASK-0091`.**
+taken when a brief is written. **Next free: `TASK-0092`.**
 
 - [x] TASK-0086 — S10.1 — the OpenCode driver, `run-gate.sh` and binding (done —
       proven against a **stub** `opencode` only; 23 tests, 18 reverts red)
@@ -624,6 +624,8 @@ taken when a brief is written. **Next free: `TASK-0091`.**
       it, since the snapshot already records the established coverage
 - [x] TASK-0090 — S10.5 — `install.sh link` for both clients, output recorded;
       gates verified connected in Claude Code and OpenCode, then unwired
+- [x] TASK-0091 — prune stale emitted agents, `ADR-0026` (done — human's decision;
+      `designer-manager.md` pruned from Claude Code by the mechanism)
 - [ ] S10.6 / S10.7 — registry and state, **the pilot** (target: ai-toolbox itself)
 - [ ] REVIEW — checkpoint
 

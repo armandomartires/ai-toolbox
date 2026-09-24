@@ -171,10 +171,13 @@ while IFS='|' read -r client target parent agents_target; do
   # and a gate that is not run is worse than no gate, because it is still
   # trusted." The control is that this is cheap and idempotent — re-run it.
   #
-  # Nothing prunes a stale emitted file either: deleting a role here leaves
-  # its agent live in both clients. Recorded, not silently patched — an
-  # installer that deletes files from a user's config directory needs its own
-  # decision, not a convenience.
+  # Pruning is narrow, and it is a decision, not a convenience (ADR-0026,
+  # the human's, 2026-09-24): when a role in agents/ stops declaring a
+  # client, emit-agents.py removes that client's file for it — only a
+  # regular file whose frontmatter names that role — and prints
+  # "agent pruned". A role DELETED from agents/ is still never pruned: its
+  # name is no longer known here, so its agent stays live until removed by
+  # hand.
   #
   # Exits non-zero if emission is REFUSED for a declared capability the
   # client cannot enforce (clause 8). That failure is intentional and must

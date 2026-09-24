@@ -422,6 +422,35 @@ def emit_claude_code(role, fm, body):
 EMITTERS = {"opencode": emit_opencode, "claude-code": emit_claude_code}
 
 
+def emitted_by_us(path, role):
+    """True only for a file this emitter would have written for `role`.
+
+    ADR-0026, the human's decision of 2026-09-24: a role that stops declaring
+    a client has its old emission pruned from that client, so a session
+    cannot keep loading a role the repo no longer emits for it. Deliberately
+    narrow — a regular file (never a symlink), whose frontmatter names this
+    role. Anything else in the directory is not ours to delete. Two limits,
+    stated: a REFUSED role's existing file is left in place, and a role
+    DELETED from agents/ is never pruned, because its name is no longer
+    known here.
+    """
+    if os.path.islink(path) or not os.path.isfile(path):
+        return False
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read(4096).split("\n")
+    except (OSError, UnicodeDecodeError):
+        return False
+    if not lines or lines[0].strip() != "---":
+        return False
+    for line in lines[1:]:
+        if line.strip() == "---":
+            return False
+        if line.startswith("name:"):
+            return line.split(":", 1)[1].strip().strip("\"'") == role
+    return False
+
+
 def main():
     if len(sys.argv) != 3:
         print("usage: emit-agents.py <client> <agents-target-dir>",
@@ -445,8 +474,14 @@ def main():
             continue
         fm, body = parse(src)
         if client not in fm.get("clients", []):
-            print("  agent skipped: %s -> %s (not in its clients list)"
-                  % (role, client))
+            stale = os.path.join(target, "%s.md" % role)
+            if emitted_by_us(stale, role):
+                os.remove(stale)
+                print("  agent pruned: %s -> %s (%s; the role no longer "
+                      "declares this client, ADR-0026)" % (role, client, stale))
+            else:
+                print("  agent skipped: %s -> %s (not in its clients list)"
+                      % (role, client))
             continue
         try:
             text = EMITTERS[client](role, fm, body)
