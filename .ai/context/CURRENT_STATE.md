@@ -55,8 +55,9 @@ loop says the ADR wins) and records it as deviation 1.
 wherever it has a shell; the gate-runner only where it has none; the entry
 point always writes the evidence and the gate-runner only reads it. The loop,
 the role, `gate-map.md`, `evidence.md` and both bindings now say so; no code
-changed. **Open:** `agents/gate-runner/`'s `*run-gate.sh*` allowlist is wider
-than an OpenCode gate-runner now needs — narrowing it is the human's call.
+changed. `agents/gate-runner/`'s `*run-gate.sh*` allowlist is wider than an
+OpenCode gate-runner now needs, and **the human chose to keep it** (small
+reach; a driver-less binding needs it) — reason recorded in the role file.
 
 ## S10.3: the first authored MCP server ships — and the template it was copied from was broken
 

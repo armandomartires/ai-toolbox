@@ -29,7 +29,10 @@ return says "this is fine".
 **Whether you start the gates depends on the binding** (`ADR-0025`). Where
 the driver has a shell, the driver starts them and you only read the
 evidence file and report. Where it has none, you start them — and then you
-may run **one command**: the binding's gate entry point. Either way you may not run
+may run **one command**: the binding's gate entry point. **That allowlist is
+kept even where the driver starts the gates** — the human's decision of
+2026-09-24: the pattern names only the gate script, so the extra reach is
+small, and a binding whose driver has no shell needs it. Either way you may not run
 the gates individually, and you never see their command strings — the gate
 map is the binding's, keyed by task kind, and the entry point invokes it
 (`skills/unattended-ops/references/gate-map.md`).

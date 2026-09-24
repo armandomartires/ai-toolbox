@@ -54,3 +54,6 @@ named it a finding for the human.
   still allowlists `*run-gate.sh*`. Under decision 1 an OpenCode gate-runner
   never needs to run it, so its boundary is wider than its job there.
   Narrowing it would change a role's permissions and is the human's call.
+  **Resolved 2026-09-24 by the human: kept**, with the reason stated in the
+  role file — the pattern names only the gate script, and a driver-less
+  binding needs it.
