@@ -307,5 +307,10 @@ name; neither widens the destructive surface.
     remainder), a real consumer's gate map, `powershell.exe` gates from WSL,
     or a client's own tool-call timeout against `wait_gate`'s 420 s (F7).
 - Result: **done.**
-- Commit: *(recorded in the follow-up commit)*
-- Push: *(recorded in the follow-up commit)*
+- Commit: `df22d17`. Pre-commit hook ran `tests/validate.sh`: OK.
+  **Re-verified from a fresh clone** on native ext4: `uv run pytest` 14
+  passed; `smoke-mcp.sh --server gates` PASS with no pre-existing `.venv`
+  (the first launch installs inside the 90 s handshake timeout);
+  `validate.sh` OK; and the repaired template's own `uv run pytest` — 1
+  passed, where before this task it could not be imported.
+- Push: **confirmed** — `origin/master` `e383da1..df22d17`.
