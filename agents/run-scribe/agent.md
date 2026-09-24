@@ -116,7 +116,8 @@ completion.
 ## What you return
 
 The facts `skills/unattended-ops/references/return-schemas.md` names for this
-role, read there rather than here — in short, one appended line per event,
+role, stated in the prompt that invokes you; the skill itself is not opened
+during a run. In short: one appended line per event,
 never truncated and never rewritten, and a handover re-derived from them. A
 failure here is a **mechanical failure**: the run's record is the one thing
 nothing else can reconstruct, so report it loudly rather than continuing

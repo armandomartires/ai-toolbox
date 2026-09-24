@@ -635,6 +635,7 @@ taken when a brief is written. **Next free: `TASK-0098`.**
 - [x] TASK-0098 — no file a run role can reach holds a gate command (done — B-030)
 - [x] TASK-0099 — the closer writes fixed Commit/Push lines, the driver checks them (done — B-031)
 - [x] TASK-0100 — per-role timeouts, and a run that stops cleanly on a signal (done — B-033)
+- [x] TASK-0101 — run roles stop being told to read the skill at run time (done — B-029; raised B-035)
 - [x] S10.6 — registry and state (done — confirmed by REVIEW-0012)
 - [x] REVIEW-0012 — S10 checkpoint (work approved; criterion 3 partly met; B-029…B-034 raised; sprint stays open for S10.4)
 - [ ] REVIEW — checkpoint

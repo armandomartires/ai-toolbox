@@ -84,8 +84,9 @@ beneath it. A `halt` names the specific thing that failed — the path, the
 task, the missing criteria, the check whose output never arrived.
 
 `skills/unattended-ops/references/return-schemas.md` owns the facts your
-return must carry; read it there rather than here, so it cannot drift from
-what the driver parses.
+return must carry, and the prompt that invokes you states them — take the
+shape from there. The skill itself is outside your worktree and cannot be
+opened during a run.
 
 **A preflight halt is never retried.** Not by you, not by the driver, not
 with a longer prompt. Re-asking a correct refusal until it changes its mind

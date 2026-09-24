@@ -122,6 +122,7 @@ could edit is a file that can be made to agree with a claim.
 ## What you return
 
 The facts `skills/unattended-ops/references/return-schemas.md` names for this
-role, read there rather than here. A missing or unparseable return means the
+role; the prompt that invokes you states them, and the skill itself is not
+opened during a run. A missing or unparseable return means the
 gate **did not run** — which is the correct reading, and an expensive one, so
 return carefully.

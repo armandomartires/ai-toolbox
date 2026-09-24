@@ -278,6 +278,15 @@ class TestHappyPath(Harness):
         self.assertIn(".ai/tasks/TASK-0001-demo.md", pre[-1])
         self.assertIn("already resolved", pre[-1])
 
+    def test_roles_are_told_the_skill_is_not_theirs_to_open(self):
+        # TASK-0092 findings 7, 13 / B-029: 57 of 92 denied calls were reads
+        # of the skill, outside every role's worktree-only boundary (TASK-0101).
+        self.make_repo()
+        self.run_driver(happy())
+        self.assertTrue(self.invocations())
+        for argv in self.invocations():
+            self.assertIn("do not open the skill's files", argv[-1])
+
     def test_preflight_is_handed_the_drivers_own_checks(self):
         # TASK-0096: the second dry run halted because the driver ran the
         # model and primary-mode checks and handed the role neither result.

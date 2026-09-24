@@ -73,6 +73,11 @@ upstream report, the human files it.
   **to stop a run, signal the driver** — it kills the role call's process
   group, retries nothing, and writes a *STOPPED* handover itself; a role
   killed from outside halts the run instead of being retried.
+- **`B-029` closed — `TASK-0101`; `B-035` raised.** No run-role body tells
+  it to open the skill, and every OpenCode prompt says not to. **The gap it
+  exposed:** the adjudicator's decision standard (`verdicts.md`,
+  `evidence.md`) is not in its prompt either — it never reached the role in
+  the pilot — and that route is the human's.
 
 ## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
 

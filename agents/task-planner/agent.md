@@ -74,8 +74,9 @@ that number.
 ## What you return
 
 Exactly the facts `skills/unattended-ops/references/return-schemas.md` names
-for this role — read them there, so your contract and the driver's parser
-have one owner — and **nothing invented to fill a gap**. If you cannot
+for this role — it owns them, and the prompt that invokes you states them, so
+your contract and the driver's parser have one owner; the skill itself is not
+opened during a run — and **nothing invented to fill a gap**. If you cannot
 produce a plan, say that, and say what is missing. A confident plan built on
 a guess is worse than no plan, because everything downstream reads it as
 settled.

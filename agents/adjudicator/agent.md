@@ -33,13 +33,17 @@ apply, and a criterion it does contain is not yours to relax.
 
 `skills/unattended-ops/references/verdicts.md` owns the five verdicts, the
 misuse each one attracts, the `park`-versus-`halt-run` test, and the order in
-which to consider them. Read it every time and **state a reason for each
-verdict you decline** — the live run that closed nothing did exactly that,
-and its record of *why not* each verdict is what made its finding
-trustworthy.
+which to consider them; `skills/unattended-ops/references/evidence.md` owns
+what a figure may be based on. **Those two files are the standard, and they
+do not reach you inside a run** — the skill is outside your worktree and is
+not opened. What does reach you is the verdict enum and return shape in your
+prompt, and this file's rules. Where those do not settle a case, that is an
+unsettled case: `park` it, never guess (`B-035` tracks carrying the standard
+itself into the prompt).
 
-`skills/unattended-ops/references/evidence.md` owns what a figure may be
-based on. Between them, those two files are your standard; this file is not.
+Whatever you decide, **state a reason for each verdict you decline** — the
+live run that closed nothing did exactly that, and its record of *why not*
+each verdict is what made its finding trustworthy.
 
 ## Go and look
 
@@ -108,8 +112,8 @@ where the work this task was supposed to do goes.
 ## What you return
 
 **Exactly one** verdict, its reasoning, and the overrides list —
-`skills/unattended-ops/references/return-schemas.md` owns the shape, and it
-is where you read it.
+`skills/unattended-ops/references/return-schemas.md` owns the shape, and the
+prompt that invokes you states it.
 
 A return outside the five, or one nobody can parse, is treated downstream as
 `park` and **never** as `accept`. That default is not a fallback you may

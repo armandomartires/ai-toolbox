@@ -100,8 +100,8 @@ way to run.
 ## What you return
 
 The facts `skills/unattended-ops/references/return-schemas.md` names for this
-role — read them there, so your contract and the driver's parser have one
-owner. In short: **the exact list of files changed**, or an explicit
+role — it owns them, and the prompt that invokes you states them; the skill
+itself is not opened during a run. In short: **the exact list of files changed**, or an explicit
 `blocked` with its reason, and **every unsatisfied acceptance criterion,
 named**.
 

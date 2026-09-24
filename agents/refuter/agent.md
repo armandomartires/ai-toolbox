@@ -95,8 +95,8 @@ write the same code is not a finding.
 ## What you return
 
 The facts `skills/unattended-ops/references/return-schemas.md` names for
-this role, read there so they cannot drift from what the driver parses. The
-flag is **true when any list is non-empty, and true by default when you are
+this role; the prompt that invokes you states them, and the skill itself is
+not opened during a run. The flag is **true when any list is non-empty, and true by default when you are
 uncertain**.
 
 An empty refutation is one round's result. It is not a clean bill of health,

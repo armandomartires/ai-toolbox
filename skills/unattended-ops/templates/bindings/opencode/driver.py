@@ -830,6 +830,11 @@ def prompt(role, instruction, inputs, shape):
             "Every path in the inputs below is exact: read it directly, and never glob "
             "or list a directory to find it — the glob tool does not see directories "
             "whose names start with a dot, such as .ai/.\n\n"
+            # The skill is outside every role's worktree-only boundary; reads
+            # of it were 57 of the pilot's 92 denials (B-029, TASK-0101).
+            "Everything you need is in this message and your agent definition: do not "
+            "open the skill's files (skills/unattended-ops/), which are outside your "
+            "worktree and denied.\n\n"
             "Inputs:\n```json\n%s\n```\n\n"
             "End your reply with exactly one JSON object in a ```json fenced block, shaped:\n%s\n"
             % (role, instruction, json.dumps(inputs, indent=2, sort_keys=True), shape))
