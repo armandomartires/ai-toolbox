@@ -63,6 +63,12 @@ upstream report, the human files it.
   `external_directory: deny`, observed for reads outside the worktree by the
   pilot; a live check against a map specifically **stalled twice** in this
   session and is not established.
+- **`B-031` closed — `TASK-0099`.** The closer writes two fixed log lines
+  the driver hands it — `Commit: pending — recorded at landing (run <id>)`
+  and `Push: not taken — the run pushes nothing` — and the driver halts on
+  any other `Commit:`/`Push:` entry in the committed task file. **Landing an
+  unattended run now owes a follow-up commit** replacing them with the landed
+  hash (`docs/operations/runbook.md`).
 
 ## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
 

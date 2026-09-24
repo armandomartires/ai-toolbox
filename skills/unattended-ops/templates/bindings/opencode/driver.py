@@ -61,6 +61,10 @@ REQUIRED_SLOTS = (
 ROLES = ("preflight", "task-planner", "implementer", "gate-runner", "refuter",
          "adjudicator", "closer", "park-steward", "run-scribe")
 
+# A task-file log entry about the commit or the push, as the closer writes
+# one: "- Commit: ...", "**Push**: ..." (B-031, TASK-0099).
+LOG_ENTRY = re.compile(r"^[\s>*-]*(commit|push)\**\s*:", re.I)
+
 GATE_LINE = re.compile(r"^GATE (?P<handle>\S+) NAME=(?P<name>\S+) "
                        r"STATE=(?P<state>[A-Z]+) EXIT=(?P<exit>-?\d+) "
                        r"ELAPSED=(?P<elapsed>\d+)s LOG=(?P<log>.*)$")
@@ -542,9 +546,11 @@ class Driver:
         got = self.ask("closer", prompt(
             "closer", "Step 10. Close task %s: re-check the porcelain against the declared "
             "paths, update the task file and the tracker row from the evidence file, stage "
-            "each path with `git add -- <path>`, commit, report the hash. Push nothing." % task["id"],
+            "each path with `git add -- <path>`, commit, report the hash. Push nothing. The "
+            "task file's Commit and Push entries are log_lines, written verbatim: a commit "
+            "cannot contain its own hash, and landing records it." % task["id"],
             {"task_file": task["file"], "tracker": self.b.tracker,
-             "declared_paths": declared,
+             "declared_paths": declared, "log_lines": self.log_lines(),
              "evidence_file": self.b.evidence, "commit_shape": self.b.commit_shape},
             '{"commit": "<hash>"} or {"refused": "<what was found>"}'))
         after = self.git("rev-parse", "HEAD")
@@ -576,8 +582,30 @@ class Driver:
             # which is the human's (loop.md, "Escalate without retrying").
             raise Halt("closer's commit for %s contains undeclared paths: %s"
                        % (task["id"], ", ".join(undeclared)))
+        added = [l[1:] for l in self.git("show", "--format=", "--unified=0", "HEAD", "--",
+                                         task["file"]).split("\n")
+                 if l.startswith("+") and not l.startswith("+++")]
+        entries = [l.strip().lstrip("-*> ").strip() for l in added if LOG_ENTRY.match(l)]
+        unexpected = [e for e in entries if e not in self.log_lines()]
+        unwritten = [e for e in self.log_lines() if entries.count(e) != 1]
+        if unexpected or unwritten:
+            # The closer's word about its own commit is checked, not trusted
+            # (TASK-0092 finding 17: it claimed a follow-up commit it never
+            # made). Halt, not park: the commit already exists.
+            raise Halt("closer's log entries in %s do not verify — unexpected: %s; "
+                       "placeholder not written exactly once: %s"
+                       % (task["file"], unexpected or "none", unwritten or "none"))
         self.closed.append({"id": task["id"], "commit": after[:12], "files": files})
         self.journal("close", task=task["id"], commit=after[:12])
+
+    def log_lines(self):
+        """The closer's Commit and Push entries, fixed (B-031, TASK-0099).
+
+        The hash is landing's: a commit cannot hold its own, and a rebase at
+        landing changes it anyway (TASK-0092: d80d843 landed as 57dbd49).
+        """
+        return ["Commit: pending \u2014 recorded at landing (run %s)" % self.b.run_id,
+                "Push: not taken \u2014 the run pushes nothing"]
 
     def step11_park(self, task, reason):
         """Step 11 — park-steward stashes; the driver checks the tree is clean."""

@@ -71,6 +71,19 @@ def filled_binding(overrides=None):
     return "\n".join(out)
 
 
+# The two log lines the driver hands the closer (B-031, TASK-0099), as the
+# closer must write them for run id r1.
+LOG_LINES = ("- Commit: pending \u2014 recorded at landing (run r1)",
+             "- Push: not taken \u2014 the run pushes nothing")
+
+
+def closer_sh(lines, add="git add -- src/a.txt .ai/tasks/{TASK}-demo.md"):
+    """A closer that appends `lines` to the task file, stages, commits."""
+    sh = ["printf '%%s\\n' %s >> .ai/tasks/{TASK}-demo.md" % " ".join("'%s'" % l for l in lines)]
+    sh += [add, "git commit -q -m '{TASK}: change a'"]
+    return {"sh": sh, "text": fence({"commit": "{HEAD}"})}
+
+
 def preflight_ok(ids):
     return [{"text": fence({"verdict": "proceed", "branch": "master", "head": "x",
                             "porcelain": "", "tasks": [
@@ -92,8 +105,7 @@ def happy(ids=("TASK-0001",)):
                                     "undeclared_changes": [], "breached_invariants": []})}],
         "adjudicator": [{"text": fence({"verdict": "accept", "reasoning": "evidenced",
                                         "overrides": [], "adhoc_titles": []})}],
-        "closer": [{"sh": ["git add -- src/a.txt", "git commit -q -m '{TASK}: change a'"],
-                    "text": fence({"commit": "{HEAD}"})}],
+        "closer": [closer_sh(LOG_LINES)],
         "park-steward": [{"auto": "stash"}],
         "run-scribe": [{"sh": ["mkdir -p .run/r1 && printf '# handover\\n' > .run/r1/handover.md"],
                         "text": fence({"written": ".run/r1/handover.md"})}],
@@ -349,11 +361,36 @@ class TestVerdictDispatch(Harness):
         agents["implementer"] = [{"sh": ["echo change >> src/a.txt", "echo stray > stray.txt"],
                                   "text": fence({"status": "done", "files_changed": ["src/a.txt"],
                                                  "unsatisfied_criteria": []})}]
-        agents["closer"] = [{"sh": ["git add -- .", "git commit -q -m '{TASK}: change a'"],
-                             "text": fence({"commit": "{HEAD}"})}]
+        agents["closer"] = [closer_sh(LOG_LINES, add="git add -- .")]
         self.assertEqual(self.run_driver(agents), 1)
         self.assertIn("stray.txt", self.events("halt")[0]["reason"])
         self.assertEqual(self.events("close"), [])
+
+    def test_the_closers_own_commit_claim_halts_the_run(self):
+        # TASK-0092 finding 17 / B-031: the closer wrote this, verbatim, and
+        # made no follow-up commit.
+        claim = "- Commit: recorded by the closer role in a follow-up commit."
+        self.make_repo()
+        agents = happy()
+        agents["closer"] = [closer_sh((claim, LOG_LINES[1]))]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertIn("recorded by the closer role", self.events("halt")[0]["reason"])
+        self.assertEqual(self.events("close"), [])
+
+    def test_a_close_without_the_commit_placeholder_halts_the_run(self):
+        self.make_repo()
+        agents = happy()
+        agents["closer"] = [{"sh": ["git add -- src/a.txt", "git commit -q -m '{TASK}: change a'"],
+                             "text": fence({"commit": "{HEAD}"})}]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertIn("placeholder", self.events("halt")[0]["reason"])
+        self.assertEqual(self.events("close"), [])
+
+    def test_the_closer_is_handed_its_log_lines_verbatim(self):
+        self.make_repo()
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        got = self.prompt_inputs(self.invocations("closer")[0])["log_lines"]
+        self.assertEqual(got, [l[2:] for l in LOG_LINES])
 
     def test_closer_refusal_parks_and_is_not_retried(self):
         self.make_repo()

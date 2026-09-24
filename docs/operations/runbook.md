@@ -139,6 +139,20 @@ receives one commit per task, still linear, still gated — the only added step
 is the rebase. A rejected push means `master` moved; rebase again. There is no
 PR or review step, deliberately (`ADR-0007` keeps this repo trunk-based).
 
+**Landing an unattended run's branch** adds one step. The run's `closer`
+cannot know its commit's hash — a commit cannot contain its own, and the
+rebase above changes it anyway — so each task file it closed carries two
+fixed placeholders, which the OpenCode driver checked were written verbatim
+(`TASK-0099`):
+
+```
+- Commit: pending — recorded at landing (run <run-id>)
+- Push: not taken — the run pushes nothing
+```
+
+After the push, replace them with the landed hash (`git log --grep <task
+id>` on `master`) and the confirmed push range, in a follow-up commit.
+
 Then remove the worktree. These are for isolation, not for parallel
 development, so they should be short-lived:
 
