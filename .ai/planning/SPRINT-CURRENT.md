@@ -47,11 +47,11 @@ Three things therefore carry unusual weight:
 | S10.1 | S9 | **done** (against a stub) — `TASK-0086` | **[corrected]** **Only the OpenCode driver remains.** The binding contract (`skills/unattended-ops/templates/binding.md`), the checker (`scripts/check-binding.sh`) and both fixtures **already ship** — `TASK-0062` built them and already ran the red-then-green proof: the incomplete fixture exits 1 naming eleven defects, the complete one exits 0. **Do not rebuild them.** |
 | S10.2 | S9 | **done** (against a stub) — `TASK-0087` | The Claude Code Workflow binding: `arm-autopilot.js` de-domained into a template carrying no rule of its own. |
 | S10.3 | S9 (`TASK-0059` **done**) | **done** — `TASK-0088`; `ADR-0024` supersedes `ADR-0010`; **not wired** until S10.5 | `mcp-servers/gates/` — first authored Python server; `smoke-mcp.sh` authored-shape support; supersede `ADR-0010`; **human authorization block**. Highest risk; independent of S10.1/S10.2. |
-| S10.4 | S10.3 | planned | **[corrected]** The Bionic binding. `configs/lm-studio-bionic/README.md` **already records this client's coverage** (`TASK-0080`) — and states only the *established* fact: **zero** of the nine roles, for want of a user-authored agent directory (`ADR-0020`). So what this row owes is **establishing** that Bionic cannot orchestrate, or dropping the claim — not writing the section. |
+| S10.4 | S10.3 | **done** — `TASK-0104` | **[corrected]** The Bionic binding. `configs/lm-studio-bionic/README.md` **already recorded this client's coverage** (`TASK-0080`) — zero of the nine roles, for want of a user-authored agent directory (`ADR-0020`). `TASK-0104` **established** the further claim rather than dropping it: no CLI subcommand, REST/OpenAI-compat/Anthropic-compat/MCP-via-API endpoint, or SDK call creates a project, session, or orchestrator from outside a live GUI chat turn, so Bionic cannot be a binding's target. |
 | S10.5 | S10.1, S10.2, S10.3 | **done** — `TASK-0090` | `configs/claude-code/` and `configs/opencode/`; run `install.sh` for both clients and record the emission output **verbatim** (F6). |
 | S10.6 | S10.5 | **done** — no task of its own: the registry regenerated where a component changed (`TASK-0088`), state updated by every task; confirmed by `REVIEW-0012` | Regenerate `docs/registry.md`; update `.ai/context/CURRENT_STATE.md`. |
 | S10.7 | S10.5, S10.1 | **done** — `TASK-0092`: both pilot tasks closed unattended and landed; 18 findings | **Pilot.** One real unattended run of at most two tasks: dry-run first, then live, watched. |
-| review | all | **done** — `REVIEW-0012`: work approved, criterion 3 partly met; **sprint stays open** for S10.4 | Sprint checkpoint. |
+| review | all | **done** — `REVIEW-0012`: work approved, criterion 3 partly met; sprint was held open for S10.4, now `done` (`TASK-0104`) | Sprint checkpoint. |
 
 ## Two design decisions carried in from `PLAN-0006`, to be honoured not re-derived
 
@@ -162,5 +162,5 @@ promotion rule — briefs must exist before **code**, not before promotion.
 **Briefs written 2026-09-23:** `TASK-0086` (S10.1), `TASK-0087` (S10.2),
 `TASK-0088` (S10.3); `TASK-0089` (the gate-invoker rule, `ADR-0025`, outside the
 deliverable table); `TASK-0090` (S10.5); `TASK-0091` (pruning, `ADR-0026`); `TASK-0092` (S10.7, the pilot) and its two
-queued tasks `TASK-0093`, `TASK-0094`; `TASK-0095` (read, never glob); `TASK-0096` (preflight evidence); `TASK-0097` (commit-paths check); the post-review backlog pass, `TASK-0098`…`TASK-0103` (one per item, `B-029`…`B-034`). **Next free id: `TASK-0104`.**
+queued tasks `TASK-0093`, `TASK-0094`; `TASK-0095` (read, never glob); `TASK-0096` (preflight evidence); `TASK-0097` (commit-paths check); the post-review backlog pass, `TASK-0098`…`TASK-0103` (one per item, `B-029`…`B-034`); `TASK-0104` (S10.4, 2026-09-25). **Next free id: `TASK-0105`.**
 **Pilot target (S10.7), the human's choice 2026-09-24: ai-toolbox itself.**

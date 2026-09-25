@@ -620,8 +620,10 @@ taken when a brief is written. **Next free: `TASK-0098`.**
       **Highest risk; authorization signed 2026-09-24** (not wired into clients). Independent of S10.1/S10.2
 - [x] TASK-0089 — the gate-invoker rule, `ADR-0025` (done — human's decision;
       loop, role, references and both bindings now agree)
-- [ ] S10.4 — the Bionic binding; *establish* the orchestration claim or drop
-      it, since the snapshot already records the established coverage
+- [x] S10.4 — the Bionic binding; established (not dropped) that Bionic cannot
+      orchestrate — no CLI, REST, OpenAI-compat, Anthropic-compat, MCP-via-API
+      or SDK surface creates a project/session/orchestrator outside a live
+      GUI chat turn (done — `TASK-0104`)
 - [x] TASK-0090 — S10.5 — `install.sh link` for both clients, output recorded;
       gates verified connected in Claude Code and OpenCode, then unwired
 - [x] TASK-0091 — prune stale emitted agents, `ADR-0026` (done — human's decision;
@@ -639,8 +641,9 @@ taken when a brief is written. **Next free: `TASK-0098`.**
 - [x] TASK-0102 — emit each role's allowed shell commands; upstream report drafted (done — B-034)
 - [x] TASK-0103 — the Claude Code binding checks a commit's files against the declared paths (done — B-032)
 - [x] S10.6 — registry and state (done — confirmed by REVIEW-0012)
-- [x] REVIEW-0012 — S10 checkpoint (work approved; criterion 3 partly met; B-029…B-034 raised; sprint stays open for S10.4)
-- [ ] REVIEW — checkpoint
+- [x] REVIEW-0012 — S10 checkpoint (work approved; criterion 3 partly met; B-029…B-034 raised; sprint held open for S10.4)
+- [x] TASK-0104 — S10.4: established that Bionic cannot orchestrate an unattended run (done)
+- [ ] REVIEW — checkpoint on the completed sprint (S10.4 now done; closing S10 is the human's decision)
 
 ## Post-S9 (superseded by the promotion above)
 

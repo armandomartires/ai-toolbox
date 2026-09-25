@@ -188,14 +188,43 @@ nine and OpenCode gets all nine; this client gets none.
 `skills/unattended-ops/SKILL.md` describes, at its sharpest on this client.
 That reasoning is linked, not restated.
 
-> **Stated narrowly on purpose.** `SPRINT-S10`'s row S10.4 plans to establish
-> and record that Bionic **cannot orchestrate** a run at all. That is not yet
-> established, so it is not claimed here. What *is* established is the
-> narrower fact above — zero roles, for want of a directory — and it is
-> sufficient for a reader deciding what this client gives them.
+> **Established 2026-09-25 (`TASK-0104`): Bionic cannot orchestrate an
+> unattended run, and here is what was actually checked.** Bionic's CLI
+> (`lms.exe`, every subcommand's `--help` read) is model/server/runtime
+> management only — no subcommand names a project, a session, or an
+> orchestrator. The documented HTTP surface (REST v1, OpenAI-compat,
+> Anthropic-compat, MCP-via-API; re-read 2026-09-25) is inference and
+> tool-calling-inside-a-chat-request only, with the same absence. Bionic
+> *does* ship a real orchestrator — a bundled system prompt (*"You are the
+> orchestrator agent running inside LM Studio Bionic … help the user create
+> 'sessions'"*) paired with a `session_control` skill exposing
+> `bionic_tool` calls (`create_project`, `create_session`, `send_prompt`,
+> `interrupt_session`, …) — but every one of those calls is something *the
+> model inside an active Bionic chat turn* invokes, executed by the app
+> itself. **There is no external, scriptable entry point to it.** No CLI
+> command, REST endpoint, or SDK call creates a project or session, or
+> starts the orchestrator, from outside a live GUI conversation. That is the
+> same absence `ADR-0020` found one layer down — no user-authored
+> agent-role directory — restated at the layer that actually matters for a
+> binding: nothing here is externally invocable at all, authored role or
+> not.
 >
-> **Nothing runs unattended on any client yet**: every binding is S10, and
-> none exists.
+> **The trap this finding does not fall into.** LM Studio ships genuine
+> agentic SDK primitives (`model.act(prompt, [tools], …)` in both
+> `lmstudio-python` and `lmstudio-js`) that could be wired to hand-rolled
+> functions replicating git operations, gate calls, and so on. **That would
+> not be a Bionic binding.** `.act()`'s tools are plain functions with
+> **zero client-enforced permission boundary** — the calling script would
+> have to implement the entire boundary itself, borrowing none of Bionic's
+> own agent machinery. It would be a fourth, unenforced driver that happens
+> to use an LM-Studio-served model as an LLM backend, exactly interchangeable
+> with any other OpenAI-compatible endpoint — not a binding into this
+> client, which is the only thing this row was ever asking whether Bionic
+> could support.
+>
+> **Nothing runs unattended on any client yet apart from the pilot's own
+> runs**: OpenCode and Claude Code have bindings (`TASK-0086`, `TASK-0087`);
+> Bionic has neither a binding nor a surface one could be written against.
 
 ## Third-party extensions
 

@@ -3,9 +3,10 @@
 Last updated 2026-09-25. Sprint S10 — Unattended runs: bindings, the gate
 server, and the pilot is open. Its eight deliverables stand as: S10.1 done
 (against a stub) — `TASK-0086`; S10.2 done (against a stub) — `TASK-0087`;
-S10.3 done — `TASK-0088`; S10.4 planned; S10.5 done — `TASK-0090`; S10.6
-done; S10.7 done — `TASK-0092`; review done — `REVIEW-0012`, the sprint
-staying open for S10.4. The dated `##` sections below carry the detail.
+S10.3 done — `TASK-0088`; S10.4 done — `TASK-0104`; S10.5 done — `TASK-0090`;
+S10.6 done; S10.7 done — `TASK-0092`; review done — `REVIEW-0012`. All eight
+deliverables are now done; closing the sprint is the human's decision. The
+dated `##` sections below carry the detail.
 
 ## Sprint S10 is OPEN
 
@@ -23,11 +24,41 @@ every binding is here.
 cost real work: **S10.1's contract, checker and fixtures already ship**
 (`TASK-0062`, with the red-then-green proof already run), so only the
 **OpenCode driver** remains; `TASK-0059` is done; Bionic's snapshot already
-records its coverage, so S10.4 owes *establishing* the orchestration claim
-rather than writing the section; and half the pre-committed checkpoint
-question was already answered in S9 and has been **replaced** with one that is
-still open — whether a binding reintroduces what the role boundary denies,
-given `git add -- .` survives only as prose.
+records its coverage, so S10.4 owed *establishing* the orchestration claim
+rather than writing the section — **now done, `TASK-0104`**; and half the
+pre-committed checkpoint question was already answered in S9 and has been
+**replaced** with one that is still open — whether a binding reintroduces
+what the role boundary denies, given `git add -- .` survives only as prose.
+
+## S10.4: Bionic cannot orchestrate — established, not dropped
+
+**`TASK-0104`, 2026-09-25.** The claim `PLAN-0006`, `ADR-0022` and the Bionic
+snapshot had all deliberately left unestablished is now checked against the
+live artifact and confirmed. **No externally scriptable surface exists**:
+`lms.exe`'s full subcommand tree is model/server/runtime management only;
+the documented REST v1, OpenAI-compat, Anthropic-compat and MCP-via-API
+endpoints (re-read 2026-09-25) are inference and in-chat tool-calling only.
+None creates a project, a session, or an orchestrator.
+
+**Bionic's orchestrator is real, and the finding is precise about that.**
+A bundled system prompt (*"You are the orchestrator agent … help the user
+create 'sessions'"*) paired with a `session_control` skill exposing
+`bionic_tool` calls does exist — but every call in it is something the model
+**inside an active Bionic chat turn** invokes; nothing external reaches it.
+The claim is "no external entry point," not "no orchestration concept,"
+which is the distinction that keeps the finding honest.
+
+**The trap named and avoided:** LM Studio's SDKs ship `model.act(prompt,
+[tools])`, a real agentic primitive that could be wired to hand-rolled
+functions. That would not be a Bionic binding — `.act()`'s tools carry
+**zero client-enforced permission boundary**, so the calling script would
+implement the entire boundary itself, borrowing none of Bionic's own
+mechanism. It would be a new, unenforced driver using an LM-Studio-served
+model as a backend, not a binding into this client.
+
+`configs/lm-studio-bionic/README.md` carries the full evidence;
+`ADR-0022`'s existing Consequences bullet gets one dated verification
+pointer, left otherwise as written.
 
 ## S10.1: the OpenCode binding ships — proven against a stub, not a client
 
@@ -93,17 +124,19 @@ upstream report, the human files it.
 
 **Open after the pass:** `B-035` (`ready` — the adjudicator's standard, the
 human's route) and `B-025` (`waiting`); the drafted OpenCode report in
-`TASK-0102`, unfiled; and S10.4, which still keeps the sprint open.
+`TASK-0102`, unfiled. S10.4 is now done (`TASK-0104`); all eight of S10's
+deliverables are complete, and closing the sprint is the human's decision.
 
-## REVIEW-0012: S10's work approved; the sprint stays open for S10.4
+## REVIEW-0012: S10's work approved; the sprint was held open for S10.4
 
 **2026-09-24.** Six of Phase 10's seven exit criteria met; **criterion 3
 partly** — the OpenCode port enforces what its roles declare, but two
 declared boundaries do not hold (the closer may `git add -- .`; a role may
 read the gate map). The first is now caught by the driver (`TASK-0097`),
 the second is `B-030`. Six backlog items raised, `B-029`…`B-034`. **S10.4
-(Bionic) has not started**, so closing the sprint or cutting S10.4 is the
-human's call.
+(Bionic) had not started** at review time; it is now done (`TASK-0104`,
+2026-09-25), so closing the sprint is the human's call rather than blocked
+on an unstarted deliverable.
 
 ## S10.7: the pilot closed two real tasks unattended — and found eighteen things
 

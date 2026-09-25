@@ -442,6 +442,12 @@ incidental.
   skill and the gate server. It has no user-authored agent-role directory
   (ADR-0020 clause 4) and no headless CLI, so there is no surface to bind an
   orchestrator into. Stated rather than implied.
+  **Verified against the live artifact 2026-09-25 (`TASK-0104`), not only
+  cited**: no CLI subcommand, REST/OpenAI-compat/Anthropic-compat/MCP-via-API
+  endpoint, or SDK call creates a project, session, or orchestrator from
+  outside a live GUI chat turn — `configs/lm-studio-bionic/README.md` carries
+  the full evidence. This paragraph is left as written per this ADR's own
+  dated-record convention; the pointer adds confirmation, not a new claim.
 
 ## Falsifiable claims
 
