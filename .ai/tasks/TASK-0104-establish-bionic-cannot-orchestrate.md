@@ -259,5 +259,5 @@ cut to a later sprint) is the human's decision, per `REVIEW-0012`.
 - Result: **done.** S10.4 is discharged: the claim is established with
   dated, sourced evidence rather than dropped or left open. Closing sprint
   S10 remains the human's decision.
-- Commit: *pending — recorded at landing.*
-- Push: *pending — recorded at landing.*
+- Commit: `0f198c3`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `388de5b..0f198c3`.
