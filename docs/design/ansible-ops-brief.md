@@ -38,6 +38,19 @@ ignored in group_vars — it is a play keyword and per-module argument only,
 with no global mechanism in ansible-core 2.20.8), and closes with
 **"Tracked as unenforced until then."** Re-verified verbatim 2026-09-15.
 
+> **Correction, 2026-09-23 (`TASK-0069`), recorded 2026-09-26 (`TASK-0108`).**
+> The accepted text above is kept as written, because it is what this brief
+> was accepted on. One half of it no longer holds. Under **`ansible-core`
+> 2.21.4** — the live toolchain; 2.20.8 is what was current when this brief
+> was accepted — `gather_subset` in `ansible.cfg` `[defaults]` is **not
+> rejected as an unknown key**. It is accepted **silently**: the run exits 0
+> with no error and no warning, and `ansible_mounts` is still collected.
+> That is **worse than this brief describes**, because the rejection it
+> promises is a diagnostic an operator would rely on and no longer gets.
+> Established by re-running both halves, not by re-dating the claim.
+> `skills/ansible-ops/references/hazards.md` is the current owner of this
+> behaviour and carries the measured result.
+
 Stated as the problem this design solves: **the knowledge required to change
 Ansible content safely exists only as prose in one estate's config files and
 in operators' heads, so it cannot be reliably reproduced by an agent or a new
@@ -179,7 +192,9 @@ trusted** (`loops/release-check/`'s own rule).
 - **`skills/ansible-ops/references/hazards.md`** — hazard *classes*, with F2
   as a named worked example: default fact gathering can stat a wedged
   clustered/FUSE mount; no global `gather_subset` mechanism exists in
-  ansible-core 2.20.8; **this repo ships no enforcement** (B-011 open).
+  ansible-core 2.20.8 — **still true under 2.21.4, re-run by `TASK-0069`,
+  and the failure mode is now silent rather than rejected (see the
+  correction above)**; **this repo ships no enforcement** (B-011 open).
 - **`skills/ansible-ops/references/check-mode-fidelity.md`** — C12: a clean
   `--check` is not proof, with the `proxmox_storage` field-level-drift gap as
   the dated illustration, and the generalisation that `changed=0` does not

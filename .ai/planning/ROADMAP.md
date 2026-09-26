@@ -184,8 +184,11 @@ any agent or human can understand, trust, and deploy.
   is the checkpoint, and the human ratified all three ADRs the same day, so
   the phase is COMPLETE.** Its four follow-ups are the review's and outlive
   the phase: the gate's undecided budget, a moved `ansible-core` version
-  recorded nine times, whether anything re-checks external claims, and
-  `skills/ansible-ops/` still unexercised against a live estate.
+  ~~recorded nine times~~ — **re-counted 2026-09-26 (`TASK-0108`): nine at
+  `REVIEW-0010`, five on 2026-09-23, and **three** live claims today, in two
+  files, all three now corrected. The ~38 other mentions are dated records
+  and are correct as written** — whether anything re-checks external claims,
+  and `skills/ansible-ops/` still unexercised against a live estate.
   - **MET** — `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
     execution or system package installation (TASK-0026). It now carries a
     `workspace_root_bounds` key splitting `bounded` from `not_bounded` per

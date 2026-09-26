@@ -83,6 +83,42 @@ earlier**. That is luck, not design: `Driver.step1_preflight_repo()` refuses
 a dirty tree, so without that ignore an unattended run using worktree-isolated
 subagents would refuse to start.
 
+## The `ansible-core` version count, re-counted and closed
+
+**`TASK-0108`, 2026-09-26.** `SPRINT-CURRENT.md` item 6's own instruction was
+**"re-count before acting"**, and the count is why it closes rather than
+sweeping again.
+
+**Live version, confirmed by running the binary today**, not cited:
+`ansible-lint 26.8.0 using ansible-core 2.21.4` — unchanged since
+`TASK-0069`'s 2026-09-23 check.
+
+**The trajectory: nine (`REVIEW-0010`) → five (2026-09-23) → three today**,
+in two files. The other **~38 mentions are dated records** — task logs,
+reviews, session notes, archived sprints, `ADR-0014`'s evidence section — and
+are **correct as written**. Not touching them is the finding, not an
+omission: a bulk replace of `2.20.8` would have destroyed accurate history
+and made this repo claim things were observed that were not.
+`skills/ansible-ops/references/hazards.md` and `ADR-0014` were already
+correct — `TASK-0069` and `TASK-0054` respectively — and were left alone.
+
+**The one that mattered was not a version number.**
+`docs/design/ansible-ops-brief.md` asserted that `gather_subset` in
+`ansible.cfg` `[defaults]` is *"rejected as an unknown key"*. `TASK-0069` had
+already disproved that by re-running it: under 2.21.4 the setting is accepted
+**silently** — exit 0, no error, no warning, and `ansible_mounts` still
+collected. That is **worse than the brief describes**, because the rejection
+it promises is a diagnostic an operator would rely on and no longer receives.
+The brief is `status: accepted`, so it was corrected in `TASK-0069`'s shape:
+the accepted text stays visible and a dated correction sits beside it.
+`ROADMAP.md`'s "recorded nine times" was the third stale claim.
+
+**What survives under this heading is a measurement, not a sweep**:
+`ADR-0014`'s standing caveat that the "53 rules / 0 real violations" figure
+has never been re-run under 2.21.4. Separately noted and deliberately not
+acted on — `ansible-lint` **26.9.0** is available upstream and nothing in
+this repo tracks it.
+
 ## Sprint S10 is CLOSED
 
 **`TASK-0105`, 2026-09-26.** Closed on `REVIEW-0012`, archived to

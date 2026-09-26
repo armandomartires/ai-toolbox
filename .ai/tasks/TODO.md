@@ -658,7 +658,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0108`.**
+untested. **Next free number: `TASK-0109`.**
 
 Two of that queue were taken up on 2026-09-26, on the human's routing, with
 no sprint opened — the `Post-S4`/`Post-S5` shape:
@@ -679,6 +679,15 @@ no sprint opened — the `Post-S4`/`Post-S5` shape:
       way: Claude Code puts its worktree **inside** the repo, which the
       runbook forbids for `worktree.sh`; `git status` stayed clean only
       because `TASK-0106` had just gitignored `.claude/`.
+- [x] TASK-0108 — item 6, the `ansible-core` version count (done). Its own
+      instruction was *re-count before acting*, and the count is the result:
+      nine → five → **three** live claims, in two files. **~38 other mentions
+      are dated records and were deliberately left alone** — a bulk replace
+      would have falsified them. Live version `2.21.4`, confirmed by running
+      the binary. The real find was not a version: the design brief promised
+      that `gather_subset` in `ansible.cfg` is *rejected*, and under 2.21.4 it
+      is accepted **silently** — worse, because the diagnostic it promises no
+      longer appears.
 
 ## Post-S9 (superseded by the promotion above)
 

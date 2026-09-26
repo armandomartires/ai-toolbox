@@ -66,9 +66,31 @@ mean inventing the second case it waits for.
    only**) and a role reading the gate map (`B-030`, closed by `TASK-0098`,
    also stub-tested). **The Claude Code binding has never been exercised
    against a real run** — stub-proven only, `REVIEW-0012` finding 4.
-6. **`ansible-core`'s version is recorded in several places and has moved.**
-   `REVIEW-0010` said nine; a count on 2026-09-23 found **five**, so
-   `TASK-0069`'s sweep reduced but did not close it. Re-count before acting.
+6. **`ansible-core`'s version — RE-COUNTED AND CLOSED 2026-09-26 by
+   `TASK-0108`.** The instruction was "re-count before acting", and the count
+   is why this closes rather than sweeping again: nine at `REVIEW-0010`, five
+   on 2026-09-23, **three** live claims today, in two files. The other **~38
+   mentions are dated records** — task logs, reviews, sessions, archived
+   sprints, an ADR's evidence section — and are **correct as written**; a
+   bulk replace would have destroyed them and made the repo claim things were
+   observed that were not. `hazards.md` and `ADR-0014` were already correct
+   and were not touched.
+
+   **The live version is `2.21.4`, confirmed by running the binary on
+   2026-09-26**, unchanged since `TASK-0069`.
+
+   **What the count actually found was not a version number.**
+   `docs/design/ansible-ops-brief.md` asserted `gather_subset` in
+   `ansible.cfg` is *"rejected as an unknown `[defaults]` key"*. Under 2.21.4
+   it is accepted **silently** — exit 0, no warning, mounts still collected —
+   which is **worse**, because the brief promises a diagnostic the operator
+   no longer gets. Corrected in `TASK-0069`'s shape: accepted text preserved,
+   dated correction added.
+
+   **What remains under this heading is a measurement, not a sweep**, and it
+   is `ADR-0014`'s standing caveat: the "53 rules / 0 violations" figure has
+   still never been re-run under 2.21.4. Also noted and not acted on:
+   `ansible-lint` **26.9.0** is available upstream; nothing here tracks it.
 7. **`skills/ansible-ops/` has never been exercised against a live estate.**
    Its closing item (`B-010`) was closed *with this limitation stated* — a
    closed item is not a claim of quality.
