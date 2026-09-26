@@ -182,5 +182,5 @@ human decision.
   - `git status --porcelain` — `.ai/` only; no component file changed
 - Result: **done.** Sprint S10 is closed. No sprint is open, stated as a
   state rather than an oversight.
-- Commit: *pending — recorded at landing.*
-- Push: *pending — recorded at landing.*
+- Commit: `f412d89`. Pre-commit hook ran `tests/validate.sh`: OK.
+- Push: **confirmed** — `origin/master` `a42b5ab..f412d89`.
