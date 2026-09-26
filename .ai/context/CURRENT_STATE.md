@@ -1,34 +1,55 @@
 # Current State
 
-Last updated 2026-09-25. Sprint S10 — Unattended runs: bindings, the gate
-server, and the pilot is open. Its eight deliverables stand as: S10.1 done
-(against a stub) — `TASK-0086`; S10.2 done (against a stub) — `TASK-0087`;
-S10.3 done — `TASK-0088`; S10.4 done — `TASK-0104`; S10.5 done — `TASK-0090`;
-S10.6 done; S10.7 done — `TASK-0092`; review done — `REVIEW-0012`. All eight
-deliverables are now done; closing the sprint is the human's decision. The
-dated `##` sections below carry the detail.
+Last updated 2026-09-26. **Sprint S10 is CLOSED** on `REVIEW-0012`
+(`TASK-0105`), archived to
+`.ai/planning/sprints/SPRINT-S10-unattended-bindings.md`; `ROADMAP.md`'s
+Phase 10 is COMPLETE. All eight deliverables landed: S10.1 (against a stub)
+— `TASK-0086`; S10.2 (against a stub) — `TASK-0087`; S10.3 — `TASK-0088`;
+S10.4 — `TASK-0104`; S10.5 — `TASK-0090`; S10.6 — no task of its own; S10.7
+— `TASK-0092`; review — `REVIEW-0012`. **No sprint is open.** The dated `##`
+sections below carry the detail.
 
-## Sprint S10 is OPEN
+## Sprint S10 is CLOSED
 
-**`TASK-0085`, 2026-09-23.** Promoted with **Phase 10** added in the same
-commit. Both ADRs it rests on are `Accepted`; `ADR-0023` matters here
-specifically, because S10 will run concurrent sessions and now rests on a
-ratified rule for doing so.
+**`TASK-0105`, 2026-09-26.** Closed on `REVIEW-0012`, archived to
+`.ai/planning/sprints/SPRINT-S10-unattended-bindings.md`, with **Phase 10
+marked COMPLETE in the same commit** — the same atomic-commit control every
+promotion and closure since `TASK-0077` has used.
 
-**S10 executes where S9 declared.** It ships runnable code, registers a server
-that can launch a seventy-minute build, and ends with a real unattended run.
-**Nothing has run unattended yet** — S9's core is inert without a binding, and
-every binding is here.
+**Six of seven exit criteria met; criterion 3 stays partly met**, carried
+into the closure exactly as `REVIEW-0012` found it rather than upgraded:
+the OpenCode binding enforces the command boundaries its roles declare, but
+two declared boundaries do not hold (bulk staging; a role reading the gate
+map), and the Claude Code binding was never exercised against a real run.
+
+**S10.4 was the sole closure blocker `REVIEW-0012` named, and `TASK-0104`
+discharged it the day before this closure** rather than the sprint closing
+over an unstarted deliverable. Established, against the live artifact:
+Bionic has no externally scriptable surface — CLI, REST, OpenAI-compat,
+Anthropic-compat, MCP-via-API, or SDK — that creates a project, session, or
+orchestrator outside a live GUI chat turn, so it cannot be a binding's
+target.
+
+**Promoted `TASK-0085`, 2026-09-23.** S10 executed where S9 declared: it
+shipped runnable code, registered a server that can launch a seventy-minute
+build, and ended with a real unattended run against a real repository —
+this repo itself, on the human's choice.
 
 **Four stale claims were corrected at promotion**, two of which would have
-cost real work: **S10.1's contract, checker and fixtures already ship**
+cost real work: **S10.1's contract, checker and fixtures already shipped**
 (`TASK-0062`, with the red-then-green proof already run), so only the
-**OpenCode driver** remains; `TASK-0059` is done; Bionic's snapshot already
-records its coverage, so S10.4 owed *establishing* the orchestration claim
-rather than writing the section — **now done, `TASK-0104`**; and half the
-pre-committed checkpoint question was already answered in S9 and has been
-**replaced** with one that is still open — whether a binding reintroduces
-what the role boundary denies, given `git add -- .` survives only as prose.
+**OpenCode driver** remained; `TASK-0059` was done; Bionic's snapshot already
+recorded its coverage, so S10.4 owed *establishing* the orchestration claim
+rather than writing the section — done by `TASK-0104`; and half the
+pre-committed checkpoint question was already answered in S9 and was
+**replaced** with one this sprint answered partly — whether a binding
+reintroduces what the role boundary denies, given `git add -- .` survives
+only as prose.
+
+**`B-035`, raised 2026-09-25 while closing `B-029`, was not carried forward
+by the outgoing sprint file's own carried-forward section** — caught by
+reading the backlog directly at closure rather than trusting that list, and
+now in the fresh `SPRINT-CURRENT.md`.
 
 ## S10.4: Bionic cannot orchestrate — established, not dropped
 

@@ -691,51 +691,63 @@ about a third-party client that nobody checked.
   describing S9's completion as "unattended runs work" is overstating it, in
   the same way `ADR-0019` warned about end-to-end autonomy.
 
-## Phase 10 — Unattended runs: bindings, the gate server, and the pilot (OPEN 2026-09-23)
+## Phase 10 — Unattended runs: bindings, the gate server, and the pilot (COMPLETE 2026-09-26)
 
-> **Opened 2026-09-23 by `TASK-0085`**, in the same commit as this section.
-> Planned by `PLAN-0006`; held in `SPRINT-CURRENT.md`. Delivers the three
-> client bindings, this repo's **first authored (Python) MCP server**, the
-> wiring snapshots, and **one live pilot run**.
+> **Closed 2026-09-26 on `REVIEW-0012`** (`TASK-0105`), archived at
+> `.ai/planning/sprints/SPRINT-S10-unattended-bindings.md`. **Six of seven
+> exit criteria met; criterion 3 stays partly met**, per the review's own
+> verdict, not upgraded on closure.
+>
+> | Exit criterion | Evidence |
+> |---|---|
+> | 1 — human authorization block exists before any destructive capability | **Met.** Signed in `TASK-0088` before the server existed; `validate.sh` observed failing with `granted = false` and with a nonexistent `task` path |
+> | 2 — `ADR-0010` superseded, three obligations discharged | **Met.** `ADR-0024`; `smoke-mcp.sh` handshakes authored servers (`PASS gates`); the guide rewritten from a server that ran — which found the template could be neither built nor imported |
+> | 3 — the OpenCode driver enforces rather than asks | **Partly met.** Enforced where declared: every role `(primary)`, checked against `opencode agent list`; `-m` on every call; a silent refuter synthesised `refuted: true`, observed live; no driver git write in any run. **Not enforced:** bulk staging (`git add -- .` / `git add -- "."` allowed and staged the whole tree, `TASK-0092` finding 18); a role opened the gate map with its `read` tool (finding 10) |
+> | 4 — a binding reintroduces nothing the role boundary denies | **Met for the binding.** No driver git write in any run, stub- and live-observed. The *role boundary* itself admits `git add -- .`; the binding now catches the result (`TASK-0097`, stub-tested) |
+> | 5 — a null refuter fails closed in every binding | **Met.** Both suites revert-proved; observed live in `s10-7-live` |
+> | 6 — no binding states a rule of its own | **Met, mechanically.** `check-binding.sh` accepts both templates filled and the pilot's real binding — checks declarations, not the implementation |
+> | 7 — the pilot runs, believed only if it finds something | **Met.** Two real tasks closed, verified, landed; **eighteen findings**, two of which halted the run correctly before it could act on a wrong premise |
+>
+> **S10.4 (Bionic) was the sole closure blocker `REVIEW-0012` named**, and it
+> is now discharged (`TASK-0104`, 2026-09-25): established, against the live
+> artifact rather than asserted, that no CLI subcommand, REST/OpenAI-compat/
+> Anthropic-compat/MCP-via-API endpoint, or SDK call creates a project,
+> session, or orchestrator outside a live GUI chat turn. Bionic's own
+> orchestrator (a system prompt plus a `session_control` skill) is real but
+> has no external, scriptable entry point, so it cannot be a binding's
+> target.
+>
+> **The pilot is what made criterion 3's real answer visible.** Fifty-two
+> stub tests across both bindings proved every declared behaviour
+> revert-proof; the live run then found seven things no stub could reach —
+> glob blindness, missing preflight evidence, skill-read denials, a quoting
+> asymmetry in permission matching, the bulk-staging allow, a false
+> self-claim in the closer's log, and timeout sizing. Six backlog items
+> raised and closed from it (`B-029`…`B-034`); one more (`B-035`) raised
+> while closing `B-029` and left open, carried to the next `SPRINT-CURRENT.md`.
+>
+> **The Claude Code binding was never exercised against a real run** — stub-
+> proven only, `REVIEW-0012` finding 4. Carried forward, not closed here.
+>
+> **Originally opened 2026-09-23 by `TASK-0085`**, in the same commit as this
+> section. Planned by `PLAN-0006`. Delivered the three client bindings, this
+> repo's **first authored (Python) MCP server**, the wiring snapshots for all
+> three clients, and one live pilot run.
 
-**What makes this phase different from Phase 9, and why it carries more
-risk.** S9 was documentation and declaration. **S10 executes**: it ships
-runnable code, registers a server that can launch a seventy-minute build, and
-ends with a real unattended run against a real repository.
-
-**Nothing has run unattended yet.** S9's portable core is inert without a
-binding, and every binding is here. Phase 10 is where the capability either
-works or is shown not to.
-
-### Exit criteria — written now, so the checkpoint is judged against them
-
-| # | Criterion | How it will be judged |
-|---|---|---|
-| 1 | The **human authorization block** exists before any destructive capability is declared | `mcp-servers/gates/`'s `[tool.ai-toolbox]` carries `authorization.granted`, `by`, `date` and a `task` path that **exists** — and `tests/validate.sh` now enforces exactly that for the authored shape (`TASK-0059`). The gate is mechanical; the signature is not |
-| 2 | `ADR-0010` is **superseded on its own terms**, with its three obligations discharged | A superseding ADR; `smoke-mcp.sh` authored-shape support; the guide's authored section verified against a server that has actually run — not against the template, which is all `TASK-0059` could do |
-| 3 | The OpenCode driver enforces rather than asks | Demonstrated against an **emitted file and a real run**, not asserted |
-| 4 | **A binding reintroduces nothing the role boundary denies** | `git add -- .` is **not closable at the glob layer** (`TASK-0083`) and survives as prose in two role bodies. A binding that stages on a role's behalf would bypass even that. Show it does not |
-| 5 | A null refuter **fails closed** in every binding | `refuted: true` synthesised on a null return — a silent refuter is not a clean bill of health |
-| 6 | No binding states a rule of its own | `skills/unattended-ops/scripts/check-binding.sh` already exists and already fails on cue; run it against each of the three |
-| 7 | **The pilot runs, and is believed only if it finds something** | One real run of at most two tasks: dry-run first, then live, watched. S7's pilot found twelve false self-claims in one skill; **treat a pilot that finds nothing as a reason to doubt the pilot** |
-
-### Pre-committed checkpoint question
+### Pre-committed checkpoint question, answered
 
 > **Did the OpenCode port actually enforce what the Claude one only asks for —
 > demonstrated against an emitted file and a real run, not asserted?**
 
-**One half of the original specific was already answered in S9 and has been
-replaced** — `git add -A` was observed denied by `TASK-0055` and re-verified
-by `TASK-0083`, so asking it again would let this checkpoint pass on another
-sprint's work. What remains open is above, criteria 3 and 4.
-
-### What this phase inherits already built
-
-**Two of S10.1's three parts ship already.** `TASK-0062` delivered the binding
-contract, the completeness checker and both fixtures, with the red-then-green
-proof run. **Only the OpenCode driver remains.** Recorded here because the
-sprint file said otherwise until promotion corrected it, and a session
-rebuilding a working checker is the most expensive kind of stale claim.
+**Partly, and the pilot is what showed where.** Criterion 4's specific —
+whether a role whose allowlist omits `git push` cannot push, for the
+*driver-invoked* path — was observed: no role attempted `git push`,
+`git add -A`, a reset, or a checkout in either pilot run, and `git add -A`
+was denied when tried in isolation. Criterion 4's second half — whether the
+binding reintroduces what the role boundary denies — is **met for the
+binding** (`TASK-0097` catches bulk staging structurally) but exposes that
+**the role boundary itself does not deny it**, which is `TASK-0083`'s
+recorded limitation, now confirmed live rather than only reasoned about.
 
 ## Risks
 - Client config format drift; symlink issues on Windows; skill spec

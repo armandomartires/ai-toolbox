@@ -605,7 +605,7 @@ brief says they are *"not blocked by this ADR at all"*.
 met, criterion 7 having been closed by `TASK-0080` **before** closure rather
 than closing over it.
 
-## Sprint S10 — Bindings, the gate server, the pilot (OPEN — promoted 2026-09-23)
+## Sprint S10 — Bindings, the gate server, the pilot (CLOSED 2026-09-26 by REVIEW-0012)
 
 **Promoted by `TASK-0085`**, in the same commit as `ROADMAP.md`'s Phase 10.
 Both ADRs it rests on are `Accepted`. It **allocates no task ids** — one is
@@ -643,7 +643,22 @@ taken when a brief is written. **Next free: `TASK-0098`.**
 - [x] S10.6 — registry and state (done — confirmed by REVIEW-0012)
 - [x] REVIEW-0012 — S10 checkpoint (work approved; criterion 3 partly met; B-029…B-034 raised; sprint held open for S10.4)
 - [x] TASK-0104 — S10.4: established that Bionic cannot orchestrate an unattended run (done)
-- [ ] REVIEW — checkpoint on the completed sprint (S10.4 now done; closing S10 is the human's decision)
+- [x] TASK-0105 — close sprint S10 on REVIEW-0012; archive to sprints/, mark
+      Phase 10 COMPLETE in ROADMAP.md, carry B-035 forward (done)
+
+**Sprint S10 complete.** Checkpoint: `REVIEW-0012`. Six of seven exit
+criteria met, criterion 3 partly met — carried into the closure as found,
+not upgraded. Archived to
+`.ai/planning/sprints/SPRINT-S10-unattended-bindings.md`.
+
+## Post-S10 (no sprint open)
+
+Opening the next sprint is a human decision. The outstanding queue lives in
+`.ai/planning/SPRINT-CURRENT.md`: the `git add -- .` glob-layer limitation;
+`worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
+`B-035` (`ready`, the adjudicator's decision standard); the Claude Code
+binding's never having run against a real run; and `ADR-0022` F7/F9,
+untested. **Next free number: `TASK-0106`.**
 
 ## Post-S9 (superseded by the promotion above)
 

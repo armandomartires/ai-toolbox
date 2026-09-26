@@ -1,101 +1,17 @@
-# Sprint S10 — Unattended runs: bindings, the gate server, and the pilot
+# No sprint is open
 
-**OPEN. Promoted 2026-09-23** by `TASK-0085`, in the same commit that added
-**Phase 10** to `ROADMAP.md` — the control that file asks for, since nothing
-mechanical enforces the pairing.
+**S10 closed 2026-09-26 on `REVIEW-0012`** (`TASK-0105`), after `TASK-0104`
+discharged its one remaining deliverable (S10.4, the Bionic finding).
+Archived to `.ai/planning/sprints/SPRINT-S10-unattended-bindings.md`.
+`ROADMAP.md`'s **Phase 10 is COMPLETE**, marked in the same commit as this
+file's move — the atomic control this repo has used for every promotion and
+closure since `TASK-0077`, since nothing mechanical enforces roadmap/sprint
+agreement.
 
-> **Its precondition is met.** This file read *"nothing here can start until S9
-> has delivered the loop, the skill and the nine roles."* S9 delivered all
-> three and closed on `REVIEW-0011` with all seven exit criteria met. Both ADRs
-> this sprint rests on are **`Accepted`** — `ADR-0022` (`TASK-0076`) and
-> **`ADR-0023`** (`TASK-0084`), the latter mattering here specifically because
-> S10 will run concurrent sessions and now rests on a ratified rule for it.
->
-> **Four claims this file carried have been corrected rather than inherited**,
-> because a promoted sprint file is read as current and two of them would have
-> sent a session to rebuild something that already ships. They are marked
-> **[corrected]** in place below.
+**Opening the next sprint is a human decision.** Nothing below is scheduled;
+it is listed so closing S10 did not quietly drop anything still open.
 
-Planned by `PLAN-0006`. Delivers the three client bindings, this repo's **first
-authored (Python) MCP server**, the wiring snapshots, and one live pilot run.
-
-## What makes this sprint different from S9
-
-S9 is documentation and declaration. S10 executes: it ships runnable code, it
-registers a server that can launch a seventy-minute build, and it ends with a
-real unattended run against a real repository.
-
-Three things therefore carry unusual weight:
-
-1. **A human authorization step is mandatory and cannot be improvised.** The
-   gate server's `capabilities.destructive` is `true` — via its command map it
-   rebuilds workbooks, rewrites workbook VBA and queries, and force-terminates
-   Excel processes it started. `AGENTS.md` requires explicit human authorization
-   in the task file, and the authoring guide requires an `authorization` block
-   whose `task` is a path validation asserts exists.
-2. **`ADR-0010` is superseded here, on its own terms**, and inherits its three
-   named obligations: `smoke-mcp.sh` authored-shape support, the authoring
-   guide's authored section verified against reality, and a superseding ADR.
-3. **The pilot is the point.** S7's pilot (`TASK-0046`) found twelve false
-   self-claims in one new skill and produced `B-021`. Budget for the same, and
-   treat a pilot that finds nothing as a reason to doubt the pilot.
-
-## Deliverables
-
-| # | Depends on | Status | What |
-|---|---|---|---|
-| S10.1 | S9 | **done** (against a stub) — `TASK-0086` | **[corrected]** **Only the OpenCode driver remains.** The binding contract (`skills/unattended-ops/templates/binding.md`), the checker (`scripts/check-binding.sh`) and both fixtures **already ship** — `TASK-0062` built them and already ran the red-then-green proof: the incomplete fixture exits 1 naming eleven defects, the complete one exits 0. **Do not rebuild them.** |
-| S10.2 | S9 | **done** (against a stub) — `TASK-0087` | The Claude Code Workflow binding: `arm-autopilot.js` de-domained into a template carrying no rule of its own. |
-| S10.3 | S9 (`TASK-0059` **done**) | **done** — `TASK-0088`; `ADR-0024` supersedes `ADR-0010`; **not wired** until S10.5 | `mcp-servers/gates/` — first authored Python server; `smoke-mcp.sh` authored-shape support; supersede `ADR-0010`; **human authorization block**. Highest risk; independent of S10.1/S10.2. |
-| S10.4 | S10.3 | **done** — `TASK-0104` | **[corrected]** The Bionic binding. `configs/lm-studio-bionic/README.md` **already recorded this client's coverage** (`TASK-0080`) — zero of the nine roles, for want of a user-authored agent directory (`ADR-0020`). `TASK-0104` **established** the further claim rather than dropping it: no CLI subcommand, REST/OpenAI-compat/Anthropic-compat/MCP-via-API endpoint, or SDK call creates a project, session, or orchestrator from outside a live GUI chat turn, so Bionic cannot be a binding's target. |
-| S10.5 | S10.1, S10.2, S10.3 | **done** — `TASK-0090` | `configs/claude-code/` and `configs/opencode/`; run `install.sh` for both clients and record the emission output **verbatim** (F6). |
-| S10.6 | S10.5 | **done** — no task of its own: the registry regenerated where a component changed (`TASK-0088`), state updated by every task; confirmed by `REVIEW-0012` | Regenerate `docs/registry.md`; update `.ai/context/CURRENT_STATE.md`. |
-| S10.7 | S10.5, S10.1 | **done** — `TASK-0092`: both pilot tasks closed unattended and landed; 18 findings | **Pilot.** One real unattended run of at most two tasks: dry-run first, then live, watched. |
-| review | all | **done** — `REVIEW-0012`: work approved, criterion 3 partly met; sprint was held open for S10.4, now `done` (`TASK-0104`) | Sprint checkpoint. |
-
-## Two design decisions carried in from `PLAN-0006`, to be honoured not re-derived
-
-- **Rule 2 becomes structural in the OpenCode binding.** The driver invokes the
-  gate from its own map and hands the agent only the evidence to read, so **no
-  agent in the run ever sees a verification command string**. This is a
-  correction to the original harness, not a concession to it.
-- **A null refuter fails closed.** `arm-autopilot.js` lets a refuter returning
-  nothing flow into the adjudicator as an absence of objections. Every binding
-  must synthesise `refuted: true` on a null return. A silent refuter is not a
-  clean bill of health.
-
-## Pre-committed checkpoint question
-
-> **Did the OpenCode port actually enforce what the Claude one only asks for —
-> demonstrated against an emitted file and a real run, not asserted?**
-
-**[corrected] Half of the original specific was already demonstrated in S9 and
-has been replaced.** The `git add -A` half — *"that `git add -A` does not
-resolve to `allow` through a broader glob"* — was observed denied by
-`TASK-0055`'s F4 and re-verified after narrowing by `TASK-0083`. Asking it
-again would let this checkpoint pass on work another sprint did.
-
-**What is still open, and what this checkpoint must therefore demonstrate:**
-
-1. That a role whose allowlist omits `git push` **cannot push** — still
-   unobserved for the *driver-invoked* path, as opposed to a fixture.
-2. **That the binding does not reintroduce what the role boundary denies.**
-   `TASK-0083` established that `git add -- .` **cannot be closed at the glob
-   layer** — an equal-length deny loses, and any longer pattern also matches
-   legitimate dotfile paths. The rule lives in two role bodies as prose. **A
-   binding that stages on the role's behalf would bypass even that.** Show it
-   does not.
-
-`scripts/emit-agents.py`'s own comments record the ordering failure happening
-once already, when alphabetical sorting put `git push*: ask` after
-`git push --force*: deny` and a force-push silently resolved to *ask*.
-
-## Carried forward — open, and not S10's scope
-
-Inherited from the post-S9 queue. Nothing below is scheduled here; it is
-listed so closing a sprint did not quietly drop it.
-
-### Known limitations, not decisions
+## Known limitations, not decisions
 
 1. **`git add -- .` cannot be closed at the glob layer**, and is a stated
    limitation rather than an open fix. `TASK-0083` closed the other two
@@ -105,33 +21,41 @@ listed so closing a sprint did not quietly drop it.
    equal-length deny **lost**, observed, and any longer pattern also matches
    legitimate dotfile paths like `.ai/tasks/x.md`. The deny was **removed
    rather than shipped non-firing**, and the rule lives in `git-ops`'s and
-   `closer`'s bodies, labelled as weaker than a gate. Reopen only if OpenCode's
+   `closer`'s bodies, labelled as weaker than a gate. `TASK-0097`/`TASK-0098`
+   now catch the *result* at the binding layer for OpenCode, stub-tested
+   only; the underlying glob hole is unchanged. Reopen only if OpenCode's
    matcher changes.
 
-### Carried forward, still open
+## Carried forward, still open
 
 2. **`worktree-only` has no settled Claude Code emission.** `ADR-0018` clause
    7's leftover, owned by `TASK-0040`. `TASK-0056` attempted it and the run
    was **confounded** by permission denials, so it could not distinguish
    isolation from refusal. `TASK-0058` then left it open *explicitly*, which
    is the honest outcome. The single question that settles it: **does a
-   `worktree`-isolated *subagent's* commit reach the real tree?** All nine S9
+   `worktree`-isolated *subagent's* commit reach the real tree?** All nine
    roles declare the term.
 3. **`B-025`** — no vocabulary term for *"may call only this MCP server"*.
    **`waiting`** since 2026-09-25 (was `ready`; the human's choice to leave it
    open). Waiting on a **second** role that wants it: one instance is a case,
    two is a vocabulary.
-4. **~~The wiring-section gate is `server.json`-only.~~ CLOSED 2026-09-24 by
-   `TASK-0088`** — it reads both shapes now, and was observed failing on
-   `gates` before its sections existed. Kept for the record: `TASK-0073`'s check
-   behind *"The first two triggers are checked"* reads manifests, so an
-   authored server with a required variable or a destructive tool would owe a
-   section and never be asked for one. Goes false when `TASK-0067` ships the
-   first authored server. Found by `TASK-0059`.
-5. **~~`loops/release-check/` step 8 says to write a commit hash back *"and
-   amend"*~~ CLOSED 2026-09-24 by `TASK-0093`**, which changes the hash just
-   recorded. This repo's own recent history uses the follow-up-commit form
-   instead. Found by `TASK-0061`.
+4. **`B-035`** — the adjudicator's decision standard
+   (`skills/unattended-ops/references/verdicts.md`, `references/evidence.md`)
+   is not in its prompt in the OpenCode binding, which carries the enum and
+   the return shape only, and the skill is outside the role's worktree.
+   **`ready`** since 2026-09-25 (raised by `TASK-0101` while closing
+   `B-029`). The pilot's adjudicator could not read either reference and
+   still decided both tasks correctly, so nothing observable broke — but the
+   gap is real and needs a route, the human's: the driver embeds the two
+   references' text in the prompt, or the standard is accepted as
+   body-plus-enum and `verdicts.md` stops being described as what the role
+   applies.
+5. **S10's own criterion 3 gaps.** Two declared boundaries the OpenCode
+   binding does not enforce: bulk staging (`git add -- .` /
+   `git add -- "."`, closed structurally by `TASK-0097` but **stub-tested
+   only**) and a role reading the gate map (`B-030`, closed by `TASK-0098`,
+   also stub-tested). **The Claude Code binding has never been exercised
+   against a real run** — stub-proven only, `REVIEW-0012` finding 4.
 6. **`ansible-core`'s version is recorded in several places and has moved.**
    `REVIEW-0010` said nine; a count on 2026-09-23 found **five**, so
    `TASK-0069`'s sweep reduced but did not close it. Re-count before acting.
@@ -140,27 +64,24 @@ listed so closing a sprint did not quietly drop it.
    closed item is not a claim of quality.
 8. **An untested commitment, stated a third time.** *"If a sprint shrinks, the
    honest cut is a product, never the spike"* has now been stated by three
-   sprints and exercised by none. S9 did not shrink either. It should be
-   restated in the next plan that risks shrinking, not retired as vindicated.
+   sprints and exercised by none. Neither S9 nor S10 shrank either. It
+   should be restated in the next plan that risks shrinking, not retired as
+   vindicated.
+9. **`ADR-0022` F7 and F9 are untested.** F7 — whether routing every gate
+   through one detaching entry point keeps each agent shell call inside the
+   client's cap — every pilot gate took 1–3 s, too short to test the claim.
+   F9 — whether a run interrupted between the gate step and the close step
+   leaves the tracker untouched — the one pilot interruption came before any
+   close, so the window it names is still unobserved.
 
-**Closed before this sprint opened, and not to be re-raised:** `B-018`,
-`B-021`, `B-023`, `B-024`, `B-026`, `B-027`, `B-028`.
+**Closed before or during S10, and not to be re-raised:** `B-018`, `B-021`,
+`B-023`, `B-024`, `B-026`, `B-027`, `B-028`, `B-029`, `B-030`, `B-031`,
+`B-032`, `B-033`, `B-034`.
 
-## Task numbering: this sprint allocates no ids
+## Task numbering
 
-**Deliberately, and for a reason observed rather than anticipated.** While
-`PLAN-0006` was being drafted, a concurrent session allocated `TASK-0068` and
-`TASK-0069` — both inside the range this sprint had provisionally reserved,
-twice, within one afternoon. So the deliverables above are named **by
-deliverable, not by id**: a sprint file that reserves ids it does not yet own
-publishes a claim the next session will silently break, and *a plan carrying
-stale ids is worse than one carrying none, because the ids look
-authoritative*. An id is taken **when a brief is written**, which is when
-`.ai/tasks/` can be read to see what is free. That is compatible with the
-promotion rule — briefs must exist before **code**, not before promotion.
-
-**Briefs written 2026-09-23:** `TASK-0086` (S10.1), `TASK-0087` (S10.2),
-`TASK-0088` (S10.3); `TASK-0089` (the gate-invoker rule, `ADR-0025`, outside the
-deliverable table); `TASK-0090` (S10.5); `TASK-0091` (pruning, `ADR-0026`); `TASK-0092` (S10.7, the pilot) and its two
-queued tasks `TASK-0093`, `TASK-0094`; `TASK-0095` (read, never glob); `TASK-0096` (preflight evidence); `TASK-0097` (commit-paths check); the post-review backlog pass, `TASK-0098`…`TASK-0103` (one per item, `B-029`…`B-034`); `TASK-0104` (S10.4, 2026-09-25). **Next free id: `TASK-0105`.**
-**Pilot target (S10.7), the human's choice 2026-09-24: ai-toolbox itself.**
+**Next free id: `TASK-0106`.** S10 ran `TASK-0086`…`TASK-0105`, with three
+of its briefs (`TASK-0055`, `TASK-0056` — S9's spikes — and `ADR-0022`
+itself) predating it, and `TASK-0068`/`TASK-0069` belonging to S8, run
+concurrently while S9/S10 were being planned. Take an id when a brief is
+written, not before — `.ai/tasks/` is the source of truth for what is free.
