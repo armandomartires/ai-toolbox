@@ -17,3 +17,14 @@ node_modules/
 # precondition, so an ignored-but-present directory is the expected state
 # for anyone who wants that server smoke-tested for real.
 .graphify/
+
+# Claude Code's in-repo directory. Every path it holds is either
+# machine-specific or an emission whose source is tracked elsewhere, so none
+# of it belongs in this repo's history: settings.json carries absolute
+# /mnt/c/... paths and per-session permission grants; .claude/skills/ and
+# .claude/agents/ were rejected outright when S7 was planned, as a
+# self-referential fourth copy competing with the validated install path;
+# and .claude/workflows/ is where the unattended-run binding is *emitted*,
+# its source being skills/unattended-ops/templates/bindings/claude-code/
+# (ADR-0018's one-source-per-client-emission shape, applied here too).
+.claude/
