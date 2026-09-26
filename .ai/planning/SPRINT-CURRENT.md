@@ -11,6 +11,12 @@ agreement.
 **Opening the next sprint is a human decision.** Nothing below is scheduled;
 it is listed so closing S10 did not quietly drop anything still open.
 
+**Two of the items below were taken up on 2026-09-26 on the human's routing,
+with no sprint opened** — the `Post-S4`/`Post-S5` shape. Item 4 (`B-035`) is
+closed; item 2 is measured but still open. Item 3 (`B-025`) was left
+untouched: it is `waiting` by the human's own choice, and closing it would
+mean inventing the second case it waits for.
+
 ## Known limitations, not decisions
 
 1. **`git add -- .` cannot be closed at the glob layer**, and is a stated
@@ -28,28 +34,32 @@ it is listed so closing S10 did not quietly drop anything still open.
 
 ## Carried forward, still open
 
-2. **`worktree-only` has no settled Claude Code emission.** `ADR-0018` clause
-   7's leftover, owned by `TASK-0040`. `TASK-0056` attempted it and the run
-   was **confounded** by permission denials, so it could not distinguish
-   isolation from refusal. `TASK-0058` then left it open *explicitly*, which
-   is the honest outcome. The single question that settles it: **does a
-   `worktree`-isolated *subagent's* commit reach the real tree?** All nine
-   roles declare the term.
+2. **`worktree-only` has no settled Claude Code emission.** Still open, but
+   **no longer unmeasured** — `TASK-0107`, 2026-09-26, ran the experiment
+   `TASK-0056` was confounded on, this time with denial reporting required of
+   the probe: `DENIALS: NONE`, so confinement and refusal are distinguishable.
+   **A worktree-isolated subagent's commit does not reach the real tree**
+   (`master` unmoved, commit not an ancestor, file absent — checked from the
+   main checkout). That question is answered and **it does not settle the
+   term**: `worktree-only` denies *access* outside the worktree, and what was
+   measured is *effect-isolation*. `ADR-0018` clause 8.2 stands, the term
+   table still reads "no per-agent equivalent", and all nine roles still
+   declare the term. **The next measurement is named in the ADR**: can such a
+   subagent read and write the main checkout by absolute path? Until that is
+   run, this stays open.
 3. **`B-025`** — no vocabulary term for *"may call only this MCP server"*.
    **`waiting`** since 2026-09-25 (was `ready`; the human's choice to leave it
    open). Waiting on a **second** role that wants it: one instance is a case,
    two is a vocabulary.
-4. **`B-035`** — the adjudicator's decision standard
-   (`skills/unattended-ops/references/verdicts.md`, `references/evidence.md`)
-   is not in its prompt in the OpenCode binding, which carries the enum and
-   the return shape only, and the skill is outside the role's worktree.
-   **`ready`** since 2026-09-25 (raised by `TASK-0101` while closing
-   `B-029`). The pilot's adjudicator could not read either reference and
-   still decided both tasks correctly, so nothing observable broke — but the
-   gap is real and needs a route, the human's: the driver embeds the two
-   references' text in the prompt, or the standard is accepted as
-   body-plus-enum and `verdicts.md` stops being described as what the role
-   applies.
+4. **`B-035` — CLOSED 2026-09-26 by `TASK-0106`** (`d50d220`). The human
+   chose the first route: **the driver embeds the two references' text in the
+   prompt**. It ships as a generated sibling file of `driver.py`, because the
+   driver is a template a consuming repository copies out and the references
+   would otherwise be at no known relative path; `tests/validate.sh` fails on
+   drift from the two sources, so the copy cannot become a second owner.
+   **The Claude Code binding has the same gap and was deliberately left** —
+   whether its roles can read the skill turns on item 2 above, which
+   `TASK-0107` has now measured but not settled. Re-raise there, not here.
 5. **S10's own criterion 3 gaps.** Two declared boundaries the OpenCode
    binding does not enforce: bulk staging (`git add -- .` /
    `git add -- "."`, closed structurally by `TASK-0097` but **stub-tested
