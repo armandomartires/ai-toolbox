@@ -7,7 +7,60 @@ Phase 10 is COMPLETE. All eight deliverables landed: S10.1 (against a stub)
 — `TASK-0086`; S10.2 (against a stub) — `TASK-0087`; S10.3 — `TASK-0088`;
 S10.4 — `TASK-0104`; S10.5 — `TASK-0090`; S10.6 — no task of its own; S10.7
 — `TASK-0092`; review — `REVIEW-0012`. **No sprint is open.** The dated `##`
-sections below carry the detail.
+sections below carry the detail. **Two post-S10 tasks have since been taken
+up on the human's routing, without opening a sprint** — `TASK-0106` (done)
+and `TASK-0107` (planned); the section immediately below carries them.
+
+## Post-S10 housekeeping and two routed items
+
+**2026-09-26.** With no sprint open, three things were closed or started on
+the human's instruction to close loose ends.
+
+**Housekeeping (`7a59f8c`).** The leftover `agent/pilot` worktree from the
+S10.7 pilot was removed — clean, and with no commits `master` did not have.
+`.claude/` was added to `.gitignore`: everything under it is either
+machine-specific (`settings.json` carried absolute `/mnt/c/...` paths and a
+permission grant for a worktree that no longer exists) or an emission whose
+source is tracked elsewhere. `.claude/skills/` and `.claude/agents/` were
+**rejected outright when S7 was planned**, and `.claude/workflows/` is where
+the Claude Code binding is emitted from
+`skills/unattended-ops/templates/bindings/claude-code/`. The rationale sits
+beside the entry, as `.graphify/`'s does.
+
+**`B-035` closed by `TASK-0106`.** The human chose **embed the references**
+over accepting the standard as body-plus-enum. The adjudicator now receives
+`references/verdicts.md` and `references/evidence.md` verbatim in its step-9
+prompt. It cannot read them itself — `worktree-only` denies the skill, which
+is why `prompt()` tells every role not to try — and `driver.py` is a template
+a consuming repository copies out, after which the references are at no known
+relative path. So the text ships as a **generated sibling file** that travels
+with the copy, and `tests/validate.sh` fails when it drifts from its two
+sources. That is `docs/registry.md`'s arrangement: a derived copy is
+allowed exactly as long as a gate proves it still matches.
+
+**The check was wrong the first time, and the gate caught it.** It was
+written with `git diff --quiet`, which reports no change for an **untracked**
+file — so it would have passed vacuously for as long as the generated file
+went uncommitted. A check that cannot fail is this repo's most-repeated
+lesson and it recurred here; replaced with generate-to-scratch-and-`cmp`,
+which does not depend on tracking. Recorded as a deviation in the task file.
+
+**A red proof was also wrong the first time.** Reverting the embed by hand
+broke `driver.py`, so the test failed with `IndexError` before the
+adjudicator was ever invoked — a failure for the wrong reason, which proves
+nothing. Redone against the genuine pre-change step 9: `AssertionError` on
+the exact assertion, with the run completing normally.
+
+**The Claude Code binding has the same gap and was deliberately left.** Its
+`step9Adjudicate` carries the enum and schema only. Whether *its* roles can
+read the skill turns on the `worktree-only` question below, so fixing it now
+would risk building a workaround for a denial that may not exist there.
+
+**`TASK-0107` is planned, not started**: the one experiment that settles
+`ADR-0018` clause 7 — does a `worktree`-isolated subagent's commit reach the
+real tree? `TASK-0056` ran it and was confounded by permission denials, so
+the brief makes distinguishing **confinement from refusal** an acceptance
+criterion rather than an afterthought.
 
 ## Sprint S10 is CLOSED
 

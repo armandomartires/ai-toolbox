@@ -1321,5 +1321,37 @@ sys.exit(1 if bad else 0)
 PY
 fi
 
+# --- The adjudicator's decision standard is a faithful copy ----------------
+#
+# The OpenCode binding ships decision-standard.md so the adjudicator can be
+# given the standard it applies: every role declares `worktree-only`, so it
+# cannot open the skill that owns that standard, and driver.py is a template
+# that gets copied out of this skill anyway (B-035, TASK-0106).
+#
+# A copy with no check is how the gap B-035 names reappears: the references
+# get edited, the binding keeps prompting with last month's standard, and
+# nothing says so. This is the docs/registry.md arrangement — a derived file
+# is allowed exactly as long as a gate proves it still matches its sources.
+STANDARD=skills/unattended-ops/templates/bindings/opencode/decision-standard.md
+if [ -e skills/unattended-ops/references/verdicts.md ]; then
+  if [ ! -r "$STANDARD" ]; then
+    echo "STANDARD: missing $STANDARD — run scripts/sync-decision-standard.sh"
+    fail=1
+  elif ! STANDARD_OUT="$STANDARD.check" scripts/sync-decision-standard.sh >/dev/null 2>&1; then
+    echo "STANDARD: scripts/sync-decision-standard.sh failed"
+    fail=1
+  # Compared against a fresh generation, not against `git diff`: an
+  # untracked file has no diff, so the git form would have passed
+  # vacuously for exactly as long as the file went uncommitted — a check
+  # that cannot fail, which is this repo's most-repeated lesson.
+  elif ! cmp -s "$STANDARD" "$STANDARD.check"; then
+    echo "STANDARD: $STANDARD is stale against references/verdicts.md and"
+    echo "STANDARD: references/evidence.md — run scripts/sync-decision-standard.sh"
+    echo "STANDARD: and commit the result"
+    fail=1
+  fi
+  rm -f "$STANDARD.check"
+fi
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail

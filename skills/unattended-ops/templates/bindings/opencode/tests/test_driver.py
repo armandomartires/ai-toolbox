@@ -385,6 +385,47 @@ class TestVerdictDispatch(Harness):
         self.assertEqual(self.events("close"), [])
         self.assertIn("no overrides", self.events("park")[0]["reason"])
 
+    def test_the_adjudicator_is_handed_the_decision_standard(self):
+        # B-035 / TASK-0106: the role is documented to decide by
+        # references/verdicts.md and references/evidence.md, and cannot open
+        # either — worktree-only denies the skill. So the text travels in the
+        # prompt. Asserted on sentences each reference owns, not on a
+        # substring of the file, so a truncated embed still fails.
+        self.make_repo()
+        self.run_driver(happy())
+        body = self.invocations("adjudicator")[0][-1]
+        self.assertIn("--- BEGIN DECISION STANDARD ---", body)
+        self.assertIn("The adjudicator returns **exactly one** of these", body)
+        self.assertIn("the only admissible source for a figure", body)
+        for verdict in ("accept", "retry", "park", "raise-adhoc", "halt-run"):
+            self.assertIn("## `%s`" % verdict, body)
+
+    def test_no_other_role_is_handed_the_decision_standard(self):
+        # It is the adjudicator's standard. Pasting it into every prompt
+        # would put a verdict vocabulary in front of roles that must not
+        # reach one, and cost tokens on all nine.
+        self.make_repo()
+        self.run_driver(happy())
+        for argv in self.invocations():
+            if argv[-1].startswith("You are the adjudicator"):
+                continue
+            self.assertNotIn("--- BEGIN DECISION STANDARD ---", argv[-1])
+
+    def test_a_missing_decision_standard_is_refused_before_any_role(self):
+        # A driver that prompts without the standard still returns verdicts,
+        # and they are indistinguishable from judged ones (ADR-0009: a check
+        # that silently does nothing is worse than no check).
+        standard = os.path.join(BINDING_DIR, "decision-standard.md")
+        saved = standard + ".testsaved"
+        self.make_repo()
+        shutil.move(standard, saved)
+        try:
+            self.assertEqual(self.run_driver(happy()), 2)
+            self.assertEqual(self.invocations(), [])
+            self.assertIn("decision standard unreadable", self.proc.stderr)
+        finally:
+            shutil.move(saved, standard)
+
     def test_a_bulk_staged_commit_halts_the_run(self):
         # TASK-0097 / TASK-0092 finding 18: the closer's permissions allow
         # `git add -- .`, so the driver checks the commit's file list.

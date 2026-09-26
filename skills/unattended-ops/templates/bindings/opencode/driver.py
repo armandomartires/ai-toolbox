@@ -41,6 +41,23 @@ import time
 # The five verdicts. skills/unattended-ops/SKILL.md owns the enum.
 VERDICTS = ("accept", "retry", "park", "raise-adhoc", "halt-run")
 
+# The adjudicator's decision standard: references/verdicts.md and
+# references/evidence.md, concatenated verbatim by
+# scripts/sync-decision-standard.sh. Those two files own it; this driver
+# quotes them and paraphrases neither (ADR-0022 clause 1.2 — the driver
+# carries no rule of its own).
+#
+# It is a sibling of this file rather than a read of the skill for two
+# reasons (B-035, TASK-0106). Every role declares `worktree-only`, emitted
+# as `external_directory: deny`, so the adjudicator cannot open the skill —
+# 57 of the S10.7 pilot's 92 denials were exactly that — which is why
+# prompt() tells roles not to try. And this driver is a template a consuming
+# repository copies out, after which the skill's references are at no known
+# relative path. A sibling survives the copy; a relative path into the skill
+# does not.
+DECISION_STANDARD = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "decision-standard.md")
+
 # loop.md, "Exit conditions": 2 acceptance attempts; 3 mechanical retries.
 ATTEMPT_BOUND = 2
 MECHANICAL_BOUND = 3
@@ -540,9 +557,18 @@ class Driver:
 
     def step9_adjudicate(self, task, attempt, impl, gates, refutation):
         """Step 9 — exactly one verdict; unparseable or out-of-enum -> park."""
+        # B-035/TASK-0106: the standard this role applies travels in the
+        # prompt, because the role cannot open the skill that owns it.
         body = prompt(
             "adjudicator", "Step 9. Decide what happens to task %s, attempt %d of %d. "
-            "retry is available on attempt 1 only." % (task["id"], attempt, ATTEMPT_BOUND),
+            "retry is available on attempt 1 only.\n\n"
+            "Decide by the standard below, quoted verbatim from "
+            "skills/unattended-ops/references/verdicts.md and "
+            "references/evidence.md, which own it. Judge against the task "
+            "file's own acceptance criteria, on the evidence file and the "
+            "diff — never on recollection.\n\n"
+            "--- BEGIN DECISION STANDARD ---\n%s\n--- END DECISION STANDARD ---"
+            % (task["id"], attempt, ATTEMPT_BOUND, decision_standard()),
             {"task_file": task["file"], "implementer_report": impl,
              "gate_reports": gates["report"], "refutation": refutation},
             '{"verdict": "accept" | "retry" | "park" | "raise-adhoc" | "halt-run", '
@@ -820,6 +846,25 @@ def kill_group(child):
             continue
 
 
+def decision_standard():
+    """The adjudicator's standard, or a Halt naming what to run.
+
+    Refuses rather than prompting without it. A driver that quietly drops the
+    standard still returns verdicts, and they would look exactly like judged
+    ones — the ADR-0009 failure this repository already refuses: a check that
+    silently does nothing is worse than no check, because it is still trusted.
+    """
+    try:
+        text = open(DECISION_STANDARD, encoding="utf-8").read().strip()
+    except OSError as exc:
+        raise Halt("decision standard unreadable at %s (%s); it is generated "
+                   "by scripts/sync-decision-standard.sh and must be copied "
+                   "beside driver.py" % (DECISION_STANDARD, exc))
+    if not text:
+        raise Halt("decision standard at %s is empty" % DECISION_STANDARD)
+    return text
+
+
 def prompt(role, instruction, inputs, shape):
     """The one prompt shape. Inputs are paths and reports — never a gate command."""
     # Paths are read, never globbed for: OpenCode's glob tool does not see
@@ -868,6 +913,9 @@ def main(argv=None):
         print("REFUSED: run id %r is not [A-Za-z0-9._-]+" % args.run_id, file=sys.stderr)
         return 2
     try:
+        # Before any role runs: without the standard the adjudicator would
+        # still return verdicts, indistinguishable from judged ones.
+        decision_standard()
         binding = Binding(args.binding, args.run_id)
     except (Halt, OSError, ValueError) as exc:
         print("REFUSED: %s" % exc, file=sys.stderr)

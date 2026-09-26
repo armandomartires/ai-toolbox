@@ -658,7 +658,20 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0106`.**
+untested. **Next free number: `TASK-0108`.**
+
+Two of that queue were taken up on 2026-09-26, on the human's routing, with
+no sprint opened — the `Post-S4`/`Post-S5` shape:
+- [x] TASK-0106 — `B-035`: embed the adjudicator's decision standard in its
+      prompt (done). The human chose *embed the references* over *accept
+      body-plus-enum*. Generated sibling file + gate-checked against its two
+      sources, because `driver.py` is a template that gets copied out of the
+      skill. Found while building it: the staleness check was first written
+      with `git diff`, which **could not fail** on an untracked file — the
+      repeat of this repo's most-repeated lesson, caught by the gate.
+- [ ] TASK-0107 — `worktree-only`'s Claude Code emission (`ADR-0018`
+      clause 7, `TASK-0040`'s leftover). Runs the one experiment
+      `TASK-0056` was confounded on. **Planned, not started.**
 
 ## Post-S9 (superseded by the promotion above)
 
