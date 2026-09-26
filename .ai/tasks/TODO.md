@@ -669,9 +669,16 @@ no sprint opened — the `Post-S4`/`Post-S5` shape:
       skill. Found while building it: the staleness check was first written
       with `git diff`, which **could not fail** on an untracked file — the
       repeat of this repo's most-repeated lesson, caught by the gate.
-- [ ] TASK-0107 — `worktree-only`'s Claude Code emission (`ADR-0018`
-      clause 7, `TASK-0040`'s leftover). Runs the one experiment
-      `TASK-0056` was confounded on. **Planned, not started.**
+- [x] TASK-0107 — `worktree-only`'s Claude Code emission (`ADR-0018`,
+      `TASK-0040`'s leftover). Ran the experiment `TASK-0056` was confounded
+      on, this time **unconfounded** (`DENIALS: NONE`). Answer: a
+      worktree-isolated subagent's commit does **not** reach the real tree —
+      but that measures *effect-isolation*, and `worktree-only` is an
+      *access-denial* term, so **the emission stays open** with a measured
+      reason instead of a guessed one. Clause 8.2 unchanged. Found on the
+      way: Claude Code puts its worktree **inside** the repo, which the
+      runbook forbids for `worktree.sh`; `git status` stayed clean only
+      because `TASK-0106` had just gitignored `.claude/`.
 
 ## Post-S9 (superseded by the promotion above)
 

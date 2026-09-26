@@ -56,11 +56,32 @@ the exact assertion, with the run completing normally.
 read the skill turns on the `worktree-only` question below, so fixing it now
 would risk building a workaround for a denial that may not exist there.
 
-**`TASK-0107` is planned, not started**: the one experiment that settles
-`ADR-0018` clause 7 — does a `worktree`-isolated subagent's commit reach the
-real tree? `TASK-0056` ran it and was confounded by permission denials, so
-the brief makes distinguishing **confinement from refusal** an acceptance
-criterion rather than an afterthought.
+**`TASK-0107` ran, and the measurement is clean.** `TASK-0056` was
+confounded by permission denials; this time denial-reporting was an explicit
+instruction to the probe and the result was `DENIALS: NONE`, so confinement
+and refusal are distinguishable. **A worktree-isolated subagent's commit does
+not reach the real tree**: verified from the main checkout, `master` unmoved
+at `5d51e2d`, the probe commit not an ancestor, the file absent. The object
+database and ref namespace *are* shared.
+
+**It does not settle the emission, and saying so is the point.**
+`worktree-only` denies *access* outside the worktree; what was measured is
+*effect-isolation* — where a commit lands. The probe's worktree sat inside
+the main repository and nothing stopped it reaching the main checkout by
+absolute path; that was not tested and is not assumed. `ADR-0018` clause 8.2
+stands and the term table still reads "no per-agent equivalent". The next
+measurement, if this is picked up, is named in the ADR: can such a subagent
+read and write the main checkout by absolute path?
+
+**An unasked-for finding with teeth.** Claude Code creates its worktree
+**inside** the repository (`.claude/worktrees/agent-<id>/`), the placement
+`docs/operations/runbook.md` forbids for this repo's own `worktree.sh`. Both
+feared consequences were checked and neither bit — the component globs are
+one level deep, `validate.sh: OK`, registry byte-identical — and `git status`
+stayed clean **only because `TASK-0106` had gitignored `.claude/` hours
+earlier**. That is luck, not design: `Driver.step1_preflight_repo()` refuses
+a dirty tree, so without that ignore an unattended run using worktree-isolated
+subagents would refuse to start.
 
 ## Sprint S10 is CLOSED
 
