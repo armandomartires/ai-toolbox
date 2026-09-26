@@ -151,7 +151,8 @@ comparison, which is independent of whether the file is tracked.
 - Owner: agent
 - Created: 2026-09-26
 - Completed: 2026-09-26
-- Commit: recorded in the follow-up commit (`TASK-0093` form)
+- Commit: `d50d220` — *Embed the adjudicator's decision standard in its prompt (TASK-0106)*
+- Push: **confirmed** to `origin/master`, `7a59f8c..d50d220`, verified by comparing `git rev-parse HEAD` against `ls-remote` — both `d50d22021f5ea0e0d875870f4598d24118700165`, not by exit code
 
 ## Execution log
 
