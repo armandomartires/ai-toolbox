@@ -29,6 +29,35 @@ checkable against the gate.
   then enforce it.
 - Scripts must be idempotent and safe to re-run.
 
+### Artifact schemas (`schemas/`)
+
+`skills/project-workflow/` and `skills/project-migration/` each ship a
+`schemas/` directory. A schema is the **single owner of one planning
+artifact's shape** — which headings exist, in what order, which are
+required, and whether each is written before or after the work
+(**ADR-0027**). Format: `skills/project-workflow/schemas/README.md`.
+
+| Rule | Detail | Gated |
+|------|--------|-------|
+| Templates are derived | `skills/project-workflow/templates/{tasks,decisions,reviews}/*` and `.ai/templates/{TASK,ADR,REVIEW,SESSION}.md` are rendered by `scripts/sync-templates.sh` and carry a do-not-edit banner. Edit the schema, re-run, commit both. | **yes** — `scripts/sync-templates.sh --check` runs from `tests/validate.sh` |
+| Task briefs match their schema | Briefs at or above `FIRST_GENERATED_TASK` in `tests/validate.sh` must carry the schema's required headings, in its order, with no superseded heading and no generator marker left behind. | **yes** |
+| Briefs below the boundary | Exempt, deliberately. They are records of what happened, not instances of a schema invented afterwards — the same argument `FIRST_CONTRACT_TASK` already carries. | not applicable |
+| Every section has `!standard` guidance | Other levels fall back to it, so one sentence does not get written four times and drift. | **yes** — the parser refuses the schema otherwise |
+| ADR, review and session shape | Schemas exist and the generator uses them; **nothing gates the finished artifacts**. Only task briefs are checked. | **no** — convention only |
+
+- **`--guidance` is a prose density, never a model tier.** Its four levels
+  (`terse`, `standard`, `explicit`, `literal`) change only the text inside
+  `<!-- FILL: … -->` comments; the filled artifact is byte-identical at every
+  level, verified by generating all four, stripping comments and diffing.
+  `SKILL.md` carries a suggested model-size column — that is documentation,
+  not a resolver. **Do not add a tier→model mapping here**: model references
+  have one owner and it is `agent-tiers`' `models.jsonc` in
+  `opencode-customization` (ADR-0018 clause 7, ADR-0017 rejected). This is the
+  same gap, and the same prohibition, as the `model` row under Agents below.
+- **No size budget is enforced on a schema, a template or an artifact**, and
+  ADR-0008 is why. Uniform *shape* is enforced; smaller files are a
+  consequence of it, not a rule.
+
 ## MCP servers
 Two shapes (ADR-0005). A server directory must contain **exactly one** of
 `pyproject.toml` (authored) or `server.json` (external) — never both,

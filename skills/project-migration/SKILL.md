@@ -4,7 +4,7 @@ description: "Harmonize an existing repository with the .ai agent-governance fra
 license: MIT
 metadata:
   author: amartires
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Project migration to the .ai governance framework
@@ -20,6 +20,7 @@ Retrofit a live repository so a human, a planning model, and a weaker executor m
 - Relocate existing files with `git mv`, never copy-then-delete, so `git log --follow` survives.
 - Never delete the old structure until the new one is validated and free of broken references.
 - Never invent requirements, commands, or environments. Leave `<!-- FILL -->` markers rather than guessing, and ask the user when ambiguity is material.
+- Generate planning artifacts; do not copy a template and imitate it. `schemas/{task,adr,review,session}.md` own the shape of each one, and `skills/project-workflow/scripts/new-artifact.sh --framework project-migration --kind task` emits the skeleton (`--guidance literal` for a smaller model; the filled artifact is identical at every level). `check-artifact.sh` proves a finished one conforms. The scaffold script still owns the *layout*; the schemas own the *shape* (ADR-0027). `.ai/templates/*.md` are generated from these schemas by `scripts/sync-templates.sh` and carry a do-not-edit banner.
 - Never commit secrets, tokens, or `.env` files; run a secrets scan before the first push.
 - Never force-push. If a push fails, diagnose and report — do not declare the task done.
 

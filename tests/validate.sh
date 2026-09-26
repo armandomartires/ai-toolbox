@@ -1353,5 +1353,61 @@ if [ -e skills/unattended-ops/references/verdicts.md ]; then
   rm -f "$STANDARD.check"
 fi
 
+# --------------------------------------------------------------------------
+# Planning templates are derived from the schemas that own their shape
+# (ADR-0027, TASK-0109), so they get the same staleness gate docs/registry.md
+# and decision-standard.md already carry. Rendered to a scratch tree and
+# compared, never by `git diff`: an untracked file has no diff, so the git
+# form passes vacuously for as long as the file stays uncommitted.
+#
+# WHAT THIS PROVES: every tracked template still matches what its schema
+# renders today.
+# WHAT IT DOES NOT PROVE: that any schema describes a useful artifact. Shape
+# is not content.
+if [ -x scripts/sync-templates.sh ]; then
+  if ! scripts/sync-templates.sh --check; then
+    fail=1
+  fi
+fi
+
+# --------------------------------------------------------------------------
+# Task briefs match the schema that owns their shape. Delegated to the skill's
+# own checker rather than reimplemented here, so the heading list has exactly
+# one owner (ADR-0027); a copy in this file would be the second owner the
+# schema exists to remove.
+#
+# THE BOUNDARY IS REQUIRED, and for the same reason FIRST_CONTRACT_TASK = 20
+# above carries one: the 105 briefs written before the schema existed are
+# records of what happened, not instances of it. 23 of them carry a
+# `## Preconditions` heading superseded by ADR-0012, and rewriting them to
+# satisfy a rule invented afterwards would fabricate compliance. Raising this
+# number is how a future convention change is absorbed; lowering it is how
+# history gets falsified.
+#
+# WHAT THIS PROVES: that briefs from TASK-0109 onward carry the schema's
+# required headings, in its order, with no generator markers left behind.
+# WHAT IT DOES NOT PROVE: that a word of any of them is true.
+FIRST_GENERATED_TASK=109
+TASK_SCHEMA=skills/project-migration/schemas/task.md
+ARTIFACT_LIB=skills/project-workflow/scripts/artifact_lib.py
+if [ -r "$TASK_SCHEMA" ] && [ -r "$ARTIFACT_LIB" ]; then
+  briefs=""
+  for brief in .ai/tasks/TASK-*.md; do
+    [ -e "$brief" ] || continue
+    num="$(basename "$brief" | sed -n 's/^TASK-0*\([0-9]\{1,\}\).*/\1/p')"
+    [ -n "$num" ] || continue
+    [ "$num" -ge "$FIRST_GENERATED_TASK" ] || continue
+    briefs="$briefs$brief
+"
+  done
+  # One interpreter for all of them, so the schema is parsed once rather than
+  # once per brief. check-artifact.sh remains the single-artifact entry point
+  # a person runs; both go through the same parser, so neither holds its own
+  # copy of what the schema means.
+  if [ -n "$briefs" ]; then
+    ARTIFACTS="$briefs" SCHEMA="$TASK_SCHEMA" python3 "$ARTIFACT_LIB" check-many || fail=1
+  fi
+fi
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail

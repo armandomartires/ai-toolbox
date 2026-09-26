@@ -9,7 +9,66 @@ S10.4 — `TASK-0104`; S10.5 — `TASK-0090`; S10.6 — no task of its own; S10.
 — `TASK-0092`; review — `REVIEW-0012`. **No sprint is open.** The dated `##`
 sections below carry the detail. **Two post-S10 tasks have since been taken
 up on the human's routing, without opening a sprint** — `TASK-0106` (done)
-and `TASK-0107` (planned); the section immediately below carries them.
+and `TASK-0107` (planned); the section immediately below carries them. A
+third, `TASK-0109`, landed on 2026-09-26 and changed how every planning
+artifact is produced — see **Artifact shape has one owner**, below.
+
+## Artifact shape has one owner (`TASK-0109`, `ADR-0027`)
+
+**2026-09-26.** Planning artifacts are no longer produced by copying a
+template and imitating it. A **schema** owns each artifact's shape — the
+headings, their order, which are required, and whether each is written
+before or after the work — and the templates are **generated from it**.
+
+**The requirement that forced it**, from the human: the convention has to
+hold for models from roughly 12b parameters to frontier. Copy-and-imitate
+degrades with capability, because every "keep this line or delete it?"
+judgment is an independent chance to drift. Fill-a-marked-slot does not.
+
+**Three measurements motivated it, taken against the tree that day.**
+`project-workflow`'s own template contradicted its `SKILL.md` about the task
+ID format — `S###_SprintName.T###_TaskName` against `S###.T###_Name` — and
+nothing caught it, because both were prose. This repo's 105 task briefs ran
+102 to 661 lines with ~14 competing heading sets: `## Inputs` in 86 of them,
+a `## Preconditions` superseded by `ADR-0012` in 23, and heading order
+entirely ungoverned. `.ai/templates/ADR.md` was 71 bytes of bare headings
+while real ADRs reach 37 KB.
+
+**What shipped.** `skills/project-workflow/scripts/new-artifact.sh` emits a
+skeleton with identifiers, date and every heading already correct;
+`check-artifact.sh` proves a finished artifact conforms, reading the headings
+*from the schema* so it can never become their second owner;
+`scripts/sync-templates.sh` regenerates all seven templates. Eight schemas
+across both frameworks — they stay separate, per `ADR-0013`; only the engine
+is shared. `tests/validate.sh` gained a template-staleness check and a brief
+shape check bounded by `FIRST_GENERATED_TASK = 109`.
+
+**`--guidance`, not `--tier`.** Four prose densities (`terse`, `standard`,
+`explicit`, `literal`) vary only the text inside `<!-- FILL: … -->` comments;
+the filled artifact is byte-identical at every level, verified by generating
+all four, stripping comments and diffing to one hash. The flag is deliberately
+not named for parameter counts: `scripts/emit-agents.py` already emits an
+unresolved `{tier:<name>}` and the authoring guide forbids a second
+tier→model owner here (`ADR-0018` clause 7, `ADR-0017` rejected). The
+model-size column in `SKILL.md` is documentation, not a resolver.
+
+**Limits, stated.** Shape is checked, never content — a conformant brief can
+still say nothing, and the checkers say so in matching *what this does not
+prove* paragraphs. **No size budget was added anywhere**; `ADR-0008` forbids
+a gate inventing a number, so uniform shape is enforced and smaller files are
+a consequence rather than a rule. The templates in fact grew — `.ai/templates/
+ADR.md` 71 → 1297 bytes — because they now describe the artifact. Only task
+briefs are gated; ADR, review and session schemas exist and generate, but
+nothing checks the finished files. The 105 pre-existing briefs are untouched
+and exempt, for the reason `FIRST_CONTRACT_TASK` already carries. **`B-036`
+is open**: the engine lives in `project-workflow`, so a consumer installing
+only `project-migration` gets schemas with no generator — nothing is broken
+here, and it is not built for an absent consumer.
+
+**Gate cost, measured rather than assumed.** On a native ext4 copy, 1.03 s →
+1.32 s; on this `/mnt/c` working copy, 2.25 s → 2.79 s. The two new passes
+cost 0.225 s between them; batching each into one interpreter rather than one
+subprocess per file gave back 1.4 s of a first attempt that had spawned seven.
 
 ## Post-S10 housekeeping and two routed items
 

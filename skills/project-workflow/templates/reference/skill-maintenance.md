@@ -14,6 +14,10 @@ To scaffold `.ai/` (or a project's declared equivalent — see
 `reference/layout-declaration.md`) in a new project, ask the agent to
 scaffold the workflow layer, or invoke this skill by name.
 
+The `tasks/`, `decisions/` and `reviews/` templates are **generated** from
+`../../schemas/` by `scripts/sync-templates.sh` and carry a do-not-edit
+banner (ADR-0027). Fix the schema, re-run the script, commit both.
+
 **Templates are copied into each project, never symlinked.** Once
 materialized, a project's layer is that project's own; updating this
 skill later never retroactively changes a project that already scaffolded
