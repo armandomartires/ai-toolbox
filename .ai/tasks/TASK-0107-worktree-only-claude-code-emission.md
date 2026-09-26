@@ -133,7 +133,8 @@ binding's decision-standard gap (`TASK-0106`) can be picked up on that answer.
 - Owner: agent
 - Created: 2026-09-26
 - Completed: 2026-09-26
-- Commit: recorded in the follow-up commit (`TASK-0093` form)
+- Commit: `9e97c10` — *Measure worktree isolation against worktree-only (TASK-0107)*
+- Push: **confirmed** to `origin/master`, `5d51e2d..9e97c10`, verified by comparing `git rev-parse HEAD` against `ls-remote` — both `9e97c101c667121e9382029bb805f8cf6ad67ef7`, not by exit code
 
 ## Execution log
 
