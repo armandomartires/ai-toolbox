@@ -359,5 +359,6 @@ Flipping it is one line: `filename_pattern` in
 - Result: done. Both frameworks generate from schemas; the templates are
   derived and gated; the `S###.T###` contradiction is gone. Two limits carried
   forward deliberately: only task briefs are shape-gated, and `B-036` is open.
-- Commit: `<hash>`
-- Push: `<result>`
+- Commit: `85ca681`
+- Push: confirmed — `6762e52..85ca681  master -> master`,
+  `origin/master` verified at `85ca681`
