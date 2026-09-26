@@ -173,4 +173,5 @@ reading the claims did.
 - Owner: agent
 - Created: 2026-09-26
 - Completed: 2026-09-26
-- Commit: recorded in the follow-up commit (`TASK-0093` form)
+- Commit: `8d2fad0` — *Re-count the ansible-core version claims and correct three (TASK-0108)*
+- Push: **confirmed** to `origin/master`, `52c8767..8d2fad0`, verified by comparing `git rev-parse HEAD` against `ls-remote` — both `8d2fad0e5bfef9732464552abcfb9d68d7ba5e7b`, not by exit code
