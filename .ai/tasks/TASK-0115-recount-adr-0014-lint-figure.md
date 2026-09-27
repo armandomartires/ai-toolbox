@@ -306,5 +306,6 @@ repository's to fix** — it is a report to make to another repository's owner.
   - `scripts/sync-registry.sh` → no diff
 - Result: done. `ADR-0014`'s caveat discharged, `SPRINT-CURRENT.md` heading 6
   closed, `B-039` raised, estate untouched.
-- Commit: COMMIT_HASH
-- Push: PUSH_RESULT
+- Commit: `704f44c`
+- Push: confirmed — `22067a2..704f44c  master -> master` to `origin`;
+  `git remote -v` token-free, `master...origin/master` in sync
