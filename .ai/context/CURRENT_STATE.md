@@ -15,6 +15,60 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
+## The scaffold never came onto the schemas (`B-040`, `TASK-0119`)
+
+**2026-09-27, from a review of whether `project-workflow` and
+`project-migration` are fully integrated.** The answer to the question asked
+is **yes for the library and no for one consumer of it**, and both halves are
+measured.
+
+**Shared, and working.** `skills/project-workflow/scripts/artifact_lib.py` is
+the single engine; `new-artifact.sh --framework project-migration` and
+`check-artifact.sh --framework project-migration` resolve the sibling
+framework's schemas script-relative, so they survive `install.sh`'s
+symlinking; `scripts/sync-templates.sh` renders all seven targets across both
+frameworks in one interpreter; `tests/validate.sh` checks four kinds against
+`project-migration`'s schemas using `project-workflow`'s engine, and exits
+`OK`. Both skills disclaim each other per `ADR-0013`. Nothing here is broken.
+
+**Not shared: `skills/project-migration/scripts/ai-project-scaffold.sh`.** It
+writes `.ai/templates/{TASK,PLAN,SESSION,ADR,REVIEW}.md` into every repository
+it migrates, as five inline heredocs that predate `ADR-0027` — a second owner
+of shape, which is the mechanism that ADR exists to remove. **Two of the five
+have already drifted past their own schemas**, extracted and run through the
+skill's own checker rather than eyeballed: `TASK.md` fails with six problems,
+three of them the `## Preconditions` / `## Dependencies` / `## Expected
+result` headings `schemas/task.md` records as `superseded:`; `REVIEW.md` fails
+missing all four required sections. `SESSION.md` and `ADR.md` pass.
+
+**Why no gate saw it.** `sync-templates.sh` regenerates `.ai/templates/` in
+*this* repository and `validate.sh` fails on drift — and the scaffold's
+`mkfile` refuses to overwrite an existing file, so its heredocs are never
+written here. They reach only other repositories, where no gate of ours runs.
+The gate is real; its blind spot is a script that only fires elsewhere.
+
+**`TASK-0109`'s exclusion was right and its boundary was not.** Its *Not
+included* reads *"`ai-project-scaffold.sh`'s layout scaffolding, which is a
+different job and stays as it is."* Layout is a different job. But the script
+does two jobs, and `mkfile .ai/templates/TASK.md <<'EOF'` is the other one —
+shape, which `ADR-0027` had just given an owner. `SKILL.md` line 23 already
+writes the division correctly: *"The scaffold script still owns the layout;
+the schemas own the shape."* The rule existed; the script never implemented
+it. In the same file, the closing report still prints `cp
+.ai/templates/TASK.md …`, which `SKILL.md`'s hard rules forbid.
+
+**Two further gaps, raised rather than absorbed.** `B-041`: `SKILL.md` names
+`scripts/sync-templates.sh` as the regeneration route for a migrated
+repository, and that script exists only at this repo's root — true read from
+inside `ai-toolbox`, false for the reader it is written for. `B-042`: the
+`plan` kind has six real instances in `.ai/planning/plans/` and no schema
+anywhere, and `project-migration`'s `BACKLOG.md` entry has its fields in prose
+only while `project-workflow`'s equivalent has `schemas/adhoc.md`.
+
+**Nothing is fixed yet.** `TASK-0119` (`ready`) routes `B-040`; `TASK-0120`
+(`blocked` on a route choice) routes `B-041`; `B-042` is deliberately
+unrouted until someone counts what the six plans share.
+
 ## `ADR-0022`'s last two untested falsifiers are settled (`TASK-0114`)
 
 **2026-09-27.** F7 and F9 both **CONFIRMED**. Eight of the nine now carry

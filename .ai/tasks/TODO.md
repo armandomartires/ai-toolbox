@@ -658,7 +658,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0119`.**
+untested. **Next free number: `TASK-0121`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
 `TASK-0109` until `TASK-0118` corrected it on 2026-09-27; the queue itself is
@@ -726,6 +726,33 @@ That became `TASK-0112` and displaced the order the briefs were planned in.
 - [ ] TASK-0117 — `B-036`, the generator unreachable from `project-migration`
       alone. **`blocked` by design**, on a stated trigger; the brief is the
       route, not a schedule
+
+**Two more briefs were written on 2026-09-27**, from a review of whether
+`project-workflow` and `project-migration` are fully integrated and share
+their libraries. **They are** — `artifact_lib.py`, `new-artifact.sh
+--framework`, `check-artifact.sh --framework` and `scripts/sync-templates.sh`
+are genuinely shared, and `tests/validate.sh` exits `OK` over all 152
+artifacts. The review's finding is the one site that sharing never reached:
+`ai-project-scaffold.sh` still writes five planning templates as inline
+heredocs, and **two of them already fail the schemas they are meant to
+embody** — measured with the skill's own checker, not inferred. Raised
+**`B-040`**, **`B-041`** and **`B-042`**.
+
+- [ ] TASK-0119 — `B-040`: the scaffold's four schema-backed templates stop
+      being heredocs and get a drift gate; its closing report stops saying
+      `cp` (`ready`). Carries one open route choice, costed with a
+      recommendation
+- [ ] TASK-0120 — `B-041`: `SKILL.md` names a regeneration mechanism a
+      migrated repository cannot run. **`blocked` by design** on a route
+      choice — retract the claim, ship a regenerator, or ship regenerator
+      plus engine — because the third fires `TASK-0117`'s trigger and the
+      first ships nothing. Sequenced behind `TASK-0119`
+
+**`B-042` got no brief, deliberately** — the `plan` kind has six real
+instances and no schema anywhere, and writing one means first reading those
+six to find what they actually share. `ADR-0027` transcribed its schemas from
+artifacts that already existed; `ADR-0008` forbids inventing the requirement.
+It needs a count before it needs a brief.
 
 **Three queue items got no brief, deliberately.** `B-025` is `waiting` on a
 second role by the human's own choice, and writing a brief would mean

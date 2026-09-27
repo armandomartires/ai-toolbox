@@ -158,9 +158,11 @@ mean inventing the second case it waits for.
 
 ## Task numbering
 
-**Next free id: `TASK-0119`.** `TASK-0106`…`TASK-0110` ran post-S10 on the
+**Next free id: `TASK-0121`.** `TASK-0106`…`TASK-0110` ran post-S10 on the
 human's routing, and `TASK-0111`…`TASK-0118` were written 2026-09-27 as briefs
-for the queue above. This counter read `TASK-0106` until then — stale, and
+for the queue above, and `TASK-0119`/`TASK-0120` the same day from a skill-integration
+review that found `ai-project-scaffold.sh` still owns artifact shape (`B-040`,
+`B-041`, `B-042`) — not a queue item, which is why they are not listed above. This counter read `TASK-0106` until then — stale, and
 harmless only because the instruction beside it is the one to follow.
 S10 ran `TASK-0086`…`TASK-0105`, with three of its briefs (`TASK-0055`,
 `TASK-0056` — S9's spikes — and `ADR-0022` itself) predating it, and
