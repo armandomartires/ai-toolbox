@@ -126,7 +126,9 @@ Claude Code has no per-agent command boundary (`ADR-0018` clause 8.3), so:
 **Two things are cross-checked by a second agent because the script cannot
 run git**: the closer's commit (`verifyHead()` before and after, from the
 preflight role — including the commit's file list, every entry of which must
-be a declared path or the run halts, `TASK-0103`) and a park's clean tree (the park-steward's reported
+be a declared path or the run halts, which is `loops/unattended-run/loop.md`
+step 10's *"refuse on anything unexpected"* applied to the commit rather than
+to the working tree) and a park's clean tree (the park-steward's reported
 porcelain). A second agent is a witness, not a gate.
 
 **What is stronger here than in OpenCode:** a `schema` forces the return

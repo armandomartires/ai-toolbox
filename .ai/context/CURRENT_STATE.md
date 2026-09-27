@@ -1,6 +1,6 @@
 # Current State
 
-Last updated 2026-09-26. **Sprint S10 is CLOSED** on `REVIEW-0012`
+Last updated 2026-09-27. **Sprint S10 is CLOSED** on `REVIEW-0012`
 (`TASK-0105`), archived to
 `.ai/planning/sprints/SPRINT-S10-unattended-bindings.md`; `ROADMAP.md`'s
 Phase 10 is COMPLETE. All eight deliverables landed: S10.1 (against a stub)
@@ -14,6 +14,38 @@ third and fourth, `TASK-0109` and `TASK-0110`, landed 2026-09-26/27 and
 changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
+
+## A binding's own checker was failing, ungated (`TASK-0112`)
+
+**2026-09-27.** The Claude Code unattended-run binding's stub suite was **red
+on `master` for two days** and nothing reported it. Found while scoping the
+post-S10 queue into briefs, not by any check.
+
+**The defect.** `98ce299` (`TASK-0103`, 2026-09-25) closed `B-032` by adding
+the commit-file-list check, and in the same diff put a `must` into
+`binding.md:126` citing `TASK-0103`. `check-binding.sh`'s `CITE` pattern does
+not accept a task id — **correctly**, and that was confirmed before the fix
+rather than assumed: `templates/binding.md` and `ADR-0022` clause 1.4
+enumerate a binding's four legitimate rule sources (the loop, the skill,
+`agents/`, the consuming repo's `AGENTS.md`), and a task brief is none of
+them. So the checker was right and the binding was wrong. Fixed by citing the
+real authority — `loops/unattended-run/loop.md` step 10's *"refuse on anything
+unexpected"* — not by widening the pattern. **Cause proved before it was
+fixed**: the pre-`98ce299` file passes the checker, the current one fails.
+
+**The general finding, now `B-037`.** `tests/validate.sh` runs neither
+binding's suite, so a red suite is invisible: three commits landed on top of
+this one and the gate exited `OK` throughout. That is **stated doctrine**
+(`authoring-guide.md:111`, and `SKILL.md` for `check-binding.sh`), so what is
+new is the measured cost, not the fact. Wiring it in is not trivial — the gate
+must stay fast, offline and hermetic, the OpenCode suite takes ~2m20s and
+pulls `pytest` through `uv`, and `ADR-0009` forbids checking runtime presence,
+so a `command -v` guard would produce the silently-skipping gate that ADR
+calls worse than none. **Raised, not built.**
+
+**A control worth recording:** `validate.sh` exits `OK` with the binding fixed
+exactly as it did with it broken. That is the finding, not a regression check.
+The OpenCode suite was green throughout.
 
 ## The repository now follows it (`TASK-0110`)
 

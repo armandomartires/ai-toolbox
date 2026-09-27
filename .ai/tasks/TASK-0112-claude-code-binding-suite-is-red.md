@@ -159,26 +159,26 @@ either does, the diagnosis was wrong and that belongs in Outputs / handover.
 
 ## Acceptance criteria
 
-- [ ] `node --test tests/unattended-run.test.mjs` in the Claude Code binding
+- [x] `node --test tests/unattended-run.test.mjs` in the Claude Code binding
       directory reports 25 tests, 25 pass, 0 fail — output pasted in.
-- [ ] Step 2's revert experiment is recorded, showing test 25 passing without
+- [x] Step 2's revert experiment is recorded, showing test 25 passing without
       the `98ce299` hunk. The defect is proved, not asserted.
-- [ ] `binding.md` still states that every entry of the commit's file list must
+- [x] `binding.md` still states that every entry of the commit's file list must
       be a declared path or the run halts — quote the new sentence in the log.
-- [ ] The citation-form question has a written answer, in this file and, if the
+- [x] The citation-form question has a written answer, in this file and, if the
       answer is that the exclusion is intended, in `skills/unattended-ops/SKILL.md`.
-- [ ] The OpenCode suite's result is recorded, whatever it is.
-- [ ] `tests/validate.sh` exits 0, recorded as a control rather than as evidence.
-- [ ] A backlog item exists for the ungated suites, naming the two-day window.
-- [ ] `check-binding.sh` is byte-identical to its pre-task state, unless step 3
+- [x] The OpenCode suite's result is recorded, whatever it is.
+- [x] `tests/validate.sh` exits 0, recorded as a control rather than as evidence.
+- [x] A backlog item exists for the ungated suites, naming the two-day window.
+- [x] `check-binding.sh` is byte-identical to its pre-task state, unless step 3
       concluded otherwise and said why.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] `node --test skills/unattended-ops/templates/bindings/claude-code/tests/unattended-run.test.mjs`
-- [ ] The OpenCode binding's pytest suite
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] `node --test skills/unattended-ops/templates/bindings/claude-code/tests/unattended-run.test.mjs`
+- [x] The OpenCode binding's pytest suite
 
 ## Risks and rollback
 
@@ -203,16 +203,30 @@ either does, the diagnosis was wrong and that belongs in Outputs / handover.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `skills/unattended-ops/templates/bindings/claude-code/binding.md` | Line 126's paragraph cites `loops/unattended-run/loop.md` step 10 instead of `TASK-0103`; the file-list rule is unchanged in substance and re-wrapped to the file's prose width. Accepted by `check-binding.sh`. **Nothing else in the file touched** |
+| `skills/unattended-ops/scripts/check-binding.sh` | **Unchanged, deliberately.** `CITE`'s exclusion of `TASK-\d{4}` was confirmed intended, so the binding was fixed rather than the checker widened |
+| `skills/unattended-ops/SKILL.md` | **Unchanged.** The plan allowed for stating the citation rule here; it turned out to be stated already, in `templates/binding.md` ("What a binding is") and `ADR-0022` clause 1.4. Adding a third statement would have created the second owner the rule exists to prevent |
+| `skills/unattended-ops/templates/bindings/claude-code/tests/unattended-run.test.mjs` | **Unchanged.** 25 tests, 25 pass |
+| `.ai/planning/BACKLOG.md` | `B-037` added: neither binding's suite is run by anything. `ready`, unbuilt, with the ADR-level decision it needs spelled out |
+| `.ai/context/CURRENT_STATE.md` | New dated section; header date 2026-09-26 → 2026-09-27 |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Deviation from the plan, and it shortened the task.** Step 3 asked whether
+`CITE`'s exclusion of task ids was intended and said the answer might need
+writing into `SKILL.md`. It was intended, and it was already written down
+twice — `templates/binding.md`'s "What a binding is" enumerates the four
+legitimate rule sources, and `ADR-0022` clause 1.4 states the rule. So the
+plan's conditional edit was **not** made, on the plan's own logic.
+
+**Next task starts here**: the Claude Code binding is accepted by its own
+checker and its suite is 25/25, which is `TASK-0113`'s stated precondition.
+`B-037` is open and unbuilt. The summary sentence at `BACKLOG.md:45` now has a
+**third** error — it already named a closed item and omitted `B-036`, and
+`B-037` is now missing from it too; repairing that sentence is `TASK-0118`'s
+scope and was deliberately not done here.
 
 ## Status
 
-- Status: ready   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-27
 - Updated: 2026-09-27
@@ -221,11 +235,65 @@ against the original.
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-27
+- Agent: Claude Opus 5 (1M context), Claude Code
 - Actions:
+  1. Reproduced at `1496cc8`: `node --test tests/unattended-run.test.mjs` →
+     `# tests 25 / # pass 24 / # fail 1`, test 25
+     (`check-binding.sh accepts a filled binding.md and rejects the template`).
+  2. **Proved the cause rather than inferring it.** Extracted
+     `git show 98ce299^:.../binding.md`, applied the test's own `<FILL:…>`
+     substitution to both it and the current file, and ran the checker on each:
+
+     ```
+     PRE-98ce299 binding.md -> exit 0
+       BINDING OK: … (20 slots answered, all 14 loop steps declared, no uncited rule)
+     CURRENT     binding.md -> exit 1
+       UNCITED RULE: line 126: … states a rule ('must') and cites nothing
+     ```
+  3. Settled the citation question before editing. `check-binding.sh:519`'s
+     `CITE` accepts `ADR-\d{4}`, `AGENTS.md`, `loops/…`, `skills/…`,
+     `agents/…`, `references/*.md`, `templates/*.md`, `rule [1-5]`.
+     `templates/binding.md` ("A binding … **carries no rule of its own**",
+     `ADR-0022` clause 1.2) then enumerates the four sources a binding may
+     draw a rule from: the loop, the skill, `agents/`, and the consuming
+     repository's `AGENTS.md`. A task brief is not among them, so the
+     exclusion is **intended** and widening `CITE` was rejected.
+  4. Found the rule's real authority: `loops/unattended-run/loop.md` step 10 —
+     "re-check `git status --porcelain` against the paths this task declared
+     and **refuse on anything unexpected**". Rewrote the paragraph to cite it,
+     kept the rule, re-wrapped to 52–77 columns. The rule as it now reads,
+     quoted verbatim:
+
+     > …the closer's commit (`verifyHead()` before and after, from the
+     > preflight role — including the commit's file list, **every entry of
+     > which must be a declared path or the run halts**, which is
+     > `loops/unattended-run/loop.md` step 10's *"refuse on anything
+     > unexpected"* applied to the commit rather than to the working tree)…
+  5. Ran both suites, `tests/validate.sh`, raised `B-037`, updated
+     `CURRENT_STATE.md`.
 - Observations:
+  - **The checker was right and the binding was wrong**, which is the opposite
+    of the cheap fix. Adding `TASK-\d{4}` to `CITE` would have made the suite
+    green by retiring the rule that caught a real defect.
+  - **`TASK-0103`'s own change was sound**; only its citation was not. The
+    behaviour it shipped is covered by the 24 tests that never failed.
+  - **The gate is the finding.** Three commits landed on a red suite and
+    `tests/validate.sh` exited `OK` at every one of them. It still exits `OK`
+    now — recorded as a control, not as evidence the fix worked.
+  - `SKILL.md` needed no edit: the rule was already stated twice. Adding a
+    third statement would have been the second-owner defect itself.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `node --test .../claude-code/tests/unattended-run.test.mjs` →
+    `# tests 25 / # pass 25 / # fail 0`
+  - OpenCode binding suite → ``39 passed, 13 subtests passed in 138.44s`,
+    exit 0 (green before and after this task; it was never implicated)`
+  - `tests/validate.sh` → `validate.sh: OK` (control: it also exited `OK`
+    while the suite was red)
+  - `git diff --check` → no whitespace errors
+  - `git diff --stat` → 4 files, +38 −3; `check-binding.sh` and the test file
+    byte-identical to their pre-task state
+- Result: done. Suite 25/25; `check-binding.sh` accepts the binding; `B-037`
+  raised for the gating gap; `TASK-0113` unblocked.
+- Commit: COMMIT_HASH
+- Push: PUSH_RESULT
