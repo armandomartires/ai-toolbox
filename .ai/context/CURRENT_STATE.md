@@ -15,6 +15,48 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
+## `ADR-0014`'s lint figure re-measured under 2.21.4 (`TASK-0115`)
+
+**2026-09-27.** The caveat that has stood on `ADR-0014` since `REVIEW-0010` is
+discharged. **53 rules, 15 tags, 0 failures, 0 warnings, exit 0** under
+`ansible-core` 2.21.4 — identical to the 2.20.8 figure.
+
+**The number holding is the expected result, not a reassuring one.** The rule
+set belongs to `ansible-lint`, which never moved (26.8.0 throughout); only
+`ansible-core` did. **What moved is the subject**: `TASK-0027` measured **2
+playbooks**, this measured **17 playbooks and 19 roles** — 202 files of 204
+processed. So the clean result now covers roughly eight times the content, and
+the matching "53 / 0" must not be read as continuity: the old figure said
+nothing about what has been added since.
+
+**Two controls, because exit 0 is not evidence the rules ran.** The
+silent-no-op trap `TASK-0027` needed four runs to find **still reproduces**: a
+custom rule was loaded and listed (`-L` 53 → 54) and never evaluated, at exit
+0; named in `--enable-list`, the same rule fired 17 times. And a deliberately
+injected violation — an unnamed task using `shell` — **was caught**, exit 2,
+with `fqcn`, `name` and `command-instead-of-shell` naming file and line. The
+zero is measured, not silent.
+
+**An arithmetic trap worth not repeating**: `--list-profiles` bullets from
+`min` through `production` count **55**, because that listing includes sub-rule
+tags and omits rules in no profile. `-L` gives 53 and is the figure `ADR-0014`
+quotes.
+
+**Method and its degradation, reproduced rather than re-decided.** Run on a
+`/tmp/opencode/` copy, never in place; `.env`, `tools/` and every `vault.yml`
+excluded, verified by `find`. With `vault_password_file` still set the run
+fails at exit 2 with 36 `internal-error` results — the same artifact
+`TASK-0027` recorded — so the figure comes from the second copy with that line
+commented out. One deliberate change: `roles/` was copied, because the estate
+now has 19 and had none before. The estate repository was verified untouched,
+`HEAD` unmoved and porcelain empty, before and after.
+
+**Raised, not fixed: `B-039`.** The estate's own `ansible.cfg` carries three
+claims that are now false — most importantly that `ansible-config validate`
+*rejects* `gather_subset`, when 2.21.4 accepts it **silently**. It is a
+separate repository; the action is to report it, not to edit it from here.
+`ansible-lint` **26.9.0** is available upstream and remains untracked.
+
 ## `worktree-only` is not enforced on Claude Code (`TASK-0111`)
 
 **2026-09-27.** The measurement `ADR-0018` named as outstanding is done, and

@@ -156,27 +156,27 @@ what changed underneath it.
 
 ## Acceptance criteria
 
-- [ ] The re-run's rules-evaluated, violations and exit code are all recorded,
+- [x] The re-run's rules-evaluated, violations and exit code are all recorded,
       with the command and its raw output.
-- [ ] The playbook and role counts at measurement time are recorded beside the
+- [x] The playbook and role counts at measurement time are recorded beside the
       figure, and the 2 → 17 change is stated in the ADR, not only here.
-- [ ] The binary's version line is pasted from an actual run.
-- [ ] Step 7's control is recorded and shows positively that the expected rules
+- [x] The binary's version line is pasted from an actual run.
+- [x] Step 7's control is recorded and shows positively that the expected rules
       were *evaluated* — a bare exit 0 does not satisfy this criterion.
-- [ ] Every degradation from `TASK-0027`'s method is either reproduced or
+- [x] Every degradation from `TASK-0027`'s method is either reproduced or
       re-decided in writing; none is silently dropped.
-- [ ] `ADR-0014`'s original 2.20.8 evidence text is still present, and the new
+- [x] `ADR-0014`'s original 2.20.8 evidence text is still present, and the new
       result is additive and dated.
-- [ ] The estate repository's `git status --porcelain` is empty and its `HEAD`
+- [x] The estate repository's `git status --porcelain` is empty and its `HEAD`
       is unchanged, both pasted.
-- [ ] `ansible-lint 26.9.0` has a recorded disposition, even if it is "not
+- [x] `ansible-lint 26.9.0` has a recorded disposition, even if it is "not
       adopted, no action".
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] `git -C /home/armando.martires/SIGMA-infrastructure status --porcelain` empty, before and after
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] `git -C /home/armando.martires/SIGMA-infrastructure status --porcelain` empty, before and after
 
 ## Risks and rollback
 
@@ -202,16 +202,38 @@ what changed underneath it.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `.ai/decisions/0014-accept-pinned-ansible-mcp-surface.md` | Caveat **discharged** with a dated result; the original 2.20.8 text is preserved above it, not overwritten. Carries the before/after table, both controls, the `-L`-vs-`--list-profiles` trap, and 26.9.0's disposition |
+| `.ai/planning/SPRINT-CURRENT.md` | Heading 6's last live item closed |
+| `.ai/context/CURRENT_STATE.md` | New dated section |
+| `.ai/planning/BACKLOG.md` | `B-039` raised; summary sentence 4 → 5 open items |
+| `/home/armando.martires/SIGMA-infrastructure/` | **Untouched and verified so**, before and after: `HEAD` `2a6be9a` unmoved, `git status --porcelain` empty, 17 playbooks |
+| `/tmp/opencode/ansible-lint-recount{,-novault,-mutant}/`, `/tmp/opencode/customrules-recount/` | Scratch, not committed, removed after write-up |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Deviations from the plan, all three recorded rather than absorbed.**
+
+1. **`roles/` was copied, which `TASK-0027` did not do.** It had none to copy;
+   the estate now has 19, and omitting them would have measured a fraction of
+   the subject. A conscious re-decision under plan step 4, not an oversight.
+2. **The rule count was miscounted once, from the wrong command.**
+   `--list-profiles` bullets from `min` through `production` give **55**, and
+   the plan's step 6 says a count that is not 53 becomes the headline. It was
+   investigated before anything else, as instructed, and the investigation is
+   what found the trap: that listing is a different metric. `-L` gives 53.
+   Recorded because the next person will reach for the same command.
+3. **A second control was added beyond the plan.** Step 7 asked only that the
+   expected rules be shown to have been *evaluated*. Reproducing the
+   silent-rule trap proves the trap still exists; it does not prove the
+   built-ins ran. So a deliberate violation was injected into a third copy and
+   caught. The plan's control was necessary and not sufficient.
+
+**Next task starts here**: `ADR-0014` has no outstanding evidence caveat and
+`SPRINT-CURRENT.md` heading 6 is closed. `B-039` is open and is **not this
+repository's to fix** — it is a report to make to another repository's owner.
+`ansible-lint` 26.9.0 remains untracked and uninstalled, deliberately.
 
 ## Status
 
-- Status: ready   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-27
 - Updated: 2026-09-27
@@ -220,11 +242,69 @@ against the original.
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-27
+- Agent: Claude Opus 5 (1M context), Claude Code
 - Actions:
+  1. Versions from the binary, not from this brief: `ansible-lint 26.8.0 using
+     ansible-core:2.21.4 ansible-compat:26.8.0`. Estate before-state:
+     `2a6be9a`, porcelain empty.
+  2. Counted the subject: **17** playbooks, **19** roles.
+  3. Built `/tmp/opencode/ansible-lint-recount/` with `playbooks/`, `roles/`,
+     `ansible.cfg`, `.ansible-lint`, `inventory/production.yml`. Confirmed by
+     `find` that no `.env`, `vault.yml`, `vault_pass.sh` or `*.vault` came
+     across, and that `inventory/group_vars/` did not.
+  4. Reproduced `TASK-0027`'s degradation deliberately. **Run 1**, with
+     `vault_password_file = tools/vault_pass.sh` still set: **exit 2**, 36
+     `internal-error` failures, *"The vault password file … tools/vault_pass.sh
+     was not found"* — the same artifact the original recorded. **Run 2**, on a
+     copy with that line commented out: `Passed: 0 failure(s), 0 warning(s) in
+     202 files processed of 204 encountered. Profile 'production' was required,
+     and it passed.` **exit 0**.
+  5. Rule count: `-L` → **53**; `-T` → **15** tags. Both identical to
+     `TASK-0027`'s baseline.
+  6. **Control A — the silent-rule trap, reproduced.** A custom rule that fires
+     on every playbook, placed in `/tmp/opencode/customrules-recount/`. With
+     `-r <dir> -R` the `-L` count goes **53 → 54** and the run is **silent at
+     exit 0**. With `--enable-list probe-always-fires` the same rule **fires 17
+     times**. (First attempt used `-r` alone, which *replaces* the ruleset and
+     reported 5 rules; `-R` is what keeps the defaults, as `TASK-0027` used.)
+  7. **Control B — the built-ins evaluate.** A third copy with an unnamed task
+     using `shell` injected: caught at **exit 2**, with `fqcn`, `name` and
+     `command-instead-of-shell` naming file and line.
+  8. Estate re-verified untouched. `ADR-0014` updated, `B-039` raised.
 - Observations:
+  - **The figure holds: 53 rules, 15 tags, 0 violations, exit 0.** The caveat
+    is discharged.
+  - **Holding is the expected result, not a reassuring one.** `ansible-lint`
+    never moved — only `ansible-core` did — and the rule set is
+    `ansible-lint`'s. Anyone reading "the count is still 53" as evidence the
+    toolchain is stable has the causation backwards.
+  - **The subject grew roughly eight-fold and that is the real content of this
+    re-run.** 2 playbooks → 17 playbooks and 19 roles. The 2026-09-14 result
+    said nothing about any of what was added since; this one covers it.
+  - **The silent-no-op trap survives the version move**, so `ADR-0014`
+    clause 2 still applies to any estate rule reached through MCP. This was the
+    single most useful thing to re-check, and it is not about a version number.
+  - **`--list-profiles` and `-L` disagree, 55 against 53**, and the difference
+    is real rather than a bug: the profile listing counts sub-rule tags
+    (`name[template]`, `name[imperative]`, `name[casing]`) and omits rules in no
+    profile. Quote `-L`.
+  - **Found and not fixed:** the estate's `ansible.cfg` still says
+    `ansible-config validate` *rejects* `gather_subset` (2.21.4 accepts it
+    silently), still says "ansible-core 2.20.8", and still says "It has five
+    now" playbooks against 17. Separate repository — `B-039`.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - Run 2 (the figure): `Passed: 0 failure(s), 0 warning(s) in 202 files
+    processed of 204 encountered. Profile 'production' was required, and it
+    passed.` exit 0
+  - Run 1 (degradation control): exit 2, 36 `internal-error`, vault file not found
+  - Control A: `-L` 53 → 54 loaded; silent at exit 0; fires 17× when enabled
+  - Control B: exit 2 on an injected violation
+  - Estate: `HEAD` `2a6be9a` before and after; `git status --porcelain` empty
+    both times; 17 playbooks
+  - `tests/validate.sh` → `validate.sh: OK`
+  - `scripts/sync-registry.sh` → no diff
+- Result: done. `ADR-0014`'s caveat discharged, `SPRINT-CURRENT.md` heading 6
+  closed, `B-039` raised, estate untouched.
+- Commit: COMMIT_HASH
+- Push: PUSH_RESULT

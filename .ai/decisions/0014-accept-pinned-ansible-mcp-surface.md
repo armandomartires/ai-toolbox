@@ -14,6 +14,65 @@ re-run under 2.21.4. The decision does not rest on the count, which is why
 this is a caveat rather than a blocker — but a reader re-checking that number
 should expect to re-run it first.
 
+**Caveat discharged 2026-09-27 (`TASK-0115`). The figure holds: 53 rules,
+0 violations, exit 0 — under `ansible-core` 2.21.4.** Accepted text above is
+left as written; this is the dated result, not a replacement.
+
+| | `TASK-0027`, 2026-09-14 | `TASK-0115`, 2026-09-27 |
+|---|---|---|
+| `ansible-lint` / `ansible-core` | 26.8.0 / **2.20.8** | 26.8.0 / **2.21.4** |
+| Built-in rules (`-L`) | **53** | **53** |
+| Tags (`-T`) | **15** | **15** |
+| Result under `profile: production` | 0 failures, 0 warnings, exit 0 | 0 failures, 0 warnings, exit 0 |
+| Subject | **2 playbooks** | **17 playbooks, 19 roles** — 202 files processed of 204 |
+
+**The number did not move and the subject did.** The rule set is
+`ansible-lint`'s, and `ansible-lint` never moved; only `ansible-core` did, so
+53 holding is the expected result rather than a reassuring one. What is
+genuinely new is the denominator: the estate has grown roughly eight-fold
+since the original figure, and **the clean result now covers all of it**. A
+reader must not treat the matching "53 / 0" as evidence of continuity — the
+2026-09-14 figure said nothing about the fifteen playbooks and nineteen roles
+added since.
+
+**One arithmetic trap, recorded because it cost time here.** Counting the
+bullets in `--list-profiles` from `min` through `production` gives **55**, not
+53, and the two are different metrics: the profile listing includes sub-rule
+tags (`name[template]`, `name[imperative]`, `name[casing]`) and omits rules in
+no profile. `-L` is the figure this ADR quotes. Quote `-L`.
+
+**The green result is backed by two controls, because exit 0 alone is not
+evidence the rules ran** — the qualification below, restated as a procedure:
+
+1. **The silent-no-op trap is unchanged under 2.21.4.** A custom rule outside
+   the active profile was **loaded and listed** (`-L` count 53 → 54) and
+   **never evaluated**, at exit 0. Enabled by name via `--enable-list`, the
+   same rule fired 17 times. So `TASK-0027`'s finding survives the version
+   move intact, and clause 2 below still applies to any estate rule reached
+   through MCP.
+2. **The built-in rules demonstrably evaluate.** A deliberate violation was
+   injected into a throwaway copy — an unnamed task using `shell` — and the
+   `production` profile caught it: exit **2**, with `fqcn`, `name` and
+   `command-instead-of-shell` hits naming the file and line. So the 0 in the
+   table is a measured zero, not silence.
+
+**Method, and its stated degradation.** Run on a `/tmp/opencode/` copy, never
+in place — `TASK-0027`'s human decision, reproduced. `.env`, `tools/` and
+every `vault.yml` were excluded and their absence verified by `find`. That
+reproduces the original's degradation exactly: with `vault_password_file =
+tools/vault_pass.sh` still in `ansible.cfg` the run fails with 36
+`internal-error` results and exit 2, *"The vault password file …
+tools/vault_pass.sh was not found"*; the figure above comes from the second
+copy with that line commented out, which is what `TASK-0027` also did. **A
+clean result in `/tmp` is still not evidence that the estate's own gate
+passes.** One deliberate change from the original method: `roles/` was copied
+too, because the estate now has 19 and the original had none to copy.
+
+**Not adopted:** `ansible-lint` **26.9.0** is available upstream and the
+installed binary prints an upgrade notice on every run. Not installed, and
+deliberately not installed inside this task — changing the tool in the run
+that re-measures it makes the delta unattributable. Nothing here tracks it.
+
 The trail below is kept as written:
 
 > **Proposed**, 2026-09-14. **Body written 2026-09-16** against `TASK-0027`'s

@@ -97,10 +97,25 @@ mean inventing the second case it waits for.
    no longer gets. Corrected in `TASK-0069`'s shape: accepted text preserved,
    dated correction added.
 
-   **What remains under this heading is a measurement, not a sweep**, and it
-   is `ADR-0014`'s standing caveat: the "53 rules / 0 violations" figure has
-   still never been re-run under 2.21.4. Also noted and not acted on:
-   `ansible-lint` **26.9.0** is available upstream; nothing here tracks it.
+   **That measurement is now done — `TASK-0115`, 2026-09-27 — and this
+   heading closes.** `ADR-0014`'s caveat is discharged: **53 rules, 15 tags,
+   0 failures, 0 warnings, exit 0** under `ansible-core` 2.21.4. The count
+   did not move, which is the expected result rather than a reassuring one —
+   the rule set is `ansible-lint`'s and `ansible-lint` never moved. **What
+   moved is the subject**: 2 playbooks then, **17 playbooks and 19 roles**
+   now, 202 files of 204 processed, so the clean result covers roughly eight
+   times the content. Backed by two controls, because exit 0 alone proves
+   nothing: the silent-no-op trap **still reproduces** under 2.21.4 (a custom
+   rule loaded, listed `53 → 54`, never evaluated, exit 0; enabled by name it
+   fired 17 times), and a deliberately injected violation **was caught**
+   (exit 2), so the zero is measured rather than silent.
+
+   Still noted and not acted on: `ansible-lint` **26.9.0** is available
+   upstream and the binary prints an upgrade notice every run; nothing here
+   tracks it, and it was deliberately not installed inside the task that
+   re-measured — changing the tool in that run would make the delta
+   unattributable. Raised instead: **`B-039`**, three now-false claims in the
+   estate's own `ansible.cfg`, which this repository cannot fix.
 7. **`skills/ansible-ops/` has never been exercised against a live estate.**
    Its closing item (`B-010`) was closed *with this limitation stated* — a
    closed item is not a claim of quality.
