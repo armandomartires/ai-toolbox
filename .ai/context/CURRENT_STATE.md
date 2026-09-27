@@ -15,6 +15,39 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
+## `worktree-only` is not enforced on Claude Code (`TASK-0111`)
+
+**2026-09-27.** The measurement `ADR-0018` named as outstanding is done, and
+the answer is **yes, a worktree-isolated subagent can read and write the main
+checkout by absolute path**. `DENIALS: NONE`, so refusal and confinement stayed
+distinguishable — the control `TASK-0056` lacked.
+
+**Verified from the main checkout, not from the probe's report**: a file the
+probe created is present in the main working tree, and tracked `LICENSE` moved
+from md5 `85da8b3a…` to `994f2c99…`, 21 → 23 lines, both visible in
+`git status`. Restored afterwards byte-identical, with `HEAD` unmoved.
+
+**It confirms clause 8.2 rather than overturning it.** A role declaring
+`worktree-only` still has no per-agent Claude Code target and its emission must
+still fail loudly — but the reason is now that the confinement **demonstrably
+does not exist**, not that no config key was found for it. `TASK-0107` measured
+a different property, effect-isolation, and stands. Together: isolation confines
+the accidental and does nothing about the deliberate, which is what the term
+exists to deny.
+
+**Still open under this heading, and it is now a decision rather than a
+measurement:** whether those roles' Claude Code emission stays refused, the term
+is redefined, or the roles stop declaring it.
+
+**Two things worth carrying forward.** The harness raised a classifier warning
+about the probe *after* the writes landed — detection is not denial, and a
+reader could otherwise mistake the warning for a boundary. And the `B-035` gap
+in the Claude Code binding is **not** settled by this: roles there are not
+denied the skill, so OpenCode's embedding rationale does not transfer, but
+absence of denial is not evidence a role would resolve the path, and the
+sibling-file argument is about location rather than permission. `TASK-0113`
+should observe its adjudicator before anyone acts on it.
+
 ## A binding's own checker was failing, ungated (`TASK-0112`)
 
 **2026-09-27.** The Claude Code unattended-run binding's stub suite was **red

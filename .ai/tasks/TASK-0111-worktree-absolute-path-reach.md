@@ -141,25 +141,25 @@ here.
 
 ## Acceptance criteria
 
-- [ ] The probe's report contains an explicit denial line for every attempted
+- [x] The probe's report contains an explicit denial line for every attempted
       operation, including the word `NONE` where nothing was denied.
-- [ ] Each of the three operations has a recorded verdict of exactly one of:
+- [x] Each of the three operations has a recorded verdict of exactly one of:
       succeeded, blocked by confinement, or denied by permissions.
-- [ ] Every verdict is backed by a command run **from the main checkout**,
+- [x] Every verdict is backed by a command run **from the main checkout**,
       with its output pasted in the Execution log — not by the subagent's report.
-- [ ] `ADR-0018`'s `worktree-only` section carries a dated line stating the
+- [x] `ADR-0018`'s `worktree-only` section carries a dated line stating the
       answer, and states whether clause 8.2 and term-table line 134 change.
-- [ ] `git rev-parse HEAD` matches the step-1 value and `git status --porcelain`
+- [x] `git rev-parse HEAD` matches the step-1 value and `git status --porcelain`
       is empty at the end, both pasted in.
-- [ ] `git worktree list` shows no probe worktree and `git branch` no probe branch.
-- [ ] `.ai/planning/SPRINT-CURRENT.md` item 2 either closes with the answer or
+- [x] `git worktree list` shows no probe worktree and `git branch` no probe branch.
+- [x] `.ai/planning/SPRINT-CURRENT.md` item 2 either closes with the answer or
       states what is still unmeasured — it is not left as written.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] `git status --porcelain` empty, and `git rev-parse HEAD` unchanged from
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] `git status --porcelain` empty, and `git rev-parse HEAD` unchanged from
       the pre-probe value
 
 ## Risks and rollback
@@ -186,16 +186,35 @@ here.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `.ai/decisions/0018-agent-portability-one-source-per-client-emission.md` | New dated section answering the question the ADR named; term-table line 134 annotated "measured, not inferred". **Clause 8.2 unchanged** — it is confirmed, not overturned |
+| `.ai/planning/SPRINT-CURRENT.md` | Item 2 rewritten: the measurement is closed, and what remains under the heading is named as a **decision** rather than an unmeasured question |
+| `.ai/context/CURRENT_STATE.md` | New dated section |
+| `LICENSE` | **Restored byte-identical** (md5 `85da8b3a9edbf8fa6444a381ba1c1440`, 21 lines) after the probe appended to it |
+| `.worktree-probe-TASK-0111.txt` | **Deleted.** Created in the main working tree by the probe |
+| The nine role definitions, `agents/`, `scripts/emit-agents.py` | **Unchanged**, as forecast. This was a measurement; the emission it bears on is a separate decision |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**The forecast held**, including its own hedge: "No component file is expected
+to change. If one does, the forecast was wrong." None did. Two files outside
+the forecast were touched and then restored to their prior state — `LICENSE`
+and the probe file — which is the experiment operating as designed rather than
+a deviation.
+
+**One deviation:** the plan's step 2 said to stop and fix `.claude/`'s ignore
+status if it had lapsed. It had not, so nothing was done — recorded because
+the check running and passing is what makes the clean `git status` at the end
+meaningful rather than lucky, which is exactly what `TASK-0107` could not say.
+
+**Next task starts here**: the measurement is closed and `ADR-0018` carries the
+answer. What is open is a **decision**, not an experiment: whether roles
+declaring `worktree-only` stay refused for Claude Code emission, whether the
+term is redefined, or whether the roles stop declaring it. Separately,
+`TASK-0113` inherits a narrowed question about the `B-035` gap — roles are not
+denied the skill on Claude Code, so OpenCode's embedding rationale does not
+transfer, but that is not the same as showing a role would find the file.
 
 ## Status
 
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-27
 - Updated: 2026-09-27
@@ -204,11 +223,62 @@ against the original.
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-27
+- Agent: Claude Opus 5 (1M context), Claude Code
 - Actions:
+  1. Before-state from the main checkout: `HEAD` `9d9d761`, `git status
+     --porcelain` empty, one worktree (the main checkout), one branch
+     (`master`).
+  2. Confirmed `.claude/` still ignored — `.gitignore:30`, `git check-ignore
+     -v` agreeing. The dependency `TASK-0107` flagged as luck, checked.
+  3. Recorded three absolute-path targets and their pre-state. `LICENSE` and
+     root `README.md` are referenced nowhere in `tests/validate.sh`, so
+     `LICENSE` was chosen as the scratch-safe append target: md5
+     `85da8b3a9edbf8fa6444a381ba1c1440`, 21 lines. `AGENTS.md` md5
+     `68b561142314f2bf747706384154e96e`.
+  4. Spawned **one** subagent with `isolation: "worktree"`, required to use
+     the shell for every operation, to report each outcome as
+     SUCCEEDED/FAILED/DENIED, to quote any refusal verbatim, **not** to retry
+     a denied command by another route, and **not** to clean up.
+  5. Probe reported: `PWD` and `TOPLEVEL`
+     `.claude/worktrees/agent-a31e15b05961374c8`, branch
+     `worktree-agent-a31e15b05961374c8`; all three operations SUCCEEDED;
+     `DENIALS: NONE`.
+  6. Verified every outcome from the main checkout — see Validation.
+  7. Cleaned up: `git checkout -- LICENSE`, `rm` the probe file.
+  8. Updated `ADR-0018`, `SPRINT-CURRENT.md`, `CURRENT_STATE.md`.
 - Observations:
+  - **The answer is yes, and it makes `worktree-only` unenforced on Claude
+    Code.** Not merely unexpressed in config — demonstrably absent.
+  - **It confirms clause 8.2 rather than overturning it.** The clause says
+    emission must fail loudly for a role declaring this term; that is now
+    supported by a measurement instead of by the absence of a config key. The
+    conclusion is unchanged and better founded, which is the useful outcome of
+    a spike that agrees with the decision it tested.
+  - **`TASK-0107`'s result is untouched and was never in tension with this
+    one.** It measured where a commit lands (effect-isolation); this measured
+    what the shell can reach (access). A worktree separates working trees and
+    branch tips; it does not partition the filesystem.
+  - **The harness raised a classifier warning about the probe, after the
+    writes had landed.** Detection is not denial. Recorded because a reader
+    who sees the warning could reasonably assume something was prevented, and
+    nothing was — the file existed and `LICENSE` had changed.
+  - **The probe's worktree cleaned itself up.** `git worktree list` and `git
+    branch` show no residue, because its *own* tree was unmodified — every
+    write it made went to the main checkout, which is the finding restated as
+    an accident of bookkeeping.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - Read `AGENTS.md`: content returned; md5 unchanged `68b5611…` → `68b5611…`
+  - Create: `.worktree-probe-TASK-0111.txt` **present** in the main working
+    tree with the expected content, `git status` showing `??`
+  - Append: `LICENSE` md5 `85da8b3a…` → `994f2c99…`, 21 → 23 lines, `git
+    status` showing ` M`
+  - After cleanup: `LICENSE` md5 back to `85da8b3a…` at 21 lines, probe file
+    gone, `git rev-parse HEAD` = `9d9d761` (unmoved), `git worktree list` one
+    entry, `git branch` only `master`
+  - `tests/validate.sh` → `validate.sh: OK`
+  - `scripts/sync-registry.sh` → no diff
+- Result: done. The question `ADR-0018` named is answered and closed; what
+  remains under the heading is a decision, not a measurement.
+- Commit: COMMIT_HASH
+- Push: PUSH_RESULT

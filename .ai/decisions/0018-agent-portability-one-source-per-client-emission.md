@@ -131,7 +131,7 @@ and the shortfall is one-sided. Measured against the four roles
 | `read-only` | `edit: deny`, `write: deny` | omit Write/Edit from `tools` | **both** |
 | `no-delegation` | `task: deny` | omit `Agent` from `tools` | **both** |
 | `no-webfetch` | `webfetch: deny` | omit WebFetch / `disallowedTools` | **both** |
-| `worktree-only` | `external_directory: deny` | no per-agent equivalent | OpenCode only |
+| `worktree-only` | `external_directory: deny` | no per-agent equivalent — **measured, not inferred** (`TASK-0111`) | OpenCode only |
 | `test-files-only` | `edit` glob map (7 globs) | **unexpressible per-agent** | OpenCode only |
 | `bash-allowlist` | `bash` glob map (13 globs in `shell-runner`) | **unexpressible per-agent** | OpenCode only |
 | `no-force-push` | `bash` deny globs | **unexpressible per-agent** | OpenCode only |
@@ -424,3 +424,55 @@ per-agent Claude Code target, and emission for that target must still fail
 loudly. What changed is that the fallback is now measured rather than
 guessed. **Open, and the next measurement if this is picked up:** can a
 worktree-isolated subagent read and write the main checkout by absolute path?
+
+### The absolute-path question, answered 2026-09-27 (`TASK-0111`)
+
+**Answer: yes, it can. Both read and write, with nothing denied.** So
+`worktree-only` is **not enforced on Claude Code** — the term table's line 134
+is now a measured fact rather than an inference from a missing config key.
+
+One subagent, spawned with `isolation: "worktree"`, was asked to perform three
+operations against the main checkout **by absolute path** and to report any
+denial verbatim. It reported `DENIALS: NONE`, so refusal and confinement are
+distinguishable here, which is the control `TASK-0056` lacked and `TASK-0107`
+established. Every outcome below was then verified **from the main checkout**,
+not taken from the probe's report:
+
+| Operation | Probe said | Verified from the main checkout |
+|---|---|---|
+| Read `AGENTS.md` | SUCCEEDED | Content returned; file md5 unchanged at `68b5611…` |
+| Create `.worktree-probe-TASK-0111.txt` | SUCCEEDED | File **present** in the main working tree, correct content, shown by `git status` as `??` |
+| Append to tracked `LICENSE` | SUCCEEDED | md5 **changed** `85da8b3a…` → `994f2c99…`, 21 → 23 lines, shown by `git status` as ` M` |
+
+The probe ran in `.claude/worktrees/agent-a31e15b05961374c8/` on branch
+`worktree-agent-a31e15b05961374c8` — the same inside-the-repository placement
+`TASK-0107` recorded.
+
+**What this settles, and what it does not.** It confirms clause 8.2 rather
+than overturning it: a role declaring `worktree-only` has no per-agent Claude
+Code target, emission must still fail loudly, and the reason is now that the
+confinement **demonstrably does not exist**, not that no key was found for it.
+`TASK-0107`'s finding stands unchanged and is a different property —
+effect-isolation, where a commit lands. The two together say: isolation
+confines the *accidental* and does nothing about the *deliberate*, which is
+what the term exists to deny. That sentence was written as a caution in
+`TASK-0107`; it is now measured.
+
+**An observation the experiment did not set out to make.** The harness
+returned a classifier warning about the subagent's actions — and the writes
+had already landed. Detection is not denial, and a warning that arrives after
+the effect is not a boundary. This is recorded because a reader could
+otherwise take the warning as evidence that something stopped the write;
+nothing did.
+
+**Consequence for the `B-035` gap, and it is the useful one.** The Claude Code
+binding has no embedded decision standard, deliberately left because whether
+its roles can read `skills/unattended-ops/` turned on this question. They are
+**not denied** — so the OpenCode rationale for embedding, that reads of the
+skill were refused (57 of 92 denied calls in one run), does not transfer.
+**That is not yet a decision to leave it unembedded**: absence of denial is
+not evidence a role would resolve the path, and `driver.py`'s sibling-file
+argument — a template copied out of the skill leaves the references at no
+known relative path — is about *location*, not permission, and is untouched by
+this measurement. `TASK-0113` should observe what its adjudicator actually
+does before anyone acts on this.

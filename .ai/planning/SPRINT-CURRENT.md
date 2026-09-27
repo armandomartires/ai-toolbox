@@ -34,19 +34,29 @@ mean inventing the second case it waits for.
 
 ## Carried forward, still open
 
-2. **`worktree-only` has no settled Claude Code emission.** Still open, but
-   **no longer unmeasured** — `TASK-0107`, 2026-09-26, ran the experiment
-   `TASK-0056` was confounded on, this time with denial reporting required of
-   the probe: `DENIALS: NONE`, so confinement and refusal are distinguishable.
-   **A worktree-isolated subagent's commit does not reach the real tree**
-   (`master` unmoved, commit not an ancestor, file absent — checked from the
-   main checkout). That question is answered and **it does not settle the
-   term**: `worktree-only` denies *access* outside the worktree, and what was
-   measured is *effect-isolation*. `ADR-0018` clause 8.2 stands, the term
-   table still reads "no per-agent equivalent", and all nine roles still
-   declare the term. **The next measurement is named in the ADR**: can such a
-   subagent read and write the main checkout by absolute path? Until that is
-   run, this stays open.
+2. **`worktree-only` is NOT enforced on Claude Code — measured 2026-09-27
+   (`TASK-0111`), and the question `ADR-0018` named is now closed.** A
+   worktree-isolated subagent **read and wrote the main checkout by absolute
+   path**, with `DENIALS: NONE`: it created a file in the main working tree
+   and appended to tracked `LICENSE` (md5 `85da8b3a…` → `994f2c99…`), both
+   verified from the main checkout rather than from the probe's report. This
+   **confirms** clause 8.2 instead of overturning it — emission for a role
+   declaring `worktree-only` must still fail loudly, and the reason is now
+   that the confinement demonstrably does not exist, not that no key was
+   found. `TASK-0107`'s earlier result stands and measured a different
+   property (effect-isolation: a commit does not reach the real tree). All
+   nine roles still declare the term and the term table still reads "no
+   per-agent equivalent", now annotated as measured.
+
+   **What remains open under this heading is the emission itself**, which is a
+   decision rather than a measurement: whether those roles' Claude Code
+   emission stays refused, or the term is redefined, or the roles stop
+   declaring it. Nothing is unmeasured any more.
+
+   Noted in passing, because it could mislead: the harness raised a classifier
+   warning about the probe **after** the writes had landed. Detection is not
+   denial.
+
 3. **`B-025`** — no vocabulary term for *"may call only this MCP server"*.
    **`waiting`** since 2026-09-25 (was `ready`; the human's choice to leave it
    open). Waiting on a **second** role that wants it: one instance is a case,
