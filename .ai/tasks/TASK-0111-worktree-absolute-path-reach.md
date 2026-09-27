@@ -280,5 +280,6 @@ transfer, but that is not the same as showing a role would find the file.
   - `scripts/sync-registry.sh` → no diff
 - Result: done. The question `ADR-0018` named is answered and closed; what
   remains under the heading is a decision, not a measurement.
-- Commit: COMMIT_HASH
-- Push: PUSH_RESULT
+- Commit: `e247ee6`
+- Push: confirmed — `9d9d761..e247ee6  master -> master` to `origin`;
+  `git remote -v` token-free, `master...origin/master` in sync
