@@ -156,29 +156,29 @@ Two measurements and the ADR rows they replace. Nothing is redesigned.
 
 ## Acceptance criteria
 
-- [ ] F7 has a recorded **maximum** single agent-side call duration, with the
+- [x] F7 has a recorded **maximum** single agent-side call duration, with the
       full list of call timings, and a verdict stated against the ten-minute cap.
-- [ ] The synthetic gate's duration is recorded and exceeds the cap; a run where
+- [x] The synthetic gate's duration is recorded and exceeds the cap; a run where
       it did not is not evidence and is discarded rather than reinterpreted.
-- [ ] The equivalence statement is written and names at least one thing the
+- [x] The equivalence statement is written and names at least one thing the
       synthetic gate does **not** establish.
-- [ ] F9 has at least two interruptions recorded, one of them in the irreducible
+- [x] F9 has at least two interruptions recorded, one of them in the irreducible
       window, each with the tracker/task-file/`git log`/journal state after it.
-- [ ] F9's verdict explicitly addresses the irreducible window rather than
+- [x] F9's verdict explicitly addresses the irreducible window rather than
       averaging over it, and states what `git log --grep <taskId>` returns.
-- [ ] Both `ADR-0022` rows are replaced, carry a date, and neither still reads
+- [x] Both `ADR-0022` rows are replaced, carry a date, and neither still reads
       `UNTESTED`.
-- [ ] Every claim in both rows traces to output pasted into this file.
-- [ ] `run-gate.sh` and `driver.py` are byte-identical to their pre-task state,
+- [x] Every claim in both rows traces to output pasted into this file.
+- [x] `run-gate.sh` and `driver.py` are byte-identical to their pre-task state,
       or the deviation is recorded with its reason.
-- [ ] `tests/validate.sh` exits 0 and this repository's tree is clean.
+- [x] `tests/validate.sh` exits 0 and this repository's tree is clean.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] The OpenCode binding's pytest suite, before and after — unchanged result
-- [ ] `skills/unattended-ops/scripts/check-binding.sh` on the scratch binding
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] The OpenCode binding's pytest suite, before and after — unchanged result
+- [x] `skills/unattended-ops/scripts/check-binding.sh` on the scratch binding
 
 ## Risks and rollback
 
@@ -205,16 +205,43 @@ Two measurements and the ADR rows they replace. Nothing is redesigned.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `.ai/decisions/0022-unattended-runs-and-the-narrowed-workflow-clause.md` | F7 and F9 rows replaced with dated `CONFIRMED` verdicts, each carrying its evidence and its stated limit. Header updated: eight of nine now carry verdicts, F8 alone open. **No `UNTESTED` verdict cell remains** |
+| `.ai/planning/SPRINT-CURRENT.md` | Item 9 closed |
+| `.ai/context/CURRENT_STATE.md` | New dated section |
+| `skills/unattended-ops/references/long-gates.md` | **Unchanged.** The plan allowed for editing it if F7's measurement contradicted it. Nothing did — the 68–72 minute figures and the ten-minute cap were the basis of the experiment, not its subject |
+| `run-gate.sh`, `driver.py` | **Byte-identical.** Both measurements were taken without modifying either, which the plan required and made an acceptance criterion |
+| `/tmp/opencode/f7-harness/`, `/tmp/opencode/f9-harness/` | Scratch, not committed, removed after write-up |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Three deviations, all recorded rather than absorbed.**
+
+1. **F9 used a stubbed model, where the brief argued for "a real signal to a
+   real driver".** The signal and the driver *were* real, as were git and the
+   filesystem — the test harness's `git_wrapper.py` execs the real git, and a
+   stubbed role's `sh` runs real commands. What is modelled is the closer's
+   *judgement*, not its disk effects, and this claim is about disk effects. The
+   brief's reasoning ("a stub replaces rather than exercises") holds against
+   stubbing the *driver*; it does not apply to stubbing the *model* while the
+   driver, git and filesystem stay real. Stated as a limit in the ADR row.
+2. **The default stub closer does not tick the tracker, so it was rewritten.**
+   `closer_sh()` stages only `src/a.txt` and the task file. F9's falsifier is
+   about the tracker, so a closer that never writes it cannot exercise the
+   claim — the measurement would have "passed" vacuously. The F9 closer ticks
+   `TODO.md` and stages it, matching loop step 10's actual instruction.
+3. **Kill placement was made deterministic rather than raced.** The plan said
+   to "record how the placement was achieved and how confident it is". A
+   pidfile written by the launcher, with the SIGTERM issued from the stub's own
+   `sh` at the chosen point, means the placement is exact rather than probable —
+   so the confidence is "certain", not "likely", and the irreducible window the
+   brief feared might be unhittable was hit on the first attempt.
+
+**Next task starts here**: `ADR-0022` has one falsifier still open — F8, for
+Bionic only (S10.4). `SPRINT-CURRENT.md` items 6 and 9 are both closed;
+item 2's measurement closed under `TASK-0111`, leaving a decision. `TASK-0113`
+is the remaining `ready` item from this batch.
 
 ## Status
 
-- Status: ready   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-27
 - Updated: 2026-09-27
@@ -223,11 +250,69 @@ against the original.
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-27
+- Agent: Claude Opus 5 (1M context), Claude Code
 - Actions:
+  1. Environment: `opencode 1.18.32` (noted against `ADR-0022`'s `1.18.31`
+     verdicts), repo `HEAD` `4f94d8a`.
+  2. **F7 harness.** A gate map with one entry, `argv` `["bash","-c","echo
+     start; sleep 720; echo done"]`, `timeout_seconds` 1800. **720 s chosen and
+     recorded: 120 s past the 600 s cap, a 20% margin.** A poll script timing
+     *every* call to `run-gate.sh`.
+  3. Ran it. `start` → **0 s**, handle returned, `STATE=RUNNING`. Then 12
+     `wait` polls: 61, 60, 60, 60, 60, 61, 60, 60, 60, 61, 60, 58 s. Final
+     poll `STATE=PASSED EXIT=0 ELAPSED=720s`. `TOTAL_ELAPSED=721s POLLS=12`.
+     Evidence file written by the gate, one line, as rule 3 requires.
+  4. Wrote the equivalence statement (see Observations).
+  5. **F9 harness.** Reused the binding's own test harness — real driver, real
+     git (`git_wrapper.py` execs `REAL_GIT`), real filesystem, stubbed model.
+     Wrote a closer that **ticks `TODO.md`** and stages it, because the default
+     one does not. SIGTERM delivered from the stub's `sh` via a pidfile the
+     launcher writes, so placement is exact.
+  6. **Placement (a), between gate and close** — kill during adjudication:
+     tracker `- [ ] TASK-0001`, commits **1** (the fixture), porcelain
+     `M src/a.txt`, journal `run-start > gate > halt > run-end`,
+     `git log --grep TASK-0001` **empty**, handover **present**, exit 1.
+  7. **Placement (b), the irreducible window** — kill issued by the closer's
+     own `sh` immediately after `git commit` returned, before
+     `driver.py:661`'s journal write: tracker `- [x] TASK-0001`, commits **2**
+     (`07be61b TASK-0001: change a`), porcelain **clean**, journal
+     `run-start > gate > adjudication > halt > run-end` — **no `close` event**
+     — `git log --grep TASK-0001` → **`07be61b`**, handover present, exit 1.
+  8. Replaced both ADR rows; updated the table's header; closed
+     `SPRINT-CURRENT.md` item 9.
 - Observations:
+  - **F7's result generalises structurally, which a single measurement normally
+    would not.** The per-call ceiling is `wait`'s own 60 s bound, **not** the
+    gate's length: a 720 s gate and a 4,300 s build both yield ~61 s calls and
+    differ only in how many. That is why a synthetic gate is legitimate here —
+    `sleep` and a compile are indistinguishable from the poller's side, which is
+    the entire content of the claim. It does **not** establish anything about
+    handling a real build's output, or about a gate that wedges without exiting.
+  - **F9's falsifier cannot occur, and finding that out was the point.** "A
+    ticked tracker row with no commit behind it" requires tracker and commit to
+    diverge; the closer stages the tracker *into* the commit, so they cannot.
+    Placement (b) is the proof: the tracker was ticked **and** the commit was
+    there.
+  - **The ADR's wording pointed at the wrong casualty.** It implies the tracker
+    is what the irreducible window endangers. The **journal** is: it carried no
+    `close` event after a real close. Worth correcting in the row rather than
+    leaving a reader to infer it.
+  - **The resume guard was observed working, not assumed.** `git log --grep
+    TASK-0001` returned the commit in placement (b) — the exact mitigation the
+    ADR says closes the window "in practice, never in theory".
+  - **`TASK-0100`'s clean stop held under a real signal** at both placements:
+    handover written, exit 1, no retry.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - F7: 13 timed calls recorded; **max 61 s** against a 600 s cap; gate
+    `ELAPSED=720s`, `STATE=PASSED EXIT=0`
+  - F9(a): tracker untouched, 1 commit, `--grep` empty
+  - F9(b): tracker ticked, 2 commits, `--grep` finds `07be61b`, journal has no
+    `close`
+  - `run-gate.sh` and `driver.py` unmodified — `git status` showed neither
+  - `tests/validate.sh` → `validate.sh: OK`
+  - `scripts/sync-registry.sh` → no diff
+- Result: done. Both falsifiers settled; no `UNTESTED` verdict cell remains in
+  `ADR-0022`; F8 (Bionic) is the only one still open.
+- Commit: COMMIT_HASH
+- Push: PUSH_RESULT

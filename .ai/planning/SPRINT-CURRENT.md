@@ -124,12 +124,33 @@ mean inventing the second case it waits for.
    sprints and exercised by none. Neither S9 nor S10 shrank either. It
    should be restated in the next plan that risks shrinking, not retired as
    vindicated.
-9. **`ADR-0022` F7 and F9 are untested.** F7 — whether routing every gate
-   through one detaching entry point keeps each agent shell call inside the
-   client's cap — every pilot gate took 1–3 s, too short to test the claim.
-   F9 — whether a run interrupted between the gate step and the close step
-   leaves the tracker untouched — the one pilot interruption came before any
-   close, so the window it names is still unobserved.
+9. **`ADR-0022` F7 and F9 — BOTH SETTLED 2026-09-27 by `TASK-0114`. This
+   heading closes.** Neither could ever have been answered by running the loop
+   normally, which is why they needed a task: every pilot gate took 1–3 s, and
+   the one pilot interruption came before any close.
+
+   **F7 — CONFIRMED.** A 720 s synthetic gate, 120 s past the ten-minute cap,
+   driven through `run-gate.sh`: `start` returned in **0 s**, then 12 polls of
+   **max 61 s**. Longest agent-side call **61 s against a 600 s cap**. It
+   generalises structurally rather than by luck — the per-call maximum is set
+   by `wait`'s own 60 s bound, **not** by the gate's length, so the real
+   68–72 minute build yields the same ceiling and merely more polls.
+
+   **F9 — CONFIRMED, and its falsifier turns out to be structurally
+   unreachable.** Two interruptions of a real driver against a real repository,
+   placed by pidfile rather than raced. Between gate and close: tracker
+   untouched, no commit. In the irreducible window (after `git commit` returned,
+   before the journal write): tracker ticked **and** the commit present — and
+   that is the point, because the closer stages the tracker *into the same
+   commit*, so "a ticked tracker row with no commit behind it" cannot occur.
+   **What diverges in that window is the journal, not the tracker**, which the
+   ADR's wording implied was the thing at risk. `git log --grep <taskId>` found
+   the commit, so the guard the ADR names as its practical mitigation was
+   observed working. Both runs wrote a handover and exited 1.
+
+   Stated limit: the model was stubbed, so the closer's *judgement* is modelled
+   while its disk effects — edit, stage, commit — were real. **F8 is now the
+   only falsifier still open**, and only for Bionic (S10.4).
 
 **Closed before or during S10, and not to be re-raised:** `B-018`, `B-021`,
 `B-023`, `B-024`, `B-026`, `B-027`, `B-028`, `B-029`, `B-030`, `B-031`,

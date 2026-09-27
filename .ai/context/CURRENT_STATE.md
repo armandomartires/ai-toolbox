@@ -15,6 +15,41 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
+## `ADR-0022`'s last two untested falsifiers are settled (`TASK-0114`)
+
+**2026-09-27.** F7 and F9 both **CONFIRMED**. Eight of the nine now carry
+verdicts; **F8 alone is still open**, and only for Bionic.
+
+**F7 — the long-gate claim holds, and generalises structurally.** A 720 s
+synthetic gate (120 s past the ten-minute cap) through `run-gate.sh`: `start`
+returned a handle in **0 s**, then 12 `wait` polls, **max 61 s**, min 58 s.
+Longest agent-side call **61 s against a 600 s cap**. The per-call maximum is
+set by `wait`'s own 60 s bound, **not** by the gate's length — so the real
+68–72 minute build produces the same ceiling with more polls, and a synthetic
+gate is indistinguishable from a compile on the poller's side. That equivalence
+is the claim's whole content and it was argued in writing rather than assumed.
+
+**F9 — confirmed, and the falsifier is structurally unreachable.** Two
+interruptions of a real driver against a real repository, placed
+deterministically by pidfile rather than raced. Between gate and close: tracker
+`- [ ]`, no commit, `git log --grep` empty. In the irreducible window — SIGTERM
+after `git commit` returned but before `driver.py:661`'s journal write — the
+tracker was `- [x]` **and** the commit was there. Neither produces "a ticked
+tracker row with no commit behind it", and the second shows why none can: the
+closer stages the tracker **into the same commit**, so the two cannot diverge.
+
+**The refinement worth carrying.** `ADR-0022`'s wording implies the *tracker* is
+what that window endangers. It is not — the **journal** is, and it carried no
+`close` event after a real close had happened. `git log --grep <taskId>` found
+the commit, so the resume guard the ADR names as its practical mitigation was
+**observed working** rather than asserted. Both runs wrote a handover and
+exited 1, so `TASK-0100`'s clean stop held under signal.
+
+**Stated limit.** The model was stubbed, so the closer's *judgement* is
+modelled; its disk effects — edit, stage, commit — were real, which is what
+these claims are about. Measured on `opencode 1.18.32`, one patch above the
+version F1/F2/F4/F5 were settled on.
+
 ## `ADR-0014`'s lint figure re-measured under 2.21.4 (`TASK-0115`)
 
 **2026-09-27.** The caveat that has stood on `ADR-0014` since `REVIEW-0010` is
