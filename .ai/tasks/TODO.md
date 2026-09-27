@@ -711,15 +711,26 @@ That became `TASK-0112` and displaced the order the briefs were planned in.
 - [x] TASK-0118 — this ledger's own stale claims (done). `B-035` still read
       `ready` a day after it closed; two next-free-id counters were stale.
       Raised **`B-038`**
-- [ ] TASK-0111 — `worktree-only`: can a worktree-isolated Claude Code
+- [x] TASK-0111 — `worktree-only`: can a worktree-isolated Claude Code
       subagent reach the main checkout by **absolute path**? `ADR-0018`'s
-      named next measurement (`ready`)
+      named next measurement (done, `e247ee6`). **It can** — created a file
+      in the main tree and appended to tracked `LICENSE`, `DENIALS: NONE`.
+      Confirms clause 8.2 with a measured reason instead of a guessed one;
+      the emission itself stays open, as a decision
 - [ ] TASK-0113 — first real run of the Claude Code binding (`ready` —
       unblocked by `TASK-0112`; was blocked on it)
-- [ ] TASK-0114 — `ADR-0022` F7 and F9, the two rows still `UNTESTED` (`ready`)
-- [ ] TASK-0115 — re-run `ADR-0014`'s 53-rule figure under `ansible-core`
+- [x] TASK-0114 — `ADR-0022` F7 and F9, the two rows still `UNTESTED`
+      (done, `e584c60`). Both **CONFIRMED**. F9's falsifier turns out to be
+      structurally unreachable — the closer stages the tracker into the same
+      commit — so what diverges in that window is the journal, not the
+      tracker. **F8 is now the only falsifier still open**, and only for
+      Bionic
+- [x] TASK-0115 — re-run `ADR-0014`'s 53-rule figure under `ansible-core`
       2.21.4. The estate has gone from **2 playbooks to 17** since, so the
-      denominator changed more than the version did (`ready`)
+      denominator changed more than the version did (done, `704f44c`).
+      **53 rules, 15 tags, 0 failures, exit 0**, over roughly eight times the
+      content, backed by two controls because exit 0 alone proves nothing.
+      Raised **`B-039`**
 - [ ] TASK-0116 — exercise `skills/ansible-ops/` against the live estate.
       Gates 1–5 are read-only and runnable; **gates 6–9 are `blocked` on
       human authorization in the task file**, per `AGENTS.md`
