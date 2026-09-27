@@ -314,5 +314,6 @@ is the remaining `ready` item from this batch.
   - `scripts/sync-registry.sh` → no diff
 - Result: done. Both falsifiers settled; no `UNTESTED` verdict cell remains in
   `ADR-0022`; F8 (Bionic) is the only one still open.
-- Commit: COMMIT_HASH
-- Push: PUSH_RESULT
+- Commit: `e584c60`
+- Push: confirmed — `4f94d8a..e584c60  master -> master` to `origin`;
+  `git remote -v` token-free, `master...origin/master` in sync
