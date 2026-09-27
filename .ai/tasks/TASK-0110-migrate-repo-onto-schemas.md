@@ -300,5 +300,6 @@ Four, all recorded rather than folded in.
   exemptions, both named and reasoned where the gate enforces them; nine
   briefs repaired by disclosure rather than reconstruction; one `TASK-0109`
   regression and one gate bug found and fixed.
-- Commit: `<hash>`
-- Push: `<result>`
+- Commit: `9525af1`
+- Push: confirmed — pushed to `origin/master`,
+  working tree clean and branch level with the remote afterwards
