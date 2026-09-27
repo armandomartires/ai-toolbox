@@ -10,8 +10,66 @@ S10.4 — `TASK-0104`; S10.5 — `TASK-0090`; S10.6 — no task of its own; S10.
 sections below carry the detail. **Two post-S10 tasks have since been taken
 up on the human's routing, without opening a sprint** — `TASK-0106` (done)
 and `TASK-0107` (planned); the section immediately below carries them. A
-third, `TASK-0109`, landed on 2026-09-26 and changed how every planning
-artifact is produced — see **Artifact shape has one owner**, below.
+third and fourth, `TASK-0109` and `TASK-0110`, landed 2026-09-26/27 and
+changed how every planning artifact is produced *and* brought the repository
+onto it — see **Artifact shape has one owner** and **The repository now
+follows it**, below.
+
+## The repository now follows it (`TASK-0110`)
+
+**2026-09-27.** `TASK-0109` built the mechanism and gated one artifact kind
+from `TASK-0109` onward, so the repo shipped a convention it did not itself
+follow. This closed that.
+
+**The gap was measured before it was planned**, by running each schema over
+every existing artifact: **27/27 ADRs and 30/30 sessions already conformed**,
+11 of 12 reviews did, and 72 of 106 briefs did. So gating three of the four
+kinds cost nothing but the decision to do it.
+
+**All four kinds are now gated**, in one interpreter (`check-groups`), and
+`FIRST_GENERATED_TASK` is **24**, not 109 — lowered *after* repairing the 11
+modern briefs it newly covered. **`TASK-0001`–`TASK-0023` stay exempt and are
+byte-identical**; `ADR-0012` and `FIRST_CONTRACT_TASK` own that exemption and
+this task did not reopen it. 152 artifacts are checked each run.
+
+**Nine briefs were repaired by disclosure, not reconstruction.** Each lacked
+a section written *before* the work — `## Likely files` ×5,
+`## Mandatory validations` ×2, `## Execution plan`, `### Attempt 1`. Each now
+carries the heading plus a dated line saying it was not recorded. Rebuilding
+them from git history was declined on the merits and by the human: a forecast
+written after the work is an outcome wearing a forecast's label, and it reads
+as evidence. All nine edits are **purely additive** — zero deletions.
+`TASK-0108` had `## Status` moved (content proven identical by a sorted-line
+diff); `TASK-0057`'s dead template scaffold was **demoted, not deleted**,
+because someone had explicitly retained it.
+
+**Two exemptions, named rather than absorbed into a number.** `REVIEW-0012`
+is the only review of twelve that diverges — different labels *and* different
+order, where the other eleven are byte-identical in order. Making it conform
+means relocating sections inside a closed sprint's point-in-time record,
+which the review schema's own write-once rule forbids; honouring a schema by
+rewriting the artifact it describes is not compliance. A numeric boundary was
+rejected as over-claiming. A second such exemption would be drift, not an
+outlier.
+
+**A regression in `TASK-0109`, found and fixed here.** Turning the review
+template into a schema dropped its write-once rule, which had lived in the
+copy-instruction blockquote and was discarded as if it were one. Restored to
+both review schemas. **The general lesson:** when a template becomes a
+schema, its prose must be triaged line by line into *instruction about
+copying* and *rule about the artifact* — only the first may be dropped.
+
+**Also fixed:** the gate's artifact list was first passed in `$GROUPS`, which
+bash owns as a built-in array, so the assignment was silently dropped and
+python raised `KeyError`. Renamed `ARTIFACT_GROUPS`.
+
+**Cost, measured.** Native ext4 1.17 s → 1.36 s for 152 artifacts — 1.25 ms
+each. On this `/mnt/c` working copy 2.79 s → 3.90 s; that delta is the 9p
+bridge reading 152 files, not the checking.
+
+**Still open:** `B-036` unchanged (the engine is unreachable from
+`project-migration` alone). `ADR-0027` carries a dated clarification, since
+two of its statements were true when written and are now false.
 
 ## Artifact shape has one owner (`TASK-0109`, `ADR-0027`)
 

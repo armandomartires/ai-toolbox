@@ -4,7 +4,9 @@
 
 # REVIEW-XXXX — Title
 
-<!-- FILL: Name what was reviewed and by whom, before anything else. -->
+<!-- FILL: Name what was reviewed and by whom, before anything else. A review is a
+     point-in-time snapshot: write it once and **don't edit it retroactively** as
+     reality moves on — that is what the next review is for. -->
 
 - Task(s) reviewed:
 - Reviewer:

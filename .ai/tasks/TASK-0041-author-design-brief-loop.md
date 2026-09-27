@@ -198,6 +198,13 @@ spikes: it depends on no spike, and its only gate is met.
 - [ ] No governance opinion: no task IDs, sprints, or `.ai/` structure
 - [ ] `tests/validate.sh` green; registry regenerated and committed
 
+## Mandatory validations
+
+*Not recorded when this brief was written.* Added by `TASK-0110`
+(2026-09-27) so the brief matches its schema. Which validations were
+*intended* was never written down; what was actually run is in the
+**Execution log**, and only that is evidence.
+
 ## Risks and rollback
 - **Risk: a placeholder exit condition that passes the gate.** The check
   verifies the section is **present and non-empty**, not that its contents

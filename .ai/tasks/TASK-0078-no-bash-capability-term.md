@@ -68,6 +68,14 @@ unqualified form does.
   **they must not copy the thinking roles' shape.**
 - `worktree-only`'s Claude Code mapping. Still open, still `TASK-0040`'s.
 
+## Likely files
+
+*Not recorded when this brief was written.* Added by `TASK-0110`
+(2026-09-27) so the brief matches its schema. This section is a **forecast**
+made before the work; it was never captured, and reconstructing it from what
+the commit actually touched would produce an outcome wearing a forecast's
+label. What was really changed is in **Outputs / handover**.
+
 ## Execution plan
 
 1. Guide: vocabulary row, the `read-only`-gap subsection, the counts.

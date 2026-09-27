@@ -353,3 +353,9 @@ defaults (finding 9); S10.4 (Bionic) and the sprint review.
       obvious binding-level fix; not taken here. (Finding 12's quoted/unquoted
       asymmetry applies to `.ai/…` paths; for `.` both forms pass.)
 - Commit: *(this record)*
+
+### Attempt 1
+
+*Not recorded when this brief was written.* Added by `TASK-0110`
+(2026-09-27) so the brief matches its schema. No attempt block was opened
+for this task; its outcome is recorded elsewhere in the brief.

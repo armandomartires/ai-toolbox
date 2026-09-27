@@ -41,9 +41,11 @@ required, and whether each is written before or after the work
 |------|--------|-------|
 | Templates are derived | `skills/project-workflow/templates/{tasks,decisions,reviews}/*` and `.ai/templates/{TASK,ADR,REVIEW,SESSION}.md` are rendered by `scripts/sync-templates.sh` and carry a do-not-edit banner. Edit the schema, re-run, commit both. | **yes** — `scripts/sync-templates.sh --check` runs from `tests/validate.sh` |
 | Task briefs match their schema | Briefs at or above `FIRST_GENERATED_TASK` in `tests/validate.sh` must carry the schema's required headings, in its order, with no superseded heading and no generator marker left behind. | **yes** |
-| Briefs below the boundary | Exempt, deliberately. They are records of what happened, not instances of a schema invented afterwards — the same argument `FIRST_CONTRACT_TASK` already carries. | not applicable |
+| Briefs below the boundary | Exempt, deliberately. They are records of what happened, not instances of a schema invented afterwards — the same argument `FIRST_CONTRACT_TASK` already carries. Now **24** (`TASK-0110`), lowered only after every brief it newly covered was repaired. **Raising it absorbs a convention change; lowering it without repairing first falsifies history.** | not applicable |
+| Repairing a brief that predates a section | Add the heading and a dated line saying it was not recorded. **Never reconstruct it** — a forecast written after the work is an outcome wearing a forecast's label, which reads as evidence and is worse than the missing heading. | **no** — judgment; the gate sees only the heading |
 | Every section has `!standard` guidance | Other levels fall back to it, so one sentence does not get written four times and drift. | **yes** — the parser refuses the schema otherwise |
-| ADR, review and session shape | Schemas exist and the generator uses them; **nothing gates the finished artifacts**. Only task briefs are checked. | **no** — convention only |
+| ADR, review and session shape | All three are gated (`TASK-0110`). No boundary: at the time the gate was added 27/27 ADRs and 30/30 sessions already conformed, so there is no pre-convention population to exempt. `INDEX.md` is excluded — it is an index, not an instance. | **yes** |
+| Named exemptions | `REVIEW-0012` only, recorded with its reason in `tests/validate.sh`. A numeric boundary would over-claim: the other eleven reviews match exactly. A second exemption would mean drift, not an outlier. | **yes** — the exemption itself is in the gate |
 
 - **`--guidance` is a prose density, never a model tier.** Its four levels
   (`terse`, `standard`, `explicit`, `literal`) change only the text inside

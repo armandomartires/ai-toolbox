@@ -265,6 +265,13 @@ the exact accepted forms, and there are two (play keyword and
 - [x] **No file under `/home/armando.martires/SIGMA-infrastructure` is
       modified**
 
+## Mandatory validations
+
+*Not recorded when this brief was written.* Added by `TASK-0110`
+(2026-09-27) so the brief matches its schema. Which validations were
+*intended* was never written down; what was actually run is in the
+**Execution log**, and only that is evidence.
+
 ## Risks and rollback
 - **Risk: authoring an unfailable check.** The named, repeated failure mode
   of this repo (lesson 8, **now three times** — this brief's own original

@@ -356,6 +356,38 @@ def check_many():
         raise SystemExit(1)
 
 
+def check_groups():
+    """Check many artifacts of SEVERAL kinds in one interpreter.
+
+    ARTIFACT_GROUPS is one 'schema<TAB>artifact' pair per line. Named that
+    and not GROUPS: bash has a built-in GROUPS array, so the assignment is
+    silently dropped rather than exported -- observed, as a KeyError. Each schema is parsed
+    once however many artifacts cite it, and the whole gate pass costs one
+    process instead of one per kind.
+    """
+    groups = {}
+    for line in os.environ["ARTIFACT_GROUPS"].split("\n"):
+        if "\t" not in line:
+            continue
+        schema, path = line.split("\t", 1)
+        schema, path = schema.strip(), path.strip()
+        if schema and path:
+            groups.setdefault(schema, []).append(path)
+    bad = 0
+    for schema in sorted(groups):
+        parse_schema(schema)      # fail fast, and prime the parse
+        for path in groups[schema]:
+            problems = check(path, schema)
+            if problems:
+                bad += 1
+                sys.stderr.write("FAIL %s\n" % path)
+                for pr in problems:
+                    sys.stderr.write("    - %s\n" % pr)
+    if bad:
+        sys.stderr.write("ARTIFACTS: %d artifact(s) do not match their schema\n" % bad)
+        raise SystemExit(1)
+
+
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
     schema = os.environ.get("SCHEMA", "")
@@ -363,6 +395,8 @@ def main():
         sync()
     elif mode == "check-many":
         check_many()
+    elif mode == "check-groups":
+        check_groups()
     elif mode == "render":
         if os.environ.get("FILENAME_ONLY") == "1":
             fm, _, _ = parse_schema(schema)

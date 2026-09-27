@@ -136,6 +136,14 @@ claims corrected. What remains under it is not a version number but
 `ADR-0014`'s standing caveat — the "53 rules / 0 violations" figure has still
 never been re-run under 2.21.4 — and that is a measurement, not a sweep.
 
+## Status
+- Status: **done**
+- Owner: agent
+- Created: 2026-09-26
+- Completed: 2026-09-26
+- Commit: `8d2fad0` — *Re-count the ansible-core version claims and correct three (TASK-0108)*
+- Push: **confirmed** to `origin/master`, `52c8767..8d2fad0`, verified by comparing `git rev-parse HEAD` against `ls-remote` — both `8d2fad0e5bfef9732464552abcfb9d68d7ba5e7b`, not by exit code
+
 ## Execution log
 
 ### Attempt 1
@@ -167,11 +175,3 @@ mostly *correct history*, and the one genuine defect was a **behavioural**
 claim: the brief promises that a misconfigured `gather_subset` is rejected,
 and it no longer is. Counting the version would never have surfaced that;
 reading the claims did.
-
-## Status
-- Status: **done**
-- Owner: agent
-- Created: 2026-09-26
-- Completed: 2026-09-26
-- Commit: `8d2fad0` — *Re-count the ansible-core version claims and correct three (TASK-0108)*
-- Push: **confirmed** to `origin/master`, `52c8767..8d2fad0`, verified by comparing `git rev-parse HEAD` against `ls-remote` — both `8d2fad0e5bfef9732464552abcfb9d68d7ba5e7b`, not by exit code

@@ -195,7 +195,7 @@ tasks the final clause set unblocks, so the next session does not re-derive it.
 - Push: **confirmed** — pushed to `origin/master`.
 
 ### Attempt 1 (template scaffold, retained)
-### Attempt 1
+#### Attempt 1
 - Date:
 - Agent:
 - Actions:

@@ -4,6 +4,10 @@
 
 # S###-checkpoint
 
+<!-- FILL: A review is a point-in-time snapshot. Write it once, at the end of a sprint
+     or a meaningful milestone, and **don't edit it retroactively** as reality
+     moves on — that is what the next checkpoint is for. -->
+
 **Date**: YYYY-MM-DD
 **Sprint completed**: `S###_Name`
 

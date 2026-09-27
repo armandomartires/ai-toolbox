@@ -63,6 +63,14 @@ the sprint and a stale list would send someone to finished work.
   `B-025` — all carried forward, none of them S9's to close.
 - Editing `REVIEW-0011`. It is a dated record.
 
+## Likely files
+
+*Not recorded when this brief was written.* Added by `TASK-0110`
+(2026-09-27) so the brief matches its schema. This section is a **forecast**
+made before the work; it was never captured, and reconstructing it from what
+the commit actually touched would produce an outcome wearing a forecast's
+label. What was really changed is in **Outputs / handover**.
+
 ## Execution plan
 
 1. Re-read the backlog's open rows.

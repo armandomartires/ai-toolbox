@@ -10,6 +10,18 @@ allow_extra: true
 ---
 
 !preamble
+!terse
+a point-in-time snapshot — write once, never edit retroactively
+!standard
+A review is a point-in-time snapshot. Write it once, at the end of a sprint
+or a meaningful milestone, and **don't edit it retroactively** as reality
+moves on — that is what the next checkpoint is for.
+!literal
+Fill the two fields below, then write the sections in order.
+A review is a snapshot of one moment. Write it once and do NOT come back
+later to correct it as things change — write the next checkpoint instead.
+Delete this comment when done.
+!body
 **Date**: {date}
 **Sprint completed**: `{sprint}`
 

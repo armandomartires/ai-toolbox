@@ -90,6 +90,13 @@ session.
 No component, script or registry change. `scripts/sync-registry.sh` is not
 expected to be needed.
 
+## Execution plan
+
+*Not recorded when this brief was written.* Added by `TASK-0110`
+(2026-09-27) so the brief matches its schema. The plan was never written
+before the work, so there is nothing to restore here; what was actually
+done is in the **Execution log**.
+
 ## Acceptance criteria
 
 - [x] `ADR-0021` reads **Accepted — 2026-09-23**; its narrative and dated

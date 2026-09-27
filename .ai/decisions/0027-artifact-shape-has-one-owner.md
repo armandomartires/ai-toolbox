@@ -159,9 +159,50 @@ engine only.
   not read prose for meaning, and must not be extended to try — *"a check
   that guesses fires on correct text and gets deleted."* Do not soften this.
 
+## Clarification (2026-09-27, `TASK-0110`)
+
+**Two statements above were true when written and are now false.** They are
+left in place rather than edited, so the record shows what changed.
+
+1. Consequences said *"Only task briefs are gated; ADR, review and session
+   schemas exist and generate, but nothing checks the finished files."*
+   `TASK-0110` gates all four kinds. That was safe to do immediately because
+   the gap was measured before it was planned and there was none: **27 of 27
+   ADRs and 30 of 30 sessions already matched their schema**, and 11 of 12
+   reviews did.
+2. The same section implied the task boundary was settled at 109. It is now
+   **24**, lowered only after repairing every brief it newly covered.
+   `TASK-0001`–`TASK-0023` remain exempt, unchanged: `ADR-0012` and
+   `FIRST_CONTRACT_TASK` own that exemption, not this ADR.
+
+**Two exemptions exist, and are named rather than absorbed into a number.**
+`REVIEW-0012` is exempt by name — the only review of twelve that diverges,
+and making it conform would mean relocating sections inside a closed
+sprint's point-in-time record, which the review schema's own write-once rule
+forbids. Honouring a schema by rewriting the artifact it describes is not
+compliance. `TASK-0057`'s dead template scaffold was demoted, not deleted,
+for the same reason: someone had explicitly retained it.
+
+**Nine briefs were repaired by disclosure, not reconstruction.** Each was
+missing a section written *before* the work — `## Likely files` five times,
+`## Mandatory validations` twice, `## Execution plan`, `### Attempt 1`. Each
+now carries the heading and a dated line saying it was not recorded. The
+content was deliberately not rebuilt from git history: a forecast written
+after the work is an outcome wearing a forecast's label, which reads as
+evidence and is worse than the missing heading.
+
+**A regression this ADR caused, found and fixed by `TASK-0110`.** Turning
+the review template into a schema dropped its write-once rule, which lived
+in the copy-instruction blockquote and was treated as a copy instruction
+rather than the substantive rule it is. Restored to both review schemas.
+The lesson generalises: when a template becomes a schema, its prose must be
+triaged line by line into *instruction about copying* and *rule about the
+artifact*, and only the first may be discarded.
+
 ## Provenance
 
-- Task: `.ai/tasks/TASK-0109-artifact-schema-one-owner.md`
+- Task: `.ai/tasks/TASK-0109-artifact-schema-one-owner.md`;
+  clarified by `.ai/tasks/TASK-0110-migrate-repo-onto-schemas.md`
 - Related ADRs: `ADR-0008` (no invented size gate), `ADR-0012` (the
   handover contract these schemas encode), `ADR-0013` (two frameworks, kept
   divergent), `ADR-0017` (rejected — tier ownership), `ADR-0018` clause 7

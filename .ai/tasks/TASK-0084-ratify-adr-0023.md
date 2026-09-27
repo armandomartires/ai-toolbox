@@ -65,6 +65,14 @@ editing it; if it no longer says `Proposed`, stop rather than overwrite.
 - `docs/operations/runbook.md` — it already documents the procedure and does
   not describe the ADR's status.
 
+## Likely files
+
+*Not recorded when this brief was written.* Added by `TASK-0110`
+(2026-09-27) so the brief matches its schema. This section is a **forecast**
+made before the work; it was never captured, and reconstructing it from what
+the commit actually touched would produce an outcome wearing a forecast's
+label. What was really changed is in **Outputs / handover**.
+
 ## Execution plan
 
 1. Re-read the status line and the clauses.

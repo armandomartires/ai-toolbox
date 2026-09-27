@@ -21,10 +21,15 @@ allow_extra: true
 
 !preamble
 !standard
-Name what was reviewed and by whom, before anything else.
+Name what was reviewed and by whom, before anything else. A review is a
+point-in-time snapshot: write it once and **don't edit it retroactively** as
+reality moves on — that is what the next review is for.
 !literal
 Replace the two fields below. "Task(s) reviewed" takes one or more task IDs.
-"Reviewer" takes the agent or person who did the review. Delete this comment.
+"Reviewer" takes the agent or person who did the review.
+A review is a snapshot of one moment. Write it once and do NOT come back
+later to correct it as things change — write the next review instead.
+Delete this comment when done.
 !body
 - Task(s) reviewed:
 - Reviewer:
