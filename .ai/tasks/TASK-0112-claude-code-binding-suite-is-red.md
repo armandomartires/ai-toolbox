@@ -295,5 +295,7 @@ scope and was deliberately not done here.
     byte-identical to their pre-task state
 - Result: done. Suite 25/25; `check-binding.sh` accepts the binding; `B-037`
   raised for the gating gap; `TASK-0113` unblocked.
-- Commit: COMMIT_HASH
-- Push: PUSH_RESULT
+- Commit: `0b6ec40` (briefs landed separately as `1496cc8`)
+- Push: confirmed — `1ceb6fa..0b6ec40  master -> master` to
+  `origin` (`armandomartires/ai-toolbox`); `git remote -v` verified
+  token-free afterwards, and `master...origin/master` reports in sync
