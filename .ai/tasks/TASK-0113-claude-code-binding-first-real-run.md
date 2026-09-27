@@ -212,13 +212,15 @@ against the original.
 
 ## Status
 
-- Status: blocked   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: ready   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-27
 - Updated: 2026-09-27
 
-Blocked on `TASK-0112`: the binding's own consistency check currently rejects
-it and its stub suite is red at 24/25.
+**Unblocked 2026-09-27 by `TASK-0112`** (`0b6ec40`): the binding is accepted by
+`check-binding.sh` and its stub suite is 25/25. Was `blocked` on exactly that.
+Status corrected by `TASK-0118`, which would otherwise have registered a
+blocker that no longer existed.
 
 ## Execution log
 

@@ -133,26 +133,26 @@ four points.
 
 ## Acceptance criteria
 
-- [ ] `grep -n "B-035" .ai/planning/BACKLOG.md` shows the row as closed, naming
+- [x] `grep -n "B-035" .ai/planning/BACKLOG.md` shows the row as closed, naming
       `TASK-0106` and commit `d50d220`.
-- [ ] `BACKLOG.md`'s open-items sentence names `B-025` and `B-036`, and does not
+- [x] `BACKLOG.md`'s open-items sentence names `B-025` and `B-036`, and does not
       name `B-035`.
-- [ ] Both next-free-id counters read the same value, and it equals one more
+- [x] Both next-free-id counters read the same value, and it equals one more
       than the highest id in `.ai/tasks/`, shown by the command that derived it.
-- [ ] `TODO.md` lists all eight new briefs with their statuses.
-- [ ] The three dated records naming `B-035` as `ready` are **unchanged**, shown
+- [x] `TODO.md` lists all eight new briefs with their statuses.
+- [x] The three dated records naming `B-035` as `ready` are **unchanged**, shown
       by `git diff` touching none of those lines.
-- [ ] `git diff --stat` shows exactly three files changed plus this one, and no
+- [x] `git diff --stat` shows exactly three files changed plus this one, and no
       whitespace-only hunk.
-- [ ] A backlog row exists for the cross-file agreement gate, unbuilt.
-- [ ] `tests/validate.sh` exits 0.
+- [x] A backlog row exists for the cross-file agreement gate, unbuilt.
+- [x] `tests/validate.sh` exits 0.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] `git diff --check` — no whitespace errors
-- [ ] `./skills/project-workflow/scripts/check-artifact.sh` on all eight new briefs
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] `git diff --check` — no whitespace errors
+- [x] `./skills/project-workflow/scripts/check-artifact.sh` on all eight new briefs
 
 ## Risks and rollback
 
@@ -175,16 +175,38 @@ four points.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `.ai/planning/BACKLOG.md` | `B-035` closed, naming `TASK-0106` and `d50d220`, with its original entry preserved after the closure — the form `B-029` and `B-032` already use. Summary sentence now reads **four** open items: `B-025`, `B-036`, `B-037`, `B-038`. `B-038` added |
+| `.ai/planning/SPRINT-CURRENT.md` | *Task numbering* reads `TASK-0119`, with a line saying what it read before and why that was harmless. Paragraph re-wrapped to the file's width; no other change |
+| `.ai/tasks/TODO.md` | Post-S10 counter reads `TASK-0119`; `TASK-0111`…`TASK-0118` registered with statuses; the three items deliberately given no brief are named with the reason |
+| `.ai/tasks/TASK-0113-claude-code-binding-first-real-run.md` | `blocked` → `ready`. Not in the original plan — see the deviation below |
+| `.ai/context/CURRENT_STATE.md` | **Unchanged**, as forecast: it was already correct on all four claims |
+| Three dated records | **Unchanged and verified so**: `TODO.md:659`, `CURRENT_STATE.md:405` and `sprints/SPRINT-S10-unattended-bindings.md:45` still describe `B-035` as `ready`, which is what was true when each was written |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Two deviations from the plan.**
+
+1. **`TASK-0113`'s status was corrected, which the plan did not list.** Its
+   blocker was `TASK-0112`, which landed an hour earlier. Registering it in
+   `TODO.md` as `blocked` would have created a fresh instance of the exact
+   defect this task exists to remove, so it was fixed. Scope grew by one line
+   and the reason is recorded rather than absorbed.
+2. **`TODO.md`'s counter was first corrected by appending a dated note rather
+   than editing in place, and that was wrong.** This brief classifies claim 4
+   as a **live** statement, and `SPRINT-CURRENT.md`'s counter — the same claim
+   — was edited in place. Treating the two differently would have left the
+   acceptance criterion ("both counters read the same value") satisfiable only
+   by argument. Reverted and redone in place. The distinction that governs is
+   the one `TASK-0108` drew: `TODO.md`'s **Post-S9** section is superseded and
+   its `TASK-0082` counter is history; the **Post-S10** section is current and
+   its counter is a claim.
+
+**Next task starts here**: the ledger's four live claims are correct as of
+2026-09-27 and the eight briefs are registered. `B-037` and `B-038` are open
+and unbuilt, both needing a decision before code. `TASK-0111` is next by the
+order chosen for this run; `TASK-0113` is now `ready` rather than `blocked`.
 
 ## Status
 
-- Status: ready   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-27
 - Updated: 2026-09-27
@@ -193,11 +215,51 @@ against the original.
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-27
+- Agent: Claude Opus 5 (1M context), Claude Code
 - Actions:
+  1. Re-verified all four claims before editing. All four still held; the
+     summary sentence had moved from line 45 to 46 because `TASK-0112` had
+     inserted `B-037` above it.
+  2. Read `B-029`'s and `B-032`'s closed cells and matched their form:
+     closure statement first, original entry preserved after it.
+  3. Fixed claim 1 (`B-035` → `done`), claim 2 (the summary sentence),
+     claim 3 (`SPRINT-CURRENT.md`), claim 4 (`TODO.md`).
+  4. Derived the next free id from the tree rather than from this brief:
+     `ls .ai/tasks/TASK-*.md | sed -n 's/.*TASK-0*\([0-9]\{1,\}\).*/\1/p'
+     | sort -n | tail -1` → **118**, so `TASK-0119` is free. Both counters set
+     to that.
+  5. Registered `TASK-0111`…`TASK-0118` in `TODO.md`, each with its status,
+     plus the three items deliberately given no brief and why.
+  6. Raised `B-038`.
+  7. Corrected `TASK-0113` from `blocked` to `ready` (deviation 1 above).
+  8. Reviewed the diff: `git diff --check` clean; confirmed no removed line
+     anywhere mentions `B-035`, which is the mechanical form of "the dated
+     records were not touched".
 - Observations:
+  - **The count went up, not down.** The sentence said two items were open; it
+    is four. It named a closed item and omitted `B-036`, and `TASK-0112` had
+    since added `B-037` without it being updated — so the sentence was wrong
+    in three directions by the time it was repaired. A summary that has to be
+    hand-maintained beside the rows it summarises is the defect, and `B-038`
+    records that rather than this fix pretending to solve it.
+  - **The id counters were stale in a way the file itself defends against.**
+    `SPRINT-CURRENT.md` says, two lines below the wrong number, "Take an id
+    when a brief is written, not before — `.ai/tasks/` is the source of truth
+    for what is free." A reader following the instruction is safe; the stale
+    number beside it teaches them to distrust the instruction.
+  - **I made the error this task is about, mid-task** — see deviation 2. The
+    first attempt at claim 4 preserved the wrong number as though it were
+    history, minutes after classifying it as live. It was caught by re-reading
+    the acceptance criterion, not by any check, which is the same way the
+    original four were found.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` → `validate.sh: OK`
+  - `scripts/sync-registry.sh` → no diff
+  - `git diff --check` → no whitespace errors
+  - `check-artifact.sh` on all eight new briefs → 8 × `OK`
+  - Protected dated records: 0 removed lines mention `B-035`
+- Result: done. Four live claims corrected, eight briefs registered, `B-038`
+  raised, `TASK-0113` unblocked. Three dated records deliberately untouched.
+- Commit: COMMIT_HASH
+- Push: PUSH_RESULT

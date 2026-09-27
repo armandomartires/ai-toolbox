@@ -658,7 +658,11 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0109`.**
+untested. **Next free number: `TASK-0119`.**
+
+`B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
+`TASK-0109` until `TASK-0118` corrected it on 2026-09-27; the queue itself is
+otherwise unchanged.
 
 Two of that queue were taken up on 2026-09-26, on the human's routing, with
 no sprint opened — the `Post-S4`/`Post-S5` shape:
@@ -688,6 +692,47 @@ no sprint opened — the `Post-S4`/`Post-S5` shape:
       that `gather_subset` in `ansible.cfg` is *rejected*, and under 2.21.4 it
       is accepted **silently** — worse, because the diagnostic it promises no
       longer appears.
+
+`TASK-0109` and `TASK-0110` followed on 2026-09-26/27 and are recorded in
+`CURRENT_STATE.md` rather than here, because they changed how every planning
+artifact is produced rather than discharging a queue item.
+
+**The rest of the queue was written up as briefs on 2026-09-27**, eight of
+them, on the human's instruction to cover every open item. Still no sprint —
+this is the `Post-S4`/`Post-S5` shape again. **Found while scoping them, not
+by any check:** the Claude Code binding's stub suite had been red since
+2026-09-25 and `tests/validate.sh` exited `OK` at every commit on top of it.
+That became `TASK-0112` and displaced the order the briefs were planned in.
+
+- [x] TASK-0112 — the red binding suite (done, `0b6ec40`). `TASK-0103` cited a
+      task brief for a rule, and `check-binding.sh` does not accept one — by
+      design, so the binding was fixed rather than the checker widened. Raised
+      **`B-037`**: neither binding suite is run by anything
+- [x] TASK-0118 — this ledger's own stale claims (done). `B-035` still read
+      `ready` a day after it closed; two next-free-id counters were stale.
+      Raised **`B-038`**
+- [ ] TASK-0111 — `worktree-only`: can a worktree-isolated Claude Code
+      subagent reach the main checkout by **absolute path**? `ADR-0018`'s
+      named next measurement (`ready`)
+- [ ] TASK-0113 — first real run of the Claude Code binding (`ready` —
+      unblocked by `TASK-0112`; was blocked on it)
+- [ ] TASK-0114 — `ADR-0022` F7 and F9, the two rows still `UNTESTED` (`ready`)
+- [ ] TASK-0115 — re-run `ADR-0014`'s 53-rule figure under `ansible-core`
+      2.21.4. The estate has gone from **2 playbooks to 17** since, so the
+      denominator changed more than the version did (`ready`)
+- [ ] TASK-0116 — exercise `skills/ansible-ops/` against the live estate.
+      Gates 1–5 are read-only and runnable; **gates 6–9 are `blocked` on
+      human authorization in the task file**, per `AGENTS.md`
+- [ ] TASK-0117 — `B-036`, the generator unreachable from `project-migration`
+      alone. **`blocked` by design**, on a stated trigger; the brief is the
+      route, not a schedule
+
+**Three queue items got no brief, deliberately.** `B-025` is `waiting` on a
+second role by the human's own choice, and writing a brief would mean
+inventing the second case it waits for; the `git add -- .` glob limitation is
+a stated limitation with a reopen trigger, not an open fix; and *"if a sprint
+shrinks, cut a product, never the spike"* belongs restated in the next plan
+that risks shrinking, not executed.
 
 ## Post-S9 (superseded by the promotion above)
 
