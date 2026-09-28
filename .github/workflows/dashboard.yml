@@ -1,11 +1,15 @@
 # Regenerate the delivery dashboard and publish it to GitHub Pages.
 #
-# STATUS: VERIFIED. Run 36440566161 (e80c84f) completed `success` and the
-# page serves at https://armandomartires.github.io/ai-toolbox/ - fetched and
-# read back, not assumed: HTTP 200, 294 KB, and the embedded model reports
-# 252 commits, 120 task briefs, 10 sprints, 27 ADRs. 252 and not 1 is the
-# whole point of the assertion below. `model.json` returns 404, so the
-# working data is not published beside the page.
+# STATUS: VERIFIED, on both triggers.
+#   - workflow_dispatch: run 36440566161 (e80c84f), `success`.
+#   - push to master:    run 36440959217 (53f6579), `success`.
+# The page serves at https://armandomartires.github.io/ai-toolbox/ and was
+# fetched and read back, not assumed: HTTP 200, ~294 KB, zero off-file
+# references after the round trip, `model.json` 404, `http://` 301. Its
+# embedded model reported 252 commits before the push and 253 after, with the
+# generated stamp moving 15:02 -> 15:05 - which is how "commit, push, and the
+# page is current" was checked rather than claimed. 253 and not 1 is the
+# whole point of the assertion below.
 #
 # It was UNVERIFIED, then PARTLY VERIFIED, before this: runs 36438809876 and
 # the one on bd4160c both proved the BUILD half on a clean runner while

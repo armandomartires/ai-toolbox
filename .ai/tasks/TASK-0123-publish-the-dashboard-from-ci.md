@@ -323,8 +323,12 @@ takes.
   - `http://` → **301**: HTTPS is enforced.
   - Zero off-file `src`/`href` references in the served HTML — still
     self-contained after a round trip through Pages.
-  - The push trigger, not just dispatch: proven by this very commit, whose
-    run is recorded below.
+  - **The push trigger, not just dispatch.** Commit `53f6579` pushed to
+    `master` → run `36440959217`, `success`, alongside a green `validate` on
+    the same sha. The live page's generated stamp moved **15:02 → 15:05** and
+    its commit count **252 → 253**, read off the served HTML. That is the
+    user's actual question — "just commit and push, and the page is updated"
+    — answered by measurement rather than by reading the trigger block.
 - Result: **Done.** All eight acceptance criteria met. The page is live, it
   carries full history, and a push to `master` republishes it.
 - Commit: this one.
