@@ -138,9 +138,37 @@ mean inventing the second case it waits for.
    re-measured — changing the tool in that run would make the delta
    unattributable. Raised instead: **`B-039`**, three now-false claims in the
    estate's own `ansible.cfg`, which this repository cannot fix.
-7. **`skills/ansible-ops/` has never been exercised against a live estate.**
-   Its closing item (`B-010`) was closed *with this limitation stated* — a
-   closed item is not a claim of quality.
+7. **`skills/ansible-ops/` — PARTLY exercised 2026-09-28 by `TASK-0116`, and
+   the limitation is narrowed rather than lifted.** Its closing item
+   (`B-010`) was closed *with this limitation stated*; a closed item is not a
+   claim of quality, and that still holds for gates 4-9.
+
+   **Gates 1-3 ran against the real estate and the skill's instructions
+   survived contact.** Gate 1 derived the hazard class (`sigsrvpve1` is a PVE
+   node; the play's `gather_facts: false` is the exclusion, so `ansible_mounts`
+   is never collected) and the bound (`--limit sigsrvpve1`); gate 2 lint exit
+   0; gate 3 syntax/parse exit 0. The estate was verified untouched either
+   side — `HEAD` unmoved, porcelain empty, every write-target checksum
+   identical.
+
+   **Gate 4 was blocked by the agent harness, not by the estate** — the Claude
+   Code auto-mode classifier denied `ansible-playbook`, on a command that was
+   read-only by construction. Raised as **`B-046`**; gate 5 reads gate 4's
+   output so it is unreachable, and **gates 6-9 remain unauthorized** (the
+   task file's Authorization section is unfilled, which `AGENTS.md` requires
+   and conversational approval does not substitute for).
+
+   **The record checker was exercised for real and behaved correctly**: run
+   against the partial record it named five missing fields —
+   `check_mode_run`, `check_mode_fidelity`, `snapshot_ref`,
+   `rollback_verified`, `approver` — which map to exactly the four gates not
+   reached. The field-to-gate routing works.
+
+   **A measured correction, not a sweep:** the estate's health gate reports
+   **6-of-6 quorum, ring `1.22c3`, all services active** — so the "3-of-4
+   quorum with no verified margin" that `ansible.cfg` calls the current normal
+   is false. Added to `B-039`. Also nearly got wrong and worth stating: `ping`
+   reports every node unreachable because ICMP is filtered; TCP/22 is open.
 8. **An untested commitment, stated a third time.** *"If a sprint shrinks, the
    honest cut is a product, never the spike"* has now been stated by three
    sprints and exercised by none. Neither S9 nor S10 shrank either. It

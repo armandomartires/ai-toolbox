@@ -219,12 +219,38 @@ and nothing else.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `skills/ansible-ops/` | **Byte-identical.** Exercised, not edited — the run's whole point |
+| `/home/armando.martires/SIGMA-infrastructure/` | **Untouched and verified so**: `HEAD` `2a6be9a` unmoved, porcelain empty, every tracked write-target byte-identical by checksum, before and after. `ansible.log` grew (gitignored, untracked) — that is gates 2-3 logging |
+| `.ai/planning/BACKLOG.md` | `B-046` raised; `B-039` extended with a fourth, measured stale claim; summary 11 → 12 open |
+| `.ai/planning/SPRINT-CURRENT.md` | Item 7 narrowed from "never exercised" to "gates 1-3 exercised, 4 blocked, 5-9 not reached" |
+| `.ai/context/CURRENT_STATE.md` | New dated section |
+| `/tmp/opencode/ansible-ops-pilot/change-record.md` | Partial record, scratch, deliberately unclosed. Quoted below |
+| Authorization section | **Still unfilled.** Phase 2 never started |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**This task is NOT done.** It stops at gate 4 and stays `blocked`. Closing it
+as `done` would claim the skill was exercised when two-thirds of its gates
+were not reached.
+
+**Deviations.**
+
+1. **Gate 4 was blocked by the agent harness, not by the estate.** The Claude
+   Code auto-mode classifier denied `ansible-playbook`. The command was
+   read-only by construction: `--check --diff --limit sigsrvpve1`, a play with
+   `gather_facts: false` invoking `*_info` modules against a PVEAuditor-scoped
+   token. **Not routed around**, on the harness's own instruction and because
+   working around a safety denial is the behaviour this whole skill exists to
+   discourage. Raised as `B-046`.
+2. **The candidate "change" is a read-back play, not a mutation.** Phase 2 was
+   never authorized, so no mutating change could honestly be proposed. The
+   obligation set, the bound and the hazard review are real and were derived
+   from the estate's own files; what is untested is the skill's behaviour
+   around an actual mutation.
+3. **Step 2's cluster check found the brief's own premise stale** — see below.
+
+**Next task starts here**: gates 1-3 are evidenced; gate 4 needs either a Bash
+permission grant for `ansible-playbook` or the `TASK-0016`/`TASK-0017` shape
+(human executes, agent records). Gates 6-9 need the Authorization section
+filled by a human. `B-046` and the `B-039` extension are open.
 
 ## Status
 
@@ -241,11 +267,77 @@ is blocked until a human fills the Authorization section above. Owner is
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-28
+- Agent: Claude Opus 5 (1M context), Claude Code
 - Actions:
+  1. Estate before-state: `HEAD` `2a6be9a`, porcelain empty, `ansible [core
+     2.21.4]`. Recorded md5 of every file under `state/baseline/`.
+  2. **Reachability, and a trap avoided.** `ping -c1 -W2` reported all three
+     probed nodes **unreachable**; a TCP connect to `:22` found all three
+     **OPEN**. ICMP is filtered. Concluding from the ping would have produced
+     a confident, false "estate unreachable" finding.
+  3. **Step 2's independent health check**, by the estate's own tool
+     (`tools/pve_verify_cluster.py` — serial, one node at a time, infers
+     pmxcfs from `/proc/self/mounts` and never touches `/etc/pve`):
+
+     ```
+     node  nodes quorate votes   ring  coro_rss pmxcfs cfgver
+     sigsrvpve1 … 6  Yes  6/6  1.22c3  … mounted 20   (and 2,3,7,4,6 identical)
+     PASS  all nodes share one Ring ID: 1.22c3
+     OVERALL: PASS - quorum, ring, pmxcfs and all services healthy
+     ```
+  4. **Gate 1 — derive.** Target `sigsrvpve1` is hazard-class (a PVE node in
+     `pve_voting`). The play sets `gather_facts: false`, so no implicit
+     `ansible.builtin.setup` runs and `ansible_mounts` is never collected —
+     that is the exclusion applied. Bound: `--limit sigsrvpve1`. Ten modules
+     derived by reading the play and its role.
+  5. **Gate 2 — lint.** `Passed: 0 failure(s), 0 warning(s) in 13 files …
+     Profile 'production' was required, and it passed.` exit 0. Recorded as
+     `lint_run: yes`; the outcome is deliberately not part of the field.
+  6. **Gate 3 — syntax/parse.** `ansible-playbook --syntax-check … --limit
+     sigsrvpve1` → `playbook: playbooks/capture_pve_baseline.yml`, exit 0.
+  7. **Gate 4 — blocked.** `Permission for this action was denied by the
+     Claude Code auto mode classifier.` Stopped rather than work around it.
+  8. Verified the estate untouched; wrote the partial record and ran its
+     checker.
 - Observations:
+  - **The skill's instructions were followable as written at gates 1, 2 and
+    3.** No step needed interpretation and none was wrong. That is the first
+    evidence of quality this skill has had; `B-010` was closed on its absence.
+  - **Gate 4's denial is not the estate's and not the skill's.** It came from
+    the agent harness. The skill reasons carefully about *estate* permission —
+    a PVEAuditor token, `become = False`, narrow forks — and has nothing to
+    say about the client's own boundary, which is where this stopped. `B-046`.
+  - **The record checker works, and its complaint routes correctly.** Against
+    the partial record:
+
+    ```
+    RECORD NOT ACCEPTED: … MISSING FIELD: check_mode_run
+      MISSING FIELD: check_mode_fidelity   MISSING FIELD: snapshot_ref
+      MISSING FIELD: rollback_verified     MISSING FIELD: approver
+    ```
+
+    Five fields, four gates — exactly the gates not reached (4, 5, 6, 9). The
+    field-to-gate mapping the template claims is real.
+  - **The brief's own premise was stale.** Both it and the estate's
+    `ansible.cfg` describe "3-of-4 quorum with no verified margin" as the
+    cluster's *current normal operating condition*. It is 6-of-6. Added to
+    `B-039`. `forks = 2` is untouched — its reason concerns a *recovering*
+    pvedaemon and remains a valid historical observation.
+  - **What is still unexercised is the part that matters most**: gate 4's
+    diff, gate 5's per-module fidelity verdict, and every gate that touches
+    state. `B-010`'s limitation is narrowed, not lifted.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tools/pve_verify_cluster.py` → `OVERALL: PASS`, exit 0
+  - `ansible-lint playbooks/capture_pve_baseline.yml` → exit 0
+  - `ansible-playbook --syntax-check … --limit sigsrvpve1` → exit 0
+  - `check-change-record.sh` → exit 1, five named missing fields (expected)
+  - Estate: `HEAD` `2a6be9a` and porcelain empty before and after; all six
+    `state/baseline/*.json` checksums identical
+  - `git -C ai-toolbox diff --stat skills/ansible-ops/` → empty
+  - `tests/validate.sh` → `validate.sh: OK`; `scripts/sync-registry.sh` → no diff
+- Result: **incomplete, and left `blocked` rather than closed.** Gates 1-3
+  evidenced; gate 4 blocked by the harness (`B-046`); gate 5 unreachable;
+  gates 6-9 unauthorized. `B-039` extended with a measured correction.
+- Commit: COMMIT_HASH
+- Push: PUSH_RESULT

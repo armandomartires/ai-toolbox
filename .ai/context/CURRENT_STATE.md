@@ -69,6 +69,52 @@ only while `project-workflow`'s equivalent has `schemas/adhoc.md`.
 (`blocked` on a route choice) routes `B-041`; `B-042` is deliberately
 unrouted until someone counts what the six plans share.
 
+## `ansible-ops` met the real estate, and stopped at gate 4 (`TASK-0116`)
+
+**2026-09-28.** The skill that had never been executed in the estate it was
+written from has now been run against it — **as far as the harness allows**.
+Gates 1-3 performed, gate 4 blocked, gates 5-9 not reached.
+
+**What ran, and it is the first evidence of quality this skill has had.**
+Gate 1 derived the obligation set from the estate's own files: `sigsrvpve1` is
+hazard-class, the play's `gather_facts: false` is the applied exclusion so
+`ansible_mounts` is never collected, and the bound is `--limit sigsrvpve1`.
+Gate 2 lint exit 0 over 13 files. Gate 3 syntax/parse exit 0. The instructions
+were followable as written at every one of the three.
+
+**Gate 4 was denied by the Claude Code auto-mode classifier** — not by the
+estate, not by the permission model the skill reasons about, and not by
+anything `agents/` declares. The command was read-only by construction
+(`--check --diff`, bounded, `*_info` modules, a PVEAuditor token). Raised as
+**`B-046`**: this is a capability asymmetry of the class `ADR-0018` records
+for `worktree-only`, one layer up — a loop written to be agent-runnable end to
+end is, on this client, agent-runnable to gate 3. **Not routed around.**
+
+**Gates 6-9 remain unauthorized** and that is by design: the task file's
+Authorization section is unfilled, `AGENTS.md` requires it there, and a
+conversational "proceed" does not substitute for it.
+
+**The record checker was exercised and is correct.** Against the partial
+record it named five missing fields — `check_mode_run`, `check_mode_fidelity`,
+`snapshot_ref`, `rollback_verified`, `approver` — mapping to exactly the four
+gates not reached. The field-to-gate routing the template claims does work.
+
+**A measured correction.** The estate's own health gate (serial, infers pmxcfs
+from `/proc/self/mounts`, never touches `/etc/pve`) reports **6 nodes, 6/6
+votes, quorate, ring `1.22c3`, all five services active on every node**. So
+`ansible.cfg`'s "3-of-4 quorum with no verified margin ... the cluster's
+current normal operating condition" is **false**, and it is a fourth stale
+claim under `B-039`. `forks = 2` is untouched: its reason is a historical
+observation about a *recovering* pvedaemon, which stands.
+
+**Nearly got wrong, so it is written down**: `ping` reports every node
+unreachable — ICMP is filtered, TCP/22 is open. Concluding from the ping would
+have produced a confident, false "estate unreachable" finding.
+
+**The estate was verified untouched** either side: `HEAD` `2a6be9a` unmoved,
+porcelain empty, and every one of the play's tracked write-targets
+byte-identical by checksum.
+
 ## The Claude Code binding has now been run (`TASK-0113`)
 
 **2026-09-28.** `REVIEW-0012` finding 4 is discharged: the binding that had
