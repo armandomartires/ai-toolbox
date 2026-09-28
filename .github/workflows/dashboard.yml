@@ -1,10 +1,27 @@
 # Regenerate the delivery dashboard and publish it to GitHub Pages.
 #
-# STATUS: UNVERIFIED. No run of this workflow has been observed yet. The
-# label follows validate.yml's rule exactly - that file was UNVERIFIED until
-# a run existed and was changed only after observing one, "not on the
-# assumption that a green file is a green build". Change this line only
-# against a real run, and name the run.
+# STATUS: PARTLY VERIFIED - the build is proven, the deploy is not.
+#
+# Observed on run 36438809876 (c30a568) and again on bd4160c: checkout,
+# prerequisites, "Generate the dashboard", "Refuse to publish a degraded
+# page" and the model cleanup all SUCCEED in CI, so fetch-depth: 0 is doing
+# its job and the generator runs on a clean runner. The run then FAILS at
+# actions/configure-pages with "Get Pages site failed. Error: Not Found".
+#
+# Pages is not enabled on this repository and neither the workflow's
+# GITHUB_TOKEN nor an owner PAT could enable it: POST /repos/.../pages
+# returns 403 "Resource not accessible by personal access token", because
+# creating a Pages site needs repo admin. `enablement: true` below is
+# therefore necessary but not sufficient.
+#
+# ONE-TIME HUMAN STEP, then this label becomes VERIFIED against a real run:
+#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
+# then re-run this workflow (Actions -> dashboard -> Run workflow).
+#
+# The label follows validate.yml's rule - that file was UNVERIFIED until a
+# run existed and was changed only after observing one, "not on the
+# assumption that a green file is a green build". Do not write VERIFIED here
+# until a deploy has been seen.
 #
 # SEPARATE FROM validate.yml ON PURPOSE. That workflow is the mandatory gate:
 # it runs on every branch and every pull request, and its token stays narrow.

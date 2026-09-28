@@ -176,8 +176,8 @@ against the original.
 
 ## Status
 
-- Status: in_progress   # planned|ready|in_progress|blocked|review|done|cancelled
-- Owner: agent
+- Status: blocked   # planned|ready|in_progress|blocked|review|done|cancelled
+- Owner: agent (blocked on one human action: enable Pages)
 - Created: 2026-09-28
 - Updated: 2026-09-28
 
@@ -190,10 +190,88 @@ takes.
 ### Attempt 1
 
 - Date: 2026-09-28
-- Agent:
-- Actions:
+- Agent: Claude Opus 5 (1M context), Claude Code
+- Actions: Measured the shallow-checkout behaviour first; corrected
+  `AGENTS.md`; wrote `.github/workflows/dashboard.yml` with `fetch-depth: 0`
+  and an assertion on the generated model; pushed; read the runs through the
+  API. Hit a blocker that stopped the whole gate, diagnosed it, fixed it in
+  its own commit.
+
 - Observations:
+
+  **1. The blocker was not this task's, and it was hiding in plain sight.**
+  The first push showed `dashboard` failing — expected to be Pages — and
+  `validate` failing too. Reading back through the API, **`validate` had
+  failed on every one of at least fourteen consecutive commits**, back past
+  `TASK-0113`, while `tests/validate.sh` passed locally every single time and
+  `validate.yml`'s header said `STATUS: VERIFIED`.
+
+  The message was `STANDARD: scripts/sync-decision-standard.sh failed`. The
+  cause is **a file mode, not that script**. This checkout is on `/mnt/c`
+  where `core.filemode` is false, so `chmod +x` changes nothing git records,
+  and drvfs reports every file executable anyway — a script committed
+  `100644` runs perfectly here and nowhere else. `validate.sh` invokes that
+  one *without* an interpreter prefix. **Eleven tracked scripts were in that
+  state, three of them added by `TASK-0122` the same day.** Reproduced by
+  cloning to ext4 and running the gate, where the CI message appears
+  verbatim. Fixed in `bd4160c` with `git update-index --chmod=+x` and gated:
+  a tracked file beginning `#!` must be recorded executable, no carve-outs.
+  **`validate` is green on `bd4160c`, the first green run in fourteen
+  commits.**
+
+  I had already met this defect and not recognised it: running
+  `build-dashboard.sh` in a fresh clone during `TASK-0122` gave
+  `Permission denied`, and I worked around it with `bash` instead of asking
+  why.
+
+  **2. The workflow's own build half is proven; only the deploy is not.**
+  On both `c30a568` and `bd4160c`, checkout, `Generate the dashboard`,
+  `Refuse to publish a degraded page` and the model cleanup all **succeed**
+  on a clean runner — so `fetch-depth: 0` works and the guard passes against
+  real full history. The run then fails at `actions/configure-pages` with
+  `Get Pages site failed. Error: Not Found`.
+
+  **3. Pages cannot be enabled from here, and that is a permission, not a
+  bug.** `POST /repos/armandomartires/ai-toolbox/pages` with the owner PAT
+  returns `403 Resource not accessible by personal access token`; creating a
+  Pages site needs repo admin. `enablement: true` in the workflow is
+  necessary and not sufficient. This is the `TASK-0016`/`TASK-0017` shape:
+  the agent writes the procedure, the human executes it, the agent records
+  the evidence.
+
+  **4. The visibility correction stands on measurement.** `AGENTS.md` said
+  `(private)`; the API says `"visibility": "public"` and
+  `raw.githubusercontent.com` serves `.ai/planning/BACKLOG.md` with no token.
+  Confirmed as intended by the human, so the line is corrected and now states
+  plainly that everything committed here is world-readable.
+
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `tests/validate.sh` → `OK` locally, and **`success` in CI on `bd4160c`**
+    (run listed against that sha) — the figure that matters, since local
+    green was exactly what was misleading.
+  - The workflow guard dry-run before pushing: full history →
+    `history OK: 249 commits, 120 task briefs, 10 sprints`, exit 0; shallow
+    clone → `::error::git history is degenerate (1 commit(s)) …`, exit 1.
+  - Both workflow files parsed as YAML before pushing.
+  - The mode check observed failing on a reverted bit
+    (`NOT EXECUTABLE: scripts/sync-decision-standard.sh …`) and passing on
+    restore.
+  - Not yet validated: the deployed page. No deploy has run.
+
+- Result: **Blocked on one human action**, with everything either side of it
+  done and evidenced. Acceptance criteria 1-3 and 8 cannot be met until Pages
+  exists. Criteria 4-7 are met: the guard is proven on both inputs, nothing
+  is committed, `validate.yml` is unchanged in behaviour, and `AGENTS.md` no
+  longer claims the repo is private.
+
+  **The human action, once:**
+  `Settings → Pages → Build and deployment → Source: "GitHub Actions"`,
+  then `Actions → dashboard → Run workflow`. The page then serves at
+  `https://armandomartires.github.io/ai-toolbox/` and updates on every push
+  to `master`.
+
+- Commit: `c30a568` (workflow, `AGENTS.md`, `.gitignore`); `bd4160c` (the
+  executable-bit fix and its gate — separate because it is a different
+  defect, found while running this one). A third records this log.
+- Push: **confirmed** for both — `884f859..c30a568` and `c30a568..bd4160c`
+  to `origin/master`.

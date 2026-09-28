@@ -7,6 +7,20 @@
 # after observing one - not on the assumption that a green file is a green
 # build.
 #
+# AND IT WENT RED WITHOUT ANYONE NOTICING. From TASK-0106 (2026-09-26) until
+# TASK-0123 (2026-09-28) every run failed at `STANDARD:
+# scripts/sync-decision-standard.sh failed` - at least fourteen consecutive
+# commits - while the same gate passed locally every time. The cause was a
+# file mode, not a check: this repo is developed on a /mnt/c checkout where
+# core.filemode is false, so a script committed 100644 runs here and nowhere
+# else. Green again on bd4160c. tests/validate.sh now fails on any tracked
+# shebang file that is not recorded executable, which is the check that would
+# have caught it on the day.
+#
+# The lesson is narrower than "watch CI": a second opinion nobody reads is
+# not a second opinion. This header being right in 2026-09-13 did not keep
+# it right.
+#
 # The primary gate is the local pre-commit hook (.githooks/pre-commit,
 # activated by scripts/install.sh). This workflow is a redundant second
 # check, not a replacement for the hook: the hook is what stops a bad
