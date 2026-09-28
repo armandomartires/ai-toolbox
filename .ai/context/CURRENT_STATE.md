@@ -147,6 +147,15 @@ byte-identical by checksum.
 
 ## The Claude Code binding has now been run (`TASK-0113`)
 
+**`B-043`, this run's headline finding, is routed as of 2026-09-28 by
+`TASK-0121`** (`ready`). Writing that brief sharpened it beyond the backlog
+row: the missing figure slot is real, but both bindings *already* collect a
+verbatim `figures[]` in the gate-runner and then drop it, because the closer
+takes no gates parameter in either. The figure never had a path to the only
+role told to write it. What stays open is the evidence standard's scope —
+whether a log named by an evidence line is admissible — which is a human's
+decision and is costed there as three routes.
+
 **2026-09-28.** `REVIEW-0012` finding 4 is discharged: the binding that had
 only ever been stub-proven was driven through a real run. One task, one gate, a
 scratch repository at `/tmp/opencode/cc-pilot/`, 13 agents, ~20 minutes, zero

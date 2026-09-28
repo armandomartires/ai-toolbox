@@ -96,6 +96,12 @@ mean inventing the second case it waits for.
    would hand an unsatisfiable instruction to the only role with git rights.
    That is the loop working, on a defect nobody had seen.
 
+   **`B-043` is routed as of 2026-09-28 by `TASK-0121`** (`ready`), which
+   sharpens it: both bindings already collect `figures[]` in the gate-runner
+   and then **discard them** — the closer takes no gates parameter in either —
+   so the figure never had a path to the role told to write it. The open part
+   is the evidence standard's scope, costed there as three routes.
+
    **The OpenCode half of this item is unchanged** — bulk staging and the gate
    map are still stub-tested only.
 6. **`ansible-core`'s version — RE-COUNTED AND CLOSED 2026-09-26 by
@@ -208,7 +214,7 @@ mean inventing the second case it waits for.
 
 ## Task numbering
 
-**Next free id: `TASK-0121`.** `TASK-0106`…`TASK-0110` ran post-S10 on the
+**Next free id: `TASK-0122`.** `TASK-0121` was written 2026-09-28, routing `B-043` — the evidence line's missing figure slot, `TASK-0113`'s headline finding and the only one of its three that is not client-specific. `TASK-0106`…`TASK-0110` ran post-S10 on the
 human's routing, and `TASK-0111`…`TASK-0118` were written 2026-09-27 as briefs
 for the queue above, and `TASK-0119`/`TASK-0120` the same day from a skill-integration
 review that found `ai-project-scaffold.sh` still owns artifact shape (`B-040`,

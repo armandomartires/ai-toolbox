@@ -773,6 +773,15 @@ embody** — measured with the skill's own checker, not inferred. Raised
       choice — retract the claim, ship a regenerator, or ship regenerator
       plus engine — because the third fires `TASK-0117`'s trigger and the
       first ships nothing. Sequenced behind `TASK-0119`
+- [ ] TASK-0121 — `B-043`: `loop.md` step 10 orders the closer to copy
+      "every figure from the evidence file", which structurally has none —
+      `run-gate.sh`'s `summary()` emits one format with no figure slot.
+      **Not client-specific**: the Claude Code binding's `gate_entry_point`
+      *is* the OpenCode binding's `run-gate.sh`. Sharper than `B-043`'s row:
+      both bindings already collect `figures[]` in the gate-runner and then
+      **drop them** — the closer takes no gates parameter — so the fix may be
+      wiring rather than a new capability. `ready`, with the standard's scope
+      as a costed route choice (`ready`)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those
