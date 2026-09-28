@@ -74,8 +74,30 @@ mean inventing the second case it waits for.
    binding does not enforce: bulk staging (`git add -- .` /
    `git add -- "."`, closed structurally by `TASK-0097` but **stub-tested
    only**) and a role reading the gate map (`B-030`, closed by `TASK-0098`,
-   also stub-tested). **The Claude Code binding has never been exercised
-   against a real run** — stub-proven only, `REVIEW-0012` finding 4.
+   also stub-tested).
+
+   **The Claude Code half is CLOSED 2026-09-28 by `TASK-0113`: it has now been
+   run.** `REVIEW-0012` finding 4 is discharged. One task, one gate, a scratch
+   repository, 13 agents, ~20 minutes, no errors — and it **parked**, against a
+   pre-recorded prediction of `accept`. Verified from the scratch repository
+   rather than from the run's report: `HEAD` unmoved, no commit, tracker
+   untouched, tree clean, the change stashed, a 14 KB handover written.
+
+   **It found what stubs cannot, which is the whole argument of `REVIEW-0012`
+   finding 3.** The headline is `B-043` and it is **not client-specific**:
+   `run-gate.sh`'s evidence line has no figure slot, so loop step 10's "copying
+   every figure from the evidence file" is unsatisfiable — and `run-gate.sh` is
+   the *OpenCode* binding's entry point, so both bindings carry it. Also
+   `B-044` (no repo-root parameter — hit before the run could start) and
+   `B-045` (a resume guard written with `--all` would read a parked task as
+   closed).
+
+   **The adjudicator parked rather than guess, and gave the reason**: accepting
+   would hand an unsatisfiable instruction to the only role with git rights.
+   That is the loop working, on a defect nobody had seen.
+
+   **The OpenCode half of this item is unchanged** — bulk staging and the gate
+   map are still stub-tested only.
 6. **`ansible-core`'s version — RE-COUNTED AND CLOSED 2026-09-26 by
    `TASK-0108`.** The instruction was "re-count before acting", and the count
    is why this closes rather than sweeping again: nine at `REVIEW-0010`, five

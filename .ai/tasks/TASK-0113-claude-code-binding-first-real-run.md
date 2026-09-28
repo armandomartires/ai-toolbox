@@ -155,30 +155,31 @@ run at all, that edit is a finding and is recorded before it is made.
 
 ## Acceptance criteria
 
-- [ ] The task chosen at step 1 is named in this file, with a timestamp showing
+- [x] The task chosen at step 1 is named in this file, with a timestamp showing
       it was recorded before the run.
-- [ ] A full transcript of the run is captured and its path recorded.
-- [ ] The run reached a terminal state and that state is one of the five
+- [x] A full transcript of the run is captured and its path recorded.
+- [x] The run reached a terminal state and that state is one of the five
       verdicts, quoted verbatim.
-- [ ] Every role invocation has a recorded duration, so `ADR-0022` F7 has data
-      even though this task does not test it.
-- [ ] The step-8 close verification is recorded with its commands and output,
+- [ ] Every role invocation has a recorded duration — **NOT MET**. The
+      workflow journal records no label, phase or duration (deviation 3).
+- [x] The step-8 close verification is recorded with its commands and output,
       from the scratch repository.
-- [ ] Every delegation in the transcript is cross-checked against the roles
+- [x] Every delegation in the transcript is cross-checked against the roles
       actually emitted for Claude Code, and the result stated — including
       "none attempted" if that is the answer.
-- [ ] Each finding has a backlog item; a run with zero findings says so
+- [x] Each finding has a backlog item; a run with zero findings says so
       explicitly and is treated as weak evidence, not as a pass.
-- [ ] `claude mcp list` no longer lists `gates`, output pasted.
-- [ ] This repository's tree is clean and `master` unmoved except for this
+- [~] `claude mcp list` no longer lists `gates` — **not applicable**: the
+      binding never uses the MCP server, so nothing was registered (deviation 1).
+- [x] This repository's tree is clean and `master` unmoved except for this
       task's own commit.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] `node --test .../claude-code/tests/unattended-run.test.mjs` — 25/25, before the run
-- [ ] `skills/unattended-ops/scripts/check-binding.sh` accepts the scratch binding
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] `node --test .../claude-code/tests/unattended-run.test.mjs` — 25/25, before the run
+- [x] `skills/unattended-ops/scripts/check-binding.sh` accepts the scratch binding
 
 ## Risks and rollback
 
@@ -203,16 +204,53 @@ run at all, that edit is a finding and is recorded before it is made.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `skills/unattended-ops/templates/bindings/claude-code/` | **Byte-identical.** The pilot ran a *copy*, which is how a consuming repository deploys it |
+| `.ai/planning/BACKLOG.md` | `B-043`, `B-044`, `B-045` raised; summary 8 → 11 open |
+| `.ai/planning/SPRINT-CURRENT.md` | Item 5's Claude Code half closed; its OpenCode half left open and said so |
+| `.ai/context/CURRENT_STATE.md` | New dated section |
+| `.ai/tasks/TODO.md` | `TASK-0113` checked off |
+| `/tmp/opencode/cc-pilot/` | Scratch: repo at `aae3965`, gate map, filled binding, the modified copy, the run's `.run/` tree. **Left in place** — it is the evidence behind `B-043` |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Deviations, and two of them are corrections to this brief rather than to the run.**
+
+1. **Step 4 was wrong: no MCP registration was needed.** The brief said to
+   register the `gates` server and deregister it afterwards. The Claude Code
+   binding does not use it — gates go through `run-gate.sh` by shell, via the
+   gate-runner. Nothing was registered, so nothing was left behind, and the
+   corresponding acceptance criterion is not applicable rather than met.
+2. **The binding could not be pointed at a scratch repository at all** —
+   `B-044`. The brief forbade running against this repository and required a
+   scratch one, and the template supports neither: every path is repo-relative
+   and every `git` command in every prompt is bare. Recorded **before** acting,
+   as the brief requires of an edit needed to run at all. Resolved without
+   touching the shipped template: the consuming repo got a copy, differing by
+   one hunk in `header()` behind an optional `args.repoRoot`.
+3. **Per-role durations were not obtainable.** An acceptance criterion asked
+   for one per invocation so `ADR-0022` F7 would have data. The workflow
+   journal records only `{agentId, key, result, type}` — no label, phase or
+   duration. The criterion is **not met**, recorded as such rather than quietly
+   dropped; F7 was settled independently by `TASK-0114` the same day, so
+   nothing is lost but the observability gap is real.
+
+**A fair criticism of this task's own fixture, made by the run.** Its second
+adhoc title: *"A pilot task whose acceptance criterion and gate predicate are
+the same proposition yields one fact under two labels, so its green gate adds
+no independent confirmation."* That is correct and it is my fixture's flaw —
+criterion 1 and the `unit` gate both test `grep -qx 'hello, world'`. The gate
+was proved failing beforehand, so it is revert-proof, but it corroborates
+nothing the criterion did not already assert. A better pilot task would have a
+gate that tests something the criteria do not restate.
+
+**Next task starts here**: the binding has been run once and `REVIEW-0012`
+finding 4 is discharged. `B-043` is the live one and needs a **human ruling or
+a line-format change, not a re-run** — a re-run reproduces the identical
+evidence line. `B-035`'s Claude Code half remains open for a sharper reason
+than before. The scratch tree at `/tmp/opencode/cc-pilot/` is the evidence and
+was deliberately not deleted.
 
 ## Status
 
-- Status: ready   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-27
 - Updated: 2026-09-27
@@ -222,15 +260,91 @@ against the original.
 Status corrected by `TASK-0118`, which would otherwise have registered a
 blocker that no longer existed.
 
+## Pre-run record
+
+**Written before anything was wired, at 2026-09-27T21:56:10+0200.** Step 1 of the plan requires the
+task to be named first; a pilot whose subject is chosen afterwards is a demo.
+
+- **Run id:** `20260927-2000`
+- **Consuming repository:** `/tmp/opencode/cc-pilot/repo`, fixture commit
+  `aae3965`, scratch, created for this run
+- **Task the run will execute:** `TASK-0001 — Make the greeting say hello`
+  (`/tmp/opencode/cc-pilot/repo/.ai/tasks/TASK-0001-greeting-says-hello.md`).
+  `src/greeting.txt` reads `goodbye` and must read `hello, world`.
+- **Gate:** one, `unit`, from `/tmp/opencode/cc-pilot/gates.json` — outside the
+  repository, per `TASK-0098`. **Proved failing before the run**: `0 passed,
+  1 failed`, exit 1. A green gate at the end therefore means something.
+- **Task cap:** 1.
+- **Prediction, recorded so it can be wrong:** the run completes with
+  `accept` and one commit. The interesting outcomes are the ones that are not
+  that.
+
 ## Execution log
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-27 (run) / 2026-09-28 (write-up)
+- Agent: Claude Opus 5 (1M context), Claude Code
 - Actions:
+  1. Preconditions: `TASK-0112` `done`, suite **25/25**.
+  2. Built the scratch consuming repository, fixture `aae3965`, and a gate map
+     **outside** it (`TASK-0098`). **Proved the gate failing first**: `0
+     passed, 1 failed`, exit 1 — so a green gate would mean something.
+  3. Hit `B-044` before the run could start; recorded it, then copied the
+     template and added one hunk to `header()` behind `args.repoRoot`.
+     `diff` against the shipped file: 11 lines, one function.
+  4. Filled `binding.md`; `check-binding.sh` → `BINDING OK (20 slots answered,
+     all 14 loop steps declared, no uncited rule)`.
+  5. Wrote the pre-run record at **21:56:10 +0200**, naming the task, the run
+     id and a prediction of `accept`, before wiring anything further.
+  6. Ran it: `Workflow({scriptPath: …})`, task cap 1. 13 agents, 0 errors,
+     120 tool uses, 463,859 subagent tokens, 1,180,724 ms.
+  7. Verified the outcome from the scratch repository, never from the report.
+  8. Verified the headline finding against `run-gate.sh`'s source by hand.
+  9. Checked which skill files the roles actually read, and from which path.
 - Observations:
+  - **It parked, and the prediction was wrong.** `HEAD` still `aae3965`, `git
+    log --grep=TASK-0001` empty, tracker `- [ ]`, porcelain clean, change
+    stashed, handover 13,971 bytes.
+  - **`B-043` is the run's deliverable and it is not client-specific.**
+    `summary()` emits `GATE <handle> NAME= STATE= EXIT= ELAPSED= LOG=` and
+    line 170 appends exactly that; `loop.md:234-235` tells the closer to copy
+    "every figure from the evidence file". There is no figure in it, ever. And
+    `run-gate.sh` is the **OpenCode** binding's entry point.
+  - **The adjudicator's reasoning is better than the verdict alone.** It
+    declined to override because accepting would hand an unsatisfiable
+    instruction to the only role with git rights — outcomes being a refusal
+    with git engaged, or an invented figure in a committed task file. It named
+    the unsettled scope question and refused to resolve it. It also declined
+    `retry` ("retrying a structural gap is asking a correct answer to change")
+    and `halt-run` ("the run's premise is intact").
+  - **The implementer refused to quote its own probe as the gate's figure**,
+    unprompted, and declared a criterion half-discharged rather than claiming
+    it. The adjudicator upheld that restraint and recorded upholding it.
+  - **`B-045` came from a near-miss inside the run.** The adjudicator itself
+    used `git log --all --grep=TASK-0001` and got an empty result — correct
+    only because the park-steward's stash did not exist yet. After the park,
+    that same command returns the stash commit.
+  - **`B-035`'s Claude Code half: answered and still open.** Roles read
+    `verdicts.md` ×7, `park-and-recover.md` ×6, `evidence.md` — unembedded and
+    undenied. But the reads resolved to `/…/ai-toolbox/skills/…`, the pilot
+    session's own cwd, which a real consumer has no reason to have. The
+    sibling-file argument is about location, not permission, and survives.
+  - **`ADR-0022` F5 was structurally unreachable**: the binding selects roles
+    by `opts.agentType`, never `tools: Agent(...)`, and an unresolvable type
+    throws into `Halt` rather than failing silently. Checked by grep, not
+    assumed.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `check-binding.sh` on the filled binding → `BINDING OK`
+  - Claude Code stub suite before the run → 25 tests, 25 pass
+  - Scratch repo after: `HEAD` `aae3965`, `git log --grep=TASK-0001` empty,
+    porcelain empty, `TODO.md` row `- [ ]`, `stash@{0}` present
+  - Evidence file: one line, `STATE=PASSED EXIT=0 ELAPSED=1s`; the gate log it
+    names contains `1 passed, 0 failed`
+  - Journal events: `run-start > gates > adjudication > park > run-end`
+  - `run-gate.sh`, `unattended-run.js`, `binding.md` — all byte-identical
+  - `tests/validate.sh` → `validate.sh: OK`; `scripts/sync-registry.sh` → no diff
+- Result: done. The binding has been run; `REVIEW-0012` finding 4 discharged;
+  `B-043`, `B-044`, `B-045` raised; nothing fixed inside the pilot.
+- Commit: COMMIT_HASH
+- Push: PUSH_RESULT

@@ -69,6 +69,60 @@ only while `project-workflow`'s equivalent has `schemas/adhoc.md`.
 (`blocked` on a route choice) routes `B-041`; `B-042` is deliberately
 unrouted until someone counts what the six plans share.
 
+## The Claude Code binding has now been run (`TASK-0113`)
+
+**2026-09-28.** `REVIEW-0012` finding 4 is discharged: the binding that had
+only ever been stub-proven was driven through a real run. One task, one gate, a
+scratch repository at `/tmp/opencode/cc-pilot/`, 13 agents, ~20 minutes, zero
+agent errors.
+
+**It parked, against a prediction of `accept` recorded before the run.** That
+is the useful outcome. Verified from the scratch repository, not from the run's
+report: `HEAD` still `aae3965`, no commit, tracker `- [ ]` untouched, tree
+clean, the one-line change stashed under `unattended/20260927-2000/TASK-0001`,
+and a 14 KB handover written from the journal.
+
+**The headline finding is `B-043`, and it is not a Claude Code defect.**
+`run-gate.sh`'s `summary()` emits one fixed line with **no figure slot** — for
+any gate, ever — and that is exactly what gets appended to the evidence file.
+But `loop.md:234-235` orders the closer to update criteria "copying **every
+figure from the evidence file**". The two cannot both be honoured, and
+`run-gate.sh` is the **OpenCode** binding's entry point, so both bindings carry
+it. Verified against source twice: by the run's adjudicator, and again by hand.
+
+**The adjudicator's reasoning is the part worth keeping.** It declined to
+override, because accepting would hand an unsatisfiable instruction to the one
+role with git and tracker rights — whose only outcomes are a refusal with git
+already engaged, or an invented figure in a committed task file. It parked and
+named the unsettled question instead of resolving it. That is the loop doing
+precisely what it was built to do, on a defect no stub could reach —
+`REVIEW-0012` finding 3's argument, now demonstrated on the other binding.
+
+**Two more findings.** `B-044`: the binding has no repo-root parameter, so it
+runs only from the consuming repository's own checkout — hit before the run
+could start, and plausibly part of why it had never been run. `B-045`: the
+park-steward's stash message carries the task id, so a resume guard written
+with `--all` would read a parked task as **closed**; `loop.md`'s guard omits
+`--all` and is correct, but nothing states the constraint.
+
+**A direct answer to what `TASK-0111` handed over, with its qualification
+intact.** Roles did read the skill — `verdicts.md` ×7, `park-and-recover.md`
+×6, `evidence.md` — so on Claude Code the adjudicator reaches the decision
+standard **unembedded**. But the reads resolved to
+`/…/ai-toolbox/skills/unattended-ops/…`, the pilot session's own cwd, which a
+real consuming repository would not have. So **`B-035`'s Claude Code half stays
+open**, and `TASK-0106`'s sibling-file argument — about *location*, not
+permission — survives untouched.
+
+**`ADR-0022` F5 was not reachable** and that is structural, not luck: the
+binding selects roles by `opts.agentType`, never `tools: Agent(...)`, and an
+unresolvable agentType throws into a `Halt` rather than failing silently.
+
+**Method note.** The shipped template was **not modified**. The consuming repo
+got a copy — which is how the binding is meant to be deployed — differing by
+one hunk in `header()`, behind an optional `args.repoRoot`, recorded as a
+finding before it was made.
+
 ## `ADR-0022`'s last two untested falsifiers are settled (`TASK-0114`)
 
 **2026-09-27.** F7 and F9 both **CONFIRMED**. Eight of the nine now carry

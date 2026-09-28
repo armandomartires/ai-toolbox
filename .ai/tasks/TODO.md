@@ -717,8 +717,15 @@ That became `TASK-0112` and displaced the order the briefs were planned in.
       in the main tree and appended to tracked `LICENSE`, `DENIALS: NONE`.
       Confirms clause 8.2 with a measured reason instead of a guessed one;
       the emission itself stays open, as a decision
-- [ ] TASK-0113 — first real run of the Claude Code binding (`ready` —
-      unblocked by `TASK-0112`; was blocked on it)
+- [x] TASK-0113 — first real run of the Claude Code binding (done). It
+      **parked**, against a prediction of `accept` recorded before the run,
+      and found what 25 stub tests could not. Headline **`B-043`**, and it is
+      **not client-specific**: `run-gate.sh`'s evidence line has no figure
+      slot, so loop step 10's "copy every figure from the evidence file"
+      cannot be honoured — and `run-gate.sh` is the *OpenCode* binding's entry
+      point. Also **`B-044`** (no repo-root parameter) and **`B-045`** (a
+      resume guard written with `--all` would read a parked task as closed).
+      `REVIEW-0012` finding 4 discharged
 - [x] TASK-0114 — `ADR-0022` F7 and F9, the two rows still `UNTESTED`
       (done, `e584c60`). Both **CONFIRMED**. F9's falsifier turns out to be
       structurally unreachable — the closer stages the tracker into the same
