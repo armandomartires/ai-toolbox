@@ -478,5 +478,5 @@ open; scheduling is the human's, as with `TASK-0111`…`TASK-0118`.
   - `git diff --stat skills/project-migration/schemas/` — empty.
   - `git diff --numstat` on `ADR-0027` — `41 0`: additive only.
 - Result: **done.** All acceptance criteria met. `B-040` closed.
-- Commit:
-- Push:
+- Commit: `91b85e5` — *Generate the scaffold's planning templates from the schemas (TASK-0119)*
+- Push: **confirmed** to `origin/master` (`e204754..91b85e5`); `git rev-parse HEAD origin/master` returns the same SHA, and `git remote -v` is token-free.
