@@ -6,7 +6,10 @@
 These two badges exist because the gate was **red for fourteen consecutive
 commits** and nothing said so (`TASK-0123`). CI cannot tell you it is
 failing, and `tests/validate.sh` cannot detect that CI is failing — so the
-state has to be visible somewhere a person already looks. This is that place.
+state has to be visible somewhere a person already looks. This is that
+place — and if one of them goes red, `.github/workflows/ci-alert.yml`
+opens an issue that closes itself when CI recovers, so the signal does
+not depend on anyone reading an email.
 
 Local monorepo for AI customization tools: agent skills, MCP servers,
 agent loops, prompts, agent roles, and client configurations.
