@@ -1,5 +1,13 @@
 # ai-toolbox
 
+[![validate](https://github.com/armandomartires/ai-toolbox/actions/workflows/validate.yml/badge.svg?branch=master)](https://github.com/armandomartires/ai-toolbox/actions/workflows/validate.yml)
+[![dashboard](https://github.com/armandomartires/ai-toolbox/actions/workflows/dashboard.yml/badge.svg?branch=master)](https://github.com/armandomartires/ai-toolbox/actions/workflows/dashboard.yml)
+
+These two badges exist because the gate was **red for fourteen consecutive
+commits** and nothing said so (`TASK-0123`). CI cannot tell you it is
+failing, and `tests/validate.sh` cannot detect that CI is failing — so the
+state has to be visible somewhere a person already looks. This is that place.
+
 Local monorepo for AI customization tools: agent skills, MCP servers,
 agent loops, prompts, agent roles, and client configurations.
 
@@ -9,6 +17,10 @@ agent loops, prompts, agent roles, and client configurations.
   reviews, templates) — see `.ai/README.md`
 - Index: `docs/registry.md` (generated, never hand-edit)
 - Deploy: `scripts/install.sh`; validate: `tests/validate.sh`
+- Delivery dashboard: **https://armandomartires.github.io/ai-toolbox/**
+  — regenerated from `.ai/` and republished on every push to `master`
+  (`.github/workflows/dashboard.yml`). A view of the governance layer,
+  not an audit of it
 
 ## Getting started
 
