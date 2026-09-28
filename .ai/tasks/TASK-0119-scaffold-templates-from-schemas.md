@@ -282,44 +282,44 @@ picks A or C instead, record that and re-cost steps 2–4.
 
 ## Acceptance criteria
 
-- [ ] The route chosen in step 0 is named and dated in the Execution log, with
+- [x] The route chosen in step 0 is named and dated in the Execution log, with
       its reason.
-- [ ] Step 2's before-state is pasted: two of four heredocs failing, two
+- [x] Step 2's before-state is pasted: two of four heredocs failing, two
       passing, from this tree.
-- [ ] `skills/project-migration/scripts/ai-project-scaffold.sh` contains **no
+- [x] `skills/project-migration/scripts/ai-project-scaffold.sh` contains **no
       heredoc** for `TASK.md`, `ADR.md`, `REVIEW.md` or `SESSION.md`.
-- [ ] What the scaffold emits for those four kinds is **byte-identical** to
+- [x] What the scaffold emits for those four kinds is **byte-identical** to
       what their schemas render, proved by a hash comparison pasted in.
-- [ ] The drift gate is **observed failing** on a mutated template and passing
+- [x] The drift gate is **observed failing** on a mutated template and passing
       on a restored one; both outputs recorded, and the log names the
       comparison mechanism and states it is not `git diff`.
-- [ ] Step 6's standalone proof is recorded: the scaffold completes with
+- [x] Step 6's standalone proof is recorded: the scaffold completes with
       `project-workflow` moved aside.
-- [ ] Step 9's end-to-end proof covers all four kinds from a scratch scaffold.
-- [ ] The scaffold's closing report no longer instructs `cp` of a template.
-- [ ] `PLAN.md`'s remaining heredoc carries a comment naming `B-042` and why it
+- [x] Step 9's end-to-end proof covers all four kinds from a scratch scaffold.
+- [x] The scaffold's closing report no longer instructs `cp` of a template.
+- [x] `PLAN.md`'s remaining heredoc carries a comment naming `B-042` and why it
       stays.
-- [ ] No file under `skills/project-migration/schemas/` changed —
+- [x] No file under `skills/project-migration/schemas/` changed —
       `git diff --stat` on that path is empty.
-- [ ] `SKILL.md` reads `version: "2.0.0"` and `author: armando.martires`.
-- [ ] `ADR-0027` carries an appended dated note; **no line of it is edited or
+- [x] `SKILL.md` reads `version: "2.0.0"` and `author: armando.martires`.
+- [x] `ADR-0027` carries an appended dated note; **no line of it is edited or
       deleted**.
-- [ ] `tests/validate.sh` exits 0, with the artifact/target count recorded
+- [x] `tests/validate.sh` exits 0, with the artifact/target count recorded
       before and after.
-- [ ] `B-040` is closed in `BACKLOG.md` with the commit hash, and the
+- [x] `B-040` is closed in `BACKLOG.md` with the commit hash, and the
       open-items sentence agrees with the rows above it.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] `scripts/sync-templates.sh --check`, run clean and then against a
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] `scripts/sync-templates.sh --check`, run clean and then against a
       mutated template — it must pass, then fail
-- [ ] The new gate, run against a mutated emitted template — observed failing
-- [ ] `bash skills/project-migration/scripts/ai-project-scaffold.sh <scratch>
+- [x] The new gate, run against a mutated emitted template — observed failing
+- [x] `bash skills/project-migration/scripts/ai-project-scaffold.sh <scratch>
       --force --type generic`, into an empty directory, with
       `skills/project-workflow/` moved aside
-- [ ] `check-artifact.sh` over one generated-and-filled artifact of each of the
+- [x] `check-artifact.sh` over one generated-and-filled artifact of each of the
       four kinds, from that scratch tree
 
 ## Risks and rollback
@@ -359,19 +359,45 @@ picks A or C instead, record that and re-cost steps 2–4.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `skills/project-migration/scripts/ai-project-scaffold.sh` | 590 → 562 lines. Four heredocs replaced by `mkfile .ai/templates/<K>.md < "$TEMPLATE_DIR/<K>.md"`. `SKILL_DIR`/`TEMPLATE_DIR` resolved **before** the `cd` into the target, with a named-file readability guard up front. Header states shape is owned by `../schemas/`. Closing report step 2 now names `new-artifact.sh` instead of `cp`. `PLAN.md`'s heredoc **unchanged**, carrying a six-line comment naming `B-042` |
+| `skills/project-migration/templates/{TASK,ADR,REVIEW,SESSION}.md` | **New**, generated, do-not-edit banner naming the schema. Byte-identical to `.ai/templates/*.md` — same schema, same renderer |
+| `scripts/sync-templates.sh` | 7 → 11 targets, plus a comment on why the same four schemas render to a second destination |
+| `tests/validate.sh` | New `SCAFFOLD:` block — four kinds × (reads-template, no-heredoc), template presence, and the `cp` prohibition. Header states what it proves and what it does not, and why the staleness gate above cannot see any of it |
+| `skills/project-migration/SKILL.md` | `1.2.0` → `2.0.0`; `author: amartires` → `armando.martires`; one sentence on where the emitted templates come from and that `PLAN.md` is exempt |
+| `.ai/decisions/0027-artifact-shape-has-one-owner.md` | 41 lines appended above `## Provenance`, **0 deleted** (`git diff --numstat`: `41 0`) |
+| `docs/development/authoring-guide.md` | Derived list extended to the scaffold's set; a second row added for the reads-the-template rule, marked as a separate gate |
+| `.ai/planning/BACKLOG.md` | `B-040` **CLOSED**; open-items sentence recounted from the rows |
+| `docs/registry.md` | **Unchanged, and correct** — the registry carries name/description/path, no version column, so the `2.0.0` bump does not reach it. Verified rather than assumed |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Deliberately not changed**: anything under `skills/project-migration/schemas/`
+(`git diff --stat` empty on that path), `skills/project-workflow/`,
+`.ai/templates/`, and `SKILL.md`'s claim that a migrated repo can run
+`scripts/sync-templates.sh` — that is `B-041`/`TASK-0120`, still open. No
+already-scaffolded repository was edited; `ADR-0027` forbids it, and because
+`mkfile` never overwrites, **re-scaffolding will not update them either** —
+an existing wrong template is skipped, not replaced. Anyone wanting the fix in
+a live repo must delete the four files first.
+
+**Next task starts here**: a migrated repository's four schema-backed
+templates are now correct *at birth*. Whether it can **keep** them correct is
+untouched — it still has no regenerator, which is `B-041`/`TASK-0120`,
+`blocked` on the human's route choice.
+
+**Deviation from the Plan**: none in substance. Step 7 added no new gate
+*mechanism* — the four new render targets fall under the existing
+`sync-templates.sh --check`, so only the scaffold-reads-the-template half
+needed new code, which is what step 3's "do not invent a third idiom"
+required. Step 8 ran three mutations rather than one, because the second
+(re-inlining a heredoc) is the only one that demonstrates the two gates are
+independent; that demonstration is now the argument recorded in both the gate
+header and `ADR-0027`.
 
 ## Status
 
-- Status: ready   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-27
-- Updated: 2026-09-27
+- Updated: 2026-09-28
 
 `ready`, not `planned`: nothing blocks it. The one decision it contains —
 route A/B/C in step 0 — is costed with a recommendation and does not need a
@@ -382,11 +408,75 @@ open; scheduling is the human's, as with `TASK-0111`…`TASK-0118`.
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-28
+- Agent: Claude Opus 5 (1M context), Claude Code
 - Actions:
+  **Step 0 — route B, chosen 2026-09-28**, as the brief recommended and for
+  its stated reason: it is the only route leaving the scaffold runnable on
+  its own, which `SKILL.md` already promises, and it reuses the
+  generated-sibling shape `sync-decision-standard.sh` already ships and
+  already gates. Route A was not taken because it would create the very
+  consumer `TASK-0117` is blocked on; C was not needed.
+  Then: all ten Inputs rows re-verified; defect reproduced; four render
+  targets added; four heredocs replaced by reads; `SKILL_DIR`/`TEMPLATE_DIR`
+  resolved before the `cd`; guard added; `PLAN.md` labelled; closing report
+  reworded; `SCAFFOLD:` gate added; `SKILL.md` bumped; `ADR-0027` appended;
+  authoring guide extended; `B-040` closed.
 - Observations:
+  **Every Inputs row was accurate** — 590 lines, heredocs at 376–458, `cp` at
+  581, `grep -c 'new-artifact\|schema\|sync-templates'` = 0. Nothing had moved.
+
+  **Step 2 reproduced the defect exactly as forecast**: `TASK.md` six problems
+  (missing `## Inputs`, `## Outputs / handover`; superseded `## Preconditions`,
+  `## Dependencies`, `## Expected result`; an unfilled `FILL:` marker),
+  `REVIEW.md` four (missing `## Findings`, `## Validation results`,
+  `## Verdict`, `## Follow-up tasks`), `ADR.md` and `SESSION.md` `OK`.
+
+  **Byte-identity, md5, scaffold output vs schema render:** `TASK.md`
+  `1cea777fd9809f3d95ae09baceb1c487`, `ADR.md` `37167e956168013831ebcb7c5bcfbb9b`,
+  `REVIEW.md` `5ab1b612509199fb8dd89231fcb51004`, `SESSION.md`
+  `b9923f888e921be5a67472e79fa55eac` — all four equal on both sides.
+
+  **The finding worth keeping is about gate independence, and it was observed
+  rather than reasoned.** Re-inlining a heredoc for `REVIEW.md` left
+  `sync-templates.sh --check` **passing** — the shipped templates were still
+  correct; they had simply stopped being what a migrated repository gets. One
+  gate cannot cover both halves, and that is exactly how the original defect
+  survived a gate that was real and working. Recorded in the gate's header,
+  in `ADR-0027`'s note and in `B-040`'s closing entry, because the next person
+  to see two checks over one subject will otherwise read it as duplication and
+  delete one.
+
+  **The scaffold is standalone, proved the strong way**: the skill was copied
+  **alone** to a scratch directory outside the repo — no `project-workflow`,
+  no `ai-toolbox`, no generator — and run there. Exit 0, all five templates
+  emitted. Route B holds.
+
+  Noted in passing: `.ai/templates/PLAN.md` still has no schema, and the
+  scaffold's `PLAN.md` heredoc is untouched and labelled. `B-042` is not
+  closed and this task does not claim it.
 - Validation:
-- Result:
+  - `tests/validate.sh` — `OK`, exit 0, ~31 s. Run clean before and after
+    every mutation.
+  - **Gate observed failing, three mutations, each restored to `OK`:**
+    (1) superseded `## Preconditions` reinstated in the shipped `TASK.md` →
+    `TEMPLATES: … is stale against … schemas/task.md`, exit 1;
+    (2) heredoc re-inlined for `REVIEW.md` → `sync-templates.sh --check`
+    **passed**, new gate fired with both messages, exit 1;
+    (3) `cp .ai/templates/…` restored to the closing report → `SCAFFOLD: …
+    tells the author to cp a template`, exit 1.
+    Comparison mechanism is in-memory render-and-compare plus a grep on the
+    script; **not `git diff`**, which cannot fail on an untracked file
+    (`TASK-0106`, `ADR-0009`).
+  - `scripts/sync-templates.sh --check` — clean; targets 7 → 11.
+  - Standalone run: `bash <scratch>/skill/scripts/ai-project-scaffold.sh .
+    --force --type generic --no-git` with `project-workflow` absent → exit 0.
+  - End-to-end: one generated-and-filled artifact of each of the four kinds
+    from the scratch scaffold → `check-artifact.sh` `OK` on all four.
+  - `scripts/sync-registry.sh` — no change to `docs/registry.md` (no version
+    column), verified by inspecting the row.
+  - `git diff --stat skills/project-migration/schemas/` — empty.
+  - `git diff --numstat` on `ADR-0027` — `41 0`: additive only.
+- Result: **done.** All acceptance criteria met. `B-040` closed.
 - Commit:
 - Push:

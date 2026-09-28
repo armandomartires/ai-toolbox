@@ -760,10 +760,14 @@ heredocs, and **two of them already fail the schemas they are meant to
 embody** — measured with the skill's own checker, not inferred. Raised
 **`B-040`**, **`B-041`** and **`B-042`**.
 
-- [ ] TASK-0119 — `B-040`: the scaffold's four schema-backed templates stop
+- [x] TASK-0119 — `B-040`: the scaffold's four schema-backed templates stop
       being heredocs and get a drift gate; its closing report stops saying
-      `cp` (`ready`). Carries one open route choice, costed with a
-      recommendation
+      `cp` (**done 2026-09-28**). Took **route B** — templates shipped beside
+      the script, read at run time — so the scaffold gained no dependency on
+      `project-workflow`, verified by running it with that skill absent.
+      Needed **two** gates, not one: re-inlining a heredoc was observed
+      leaving the existing staleness check green, which is how the original
+      defect survived a gate that was real and working
 - [ ] TASK-0120 — `B-041`: `SKILL.md` names a regeneration mechanism a
       migrated repository cannot run. **`blocked` by design** on a route
       choice — retract the claim, ship a regenerator, or ship regenerator

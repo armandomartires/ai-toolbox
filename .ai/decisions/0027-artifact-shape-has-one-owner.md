@@ -199,6 +199,47 @@ The lesson generalises: when a template becomes a schema, its prose must be
 triaged line by line into *instruction about copying* and *rule about the
 artifact*, and only the first may be discarded.
 
+**An incompleteness in clause 2's list, found 2026-09-28 by `TASK-0119`.**
+Appended rather than edited: the list was complete for *this repository* and
+incomplete for the skill that scaffolds others.
+
+Clause 2 enumerates the derived templates and does not name
+`skills/project-migration/scripts/ai-project-scaffold.sh`. That script wrote
+`.ai/templates/{TASK,PLAN,SESSION,ADR,REVIEW}.md` into every repository it
+migrated, as five inline heredocs — second owners of shape, of exactly the
+kind clause 1 removed. `TASK-0109` had excluded the scaffold as *"layout
+scaffolding, a different job"*, which is true of the job and false of the
+file: the script does two jobs, and `mkfile .ai/templates/TASK.md <<'EOF'` is
+a declaration of shape, not of layout. The boundary was drawn around the
+script when the decision drew it around the job.
+
+**Two of the five had already drifted into failing their own schemas**,
+measured by this skill's own checker before the fix: the scaffold's `TASK.md`
+was missing `## Inputs` and `## Outputs / handover` and still carried
+`## Preconditions`, `## Dependencies` and `## Expected result` — the three
+headings `ADR-0012` retired and `schemas/task.md` records on its
+`superseded:` line — while its `REVIEW.md` was missing `## Findings`,
+`## Validation results`, `## Verdict` and `## Follow-up tasks`. Every
+repository migrated since inherited that on day one. This repository never
+saw it because `mkfile` refuses to overwrite, and all five templates already
+existed here.
+
+**The decision is unchanged; its scope is extended.** The four schema-backed
+templates are now rendered into `skills/project-migration/templates/` by
+`scripts/sync-templates.sh` (7 targets → 11) and read by the scaffold at run
+time, so the scaffold stays standalone — verified by running it with
+`project-workflow` absent entirely. `PLAN.md` stays a heredoc: it has no
+schema in either framework, and writing one here would make the script the
+author of a shape rather than the enforcer of one (`ADR-0008`). That is
+`B-042`.
+
+**Two gates, because neither implies the other.** `sync-templates.sh --check`
+proves the shipped templates match their schemas; a second check proves the
+scaffold still *reads* them. Re-inlining a heredoc leaves the first gate
+green — observed, not reasoned — which is precisely how the original defect
+survived a gate that was real and working.
+
+
 ## Provenance
 
 - Task: `.ai/tasks/TASK-0109-artifact-schema-one-owner.md`;

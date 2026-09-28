@@ -43,7 +43,28 @@ skills/project-migration/schemas/task.md:.ai/templates/TASK.md
 skills/project-migration/schemas/adr.md:.ai/templates/ADR.md
 skills/project-migration/schemas/review.md:.ai/templates/REVIEW.md
 skills/project-migration/schemas/session.md:.ai/templates/SESSION.md
+skills/project-migration/schemas/task.md:skills/project-migration/templates/TASK.md
+skills/project-migration/schemas/adr.md:skills/project-migration/templates/ADR.md
+skills/project-migration/schemas/review.md:skills/project-migration/templates/REVIEW.md
+skills/project-migration/schemas/session.md:skills/project-migration/templates/SESSION.md
 "
+
+# The last four render the SAME schemas to a second destination, and that is
+# deliberate rather than duplication (B-040, TASK-0119). The scaffold script
+# is copied out of this skill and run against other repositories, where
+# .ai/templates/ above does not exist and this repo's paths mean nothing; it
+# needs the rendered templates beside it. Same reason
+# scripts/sync-decision-standard.sh ships a generated sibling of driver.py.
+#
+# Before this, the scaffold carried five inline heredocs -- a second owner of
+# shape, and two of them had already drifted into failing their own schemas:
+# its TASK.md was missing ## Inputs and ## Outputs / handover and still
+# carried the three headings ADR-0012 retired, and its REVIEW.md was missing
+# four required sections. Every repository it migrated inherited that on day
+# one, where no gate of ours reaches.
+#
+# .ai/templates/PLAN.md has no schema in either framework, so the scaffold
+# still emits PLAN.md from a heredoc. That is B-042, not an oversight.
 
 for pair in $TARGETS; do
   schema="${pair%%:*}"

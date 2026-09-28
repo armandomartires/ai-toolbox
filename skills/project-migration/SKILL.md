@@ -3,8 +3,8 @@ name: project-migration
 description: "Harmonize an existing repository with the .ai agent-governance framework (AGENTS.md, CLAUDE.md, .ai/ context, decisions, planning, tasks, sessions, reviews). Use when asked to migrate, retrofit, restructure, or onboard a project for multi-agent work, or to scaffold that structure in a new repo. Not for ordinary feature work inside an already-governed repo."
 license: MIT
 metadata:
-  author: amartires
-  version: 1.2.0
+  author: armando.martires
+  version: 2.0.0
 ---
 
 # Project migration to the .ai governance framework
@@ -20,7 +20,7 @@ Retrofit a live repository so a human, a planning model, and a weaker executor m
 - Relocate existing files with `git mv`, never copy-then-delete, so `git log --follow` survives.
 - Never delete the old structure until the new one is validated and free of broken references.
 - Never invent requirements, commands, or environments. Leave `<!-- FILL -->` markers rather than guessing, and ask the user when ambiguity is material.
-- Generate planning artifacts; do not copy a template and imitate it. `schemas/{task,adr,review,session}.md` own the shape of each one, and `skills/project-workflow/scripts/new-artifact.sh --framework project-migration --kind task` emits the skeleton (`--guidance literal` for a smaller model; the filled artifact is identical at every level). `check-artifact.sh` proves a finished one conforms. The scaffold script still owns the *layout*; the schemas own the *shape* (ADR-0027). `.ai/templates/*.md` are generated from these schemas by `scripts/sync-templates.sh` and carry a do-not-edit banner.
+- Generate planning artifacts; do not copy a template and imitate it. `schemas/{task,adr,review,session}.md` own the shape of each one, and `skills/project-workflow/scripts/new-artifact.sh --framework project-migration --kind task` emits the skeleton (`--guidance literal` for a smaller model; the filled artifact is identical at every level). `check-artifact.sh` proves a finished one conforms. The scaffold script still owns the *layout*; the schemas own the *shape* (ADR-0027). `.ai/templates/*.md` are generated from these schemas by `scripts/sync-templates.sh` and carry a do-not-edit banner. **`scripts/ai-project-scaffold.sh` emits the four schema-backed templates by reading `templates/{TASK,ADR,REVIEW,SESSION}.md`, shipped with this skill and generated from `schemas/` by that same script** — it does not carry its own copies, and needs no generator at run time. `templates/PLAN.md` has no schema in either framework, so the scaffold still writes `PLAN.md` from an inline heredoc (`B-042`).
 - Never commit secrets, tokens, or `.env` files; run a secrets scan before the first push.
 - Never force-push. If a push fails, diagnose and report — do not declare the task done.
 

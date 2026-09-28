@@ -1,6 +1,6 @@
 # Current State
 
-Last updated 2026-09-27. **Sprint S10 is CLOSED** on `REVIEW-0012`
+Last updated 2026-09-28. **Sprint S10 is CLOSED** on `REVIEW-0012`
 (`TASK-0105`), archived to
 `.ai/planning/sprints/SPRINT-S10-unattended-bindings.md`; `ROADMAP.md`'s
 Phase 10 is COMPLETE. All eight deliverables landed: S10.1 (against a stub)
@@ -15,7 +15,7 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
-## The scaffold never came onto the schemas (`B-040`, `TASK-0119`)
+## The scaffold is now on the schemas (`B-040`, CLOSED by `TASK-0119`)
 
 **2026-09-27, from a review of whether `project-workflow` and
 `project-migration` are fully integrated.** The answer to the question asked
@@ -65,9 +65,39 @@ inside `ai-toolbox`, false for the reader it is written for. `B-042`: the
 anywhere, and `project-migration`'s `BACKLOG.md` entry has its fields in prose
 only while `project-workflow`'s equivalent has `schemas/adhoc.md`.
 
-**Nothing is fixed yet.** `TASK-0119` (`ready`) routes `B-040`; `TASK-0120`
-(`blocked` on a route choice) routes `B-041`; `B-042` is deliberately
+**`B-040` is CLOSED, 2026-09-28 by `TASK-0119`.** Everything above this
+paragraph is the state *before* that task and is left as written. The four
+schema-backed templates are rendered into
+`skills/project-migration/templates/` by `sync-templates.sh` (7 targets → 11)
+and read by the scaffold at run time; the four heredocs are gone; the closing
+report names `new-artifact.sh` instead of `cp`; `SKILL.md` is `2.0.0`.
+`PLAN.md` stays a heredoc and is labelled — it has no schema in either
+framework, which is `B-042`, still open.
+
+**The scaffold did not become dependent on its sibling skill.** Route B of
+three was taken for exactly that reason, and it was verified the strong way:
+the skill was copied **alone** to a directory outside this repo — no
+`project-workflow`, no generator — and run there. Exit 0, all five templates
+emitted. `TASK-0117`'s trigger did **not** fire.
+
+**The result worth carrying forward is about gates, not templates.** This
+needed **two** checks, and the second is not redundant: re-inlining a heredoc
+was *observed* leaving `sync-templates.sh --check` green, because the shipped
+templates were still correct — they had simply stopped being what a migrated
+repository gets. One gate over one artifact cannot cover both "is it right"
+and "is it used". That blind spot is how the original defect survived a gate
+that was real, working, and trusted. Anyone who later reads those two checks
+as duplication and deletes one restores the defect.
+
+**Still open here**: `TASK-0120` (`blocked` on a route choice) routes
+`B-041` — a migrated repository's templates are now correct *at birth*, but
+it still has no way to **keep** them correct; and `B-042` is deliberately
 unrouted until someone counts what the six plans share.
+
+**Not done, and stated because it could be assumed**: repositories already
+scaffolded keep their old templates. `ADR-0027` forbids retroactive edits,
+and since `mkfile` never overwrites, **re-scaffolding will not fix them
+either** — the four files must be deleted first.
 
 ## `ansible-ops` met the real estate, and stopped at gate 4 (`TASK-0116`)
 

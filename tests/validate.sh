@@ -1371,6 +1371,60 @@ if [ -x scripts/sync-templates.sh ]; then
 fi
 
 # --------------------------------------------------------------------------
+# The migration scaffold emits its four schema-backed templates by READING
+# skills/project-migration/templates/, not by carrying its own copy (B-040,
+# TASK-0119). The check above proves those files match their schemas; this
+# one proves the scaffold still uses them.
+#
+# Both halves are required and neither implies the other. Re-inlining a
+# heredoc would leave the check above passing -- the templates would still be
+# correct, they would simply no longer be what a migrated repository gets.
+# That is precisely how the original defect survived: the shipped copies here
+# were gated and right, while the scaffold's inline TASK.md was missing
+# ## Inputs and ## Outputs / handover and still carried the three headings
+# ADR-0012 retired, and its REVIEW.md was missing four required sections.
+#
+# A grep, not a byte comparison, because there is no second artifact to
+# compare: the question is which mechanism the script uses. PLAN.md is
+# deliberately excluded -- it has no schema in either framework (B-042).
+#
+# WHAT THIS PROVES: the scaffold reads all four templates from TEMPLATE_DIR
+# and carries no heredoc for any of them.
+# WHAT IT DOES NOT PROVE: that the scaffold runs, or that what it writes
+# lands where a migrated repository expects it. Only running it shows that.
+SCAFFOLD=skills/project-migration/scripts/ai-project-scaffold.sh
+if [ -r "$SCAFFOLD" ]; then
+  for kind in TASK ADR REVIEW SESSION; do
+    if ! grep -q "^mkfile \.ai/templates/$kind\.md < \"\$TEMPLATE_DIR/$kind\.md\"" "$SCAFFOLD"; then
+      echo "SCAFFOLD: $SCAFFOLD does not emit .ai/templates/$kind.md by reading"
+      echo "SCAFFOLD: \$TEMPLATE_DIR/$kind.md — shape is owned by"
+      echo "SCAFFOLD: skills/project-migration/schemas/, not by this script (ADR-0027)"
+      fail=1
+    fi
+    if grep -q "^mkfile \.ai/templates/$kind\.md <<" "$SCAFFOLD"; then
+      echo "SCAFFOLD: $SCAFFOLD carries an inline heredoc for $kind.md — that is"
+      echo "SCAFFOLD: a second owner of artifact shape (ADR-0027, B-040)"
+      fail=1
+    fi
+  done
+  for kind in TASK ADR REVIEW SESSION; do
+    if [ ! -r "skills/project-migration/templates/$kind.md" ]; then
+      echo "SCAFFOLD: skills/project-migration/templates/$kind.md is missing —"
+      echo "SCAFFOLD: run scripts/sync-templates.sh and commit the result"
+      fail=1
+    fi
+  done
+  # The closing report must not send the author back to `cp`, which
+  # SKILL.md's hard rules forbid: "Generate planning artifacts; do not copy a
+  # template and imitate it."
+  if grep -q 'cp \.ai/templates/' "$SCAFFOLD"; then
+    echo "SCAFFOLD: $SCAFFOLD tells the author to cp a template; SKILL.md's"
+    echo "SCAFFOLD: hard rules require generating the artifact instead"
+    fail=1
+  fi
+fi
+
+# --------------------------------------------------------------------------
 # Task briefs match the schema that owns their shape. Delegated to the skill's
 # own checker rather than reimplemented here, so the heading list has exactly
 # one owner (ADR-0027); a copy in this file would be the second owner the

@@ -17,8 +17,38 @@
 #   - Only create files that provide immediate value; the rest are templates.
 #   - AGENTS.md is the single source of agent instructions; CLAUDE.md symlinks to it.
 #   - No secrets, no .env, no invented requirements — placeholders are marked FILL.
+#
+# THIS SCRIPT OWNS THE LAYOUT, NOT THE SHAPE (ADR-0027, B-040, TASK-0119).
+# Which directories and files exist is decided here. What a TASK / ADR /
+# REVIEW / SESSION artifact looks like is owned by
+# ../schemas/{task,adr,review,session}.md, rendered into ../templates/*.md by
+# ai-toolbox's scripts/sync-templates.sh, and emitted below by reading those
+# files. Do not re-inline them as heredocs: that is what this script used to
+# do, and two of the five had silently drifted into failing their own schemas.
+# ai-toolbox's tests/validate.sh fails when ../templates/ drifts from
+# ../schemas/, and when this script grows a heredoc for one of the four kinds.
+# PLAN.md is the exception and is still a heredoc; see its comment below.
 
 set -euo pipefail
+
+# Resolved BEFORE the cd into the target project, because after it a
+# $0-relative path no longer points at the skill.
+SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+TEMPLATE_DIR="$SKILL_DIR/templates"
+
+# Checked up front, and by name, so a missing template is one clear message
+# before anything is written -- not a bare redirect error 300 lines in, after
+# half a repository has been scaffolded. The script needs only these files;
+# it does NOT need the project-workflow skill or a generator at run time.
+for _t in TASK ADR REVIEW SESSION; do
+  [ -r "$TEMPLATE_DIR/$_t.md" ] || {
+    echo "ai-project-scaffold.sh: missing template $TEMPLATE_DIR/$_t.md" >&2
+    echo "  The skill is incomplete. These are generated from ../schemas/ by" >&2
+    echo "  ai-toolbox's scripts/sync-templates.sh and are shipped with the skill." >&2
+    exit 1
+  }
+done
+unset _t
 
 # ---- Arguments -----------------------------------------------------------------
 usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
@@ -373,42 +403,14 @@ EOF
 mkfile .ai/reviews/.gitkeep </dev/null
 
 # ---- .ai templates -----------------------------------------------------------------
-mkfile .ai/templates/TASK.md <<'EOF'
-# TASK-XXXX — Title
+mkfile .ai/templates/TASK.md < "$TEMPLATE_DIR/TASK.md"
 
-## Objective
-## Minimal context
-## Scope
-### Included
-### Not included
-## Preconditions
-## Likely files
-## Execution plan
-1.
-## Acceptance criteria
-- [ ]
-## Mandatory validations
-- [ ] <!-- FILL: test/lint/build commands -->
-## Risks and rollback
-## Dependencies
-## Expected result
-## Status
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
-- Owner: agent/human
-- Created:
-- Updated:
-## Execution log
-### Attempt 1
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
-EOF
-
+# PLAN.md stays a heredoc, deliberately. It is the one artifact kind with
+# NO schema in either framework -- project-workflow does not declare a
+# `plan` kind and neither does this skill -- so there is nothing to render
+# it from. Writing a schema for it is B-042 and is a larger piece of work
+# with its own evidence to gather; inventing one here would make this
+# script the author of a shape rather than the enforcer of one (ADR-0008).
 mkfile .ai/templates/PLAN.md <<'EOF'
 # PLAN-XXXX — Title
 
@@ -421,41 +423,11 @@ mkfile .ai/templates/PLAN.md <<'EOF'
 ## Human decisions required
 EOF
 
-mkfile .ai/templates/SESSION.md <<'EOF'
-# SESSION-YYYYMMDD-HHMM — Title
+mkfile .ai/templates/SESSION.md < "$TEMPLATE_DIR/SESSION.md"
 
-- Date:
-- Agent/model:
-- Objective:
-- Context consulted:
-- Tasks worked on:
-- Decisions:
-- Commands and validations:
-- Problems:
-- Commit/push:
-- Next action:
-EOF
+mkfile .ai/templates/ADR.md < "$TEMPLATE_DIR/ADR.md"
 
-mkfile .ai/templates/ADR.md <<'EOF'
-# ADR-XXXX — Title
-
-## Status
-## Context
-## Decision
-## Consequences
-EOF
-
-mkfile .ai/templates/REVIEW.md <<'EOF'
-# REVIEW-XXXX — Title
-
-- Task(s) reviewed:
-- Reviewer:
-- Diff summary:
-- Findings:
-- Validation results:
-- Verdict: approve | request changes
-- Follow-up tasks:
-EOF
+mkfile .ai/templates/REVIEW.md < "$TEMPLATE_DIR/REVIEW.md"
 
 # ---- docs/ ---------------------------------------------------------------------------
 mkfile docs/architecture/README.md <<'EOF'
@@ -577,8 +549,13 @@ echo
 echo "Next steps:"
 echo "  1. Fill the <!-- FILL --> markers in AGENTS.md, README.md,"
 echo "     and .ai/context/CURRENT_STATE.md."
-echo "  2. Replace TODO.md's placeholder with your first executable task"
-echo "     (cp .ai/templates/TASK.md .ai/tasks/TASK-0001-*.md)."
+echo "  2. Replace TODO.md's placeholder with your first executable task."
+echo "     Generate it, do not copy a template and imitate it:"
+echo "       <project-workflow skill>/scripts/new-artifact.sh \\"
+echo "         --kind task --framework project-migration"
+echo "     If that skill is not installed, start from .ai/templates/TASK.md"
+echo "     and fill every <!-- FILL --> marker; the generator is the"
+echo "     supported route because it also names the file correctly."
 echo "  3. Delete directories that do not apply (e.g. docs/deployment/)."
 echo "  4. Windows checkouts: verify CLAUDE.md symlink with"
 echo "     git ls-files -s CLAUDE.md (mode 120000 = OK)."
