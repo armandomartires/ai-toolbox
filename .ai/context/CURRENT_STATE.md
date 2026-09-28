@@ -15,6 +15,24 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
+## The publishing pipeline stays repo-local (`B-048`)
+
+**2026-09-28, the human's call.** `skills/project-workflow/` ships the
+dashboard **generator** and nothing about publishing — measured, not assumed:
+`grep -rli 'pages|workflow|github actions|\.github'` over the whole skill
+returns zero. All three workflows live in `.github/workflows/`, which travels
+with this repository and not with the skill, so a consumer gets *run one
+command, get one file*.
+
+Three routes were costed — a rendered template gated on drift (the
+`sync-templates.sh` shape), an ungated template, or prose in the reference —
+and **none was taken**. Publishing stays a property of this repository.
+Recorded as `B-048`, `ready` and unscheduled, with `B-036`'s own reasoning:
+building for an absent consumer is how a second owner appears.
+
+**Open items are now thirteen**, recounted from the rows — the second recount
+in one day, which is `B-038` and `B-047` making their point again.
+
 ## A failing workflow now reaches a person (`TASK-0124`)
 
 **2026-09-28**, closing the question `TASK-0123` deliberately left open.
