@@ -1,27 +1,19 @@
 # Regenerate the delivery dashboard and publish it to GitHub Pages.
 #
-# STATUS: PARTLY VERIFIED - the build is proven, the deploy is not.
+# STATUS: VERIFIED. Run 36440566161 (e80c84f) completed `success` and the
+# page serves at https://armandomartires.github.io/ai-toolbox/ - fetched and
+# read back, not assumed: HTTP 200, 294 KB, and the embedded model reports
+# 252 commits, 120 task briefs, 10 sprints, 27 ADRs. 252 and not 1 is the
+# whole point of the assertion below. `model.json` returns 404, so the
+# working data is not published beside the page.
 #
-# Observed on run 36438809876 (c30a568) and again on bd4160c: checkout,
-# prerequisites, "Generate the dashboard", "Refuse to publish a degraded
-# page" and the model cleanup all SUCCEED in CI, so fetch-depth: 0 is doing
-# its job and the generator runs on a clean runner. The run then FAILS at
-# actions/configure-pages with "Get Pages site failed. Error: Not Found".
-#
-# Pages is not enabled on this repository and neither the workflow's
-# GITHUB_TOKEN nor an owner PAT could enable it: POST /repos/.../pages
-# returns 403 "Resource not accessible by personal access token", because
-# creating a Pages site needs repo admin. `enablement: true` below is
-# therefore necessary but not sufficient.
-#
-# ONE-TIME HUMAN STEP, then this label becomes VERIFIED against a real run:
-#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
-# then re-run this workflow (Actions -> dashboard -> Run workflow).
-#
-# The label follows validate.yml's rule - that file was UNVERIFIED until a
-# run existed and was changed only after observing one, "not on the
-# assumption that a green file is a green build". Do not write VERIFIED here
-# until a deploy has been seen.
+# It was UNVERIFIED, then PARTLY VERIFIED, before this: runs 36438809876 and
+# the one on bd4160c both proved the BUILD half on a clean runner while
+# failing at actions/configure-pages with "Get Pages site failed. Not Found".
+# Pages had never been enabled, and creating a site needs repo admin - an
+# owner PAT got 403 until its permissions were widened. `enablement: true`
+# below is necessary and was not sufficient. Same rule as validate.yml: this
+# label moves only against an observed run, and names it.
 #
 # SEPARATE FROM validate.yml ON PURPOSE. That workflow is the mandatory gate:
 # it runs on every branch and every pull request, and its token stays narrow.

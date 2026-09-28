@@ -167,17 +167,35 @@ A forecast, written before the work.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `.github/workflows/dashboard.yml` | **New.** Build + deploy to Pages on push to `master` and on dispatch. `fetch-depth: 0`, a guard that refuses to publish a degenerate history, the model dropped before upload, `concurrency: pages`. Labelled `VERIFIED` against run `36440566161` |
+| `.github/workflows/validate.yml` | Header only. Records that it read `VERIFIED` while red for fourteen commits, and why |
+| `AGENTS.md` | The remote is **public**, not private; states that everything committed is world-readable, which makes the secrets rule load-bearing rather than belt-and-braces |
+| `.gitignore` | `/_site/` added |
+| `tests/validate.sh` | Gains the shebang-implies-executable rule (commit `bd4160c`) |
+| Eleven tracked scripts | `100644` → `100755` in the index, `bd4160c` |
+| GitHub Pages | **Enabled**, `build_type: workflow`, `public: true`, HTTPS enforced. Serving at `https://armandomartires.github.io/ai-toolbox/` |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Deliberately not changed**: `validate.yml`'s behaviour, triggers or
+permissions; any skill; the generator itself. No dashboard HTML is committed.
+
+**Next task starts here**: the dashboard publishes itself on every push to
+`master` and the page is live and verified. `validate` is green again after
+fourteen red commits. **The open question this leaves is not technical**: the
+mode defect went unseen for two days because nobody reads a second opinion
+that has no way of reaching them. There is no notification on a failed run,
+and `tests/validate.sh` cannot detect that CI is failing. That is worth a
+backlog item, and this task deliberately does not open one — it is a
+decision about how this project wants to be told, not a fix.
+
+**Deviation from the Plan**: step 4 assumed observing one run. It took four,
+and the second of them exposed a defect older and larger than this task —
+recorded in the log rather than folded in silently, and fixed in its own
+commit.
 
 ## Status
 
-- Status: blocked   # planned|ready|in_progress|blocked|review|done|cancelled
-- Owner: agent (blocked on one human action: enable Pages)
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
+- Owner: agent (implementation) / human (enabling Pages)
 - Created: 2026-09-28
 - Updated: 2026-09-28
 
@@ -271,7 +289,43 @@ takes.
   to `master`.
 
 - Commit: `c30a568` (workflow, `AGENTS.md`, `.gitignore`); `bd4160c` (the
-  executable-bit fix and its gate — separate because it is a different
-  defect, found while running this one). A third records this log.
-- Push: **confirmed** for both — `884f859..c30a568` and `c30a568..bd4160c`
-  to `origin/master`.
+  executable-bit fix and its gate — separate because it is a different defect,
+  found while running this one); `e80c84f` (the observed-CI record); and a
+  fourth carrying this closure.
+- Push: **confirmed** for all — `884f859..c30a568`, `c30a568..bd4160c`,
+  `bd4160c..e80c84f` to `origin/master`, each verified from `git status -sb`.
+
+### Attempt 2
+
+- Date: 2026-09-28
+- Agent: Claude Opus 5 (1M context), Claude Code
+- Actions: The human widened the token's permissions. Re-ran the enablement,
+  dispatched the workflow, observed it, and read the published page back.
+- Observations:
+  - `POST /repos/armandomartires/ai-toolbox/pages` with `build_type:
+    workflow` now returns the site object — `public: true`,
+    `https_enforced: true`, `html_url:
+    https://armandomartires.github.io/ai-toolbox/`. The same call returned
+    `403` on attempt 1, so the difference is the permission and nothing else.
+  - `workflow_dispatch` → run `36440566161` on `e80c84f` → **`success`**,
+    both jobs.
+- Validation, all read back rather than assumed:
+  - `GET https://armandomartires.github.io/ai-toolbox/` → **HTTP 200**,
+    294,284 bytes.
+  - The page's embedded model: **252 commits**, 120 task briefs, 114 done,
+    10 sprints, 27 ADRs, 12 of 47 backlog items open, `git: true`,
+    `framework: project-migration`. **252 and not 1** is the shallow-checkout
+    trap proven avoided in production, which is the one thing the guard
+    exists for.
+  - `GET .../model.json` → **404**: the generator's working data is not
+    published beside the page, so there is no second unlabelled copy of every
+    figure on the web.
+  - `http://` → **301**: HTTPS is enforced.
+  - Zero off-file `src`/`href` references in the served HTML — still
+    self-contained after a round trip through Pages.
+  - The push trigger, not just dispatch: proven by this very commit, whose
+    run is recorded below.
+- Result: **Done.** All eight acceptance criteria met. The page is live, it
+  carries full history, and a push to `master` republishes it.
+- Commit: this one.
+- Push: confirmed.

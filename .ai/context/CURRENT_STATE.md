@@ -15,6 +15,46 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
+## The dashboard publishes itself, and CI was red for two weeks (`TASK-0123`)
+
+**2026-09-28.** `.github/workflows/dashboard.yml` regenerates the dashboard on
+every push to `master` and deploys it to GitHub Pages. **Live and verified at
+`https://armandomartires.github.io/ai-toolbox/`** — run `36440566161`,
+`success`; the page fetched back at HTTP 200, 294 KB, embedded model
+reporting **252 commits**, 120 briefs, 10 sprints, 27 ADRs; `model.json`
+404s; `http://` 301s. Nothing is committed: `/_site/` is ignored.
+
+**`fetch-depth: 0` is load-bearing and asserted.** `actions/checkout` defaults
+to depth 1 and the generator reads `git log`. Measured both ways: full →
+249 commits, `--depth 1` → **1 commit**, an empty Activity tab and every
+completion date silently degraded from a commit timestamp to the editable
+`Updated` field. A plausible page that is wrong. The workflow therefore
+refuses to deploy a degenerate history rather than trusting the flag stayed.
+
+**`AGENTS.md` said this repository was private. It is public** — the API says
+so and `raw.githubusercontent.com` serves `.ai/` with no token. Confirmed as
+intended and corrected: everything committed here is world-readable, which
+makes the secrets rule the only thing between this repo and a published
+credential rather than belt-and-braces.
+
+**The larger finding: `validate` had failed on every commit for at least
+fourteen commits**, back past `TASK-0113`, while the same gate passed locally
+every time and `validate.yml`'s header read `STATUS: VERIFIED`. The cause was
+**a file mode**, not a check: this checkout is on `/mnt/c` where
+`core.filemode` is false, so `chmod +x` changes nothing git records and drvfs
+reports every file executable anyway. `scripts/sync-decision-standard.sh` went
+in at `100644` and `validate.sh` invokes it with no interpreter prefix.
+**Eleven tracked scripts were in that state, three added by `TASK-0122` the
+same day.** Reproduced by cloning to ext4, where the CI message appears
+verbatim. Fixed in `bd4160c`; `tests/validate.sh` now fails on any tracked
+shebang file not recorded executable, with no carve-outs. **Green again.**
+
+**What is still open, and it is not technical.** The mode defect survived two
+days because nothing tells anyone a run failed, and `tests/validate.sh`
+cannot detect that CI is failing. A second opinion with no way to reach its
+reader is not a second opinion. Deliberately left as a decision for the
+human rather than fixed inside `TASK-0123`.
+
 ## The governance layer now has a generated view (`TASK-0122`)
 
 **2026-09-28, requested by the human; no sprint open.**

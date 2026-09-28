@@ -786,6 +786,8 @@ embody** — measured with the skill's own checker, not inferred. Raised
       generator, nine tabs, burn-up/burn-down/CFD/velocity/flow/forecast,
       both frameworks, light+dark, CSS-customizable (done; raised B-047)
 
+- [x] TASK-0123 — Publish the dashboard to GitHub Pages from CI; fix the
+      core.filemode trap that had CI red for 14 commits (done)
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those
 six to find what they actually share. `ADR-0027` transcribed its schemas from
