@@ -32,5 +32,14 @@ node_modules/
 # Generated delivery dashboard (skills/project-workflow/scripts/build-dashboard.sh).
 # Deliberately NOT committed: it reads the git log, so it is stale the moment
 # it lands -- the failure mode this repo keeps naming. Regenerate it instead.
-dashboard.html
-docs/dashboard.html
+#
+# ANCHORED WITH A LEADING SLASH, and that is not cosmetic. Written unanchored
+# as `dashboard.html`, this rule matched EVERY file of that name at every
+# depth -- including the generator's own shell template,
+# skills/project-workflow/assets/dashboard.html, which `git add -A` then
+# skipped in silence. The skill shipped without it and no fresh clone could
+# produce a dashboard at all, while `git status` stayed clean and the gate
+# stayed green. tests/validate.sh now fails on a declared asset that is not
+# tracked; this comment is why that check exists.
+/dashboard.html
+/docs/dashboard.html

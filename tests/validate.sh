@@ -560,6 +560,83 @@ for msg in bad:
 sys.exit(1 if bad else 0)
 PY
 
+# Assets a skill script declares must EXIST and be TRACKED.
+#
+# WHY THIS EXISTS: TASK-0122 added `dashboard.html` and `docs/dashboard.html`
+# to .gitignore so a generated dashboard could not be committed. A gitignore
+# pattern without a leading slash matches at EVERY depth, so `dashboard.html`
+# also matched the generator's own shell template at
+# skills/project-workflow/assets/dashboard.html. `git add -A` skipped it in
+# silence, the commit went green, `git status` stayed clean, and the skill
+# shipped unable to run from a fresh clone -- `missing asset dashboard.html`.
+# It was found by cloning the repo, not by any gate. Nothing in this file
+# could see it, because every check here reads the WORKING TREE, where the
+# file was present the whole time.
+#
+# That is the worst shape a defect can have here: invisible locally, fatal to
+# every consumer, and green at every step.
+#
+# WHAT THIS PROVES: that every path a shipped skill script passes to a
+# literal asset("...") call exists on disk and, when git is available, is
+# tracked by it.
+# WHAT IT DOES NOT PROVE: anything about an asset resolved through a
+# variable, a glob or a computed name -- only literal calls are visible to a
+# regex, and guessing at the rest fires on correct code. Nor that the asset's
+# CONTENT is right; that is the component's own checker's job.
+#
+# The tracked half degrades rather than lying: outside a git work tree it
+# announces that it could not run instead of passing silently, and the
+# exists half still runs. A gate that cannot fail is worse than no gate.
+python3 - <<'ASSETS' || fail=1
+import glob
+import os
+import re
+import subprocess
+import sys
+
+# Only a literal call. asset(name) with a variable is invisible here, and
+# deliberately so -- see the header.
+CALL = re.compile(r'\basset\(\s*"([^"]+)"\s*\)')
+
+tracked = None
+try:
+    inside = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if inside.returncode == 0 and inside.stdout.strip() == b"true":
+        out = subprocess.run(["git", "ls-files"], stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL, check=True)
+        tracked = set(out.stdout.decode("utf-8", "replace").split("\n"))
+except (OSError, subprocess.SubprocessError):
+    tracked = None
+
+bad = []
+for path in sorted(glob.glob("skills/*/scripts/*")):
+    if "_template" in path or not os.path.isfile(path):
+        continue
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        body = fh.read()
+    skill = path.split("/")[1]
+    for m in CALL.finditer(body):
+        rel = "skills/%s/assets/%s" % (skill, m.group(1))
+        if not os.path.exists(rel):
+            bad.append("%s declares asset %s, which does not exist"
+                       % (path, rel))
+        elif tracked is not None and rel not in tracked:
+            bad.append("%s declares asset %s, which exists but is NOT TRACKED "
+                       "by git -- a .gitignore pattern is swallowing it, so a "
+                       "fresh clone cannot run this script. Anchor the pattern "
+                       "with a leading slash and `git add` the file"
+                       % (path, rel))
+
+if tracked is None:
+    print("NOTICE: not a git work tree - declared assets were checked for "
+          "existence only, not for being tracked")
+
+for msg in bad:
+    print("UNTRACKED ASSET: %s" % msg)
+sys.exit(1 if bad else 0)
+ASSETS
+
 # Agents: the frontmatter rules docs/development/authoring-guide.md states
 # under "Agents", mirrored here so guide and gate cannot drift (ADR-0008).
 # Parsed with python3, never grepped: an agent body IS a system prompt and
