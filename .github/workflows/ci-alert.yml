@@ -1,7 +1,22 @@
 # Open a GitHub Issue when a workflow fails, and close it when CI recovers.
 #
-# STATUS: UNVERIFIED. No run observed yet. Same rule as the other two
-# workflows: this label moves only against a real run, and names it.
+# STATUS: VERIFIED. All three paths exercised on 2026-09-28, each read back
+# from the API rather than inferred:
+#   36443923514  dispatch failure  -> OPENED issue #1
+#   36443928448  workflow_run      -> a REAL green `validate` on 2bfda15
+#                                     commented "Recovered" and CLOSED #1.
+#                                     Not a simulation: the live trigger.
+#   36443970361  workflow_run      -> real green `dashboard`, nothing open,
+#                                     nothing done
+#   36444043239  dispatch failure  -> OPENED #2
+#   36444075034  dispatch failure  -> COMMENTED "Still failing" on #2 and
+#                                     created NO second issue (#2 comments
+#                                     1 -> 2, issue count unchanged)
+#   36444136192  dispatch success  -> CLOSED #2, state_reason `completed`,
+#                                     0 issues left open
+# Issues #1 and #2 are the test artifacts and are left closed as the record.
+# Same rule as the other two workflows: this label moves only against a real
+# run, and names it.
 #
 # WHY THIS EXISTS (TASK-0123, TASK-0124): validate was red for FOURTEEN
 # consecutive commits and nobody knew. GitHub's own failure email defaults to

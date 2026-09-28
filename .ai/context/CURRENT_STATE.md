@@ -15,6 +15,42 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
+## A failing workflow now reaches a person (`TASK-0124`)
+
+**2026-09-28**, closing the question `TASK-0123` deliberately left open.
+`.github/workflows/ci-alert.yml` opens a GitHub Issue when `validate` or
+`dashboard` fails, comments on further failures rather than filing more
+issues, and **closes the issue when CI recovers** — a state indicator rather
+than a notification.
+
+**Not email, and that is the finding.** GitHub's failure email defaults to
+*on*, so it was almost certainly already sending during all fourteen red
+commits and already being missed. Turning on a channel that has already
+failed is not a fix. It also cannot be verified or tested from a script:
+`/notifications/settings` and `/user/notifications/settings` 404 and
+`/user/emails` 403s for this token. GitHub still emails about the issue
+through the normal path, so the mail arrives — but the record no longer
+depends on it being read.
+
+**No secret and no dependency.** `GITHUB_TOKEN` with `issues: write` is
+already in the runner. SMTP would have put credentials in the secrets of a
+**public** repository and added a marketplace action where `ADR-0021` prefers
+wiring to vendoring. `grep 'uses:'` over the workflow returns nothing.
+
+**All three paths verified against real runs**, six of them, each read back
+from the API — and the strongest evidence was unplanned: a **real** green
+`validate` on `2bfda15` closed issue #1 through the live `workflow_run`
+trigger, naming the actual commit and run URL. Two consecutive failures
+produced one issue and one comment, not two issues. Issues `#1` and `#2` are
+closed and left as the record.
+
+**Known limit**: `workflow_run` fires only for the file on the **default
+branch**, so a failure on a side branch raises nothing, and an edit to the
+alert takes effect only once it is on `master`.
+
+`README.md` also carries both badges now, so red is visible without any
+notification at all.
+
 ## The dashboard publishes itself, and CI was red for two weeks (`TASK-0123`)
 
 **2026-09-28.** `.github/workflows/dashboard.yml` regenerates the dashboard on

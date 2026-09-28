@@ -155,16 +155,30 @@ skill.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `.github/workflows/ci-alert.yml` | **New.** `workflow_run` on `validate` and `dashboard`, plus a `workflow_dispatch` simulation. Opens one issue on failure, comments on further failures, closes it on recovery. `issues: write` and nothing wider; **no repository secret and no third-party action** — every call is `urllib` against the REST API with the built-in token. Labelled `VERIFIED` with six run ids |
+| `README.md` | Says what a red badge now also produces |
+| Repository issues | `#1` and `#2`, both **closed**, left as the test record. Zero open |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Deliberately not changed**: `validate.yml`, `dashboard.yml`, any script,
+any skill. No secret added.
+
+**Next task starts here**: a failing workflow on `master` now produces a
+durable, self-closing issue, and the two badges make the state visible in the
+README. All three alert paths are proven against real runs.
+
+**Known limit, stated rather than discovered later**: `workflow_run` only
+fires for the workflow file on the **default branch**, so a failure on a side
+branch raises nothing. That is the mechanism's boundary, not a defect, and
+editing `ci-alert.yml` only takes effect once the edit is on `master`.
+
+**Deviation from the Plan**: step 4 expected three simulated runs. It took
+six, because two **real** `workflow_run` events arrived mid-test — and that
+was luck worth keeping: the live trigger closed issue #1 off a genuine green
+`validate`, which is stronger evidence than any simulation could be.
 
 ## Status
 
-- Status: in_progress   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent
 - Created: 2026-09-28
 - Updated: 2026-09-28
@@ -177,10 +191,45 @@ choosing the issue route over SMTP and over relying on the account setting.
 ### Attempt 1
 
 - Date: 2026-09-28
-- Agent:
-- Actions:
+- Agent: Claude Opus 5 (1M context), Claude Code
+- Actions: Confirmed issues were enabled and zero were open, so the test would
+  be readable. Wrote the workflow, merged it to `master` (`workflow_run`
+  ignores every other branch), then exercised all three paths.
+
 - Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+  - **The live trigger proved itself by accident, and better than the
+    simulation could.** The push of `2bfda15` produced real green `validate`
+    and `dashboard` runs whose `workflow_run` events arrived *after* the
+    first simulated failure had opened issue #1. Run `36443928448` therefore
+    commented *"Recovered - validate on `master`"*, naming the real commit
+    subject and run URL, and closed #1. The auto-close path is proven on a
+    genuine event, not a dispatch input.
+  - **Dedupe holds.** Two consecutive failure dispatches produced issue #2
+    and then a *comment* on it (`Still failing - validate on master`), with
+    the issue count unchanged and #2's comments going 1 → 2. A fourteen-commit
+    red streak would be one thread with fourteen comments.
+  - **No secret, no dependency.** `grep 'uses:'` over the workflow returns
+    nothing; the only credential is the runner's own `GITHUB_TOKEN`.
+  - A conclusion that is neither `failure` nor `success` — `cancelled`,
+    `skipped`, `timed_out` — touches nothing, because it is evidence of
+    neither state.
+
+- Validation, every figure read back from the API:
+  - `36443923514` dispatch failure → **opened #1**
+  - `36443928448` **workflow_run**, real green `validate` on `2bfda15` →
+    commented and **closed #1**
+  - `36443970361` **workflow_run**, real green `dashboard` → nothing open,
+    nothing done
+  - `36444043239` dispatch failure → **opened #2**
+  - `36444075034` dispatch failure → **commented on #2, no second issue**
+  - `36444136192` dispatch success → **closed #2**, `state_reason:
+    completed`, **0 issues open**
+  - Every run concluded `success`.
+  - `tests/validate.sh` → `OK`; both other workflows unchanged.
+  - YAML parsed and the embedded python compiled before pushing.
+
+- Result: **Done.** All seven acceptance criteria met, each against an
+  observed run rather than a reading of the file.
+
+- Commit: this one, plus `2bfda15` which added the workflow.
+- Push: confirmed — `1d77b14..2bfda15`, and this commit after it.
