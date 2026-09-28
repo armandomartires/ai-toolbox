@@ -346,5 +346,6 @@ task to be named first; a pilot whose subject is chosen afterwards is a demo.
   - `tests/validate.sh` → `validate.sh: OK`; `scripts/sync-registry.sh` → no diff
 - Result: done. The binding has been run; `REVIEW-0012` finding 4 discharged;
   `B-043`, `B-044`, `B-045` raised; nothing fixed inside the pilot.
-- Commit: COMMIT_HASH
-- Push: PUSH_RESULT
+- Commit: `e8c364a`
+- Push: confirmed — `ece5011..e8c364a  master -> master` to `origin`;
+  `git remote -v` token-free, `master...origin/master` in sync
