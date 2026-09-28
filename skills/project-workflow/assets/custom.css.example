@@ -1,0 +1,107 @@
+/* ===========================================================================
+   custom.css.example — the whole supported customization surface.
+   ---------------------------------------------------------------------------
+   Copy, edit, then either:
+       build-dashboard.sh --css my-brand.css        (inlined; stays portable)
+       build-dashboard.sh --css-href ./my-brand.css (linked; live-editable)
+   Both are applied AFTER the base sheet, so any token you set here wins.
+
+   You never need to touch dashboard.js. Every hue a chart draws with is read
+   from these properties at draw time, which is the contract that makes this
+   file sufficient. If you find yourself editing JavaScript to change a
+   colour, that is a bug in the base sheet — the token is missing.
+
+   IF YOU CHANGE THE SERIES HUES, VALIDATE THEM. The defaults are the dataviz
+   reference instance and were checked in both modes before any chart existed.
+   Substituted hues get the same treatment or they get none:
+       node scripts/validate_palette.js "#hex,#hex,…" --mode light \
+            --surface <your --surface-1>
+       node scripts/validate_palette.js "#hex,#hex,…" --mode dark  \
+            --surface <your dark --surface-1>
+   Fix every FAIL. A contrast WARN is dischargeable — this dashboard
+   discharges it by giving every chart a table view — but it is not
+   dismissable.
+   =========================================================================== */
+
+:root {
+  /* --- brand surfaces and ink ------------------------------------------- */
+  /* --plane:          #f7f7fb; */   /* page background            */
+  /* --surface-1:      #ffffff; */   /* cards AND the chart surface.
+                                        Chart marks assume this colour for
+                                        their 2px separating gaps — change it
+                                        here, never in the plot styles.      */
+  /* --surface-2:      #eef0f6; */   /* hover rows, chips, table head        */
+  /* --text-primary:   #10121a; */
+  /* --text-secondary: #4a4f60; */
+  /* --text-muted:     #8b90a0; */
+  /* --border:         rgba(16,18,26,.12); */
+  /* --grid:           #e6e8ef; */   /* hairline gridline, solid, recessive  */
+  /* --axis:           #c7cad6; */
+
+  /* --- categorical slots, assigned in fixed order, never cycled ---------- */
+  /* --series-1: #3358d4; */  /* --series-5: #d6409f; */
+  /* --series-2: #e54d2e; */  /* --series-6: #2b7a3d; */
+  /* --series-3: #12a594; */  /* --series-7: #5b3dc4; */
+  /* --series-4: #ffc53d; */  /* --series-8: #e5484d; */
+
+  /* --- reserved status tokens (never reuse one as "series 4") ----------- */
+  /* --status-good:     #30a46c; */
+  /* --status-warning:  #ffc53d; */
+  /* --status-serious:  #f76b15; */
+  /* --status-critical: #e5484d; */
+
+  /* --- sequential ramp: ONE hue, light → dark. Never a rainbow. --------- */
+  /* --seq-100 … --seq-700 */
+
+  /* --- ordinal ramp: three steps for low / medium / high priority ------- */
+  /* --ord-1, --ord-2, --ord-3 */
+
+  /* --- workflow bands ---------------------------------------------------
+     Keep Blocked on a status token: it is the one band that means "bad",
+     and a status colour is what carries that meaning. Keep To do neutral —
+     spending a hue slot on "not started yet" costs you a real series later. */
+  /* --band-todo:    #d4d6de; */
+  /* --band-doing:   #e54d2e; */  /* keep in step with --series-2        */
+  /* --band-blocked: #e5484d; */  /* keep in step with --status-critical */
+  /* --band-done:    #3358d4; */  /* keep in step with --series-1        */
+  /* Write these as literal colours, never `var(--series-2)`. The renderer
+     reads them through getComputedStyle, and an engine that does not
+     substitute the inner var() would hand an SVG attribute the string
+     "var(--series-2)", which paints nothing. Set them in BOTH theme blocks:
+     a literal does not inherit the dark steps the way an alias did. */
+
+  /* --- mark geometry (dataviz specs; widen at your own risk) ------------ */
+  /* --bar-max:      24px; */  /* cap bar thickness; the slack is air       */
+  /* --bar-radius:   4px;  */  /* rounded data-end, square at the baseline  */
+  /* --line-width:   2px;  */
+  /* --dot-radius:   4px;  */  /* ≥ 8px across                              */
+  /* --mark-gap:     2px;  */  /* surface gap between touching fills        */
+  /* --area-opacity: .10;  */  /* a wash, never a saturated block           */
+
+  /* --- shape, rhythm and type ------------------------------------------- */
+  /* --radius: 10px; --radius-sm: 6px; --gap: 16px; --pad: 18px; */
+  /* --font: "Inter", system-ui, sans-serif; */
+  /* --font-mono: "JetBrains Mono", ui-monospace, monospace; */
+  /* --fs-hero: 48px; --fs-value: 26px; --fs-body: 14px; */
+}
+
+/* Dark values go under BOTH scopes: the media query covers the OS setting,
+   the attribute covers the in-page toggle, and an explicit light choice has
+   to beat OS-dark. Step your dark hues for the dark surface — do not invert
+   the light ones; an inverted palette fails the dark lightness band. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    /* --plane: #0b0c10; --surface-1: #15171c; --surface-2: #1e2127; */
+    /* --series-1: #5b7cfa; --series-2: #f0684a; */
+  }
+}
+:root[data-theme="dark"] {
+  /* --plane: #0b0c10; --surface-1: #15171c; --surface-2: #1e2127; */
+  /* --series-1: #5b7cfa; --series-2: #f0684a; */
+}
+
+/* Layout is fair game too — the cards are a 12-column grid. */
+/* .card.half { grid-column: span 12; } */   /* one chart per row          */
+/* .wrap { max-width: 1180px; } */           /* narrower page              */
+/* .tile .value { font-variant-numeric: tabular-nums; } */  /* not advised:
+     equal-width digits make a large standalone number look loose.         */

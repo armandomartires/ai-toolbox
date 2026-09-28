@@ -782,6 +782,9 @@ embody** — measured with the skill's own checker, not inferred. Raised
       **drop them** — the closer takes no gates parameter — so the fix may be
       wiring rather than a new capability. `ready`, with the standard's scope
       as a costed route choice (`ready`)
+- [x] TASK-0122 — Agile HTML dashboard for the .ai governance layer:
+      generator, nine tabs, burn-up/burn-down/CFD/velocity/flow/forecast,
+      both frameworks, light+dark, CSS-customizable (done; raised B-047)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

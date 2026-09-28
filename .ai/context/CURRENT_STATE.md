@@ -15,6 +15,46 @@ changed how every planning artifact is produced *and* brought the repository
 onto it — see **Artifact shape has one owner** and **The repository now
 follows it**, below.
 
+## The governance layer now has a generated view (`TASK-0122`)
+
+**2026-09-28, requested by the human; no sprint open.**
+`skills/project-workflow/` gained a dashboard generator:
+`scripts/build-dashboard.sh` + `scripts/dashboard_lib.py` read a repository's
+`.ai/` and write **one self-contained HTML5 file** — no CDN, no external font,
+no network, `python3` stdlib only, every chart hand-rolled SVG. Nine tabs;
+burn-up and burn-down, cumulative flow, velocity, throughput, cycle-time
+percentiles, ageing WIP, a roadmap timeline, a seeded Monte Carlo forecast, a
+commit heatmap. A **table view behind every chart**, light and dark themes
+both stepped from validated ramps, and `--css` / `--css-href` for branding.
+`references/dashboard.md` is the reference; `SKILL.md` → `4.1.0`.
+
+**Both frameworks, and that mattered.** The reader detects
+`project-workflow` and `project-migration` from the files present. A
+`project-workflow` fixture — the layout *this* repository does not use —
+found **three parser defects nothing here could have shown**: the task-id
+pattern swallowed the file extension; an identifier field was cleaned as
+prose, turning `S001_Foundation` into `S001Foundation (see
+../30.ROADMAP.md…)`; and a sprint the plan calls `S002` never matched a brief
+saying `S002_Performance`, so every sprint in that layout fell into the
+"outside a sprint" bucket with the velocity chart empty. The fixture is also
+the only place an **open** sprint is exercised: none is open here.
+
+**It found a real defect on its first run against this repository, and that
+is the point.** `BACKLOG.md`'s prose counted twelve open items and named
+`B-015`; `B-015`'s own row has read `**done**` since 2026-09-16. The
+generator counts from the rows and said eleven. Recorded as **`B-047`** and
+the sentence recounted — the third recurrence of `B-038`'s argument in three
+days, after `TASK-0115` and `TASK-0118` each repaired it by hand.
+
+**What it is not.** It renders what the artifacts say; it does not audit
+them. A brief recording a suite it never ran is rendered as a suite that
+passed — the `ADR-0009` boundary, stated on the tool rather than assumed. Its
+cumulative-flow diagram is **reconstructed from three dates, not replayed**,
+because neither schema records a status transition, and the chart card says
+so on its face. It is **not wired into `tests/validate.sh`** and does not
+claim to be: the gate is hermetic and offline, and this needs a working tree
+and git.
+
 ## The scaffold is now on the schemas (`B-040`, CLOSED by `TASK-0119`)
 
 **2026-09-27, from a review of whether `project-workflow` and

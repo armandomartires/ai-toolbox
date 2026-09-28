@@ -28,3 +28,9 @@ node_modules/
 # its source being skills/unattended-ops/templates/bindings/claude-code/
 # (ADR-0018's one-source-per-client-emission shape, applied here too).
 .claude/
+
+# Generated delivery dashboard (skills/project-workflow/scripts/build-dashboard.sh).
+# Deliberately NOT committed: it reads the git log, so it is stale the moment
+# it lands -- the failure mode this repo keeps naming. Regenerate it instead.
+dashboard.html
+docs/dashboard.html
