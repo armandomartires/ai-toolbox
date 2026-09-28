@@ -637,6 +637,73 @@ for msg in bad:
 sys.exit(1 if bad else 0)
 ASSETS
 
+# A tracked file with a shebang must be recorded EXECUTABLE by git.
+#
+# WHY THIS EXISTS: this repository is developed on a /mnt/c WSL checkout,
+# where `core.filemode` is false. `chmod +x` therefore changes nothing git can
+# see, and the drvfs mount reports every file as executable anyway -- so a
+# script that git records as 100644 runs perfectly here and fails everywhere
+# else. TASK-0014 already documented one face of this trap for the hook; this
+# is the other.
+#
+# WHAT IT COST: scripts/sync-decision-standard.sh went in at 100644, and
+# tests/validate.sh invokes it WITHOUT an interpreter prefix. Every CI run
+# since has failed at `STANDARD: scripts/sync-decision-standard.sh failed`,
+# for at least fourteen consecutive commits, while this gate passed locally
+# every time and validate.yml's header said `STATUS: VERIFIED`. Eleven tracked
+# scripts were in that state when this check was written, including three
+# added the same day. Reproduced by cloning to ext4 and running the gate: the
+# CI message appears verbatim.
+#
+# A second opinion that has been failing unnoticed is the ADR-0009 shape
+# again -- not a check that broke, a check whose failure nobody could see.
+#
+# WHAT THIS PROVES: that every tracked file beginning `#!` is mode 100755 in
+# the index, so it runs on a filesystem where the bit means something.
+# WHAT IT DOES NOT PROVE: that a file WITHOUT a shebang does not need to be
+# executable, or that an executable one is correct. Shebang-implies-runnable
+# is the rule with no carve-outs, which is the only kind that survives.
+python3 - <<'MODES' || fail=1
+import os
+import subprocess
+import sys
+
+try:
+    inside = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if inside.returncode != 0 or inside.stdout.strip() != b"true":
+        raise OSError("not a work tree")
+    out = subprocess.run(["git", "ls-files", "-s"], stdout=subprocess.PIPE,
+                         stderr=subprocess.DEVNULL, check=True)
+except (OSError, subprocess.SubprocessError):
+    print("NOTICE: not a git work tree - recorded file modes were not checked")
+    sys.exit(0)
+
+bad = []
+for line in out.stdout.decode("utf-8", "replace").split("\n"):
+    if not line.strip():
+        continue
+    meta, _, path = line.partition("\t")
+    mode = meta.split()[0]
+    if mode not in ("100644", "100755"):
+        continue                      # symlink, submodule: not our business
+    try:
+        with open(path, "rb") as fh:
+            if fh.read(2) != b"#!":
+                continue
+    except OSError:
+        continue
+    if mode != "100755":
+        bad.append(path)
+
+for path in bad:
+    print("NOT EXECUTABLE: %s has a shebang but git records it 100644 - it "
+          "will fail to run anywhere core.filemode is honoured. Fix with "
+          "`git update-index --chmod=+x %s` (plain chmod does nothing on a "
+          "core.filemode=false checkout)" % (path, path))
+sys.exit(1 if bad else 0)
+MODES
+
 # Agents: the frontmatter rules docs/development/authoring-guide.md states
 # under "Agents", mirrored here so guide and gate cannot drift (ADR-0008).
 # Parsed with python3, never grepped: an agent body IS a system prompt and
