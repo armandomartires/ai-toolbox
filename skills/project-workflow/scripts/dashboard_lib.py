@@ -1144,6 +1144,24 @@ def render(model, css_files=(), css_href=None, theme="auto"):
     return out
 
 
+def write(path, text):
+    """Write `path`, creating its parent directories.
+
+    `--out docs/dashboard.html` is the command the documentation gives, and a
+    repository that has no `docs/` yet met it with a raw FileNotFoundError
+    traceback. Creating the parent is what every reader expects of an --out
+    flag; failing to is reported as one line, not a stack.
+    """
+    parent = os.path.dirname(os.path.abspath(path))
+    try:
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+    except OSError as exc:
+        die("cannot write %s: %s" % (path, exc.strerror or exc))
+
+
 def main(argv):
     args = {"root": ".ai", "out": "dashboard.html", "theme": "auto",
             "repo": None, "project": None, "json": None, "git": True}
@@ -1182,11 +1200,8 @@ def main(argv):
         die("%s" % exc)
 
     if args["json"]:
-        with open(args["json"], "w", encoding="utf-8") as fh:
-            json.dump(model, fh, indent=1, sort_keys=False)
-    html = render(model, css, href, args["theme"])
-    with open(args["out"], "w", encoding="utf-8") as fh:
-        fh.write(html)
+        write(args["json"], json.dumps(model, indent=1, sort_keys=False))
+    write(args["out"], render(model, css, href, args["theme"]))
 
     k = model["series"]["kpi"]
     sys.stderr.write(

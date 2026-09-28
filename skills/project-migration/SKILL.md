@@ -4,7 +4,7 @@ description: "Harmonize an existing repository with the .ai agent-governance fra
 license: MIT
 metadata:
   author: armando.martires
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Project migration to the .ai governance framework
@@ -53,6 +53,10 @@ Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis*
 ## Phase 4 — Validate and finalize
 
 Run the project's real test/lint/build suite; start a fresh agent session from `AGENTS.md` + `CURRENT_STATE.md` and confirm it can state the objective and next action; grep for references to moved files; scan for secrets; then merge and push and report the commit hash. From here every task follows the definition of done in `references/governance-spec.md`.
+
+## Seeing the layer
+
+Once a migrated repo has real task briefs, `skills/project-workflow/scripts/build-dashboard.sh --root .ai --out docs/dashboard.html` renders them as one self-contained HTML file — burn-up, burn-down, cumulative flow, velocity, cycle time, a roadmap timeline and a throughput forecast, light and dark, CSS-customizable. **It reads this framework's shape natively** (`TASK-####`, `## Status`, `planning/`, `BACKLOG.md`, `tasks/TODO.md` for sprint membership) and needs no schema, no generator and nothing installed beyond `python3`. Reference, including what each metric does *not* prove: `skills/project-workflow/references/dashboard.md`. Same cross-skill arrangement as the artifact generator above, and the same caveat: it lives in the sibling skill, so a consumer who installed only this one does not have it (`B-036` in `ai-toolbox`). Do not copy it here. It is a **view, not a gate** — it renders what the artifacts say and audits nothing — and it fails loudly on a freshly scaffolded repo, because a `.ai/` with no task brief has nothing to chart.
 
 ## Adapting the framework
 

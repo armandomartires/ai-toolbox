@@ -46,6 +46,20 @@ generator counts from the rows and said eleven. Recorded as **`B-047`** and
 the sentence recounted — the third recurrence of `B-038`'s argument in three
 days, after `TASK-0115` and `TASK-0118` each repaired it by hand.
 
+**`project-migration` points at it, in a follow-up commit.** The dashboard
+reads that framework's shape natively — this repository *is* one, which is
+where every figure above came from — but `skills/project-migration/` named it
+nowhere, so an agent loading only that skill would never learn it exists.
+`SKILL.md` gained a `## Seeing the layer` section (`2.0.0` → `2.1.0`), the
+same cross-skill pointer arrangement it already uses for `new-artifact.sh`.
+**The install-alone case is unchanged and stays `B-036`**: the generator
+lives in the sibling skill and was deliberately not copied. Writing that
+pointer found a bug in the command it recommends — `--out docs/dashboard.html`
+died with a raw `FileNotFoundError` in a repository with no `docs/` yet. The
+generator now creates the parent directory for `--out` and `--json`, and
+reports an unwritable path as one line rather than a stack. Documenting a
+command is a way of testing it.
+
 **What it is not.** It renders what the artifacts say; it does not audit
 them. A brief recording a suite it never ran is rendered as a suite that
 passed — the `ADR-0009` boundary, stated on the tool rather than assumed. Its
