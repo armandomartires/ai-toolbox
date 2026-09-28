@@ -60,6 +60,15 @@ generator now creates the parent directory for `--out` and `--json`, and
 reports an unwritable path as one line rather than a stack. Documenting a
 command is a way of testing it.
 
+**Installed here, and it needed no install step.** Both clients carry the
+skills as **symlinks** into this checkout (`~/.claude/skills/` and
+`~/.config/opencode/skills/`, `link` mode, ADR-0002), so `4.1.0` and the
+dashboard went live the moment the commit landed — verified by running
+`~/.claude/skills/project-workflow/scripts/build-dashboard.sh` through the
+deployed path and getting the same counts. What *was* missing is that
+`AGENTS.md`'s **Commands** section listed every other script in this repo and
+not this one; it now does, labelled a view rather than a gate.
+
 **What it is not.** It renders what the artifacts say; it does not audit
 them. A brief recording a suite it never ran is rendered as a suite that
 passed — the `ADR-0009` boundary, stated on the tool rather than assumed. Its

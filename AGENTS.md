@@ -55,6 +55,16 @@ services, secrets.
   the network (launchers fetch upstream), so it is deliberately *not* part
   of `tests/validate.sh`. Reports PASS / FAIL / SKIP as three distinct
   outcomes; a SKIP is not a pass.
+- Delivery dashboard: `skills/project-workflow/scripts/build-dashboard.sh
+  --root .ai --project ai-toolbox --out docs/dashboard.html` — renders this
+  repo's own `.ai/` as one self-contained HTML file (burn-up, burn-down,
+  cumulative flow, velocity, cycle time, roadmap, forecast). **A view, not a
+  gate**: it reports what the artifacts say and audits nothing, so it is
+  deliberately not part of `tests/validate.sh` and not run by any hook. The
+  output is **gitignored** — it reads the git log, so a committed copy is
+  stale the moment it lands. Regenerate it; never commit it. Component check:
+  `skills/project-workflow/scripts/check-dashboard.sh`. What each metric does
+  *not* prove: `skills/project-workflow/references/dashboard.md`.
 - Run a Python server: `uv --directory mcp-servers/<name> run <name>` (the
   console script is named after the directory; ADR-0024). External
   servers: `scripts/install.sh` prints the launch command from the
