@@ -93,8 +93,16 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   Observed twice on 2026-09-23 before the decision existed.
 - Every project has a local git repository. A remote (GitHub, GitLab) is
   recommended but not mandatory (ADR-0007). **This repo now has one:**
-  `origin` → `armandomartires/ai-toolbox` (private), added by TASK-0015
-  from `GITHUB_URL`/`GITHUB_TOKEN` (ADR-0009).
+  `origin` → `armandomartires/ai-toolbox` (**public**), added by
+  TASK-0015 from `GITHUB_URL`/`GITHUB_TOKEN` (ADR-0009). This line read
+  *private* until TASK-0123 checked it against the API and found
+  `"visibility": "public"` — `.ai/` reads over
+  `raw.githubusercontent.com` with no token. **Everything committed here
+  is world-readable**: every task brief, the backlog, every commit
+  subject and author name. The secrets rule above is therefore not
+  belt-and-braces, it is the only thing between this repo and a
+  published credential. The dashboard is served from it at
+  `.github/workflows/dashboard.yml`.
 - At task end: validate, review diff, commit, record the commit hash in
   the task log. Push **if a remote is configured**, and record the push
   result; if there is none, record that instead of treating it as a

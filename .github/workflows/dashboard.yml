@@ -1,0 +1,122 @@
+# Regenerate the delivery dashboard and publish it to GitHub Pages.
+#
+# STATUS: UNVERIFIED. No run of this workflow has been observed yet. The
+# label follows validate.yml's rule exactly - that file was UNVERIFIED until
+# a run existed and was changed only after observing one, "not on the
+# assumption that a green file is a green build". Change this line only
+# against a real run, and name the run.
+#
+# SEPARATE FROM validate.yml ON PURPOSE. That workflow is the mandatory gate:
+# it runs on every branch and every pull request, and its token stays narrow.
+# This one runs on master only and needs `pages: write` plus an `id-token`.
+# Folding the two together would put a deploy permission on the job that runs
+# for every PR, including one from a fork.
+#
+# THE DASHBOARD IS A VIEW, NOT A GATE. A failed deploy fails this workflow; a
+# dashboard reporting uncomfortable numbers fails nothing, because it renders
+# what the artifacts say and audits nothing (ADR-0009's boundary, stated on
+# the tool itself). Nothing here may ever become a condition on a commit.
+name: dashboard
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. Two pushes in quick succession must not race to
+# publish, and the older one losing is correct.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # NOT A TUNING CHOICE. actions/checkout defaults to depth 1, and
+          # the generator reads `git log` for every completion date and for
+          # the whole Activity tab. Measured by cloning this repo both ways
+          # on 2026-09-28: full history reports 249 commits; `--depth 1`
+          # reports `1 commits` and silently falls back to each brief's
+          # editable `Updated` field for dates. That publishes a
+          # plausible-looking page that is wrong, which is worse than
+          # publishing nothing. The assertion below exists because a flag
+          # can be dropped by an edit and a comment cannot fail.
+          fetch-depth: 0
+
+      - name: Check prerequisites
+        run: |
+          bash --version | head -1
+          python3 --version
+
+      - name: Generate the dashboard
+        run: |
+          mkdir -p _site
+          bash skills/project-workflow/scripts/build-dashboard.sh \
+            --root .ai \
+            --project ai-toolbox \
+            --out _site/index.html \
+            --json _site/model.json
+
+      # The trap this workflow was written around, checked rather than
+      # trusted. A degenerate history is the one failure that produces a
+      # complete-looking page, so it must stop the deploy.
+      - name: Refuse to publish a degraded page
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          m = json.load(open("_site/model.json", encoding="utf-8"))
+          k = m["series"]["kpi"]
+          bad = []
+          if k["commits"] <= 1:
+              bad.append(
+                  "git history is degenerate (%d commit(s)) - checkout is "
+                  "shallow, so every completion date fell back to the "
+                  "Updated field and the Activity tab is empty. Restore "
+                  "fetch-depth: 0." % k["commits"])
+          if k["tasks"] < 1:
+              bad.append("no task brief parsed - the page would be empty")
+          if not m["project"]["git"]:
+              bad.append("git was unavailable to the generator")
+          for msg in bad:
+              print("::error::%s" % msg)
+          if bad:
+              sys.exit(1)
+          print("history OK: %d commits, %d task briefs, %d sprints"
+                % (k["commits"], k["tasks"], k["sprints"]))
+          PY
+
+      # The model is the generator's working data, not part of the page.
+      # Leaving it published would put a second, unlabelled copy of every
+      # figure on the web with nothing saying which one is authoritative.
+      - name: Drop the model from what gets published
+        run: rm -f _site/model.json
+
+      # `enablement: true` turns Pages on the first time, so no manual
+      # Settings step is needed. If the token lacks the scope this step
+      # fails loudly and a human enables Pages once by hand - a documented
+      # fallback, not a silent skip.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

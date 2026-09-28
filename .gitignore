@@ -43,3 +43,5 @@ node_modules/
 # tracked; this comment is why that check exists.
 /dashboard.html
 /docs/dashboard.html
+# What .github/workflows/dashboard.yml builds and publishes.
+/_site/
