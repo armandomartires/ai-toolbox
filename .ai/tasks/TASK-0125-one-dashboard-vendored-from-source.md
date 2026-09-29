@@ -164,14 +164,10 @@ checkable from the source side.
 
 ## Status
 
-- Status: review   # planned|ready|in_progress|blocked|review|done|cancelled
-- Owner: agent (implementation) / human (push)
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
+- Owner: agent (implementation) / human (authorised the push and the gate fix)
 - Created: 2026-09-29
 - Updated: 2026-09-29
-
-`review` rather than `done`: everything is committed locally and verified, but
-nothing is pushed, and one acceptance criterion cannot be met on this machine
-for a reason that predates this task. Both are below.
 
 ## Execution log
 
@@ -257,9 +253,49 @@ for a reason that predates this task. Both are below.
     trap `TASK-0123` hit for fourteen commits.
   - `tests/validate.sh` → exit 1, **unchanged from HEAD**; see observation 3.
 
-  **Not proven:** the published page. Nothing has been pushed.
+### Attempt 2
 
-- Result: **Committed locally, not pushed.** Awaiting the human on two points:
-  whether to push, and what to do about the gate's Windows crash.
-- Commit: recorded on the follow-up, since a commit cannot contain its own hash.
-- Push: **not done.**
+- Date: 2026-09-29
+- Agent: Claude Opus 5, Claude Code
+- Actions: On the human's decision, fixed the gate's Windows crash as its own
+  commit, then pushed and verified the result through the API and the live page.
+
+- Observations:
+
+  **The gate is green, and the fix is proven load-bearing.** The separator
+  normalisation went in as `a8e825b`, deliberately separate from this task —
+  it changes the mandatory gate, which deserves its own reviewable commit.
+  `tests/validate.sh` → **`validate.sh: OK`, exit 0** on this Windows checkout,
+  the first time it has run here at all. Reverting the one line reproduces the
+  `IndexError` and exit 1; restoring it returns `OK`.
+
+  That also means every check in the gate now passes **against this task's
+  changes**: skill frontmatter and its semver, the false-wiring-claim scan over
+  the rewritten scripts, the `NOT EXECUTABLE` rule over the seven vendored
+  `.py` files, the handover-section rule over this brief, and registry
+  integrity.
+
+- Validation, read back rather than assumed:
+  - `validate` workflow on `a8e825b` → **success**.
+  - `dashboard` workflow on `a8e825b` → **success**, both jobs.
+  - **The guard fired and passed on real CI**: `history OK: 260 commits, 122
+    task briefs, 16 sprints, shape numbered_task`. **260 and not 1** is the
+    shallow-checkout trap proven still caught, by a guard that was rewritten
+    and could not have fired before.
+  - `GET https://armandomartires.github.io/ai-toolbox/` → **HTTP 200**,
+    1,646,457 bytes.
+  - The served page carries `<meta name="generator" content="pm_dashboard.py
+    2.0.0">` and **twelve** `data-tab` ids including `backlog` — so the page is
+    the unified generator's output, not a cached copy of the retired one.
+  - Off-file references in the served HTML: **0**. Still self-contained after a
+    round trip through Pages.
+
+- Result: **Done.** One generator, vendored, drift-checkable, and the published
+  page is now the same program as the local one. `B-048` untouched.
+- Commit: `f999518` (this task) and `a8e825b` (the gate fix, separate). This
+  closure is a follow-up commit, since a commit cannot contain its own hash.
+- Push: **confirmed** — `b74e8e4..a8e825b master -> master` to
+  `origin` (`armandomartires/ai-toolbox`), working tree clean, local and remote
+  `master` in step. The token came from `GITHUB_TOKEN` through a one-shot
+  credential helper and was never written to a tracked file or into the
+  remote URL.

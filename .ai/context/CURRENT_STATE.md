@@ -35,13 +35,23 @@ generator and explicitly does **not** want it: its position is that the local
 file is canonical and Pages is optional. So publishing remains a property of
 this repository, exactly as routed.
 
-**Found, not caused, and not fixed here:** `tests/validate.sh` cannot run on a
-Windows checkout. Its `UNTRACKED ASSET` block does `path.split("/")[1]` over
-`glob.glob("skills/*/scripts/*")`, which returns backslash-separated paths on
-Windows, so the block raises `IndexError` and the whole gate exits 1. Verified
-to occur identically at `b74e8e4` in a clean worktree carrying none of this
-task's changes, and the gate's failure set is **unchanged** by this task. CI
-runs on Linux and is unaffected.
+**The gate now runs on Windows (`a8e825b`, a separate commit).** It could not,
+and not by failing a check: the `UNTRACKED ASSET` block did `path.split("/")[1]`
+over `glob.glob("skills/*/scripts/*")`, which returns backslash-separated paths
+there, so it raised `IndexError` and took the whole gate to exit 1 with no
+indication of which check had died. Normalising the separator also fixes a
+quieter second fault in the same loop — `rel` is compared against `git
+ls-files`, which always emits forward slashes, so every declared asset would
+have read `NOT TRACKED` even once the crash was fixed. CI runs on Linux, which
+is why neither was ever visible. Kept out of `TASK-0125` deliberately: a change
+to the mandatory gate is its own reviewable commit.
+
+**Verified live.** `validate` and `dashboard` both **success** on `a8e825b`; the
+rewritten guard reported `history OK: 260 commits, 122 task briefs, 16 sprints,
+shape numbered_task` — 260 and not 1, so the shallow-checkout trap is still
+caught by a guard that previously could not have fired at all. The published
+page returns **HTTP 200**, carries `generator content="pm_dashboard.py 2.0.0"`
+and twelve tabs, and has **zero** off-file references after the round trip.
 
 Last updated 2026-09-28. **Sprint S10 is CLOSED** on `REVIEW-0012`
 (`TASK-0105`), archived to
