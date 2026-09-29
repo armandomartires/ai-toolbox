@@ -226,6 +226,27 @@ def render_html(payload, asset_dir=ASSET_DIR):
             "pm_dashboard: template is missing placeholder(s): %s" % ", ".join(missing)
         )
 
+    # Exactly once, each. Substitution is a plain string replace, so a second
+    # occurrence is silently filled too — and the template's own documentation
+    # comment used to list all four verbatim, which inlined a duplicate copy of
+    # the stylesheet, the payload and the whole bundle into a dead HTML comment:
+    # 1,033 KB of a 2,071 KB page. It rendered only because nothing in the
+    # duplicate happened to contain `-->`; the first source or task title that
+    # did would have closed the comment early and left the browser parsing a
+    # second copy of everything as markup. Counted rather than assumed, because
+    # the failure is invisible in the output.
+    repeated = [
+        "%s x%d" % (p, template.count(p))
+        for p in PLACEHOLDERS if template.count(p) != 1
+    ]
+    if repeated:
+        raise SystemExit(
+            "pm_dashboard: each placeholder must appear exactly once in %s; "
+            "found %s. A repeated placeholder is substituted everywhere it "
+            "occurs, which silently doubles the generated file."
+            % (template_path, ", ".join(repeated))
+        )
+
     styles, css_names = _concat(asset_dir / "css", ".css")
     script, js_names = _concat(asset_dir / "js", ".js")
     if not css_names:

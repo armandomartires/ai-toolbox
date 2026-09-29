@@ -2,11 +2,25 @@
 <!--
   template.html — the shell pm_dashboard.py fills in.
 
-  Four placeholders are substituted, each alone on its line:
-    <!--{{META}}-->   title + generated-at meta
-    /*{{STYLES}}*/    every css/*.css, concatenated in filename order
-    /*{{DATA}}*/      the JSON payload
-    /*{{SCRIPT}}*/    every js/*.js, concatenated in filename order
+  Four placeholders are substituted, each alone on its line and each
+  appearing EXACTLY ONCE in this file. They are named with a space below
+  ({{ META }}) so this comment does not contain them literally:
+
+    {{ META }}     title + generated-at meta, in <head>
+    {{ STYLES }}   every css/*.css, concatenated in filename order
+    {{ DATA }}     the JSON payload, in the pm-data script block
+    {{ SCRIPT }}   every js/*.js, concatenated in filename order
+
+  THE SPACES ARE LOAD-BEARING. The generator substitutes with a plain
+  string replace, which replaces every occurrence — so when this comment
+  listed the tokens verbatim, all four were substituted here too. The
+  result was a 2 MB page of which 1 MB was a dead comment holding a
+  second copy of the stylesheet, the payload and the whole bundle. It
+  rendered correctly by luck: nothing in the duplicated content happened
+  to contain a comment terminator, and the day something did, the comment
+  would close early and the browser would parse that second copy as
+  markup. pm_dashboard.py now refuses to build unless each placeholder
+  occurs exactly once, so this cannot come back silently.
 
   Everything is inlined on purpose. The generated file has to open by
   double-clicking it on a machine with no server and no network — which is
