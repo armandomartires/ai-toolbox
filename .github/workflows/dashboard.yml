@@ -81,29 +81,48 @@ jobs:
       # The trap this workflow was written around, checked rather than
       # trusted. A degenerate history is the one failure that produces a
       # complete-looking page, so it must stop the deploy.
+      #
+      # REWRITTEN BY TASK-0125, in the same commit that swapped the generator.
+      # The keys this used to read - series.kpi.commits, series.kpi.tasks,
+      # project.git - do not exist in the new payload, and a guard reading
+      # `undefined` would never fire. A guard that cannot fail is worse than no
+      # guard, because the deploy it is supposed to stop now looks checked. The
+      # field names below are `metrics.totals` and `project.git_available` from
+      # ../../skills/project-workflow/dashboard/SCHEMA.md sections 1.1 and 2.
       - name: Refuse to publish a degraded page
         run: |
           python3 - <<'PY'
           import json, sys
           m = json.load(open("_site/model.json", encoding="utf-8"))
-          k = m["series"]["kpi"]
+          totals = m["metrics"]["totals"]
           bad = []
-          if k["commits"] <= 1:
+          commits = totals["commits"]
+          if commits <= 1:
               bad.append(
                   "git history is degenerate (%d commit(s)) - checkout is "
-                  "shallow, so every completion date fell back to the "
-                  "Updated field and the Activity tab is empty. Restore "
-                  "fetch-depth: 0." % k["commits"])
-          if k["tasks"] < 1:
+                  "shallow, so every completion date fell back to a "
+                  "hand-recorded field and the Activity tab is empty. Restore "
+                  "fetch-depth: 0." % commits)
+          if totals["tasks"] < 1:
               bad.append("no task brief parsed - the page would be empty")
-          if not m["project"]["git"]:
+          if not m["project"]["git_available"]:
               bad.append("git was unavailable to the generator")
+          # The payload names the reader that produced it. If shape detection
+          # ever picks the wrong one for this repository, every count below is
+          # drawn from a parser reading the wrong filenames - which yields zero
+          # tasks, caught above, but says so here in one line rather than
+          # leaving somebody to work it out from an empty page.
+          shape = m["project"].get("corpus_shape")
+          if shape != "numbered_task":
+              bad.append(
+                  "corpus shape detected as %r; this repository is "
+                  "numbered_task (TASK-####)" % shape)
           for msg in bad:
               print("::error::%s" % msg)
           if bad:
               sys.exit(1)
-          print("history OK: %d commits, %d task briefs, %d sprints"
-                % (k["commits"], k["tasks"], k["sprints"]))
+          print("history OK: %d commits, %d task briefs, %d sprints, shape %s"
+                % (commits, totals["tasks"], totals["sprints"], shape))
           PY
 
       # The model is the generator's working data, not part of the page.

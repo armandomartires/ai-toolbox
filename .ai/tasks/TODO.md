@@ -791,6 +791,10 @@ embody** — measured with the skill's own checker, not inferred. Raised
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 - [x] TASK-0124 — Open a self-closing GitHub Issue when CI fails; no
       secret, no third-party action; all three paths verified (done)
+- [x] TASK-0125 — Retire this repo's dashboard generator for a vendored
+      copy of the one in `sigma-llmwiki`, so one generator serves every
+      project the skill is applied to. `SKILL.md` 4.1.0 → 5.0.0. The
+      fixture found three defects in the incoming tool (done)
 instances and no schema anywhere, and writing one means first reading those
 six to find what they actually share. `ADR-0027` transcribed its schemas from
 artifacts that already existed; `ADR-0008` forbids inventing the requirement.

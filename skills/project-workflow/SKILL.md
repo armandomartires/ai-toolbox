@@ -1,10 +1,10 @@
 ---
 name: project-workflow
-description: "Scaffolds and maintains a project's .ai/ directory - a consistent plan/develop/test/validate documentation convention (sprint-prefixed task briefs, architecture decision records, roadmap, ad-hoc task list, review checkpoints), and generates each artifact from the schema that owns its shape. USE FOR: setting up project planning docs, scaffolding .ai, writing a task brief, writing an ADR, recording a decision, tracking sprint history, starting a new project's documentation structure, standardizing how a project plans/develops/tests/validates work, and rendering that layer as an agile HTML dashboard (burn-up, burn-down, cumulative flow, velocity, cycle time, roadmap, forecast). DO NOT USE FOR: writing normative project documentation (AGENTS.md, docs/ reference guides) - this skill is only for the WHY/WHAT'S-NEXT layer, never the WHAT-IS layer."
+description: "Scaffolds and maintains a project's .ai/ directory - a consistent plan/develop/test/validate documentation convention (sprint-prefixed task briefs, architecture decision records, roadmap, ad-hoc task list, review checkpoints), and generates each artifact from the schema that owns its shape. USE FOR: setting up project planning docs, scaffolding .ai, writing a task brief, writing an ADR, recording a decision, tracking sprint history, starting a new project's documentation structure, standardizing how a project plans/develops/tests/validates work, and rendering that layer as an agile HTML dashboard (burn-up, burn-down, cumulative flow, velocity, cycle time, dependencies, backlog, roadmap, forecast). DO NOT USE FOR: writing normative project documentation (AGENTS.md, docs/ reference guides) - this skill is only for the WHY/WHAT'S-NEXT layer, never the WHAT-IS layer."
 license: MIT
 metadata:
   author: armando.martires
-  version: "4.1.0"
+  version: "5.0.0"
 ---
 
 # project-workflow
@@ -98,12 +98,21 @@ doc; don't restate it.
 
 `scripts/build-dashboard.sh --root .ai --out docs/dashboard.html` renders the
 governance layer as **one self-contained HTML5 file** — no CDN, no external
-font, no network, `python3` stdlib only. Nine tabs; burn-up and burn-down,
-cumulative flow, velocity, throughput, cycle-time percentiles, a roadmap
-timeline and a seeded Monte Carlo forecast; a table view behind every chart;
-light and dark themes; `--css` / `--css-href` for branding. Both frameworks
-are detected, not assumed. Full reference, including **what each metric does
-not prove**: `references/dashboard.md`.
+font, no network, `python3` stdlib only. Twelve tabs; burn-up and burn-down,
+cumulative flow, velocity, throughput, cycle-time percentiles, a dependency
+graph, a backlog priority×value matrix, a roadmap timeline and a seeded Monte
+Carlo forecast; light and dark themes with a live token editor; an optional
+`dashboard.custom.css` beside the output for branding. Both corpus layouts are
+detected, not assumed. Full reference, including **what each metric does not
+prove**: `references/dashboard.md`.
+
+**The generator under `dashboard/` is a vendored copy — do not edit it here.**
+It is developed in the `sigma-llmwiki` repository and synced by that repo's
+`sync_dashboard_skill.py`, which writes `dashboard/VENDORED.md` with the source
+commit and a sha256 per file; its `--check` exits non-zero on drift. One
+generator, so every project that adopts this skill renders the same dashboard.
+Editing the copy re-creates the split this arrangement exists to remove — two
+generators, written a week apart, neither aware of the other.
 
 `.ai/` is prose, and prose does not add up. The one figure this repository
 maintained by hand — `BACKLOG.md`'s open-item count — went stale twice in two

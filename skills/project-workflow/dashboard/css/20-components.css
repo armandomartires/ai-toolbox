@@ -1,0 +1,748 @@
+/* ==========================================================================
+   20-components.css — every non-chart component PM.util builds.
+
+   Scope boundary: this file styles exactly the class names emitted by
+   js/00-util.js (`card`, `kpi`, `table`, `badge`, `empty`, `note`,
+   `approxMark`) plus the hand-built structures the view modules assemble out
+   of `el()` — board columns, Gantt rows, definition lists, chips, progress
+   bars and the theme editor. Page frame, panel grids and `.pm-span-*` tracks
+   belong to 10-base.css; anything drawn inside an <svg> belongs to
+   30-charts.css. A class that PM.util never emits is deliberately absent —
+   an invented selector would never match anything.
+
+   Two hard constraints, both from SCHEMA.md §6:
+     - Tokens only. No custom property is defined here (00-tokens.css is the
+       only file allowed to), and no colour literal appears anywhere, so the
+       light/dark switch and the token editor both re-skin this file for free.
+     - Semantic colour arrives through the four `--pm-ok|warn|bad|info` pairs.
+       Series colour never does: a component tinted from the categorical ramp
+       would compete with the chart that owns that ramp.
+   ========================================================================== */
+
+/* ==========================================================================
+   Cards — PM.util.card()
+   ========================================================================== */
+
+.pm-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--pm-bg-elev);
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius);
+  box-shadow: var(--pm-shadow);
+  /* Charts inside are `width: 100%` of an intrinsic-min-content grid item.
+     Without both of these a wide svg (or a long unbroken task id in a table)
+     forces the grid track wider than its share and the whole band overflows. */
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pm-card-head {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-between;
+  /* flex-start, not center: a two-line subtitle must not drag the title down. */
+  align-items: flex-start;
+  gap: .5rem .75rem;
+  padding: .75rem var(--pm-pad);
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.pm-card-titles {
+  min-width: 0;
+}
+
+.pm-card-title {
+  margin: 0;
+  font-size: var(--pm-fs-base);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.pm-card-sub {
+  margin: .15rem 0 0;
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+  line-height: 1.4;
+}
+
+.pm-card-actions {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex: 0 0 auto;
+}
+
+.pm-card-body {
+  padding: var(--pm-pad);
+  flex: 1;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   KPI tiles — PM.util.kpi(), fed from metrics.kpis[]
+   ========================================================================== */
+
+.pm-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--pm-gap);
+}
+
+.pm-kpi {
+  background: var(--pm-bg-elev);
+  border: 1px solid var(--pm-border);
+  /* The tone stripe is geometry on every tile and colour only on some, so an
+     untoned tile lines up with a toned one instead of shifting 2px. */
+  border-left-width: 3px;
+  border-radius: var(--pm-radius);
+  padding: .7rem .85rem;
+  min-width: 0;
+}
+
+.pm-kpi-label {
+  /* Letter-spaced rather than text-transform'd: these labels are payload
+     prose ("Scope complete"), and upper-casing them would mangle ids. */
+  font-size: var(--pm-fs-sm);
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--pm-fg-muted);
+}
+
+.pm-kpi-value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-top: .2rem;
+  font-size: var(--pm-fs-xl);
+  font-weight: 650;
+  line-height: 1.1;
+  /* Tiles sit in a row and re-render on resize; proportional digits make the
+     numbers visibly jitter between renders. */
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-kpi-sub {
+  margin-top: .25rem;
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+}
+
+.pm-kpi-trend {
+  font-size: var(--pm-fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-kpi-trend.is-up { color: var(--pm-ok); }
+.pm-kpi-trend.is-down { color: var(--pm-bad); }
+
+/* Left border only. A fully tinted tile reads as an alert and pulls attention
+   off the charts, which are the actual evidence. */
+.pm-kpi.is-good { border-left-color: var(--pm-ok); }
+.pm-kpi.is-warn { border-left-color: var(--pm-warn); }
+.pm-kpi.is-bad { border-left-color: var(--pm-bad); }
+/* `is-info` is reachable: PM.util.stateTone() maps in_progress/active to it. */
+.pm-kpi.is-info { border-left-color: var(--pm-info); }
+/* No `--pm-neutral` exists, and none should — an untoned tile is not a fifth
+   semantic state, so it borrows the strong border token. */
+.pm-kpi.is-neutral { border-left-color: var(--pm-border-strong); }
+
+/* ==========================================================================
+   Tables — PM.util.table()
+   ========================================================================== */
+
+.pm-table-wrap {
+  /* Horizontal scroll, never horizontal clipping: the dependency and aging
+     tables are genuinely wide and truncating a task id loses the row's key. */
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.pm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--pm-fs-sm);
+}
+
+.pm-table th {
+  /* `.pm-table-wrap`'s `overflow-x: auto` makes that wrap the scrollport (a
+     non-visible overflow on one axis computes the other to `auto`), so this
+     sticks to the wrap and never to the page: it engages only where a view
+     caps the wrap's height, and no view does today. The opaque background is
+     what the rule actually guarantees. 90-print.css forces `static` so
+     `table-header-group` can repeat the header on each sheet instead. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: .45rem .6rem;
+  text-align: left;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--pm-fg-muted);
+  background: var(--pm-bg-elev);
+  border-bottom: 1px solid var(--pm-border);
+  white-space: nowrap;
+}
+
+.pm-table td {
+  padding: .5rem .6rem;
+  /* Top, not middle: a wrapped goal string next to a one-word state column
+     should not float the state into the middle of the row. */
+  vertical-align: top;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.pm-table tbody tr:hover {
+  background: var(--pm-bg-sunken);
+}
+
+/* PM.util.table()'s `rowClass` flags blocked and in-progress rows (23-board.js
+   does it for both the task and the sprint tables), so the class has to mean
+   something. An inset shadow rather than a border: with `border-collapse:
+   collapse` a border on the first cell would shift that one row's text out of
+   the column, and a background tint would outrank the `:hover` above. */
+.pm-table tbody tr.is-blocked td:first-child {
+  box-shadow: inset 3px 0 0 var(--pm-bad);
+}
+
+.pm-table tbody tr.is-progress td:first-child {
+  box-shadow: inset 3px 0 0 var(--pm-info);
+}
+
+.pm-table .is-right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-table .is-center {
+  text-align: center;
+}
+
+/* For the long lists — 118 tasks, 254 log entries, 566 commits — where the
+   comfortable row height would push the table off the fold. */
+.pm-table.is-compact th,
+.pm-table.is-compact td {
+  padding: .25rem .45rem;
+}
+
+.pm-mono {
+  font-family: var(--pm-font-mono);
+  /* Monospace runs optically larger at the same px size. */
+  font-size: .95em;
+}
+
+.pm-nowrap {
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Badges — PM.util.badge(text, tone)
+   ========================================================================== */
+
+.pm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .1rem .45rem;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: var(--pm-fs-sm);
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+/* Foreground from the semantic token, surface from its `-weak` pair; the
+   border takes the weak tone too, so the pill stays quiet at table density. */
+.pm-badge.is-good {
+  color: var(--pm-ok);
+  background: var(--pm-ok-weak);
+  border-color: var(--pm-ok-weak);
+}
+
+.pm-badge.is-warn {
+  color: var(--pm-warn);
+  background: var(--pm-warn-weak);
+  border-color: var(--pm-warn-weak);
+}
+
+.pm-badge.is-bad {
+  color: var(--pm-bad);
+  background: var(--pm-bad-weak);
+  border-color: var(--pm-bad-weak);
+}
+
+.pm-badge.is-info {
+  color: var(--pm-info);
+  background: var(--pm-info-weak);
+  border-color: var(--pm-info-weak);
+}
+
+.pm-badge.is-neutral {
+  color: var(--pm-fg-muted);
+  background: var(--pm-bg-sunken);
+  border-color: var(--pm-border);
+}
+
+/* ==========================================================================
+   Empty states, notes, approximation marks
+   ========================================================================== */
+
+/* PM.util.empty() is the only legal rendering of an unusable series, so it has
+   to look deliberate rather than broken — dashed, centred, and carrying the
+   sentence that says why. */
+.pm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--pm-fg-muted);
+  border: 1px dashed var(--pm-border);
+  border-radius: var(--pm-radius);
+  font-size: var(--pm-fs-sm);
+}
+
+.pm-empty p {
+  margin: 0;
+  max-width: 46ch;
+  line-height: 1.5;
+}
+
+.pm-empty-mark {
+  font-size: var(--pm-fs-xl);
+  line-height: 1;
+  color: var(--pm-fg-faint);
+}
+
+.pm-note {
+  margin: .5rem 0 0;
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+  line-height: 1.5;
+}
+
+/* Text colour only. A note carrying the caveat under a chart must not become a
+   box that outweighs the chart. */
+.pm-note.is-good { color: var(--pm-ok); }
+.pm-note.is-warn { color: var(--pm-warn); }
+.pm-note.is-bad { color: var(--pm-bad); }
+
+/* PM.util.approxMark(): the "this date is derived, not recorded" marker — it
+   covers a floored git date and a sprint-granularity one alike, so it must not
+   be read as meaning lower bound specifically. Faint on purpose: it qualifies
+   a value without claiming to be one. */
+.pm-approx {
+  margin-left: .2em;
+  color: var(--pm-fg-faint);
+  cursor: help;
+  /* UA stylesheets give abbr[title] a dotted underline that reads as a typo
+     at 12px; the `title` tooltip and the cursor carry the affordance. */
+  text-decoration: none;
+  -webkit-text-decoration: none;
+  border-bottom: 0;
+}
+
+/* ==========================================================================
+   The shared tooltip — one node for all eleven tabs (#pm-tooltip)
+   ========================================================================== */
+
+#pm-tooltip {
+  /* Fixed, because PM.svg positions it from clientX/clientY; pointer-events
+     none, because it is placed next to the cursor and must never become the
+     mousemove target inside the plot it is describing. */
+  position: fixed;
+  pointer-events: none;
+  z-index: 100;
+  max-width: 340px;
+  padding: .4rem .55rem;
+  background: var(--pm-tooltip-bg);
+  color: var(--pm-tooltip-fg);
+  border-radius: var(--pm-radius-sm);
+  box-shadow: var(--pm-shadow);
+  font-size: var(--pm-fs-sm);
+  line-height: 1.4;
+}
+
+/* PM.svg hides the tooltip by toggling the `hidden` attribute, not a class, so
+   any `display` declaration would strand it on screen. Also covers the
+   `hidden` panels in template.html. */
+[hidden] {
+  display: none !important;
+}
+
+.pm-tip-head {
+  font-weight: 600;
+}
+
+.pm-tip-row {
+  /* Opacity rather than a muted colour: the tooltip surface is inverted per
+     theme, so there is no fixed token that reads as "quieter" on both. */
+  opacity: .85;
+}
+
+/* ==========================================================================
+   Progress bars
+   ========================================================================== */
+
+.pm-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--pm-bg-sunken);
+  overflow: hidden;
+}
+
+.pm-progress-fill {
+  /* Block, not inherited: 23-board.js renders the fill as a <span> inside the
+     table cell, and an inline box ignores both width and height — which would
+     print a part-complete sprint as an empty track, a figure that is wrong
+     rather than merely missing. */
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pm-accent);
+}
+
+.pm-progress-fill.is-good { background: var(--pm-ok); }
+.pm-progress-fill.is-warn { background: var(--pm-warn); }
+.pm-progress-fill.is-bad { background: var(--pm-bad); }
+
+/* ==========================================================================
+   Board — columns of tickets
+   ========================================================================== */
+
+.pm-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--pm-gap);
+  /* Columns hold wildly different counts (105 done vs 1 in progress); stretch
+     would inflate every column to the tallest. */
+  align-items: start;
+}
+
+.pm-col {
+  background: var(--pm-bg-sunken);
+  border-radius: var(--pm-radius);
+  padding: .6rem;
+  /* An empty column must still read as a column, not as a missing one. */
+  min-height: 120px;
+  min-width: 0;
+}
+
+.pm-col-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .5rem;
+  padding-bottom: .5rem;
+  font-size: var(--pm-fs-sm);
+  font-weight: 600;
+  color: var(--pm-fg-muted);
+}
+
+.pm-col-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--pm-fg-faint);
+}
+
+.pm-cards {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.pm-ticket {
+  background: var(--pm-bg-elev);
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius-sm);
+  padding: .55rem;
+  /* Nothing here is draggable or clickable — the board is a read-only view of
+     a corpus on disk, and a pointer cursor would promise otherwise. */
+  cursor: default;
+  min-width: 0;
+}
+
+.pm-ticket-id {
+  font-family: var(--pm-font-mono);
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+}
+
+.pm-ticket-title {
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: .1rem;
+  /* Task titles are de-camel-cased names that can still exceed the column. */
+  overflow-wrap: break-word;
+}
+
+.pm-ticket-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-top: .35rem;
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+}
+
+/* The 2px the wider border adds is taken back out of the padding, so a flagged
+   ticket's text stays on the same vertical line as its neighbours'. */
+.pm-ticket.is-blocked,
+.pm-ticket.is-progress {
+  border-left-width: 3px;
+  padding-left: calc(.55rem - 2px);
+}
+
+.pm-ticket.is-blocked { border-left-color: var(--pm-bad); }
+.pm-ticket.is-progress { border-left-color: var(--pm-info); }
+
+/* ==========================================================================
+   Timeline / Gantt rows (roadmap)
+   ========================================================================== */
+
+.pm-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pm-trow {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: .6rem;
+  align-items: center;
+  font-size: var(--pm-fs-sm);
+}
+
+.pm-trow-label {
+  font-family: var(--pm-font-mono);
+  /* A fixed label column keeps every bar on the same origin; sprint labels are
+     longer than that column, so they truncate rather than reflow the track. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pm-fg-muted);
+}
+
+.pm-trow-track {
+  position: relative;
+  height: 20px;
+  background: var(--pm-bg-sunken);
+  border-radius: var(--pm-radius-sm);
+}
+
+.pm-tbar {
+  position: absolute;
+  top: 2px;
+  height: 16px;
+  border-radius: var(--pm-radius-sm);
+  background: var(--pm-accent-weak);
+  border: 1px solid var(--pm-accent);
+  /* border-box so the 1px border does not push the bar past the width the
+     renderer computed from the date scale. */
+  box-sizing: border-box;
+  min-width: 2px;
+}
+
+/* An ongoing sprint has no end date. A dashed, unsquared right edge says the
+   bar stops where knowledge stops, not where the work does. */
+.pm-tbar.is-ongoing {
+  border-right-style: dashed;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* ==========================================================================
+   Definition lists — detail panels
+   ========================================================================== */
+
+.pm-dl {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: .35rem .8rem;
+  margin: 0;
+  font-size: var(--pm-fs-sm);
+}
+
+.pm-dl dt {
+  color: var(--pm-fg-muted);
+  font-weight: 600;
+}
+
+.pm-dl dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+/* ==========================================================================
+   Chips — compact inline lists (dependency ids, areas, lanes)
+   ========================================================================== */
+
+.pm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.pm-chip {
+  padding: .05rem .4rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 999px;
+  font-family: var(--pm-font-mono);
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Theme editor (Data & theme tab)
+   ========================================================================== */
+
+.pm-tokens {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--pm-gap);
+}
+
+/* No background: the group sits inside a card that already supplies one, and a
+   second elevation here would read as a nested card. */
+.pm-token-group {
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius);
+  padding: .7rem .8rem;
+  min-width: 0;
+}
+
+.pm-token-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .2rem 0;
+  font-size: var(--pm-fs-sm);
+}
+
+.pm-token-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--pm-font-mono);
+  font-size: .75rem;
+  color: var(--pm-fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The swatch's own background is set inline by 40-theme.js from the live token
+   value — that is the one legitimate source of a colour this file cannot name. */
+.pm-token-swatch {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--pm-border);
+  border-radius: 4px;
+}
+
+input[type="color"].pm-color {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--pm-border);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+/* Chrome/Safari pad the native swatch inside the control, which leaves a band
+   of UA-chosen grey no token can reach. */
+input[type="color"].pm-color::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"].pm-color::-webkit-color-swatch {
+  border: 0;
+  border-radius: 3px;
+}
+
+.pm-code {
+  margin: 0;
+  padding: .7rem;
+  background: var(--pm-bg-sunken);
+  border-radius: var(--pm-radius-sm);
+  font-family: var(--pm-font-mono);
+  font-size: .75rem;
+  line-height: 1.5;
+  color: var(--pm-fg);
+  /* `pre`, not `pre-wrap`: this is exported CSS and JSON, where a soft wrap
+     would misrepresent the text the user is about to copy. */
+  white-space: pre;
+  overflow: auto;
+  max-height: 340px;
+  -moz-tab-size: 2;
+  tab-size: 2;
+}
+
+/* ==========================================================================
+   Keyboard focus for the two components JS makes focusable
+   ========================================================================== */
+
+/* PM.svg.bindTip() sets `tabindex="0"` on a Gantt bar so its tooltip has a
+   keyboard path (SCHEMA.md §5.4: nothing may depend on hover alone), and
+   40-theme.js does the same for the export block so it can be scrolled.
+   30-charts.css's focus ring is scoped to `[tabindex]` inside `.pm-svg`, and
+   both of these are HTML, so without this they would take focus invisibly. */
+.pm-tbar:focus-visible,
+.pm-code:focus-visible {
+  outline: 2px solid var(--pm-accent);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Visually hidden
+   ========================================================================== */
+
+/* Where a chart card supplies a fallback table instead of a summarising
+   aria-label (SCHEMA.md §5.4 accepts either; 26-debt.js is the view that does
+   it), the table lives in here: read by a screen reader, absent from layout,
+   still selectable text for anyone who copies the page. `display: none` would
+   hide it from both. */
+.pm-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   Narrow viewports. Only the two fixed-track grids need it — everything else
+   above is auto-fit and already collapses on its own.
+   ========================================================================== */
+
+@media (max-width: 720px) {
+  .pm-trow {
+    grid-template-columns: 110px 1fr;
+  }
+
+  .pm-dl {
+    grid-template-columns: 1fr;
+    gap: .1rem;
+  }
+
+  .pm-dl dd {
+    margin-bottom: .45rem;
+  }
+}

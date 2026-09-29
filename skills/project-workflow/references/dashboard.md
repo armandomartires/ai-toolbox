@@ -13,15 +13,29 @@ skills/project-workflow/scripts/build-dashboard.sh \
 
 | Flag | Meaning |
 |---|---|
-| `--root` | the governance directory. Default `.ai`. Either framework's layout is **detected**; neither is assumed |
+| `--root` | the governance directory. Default `.ai`. Either corpus layout is **detected**; neither is assumed |
 | `--repo` | repository root, for git provenance. Default: `--root`'s parent |
 | `--out` | output path. Default `dashboard.html` |
-| `--project` | display name. Default: the repo directory's name |
-| `--theme` | initial theme: `auto` (default), `light`, `dark` |
-| `--css FILE` | a stylesheet **inlined** after the base one. Repeatable; the output stays one portable file |
-| `--css-href URL` | a stylesheet **linked** instead — editable without regenerating, at the cost of self-containment |
+| `--project` | accepted for compatibility; the page is titled from the repository directory name, and a mismatch is warned about rather than silently ignored |
 | `--json PATH` | also write the underlying model, so the same numbers are available to anything else |
-| `--no-git` | do not shell out to git (see *Where a date comes from*) |
+| `--no-git` | do not read git (see *Where a date comes from*) |
+| `--theme`, `--css`, `--css-href` | **accepted and ignored, with a warning.** Styling is now an optional `dashboard.custom.css` beside the output, which the page links last. They are accepted so an existing invocation does not break, and warned about so nobody believes a stylesheet was applied when it was not |
+
+## The generator is vendored — do not edit it here
+
+`dashboard/` holds a **copy**. The original lives in the `sigma-llmwiki`
+repository, and `build-dashboard.sh` is a thin wrapper over it.
+
+That is deliberate, and the reason is worth knowing before you reach for an
+edit: two dashboard generators were once built for this convention in the same
+week, in two repositories, neither aware of the other — so the dashboard a
+project got depended on which repository it was scaffolded from. One generator,
+vendored, is what stops that recurring. Editing the copy here starts it again.
+
+`dashboard/VENDORED.md` records the source commit and a sha256 per file, and
+the sync script's `--check` exits non-zero on any drift, so the two copies
+matching is a claim a command can refute rather than one somebody remembers
+making.
 
 ## Why it exists
 
@@ -36,23 +50,28 @@ repository it disagreed with that sentence by one and was right: see
 
 ## The tabs
 
+Twelve tabs, a closed set.
+
 | Tab | What it answers |
 |---|---|
-| **Overview** | Are we delivering? One hero figure, eight tiles, the release burn-up, velocity, throughput, ageing work |
-| **Burn charts** | Burn-up (scope vs completed), burn-down with a trend projection, cumulative flow, work in progress |
-| **Sprints** | A timeline of every sprint; per-sprint burn-down against an ideal line, and per-sprint burn-up; committed vs delivered; work run outside any sprint |
-| **Flow** | Cycle time scatter with percentiles, lead-time distribution, ageing WIP, tasks closed per day |
-| **Backlog** | Open items by priority × value, raised vs closed, and the full sortable table |
-| **Roadmap & forecast** | Declared phases, a Monte Carlo forecast over observed throughput, and the written-down list of what is next |
-| **Tasks** | Every brief, sortable, with criteria and validation counts and how its date was obtained |
-| **Decisions** | ADRs accepted over time, by status, and the review checkpoints |
-| **Activity** | Commit heatmap, contributors, and how many commits name a task |
+| **Overview** | Where does the project stand? KPI tiles, state distribution, a compact burn-up, weekly throughput, acceptance-criteria coverage |
+| **Burn charts** | Burn-up (scope vs completed), burn-down against a straight-line reference, scope churn |
+| **Flow & velocity** | Cumulative flow, velocity per sprint, throughput, cycle-time control chart and histogram, lead-time distribution, ageing WIP |
+| **Forecast** | Monte Carlo completion histogram, the confidence curve, p50/p85/p95 dates, and the throughput it sampled |
+| **Board** | What is in flight and what is stuck, with blocked-by lists, owners, and per-brief criteria counts |
+| **Roadmap** | Sprint history and timeline, roadmap phases, one sprint's own burn-down and burn-up, and work run outside any sprint |
+| **Backlog** | Open items by priority × value, raised vs closed, what is next as written down, and the full sortable list |
+| **Dependencies** | The layered DAG, the critical path, the ready frontier, prose gates, and any cycles |
+| **Decisions** | ADRs over time, by status, with supersession — and the review checkpoints |
+| **Activity** | Commit heatmap, contributors, commit↔task linkage, the commit log, audit-log mix |
+| **Debt & risk** | Corpus defects, the risk register, open ad-hoc items with ages |
+| **Data & theme** | Where every number came from, how each completion date was obtained, the token editor, the raw payload |
 
-Every chart has a **table view** (the `Table` button on its card, or
-`Show all tables`). That is not a nicety: the light-mode palette carries a
-contrast `WARN` on three slots, and a visible table is the relief that
-warning requires. It is also why no value on this dashboard is reachable only
-by hovering.
+A tab whose data a corpus does not record renders **a sentence saying so**,
+never an empty chart. A sprint-brief project has no roadmap phases and a
+numbered-task project records no per-task dependencies; in both cases the tab
+states the absence rather than drawing an axis with nothing on it. An absence
+is not a finding.
 
 ## What the metrics mean
 
@@ -139,20 +158,30 @@ Read this section before quoting any figure off the dashboard.
 
 ## Customizing it
 
-Everything visual is a CSS custom property read at draw time. **There is not
-one hex value in `assets/dashboard.js`** — a missing token falls back to
-`currentColor`, which is still the stylesheet's decision. That is the contract
-that makes `assets/custom.css.example` a complete surface: if you find
-yourself editing JavaScript to change a colour, the token is missing and that
-is a bug in the base sheet.
+Everything visual is a CSS custom property read at draw time, and **no chart
+module names a colour** — series marks take `pm-s1`–`pm-s8` / `pm-a1`–`pm-a8`
+and the semantic `pm-ok` / `pm-warn` / `pm-bad` / `pm-ref` / `pm-muted`, all
+bound to tokens in one stylesheet. If you find yourself editing JavaScript to
+change a colour, the token is missing and that is a bug in the base sheet.
 
-```sh
-build-dashboard.sh --css my-brand.css          # inlined, stays portable
-build-dashboard.sh --css-href ./my-brand.css   # linked, live-editable
-```
+Three routes, in ascending order of permanence:
 
-Both are applied after the base sheet, so any token you set wins. Start from
-`assets/custom.css.example`, which documents every token with its role.
+| Route | Where | Persistence |
+|---|---|---|
+| Theme toggle | header button, or `t` | `localStorage` |
+| Token editor | Data & theme tab — edit any token live, then export a ready-made stylesheet | `localStorage`, as inline styles |
+| `dashboard.custom.css` | a file **beside the generated page** | the file, across regenerations |
+
+The generated page links `dashboard.custom.css` last, so a plain declaration
+there beats every stylesheet — but an inline style from the token editor beats
+any stylesheet, so add `!important` when you want the file to be the final word
+in a browser where you have used the editor. A missing file is **not** an
+error: a `<link>` to a same-directory file resolves over `file://` where a
+`fetch` would not, which is what makes this a usable hook rather than a
+required build input.
+
+The easy path is to tune it in the browser, export from the Data tab, and drop
+the result next to the page.
 
 **If you substitute the series hues, validate them.** The defaults are the
 `dataviz` skill's reference instance and were checked in both modes before any
@@ -175,22 +204,34 @@ through `getComputedStyle`, and an engine that does not substitute an inner
 `var()` hands an SVG presentation attribute the string `var(--series-2)`,
 which paints nothing. Set them in both theme blocks.
 
-## Both frameworks
+## Both corpus layouts
 
-| | `project-workflow` | `project-migration` |
+| | sprint-brief (`project-workflow`) | numbered-task (`project-migration`) |
 |---|---|---|
-| Task id | `S###.T###_Name` | `TASK-####` |
+| Brief filename | `S###.T###_Name.md`, or `S###_Sprint.T###_Name.md` | `TASK-####-slug.md` |
 | Status | `**Status**:` in the preamble | `- Status:` under `## Status` |
-| Started | *not recorded by the schema* | `## Execution log` → first `- Date:` |
+| Status words | `not started` / `in progress` / `blocked` / `completed` | adds `planned`, `ready`, `review`, `cancelled` |
+| Dates | `**Created**` / `**Updated**` where present, else git | `- Created:` / `- Updated:`, and commit hashes the brief names |
 | Criteria | *no checkbox list — `## Verification` instead* | `## Acceptance criteria` |
-| Sprint | `**Sprint**:` on the brief | `tasks/TODO.md` headings |
+| Sprint | the filename, or `**Sprint**:` | `tasks/TODO.md` headings |
 | Plan | `20.PLAN.md`, `30.ROADMAP.md` | `planning/SPRINT-CURRENT.md`, `planning/ROADMAP.md` |
 | Backlog | `35.AD_HOC_TASKS.md` entries | `planning/BACKLOG.md` table |
+| Dependencies | `**Depends on**:` — a real graph | *not recorded* |
 
-A card whose data the layout does not record says which schema difference
-caused it, rather than showing an empty chart — "No brief in this layout
-records acceptance criteria as checkboxes" is not the same statement as "no
-data", and a reader deserves the first one.
+Which one a corpus uses is decided from the briefs' own filenames and recorded
+in the payload as `project.corpus_shape`, so the Data tab always says which
+reader produced the numbers.
+
+A card whose data the layout does not record says so, rather than showing an
+empty chart — "No brief in this layout records acceptance criteria as
+checkboxes" is not the same statement as "no data", and a reader deserves the
+first one.
+
+**Both layouts fill the same payload keys.** `backlog[]` comes from a
+`BACKLOG.md` table where one exists and from the ad-hoc list where it does not;
+`phases[]` is empty for a layout with no roadmap phases. A key a corpus has
+nothing for is an empty array, never absent — so a consumer never has to ask
+which shape it is reading before it can index the payload.
 
 ## Findings this has already produced
 

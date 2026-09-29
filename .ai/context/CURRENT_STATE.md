@@ -1,5 +1,48 @@
 # Current State
 
+## One dashboard, vendored from its source (`TASK-0125`)
+
+**2026-09-29.** `skills/project-workflow/` no longer carries its own dashboard
+generator. `scripts/dashboard_lib.py` and `assets/dashboard.{html,css,js}` are
+**deleted**; `dashboard/` holds a vendored copy of the generator developed in
+`sigma-llmwiki`, and `build-dashboard.sh` is a thin wrapper over it that keeps
+the flag surface `.github/workflows/dashboard.yml` and
+`skills/project-migration/SKILL.md` already call. `SKILL.md` is `5.0.0` — a
+major, because what produces the artifact changed.
+
+**Why.** Two generators for this convention were built in the same week, in two
+repositories, neither aware of the other: this repo's `TASK-0122` and
+`sigma-llmwiki`'s `S027.T001`. So the dashboard a project got depended on which
+repository it was scaffolded from, which is the opposite of what a skill is
+for. One generator, vendored, with `dashboard/VENDORED.md` recording the source
+commit and a sha256 per file and a drift check that exits non-zero — so the two
+copies matching is a claim a command can refute, not one somebody remembers.
+
+**The fixture earned its place a second time.** Re-pointing
+`fixtures/dashboard/` at the incoming generator found three defects in a tool
+that was passing every check in its own repository: the fixture parsed to
+**zero tasks** (its briefs are `S001.T001_Name.md`; the reader demanded a
+sprint name in the filename), every pending task raised a bogus "no lane
+assigned" defect (that repo's own execution-lane table applied to a foreign
+corpus — `--check` would have failed for every consumer of this skill), and
+hand-recorded `**Created**`/`**Updated**` fields were ignored in favour of the
+filesystem mtime. All three were fixed at the source and re-vendored.
+
+**`B-048` is untouched and still stands.** It records the human's decision not
+to ship the publishing pipeline from the skill, to be reopened "when a second
+repository actually wants the pipeline". A second repository now owns the
+generator and explicitly does **not** want it: its position is that the local
+file is canonical and Pages is optional. So publishing remains a property of
+this repository, exactly as routed.
+
+**Found, not caused, and not fixed here:** `tests/validate.sh` cannot run on a
+Windows checkout. Its `UNTRACKED ASSET` block does `path.split("/")[1]` over
+`glob.glob("skills/*/scripts/*")`, which returns backslash-separated paths on
+Windows, so the block raises `IndexError` and the whole gate exits 1. Verified
+to occur identically at `b74e8e4` in a clean worktree carrying none of this
+task's changes, and the gate's failure set is **unchanged** by this task. CI
+runs on Linux and is unaffected.
+
 Last updated 2026-09-28. **Sprint S10 is CLOSED** on `REVIEW-0012`
 (`TASK-0105`), archived to
 `.ai/planning/sprints/SPRINT-S10-unattended-bindings.md`; `ROADMAP.md`'s

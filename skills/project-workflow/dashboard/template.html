@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<!--
+  template.html — the shell pm_dashboard.py fills in.
+
+  Four placeholders are substituted, each alone on its line:
+    <!--{{META}}-->   title + generated-at meta
+    /*{{STYLES}}*/    every css/*.css, concatenated in filename order
+    /*{{DATA}}*/      the JSON payload
+    /*{{SCRIPT}}*/    every js/*.js, concatenated in filename order
+
+  Everything is inlined on purpose. The generated file has to open by
+  double-clicking it on a machine with no server and no network — which is
+  exactly when a reviewer most wants to know where the project stands — so
+  there is no CDN, no import, and no fetch(). The one external reference is
+  dashboard.custom.css, which is optional by design and must not error when
+  absent.
+-->
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<!--{{META}}-->
+<style>
+/*{{STYLES}}*/
+</style>
+</head>
+<body data-theme="auto">
+
+<a class="pm-skip" href="#pm-main">Skip to content</a>
+
+<header id="pm-header">
+  <div class="pm-header-inner">
+    <div class="pm-brand">
+      <span class="pm-brand-mark" aria-hidden="true"></span>
+      <div class="pm-brand-text">
+        <h1 id="pm-project-name">Project dashboard</h1>
+        <p class="pm-brand-sub">
+          <span id="pm-project-sub"></span>
+          <span class="pm-sep" aria-hidden="true">·</span>
+          <span id="pm-generated-at"></span>
+        </p>
+      </div>
+    </div>
+
+    <div class="pm-header-actions">
+      <label class="pm-field" for="pm-filter-sprint">
+        <span class="pm-field-label">Sprint</span>
+        <select id="pm-filter-sprint" class="pm-select"></select>
+      </label>
+      <label class="pm-field" for="pm-filter-lane">
+        <span class="pm-field-label">Lane</span>
+        <select id="pm-filter-lane" class="pm-select"></select>
+      </label>
+      <button id="pm-theme-toggle" class="pm-btn pm-btn-icon" type="button"
+              aria-label="Switch theme" title="Switch theme (t)">
+        <span id="pm-theme-label">Auto</span>
+      </button>
+      <button id="pm-print" class="pm-btn pm-btn-icon" type="button"
+              aria-label="Print or save as PDF" title="Print (p)">Print</button>
+    </div>
+  </div>
+
+  <nav id="pm-tabs" role="tablist" aria-label="Dashboard sections">
+    <button class="pm-tab" role="tab" data-tab="overview"  id="pm-tabbtn-overview"  aria-controls="tab-overview"  aria-selected="true"  tabindex="0">Overview</button>
+    <button class="pm-tab" role="tab" data-tab="burn"      id="pm-tabbtn-burn"      aria-controls="tab-burn"      aria-selected="false" tabindex="-1">Burn charts</button>
+    <button class="pm-tab" role="tab" data-tab="flow"      id="pm-tabbtn-flow"      aria-controls="tab-flow"      aria-selected="false" tabindex="-1">Flow &amp; velocity</button>
+    <button class="pm-tab" role="tab" data-tab="forecast"  id="pm-tabbtn-forecast"  aria-controls="tab-forecast"  aria-selected="false" tabindex="-1">Forecast</button>
+    <button class="pm-tab" role="tab" data-tab="board"     id="pm-tabbtn-board"     aria-controls="tab-board"     aria-selected="false" tabindex="-1">Board</button>
+    <button class="pm-tab" role="tab" data-tab="roadmap"   id="pm-tabbtn-roadmap"   aria-controls="tab-roadmap"   aria-selected="false" tabindex="-1">Roadmap</button>
+    <button class="pm-tab" role="tab" data-tab="backlog"   id="pm-tabbtn-backlog"   aria-controls="tab-backlog"   aria-selected="false" tabindex="-1">Backlog</button>
+    <button class="pm-tab" role="tab" data-tab="deps"      id="pm-tabbtn-deps"      aria-controls="tab-deps"      aria-selected="false" tabindex="-1">Dependencies</button>
+    <button class="pm-tab" role="tab" data-tab="decisions" id="pm-tabbtn-decisions" aria-controls="tab-decisions" aria-selected="false" tabindex="-1">Decisions</button>
+    <button class="pm-tab" role="tab" data-tab="activity"  id="pm-tabbtn-activity"  aria-controls="tab-activity"  aria-selected="false" tabindex="-1">Activity</button>
+    <button class="pm-tab" role="tab" data-tab="debt"      id="pm-tabbtn-debt"      aria-controls="tab-debt"      aria-selected="false" tabindex="-1">Debt &amp; risk</button>
+    <button class="pm-tab" role="tab" data-tab="data"      id="pm-tabbtn-data"      aria-controls="tab-data"      aria-selected="false" tabindex="-1">Data &amp; theme</button>
+  </nav>
+</header>
+
+<main id="pm-main">
+  <section class="pm-panel" id="tab-overview"  role="tabpanel" aria-labelledby="pm-tabbtn-overview"></section>
+  <section class="pm-panel" id="tab-burn"      role="tabpanel" aria-labelledby="pm-tabbtn-burn"      hidden></section>
+  <section class="pm-panel" id="tab-flow"      role="tabpanel" aria-labelledby="pm-tabbtn-flow"      hidden></section>
+  <section class="pm-panel" id="tab-forecast"  role="tabpanel" aria-labelledby="pm-tabbtn-forecast"  hidden></section>
+  <section class="pm-panel" id="tab-board"     role="tabpanel" aria-labelledby="pm-tabbtn-board"     hidden></section>
+  <section class="pm-panel" id="tab-roadmap"   role="tabpanel" aria-labelledby="pm-tabbtn-roadmap"   hidden></section>
+  <section class="pm-panel" id="tab-backlog"   role="tabpanel" aria-labelledby="pm-tabbtn-backlog"   hidden></section>
+  <section class="pm-panel" id="tab-deps"      role="tabpanel" aria-labelledby="pm-tabbtn-deps"      hidden></section>
+  <section class="pm-panel" id="tab-decisions" role="tabpanel" aria-labelledby="pm-tabbtn-decisions" hidden></section>
+  <section class="pm-panel" id="tab-activity"  role="tabpanel" aria-labelledby="pm-tabbtn-activity"  hidden></section>
+  <section class="pm-panel" id="tab-debt"      role="tabpanel" aria-labelledby="pm-tabbtn-debt"      hidden></section>
+  <section class="pm-panel" id="tab-data"      role="tabpanel" aria-labelledby="pm-tabbtn-data"      hidden></section>
+</main>
+
+<footer id="pm-footer">
+  <p>
+    Generated by <code>pm_dashboard.py</code> from
+    <code id="pm-footer-corpus">.ai/workflow/</code>.
+    Every figure is derived from the corpus on disk — nothing here is
+    hand-entered. Read the <strong>Data &amp; theme</strong> tab for how each
+    date was resolved and what is not known.
+  </p>
+</footer>
+
+<div id="pm-tooltip" role="status" aria-live="polite" hidden></div>
+
+<noscript>
+  <div class="pm-noscript">
+    <h2>This dashboard needs JavaScript</h2>
+    <p>
+      Every chart is rendered client-side from an inlined JSON payload, so
+      there is no server and no network call — but there is also nothing to
+      show without scripting. The same data is available as
+      <code>dashboard-data.json</code> beside this file.
+    </p>
+  </div>
+</noscript>
+
+<script type="application/json" id="pm-data">
+/*{{DATA}}*/
+</script>
+
+<script>
+/*{{SCRIPT}}*/
+</script>
+
+<!-- Optional, loaded last so it overrides everything above. Absent by
+     default; a missing file is not an error. See README.md. -->
+<link rel="stylesheet" href="dashboard.custom.css">
+</body>
+</html>

@@ -58,13 +58,22 @@ services, secrets.
 - Delivery dashboard: `skills/project-workflow/scripts/build-dashboard.sh
   --root .ai --project ai-toolbox --out docs/dashboard.html` — renders this
   repo's own `.ai/` as one self-contained HTML file (burn-up, burn-down,
-  cumulative flow, velocity, cycle time, roadmap, forecast). **A view, not a
-  gate**: it reports what the artifacts say and audits nothing, so it is
-  deliberately not part of `tests/validate.sh` and not run by any hook. The
-  output is **gitignored** — it reads the git log, so a committed copy is
-  stale the moment it lands. Regenerate it; never commit it. Component check:
-  `skills/project-workflow/scripts/check-dashboard.sh`. What each metric does
-  *not* prove: `skills/project-workflow/references/dashboard.md`.
+  cumulative flow, velocity, cycle time, dependencies, backlog, roadmap,
+  forecast). **A view, not a gate**: it reports what the artifacts say and
+  audits nothing, so it is deliberately not part of `tests/validate.sh` and not
+  run by any hook. The output is **gitignored** — it reads the git log, so a
+  committed copy is stale the moment it lands. Regenerate it; never commit it.
+  Component check: `skills/project-workflow/scripts/check-dashboard.sh`. What
+  each metric does *not* prove: `skills/project-workflow/references/dashboard.md`.
+- **The generator itself is vendored, not ours to edit.** It lives in
+  `skills/project-workflow/dashboard/` as a copy of the one developed in the
+  `sigma-llmwiki` repository, synced by that repo's `sync_dashboard_skill.py`,
+  which records the source commit and a sha256 per file in
+  `dashboard/VENDORED.md` and whose `--check` exits non-zero on drift. Change it
+  there and re-sync; a local edit re-creates the two-generators split that
+  `TASK-0125` removed. `build-dashboard.sh` is a thin wrapper over it and keeps
+  the flag surface `.github/workflows/dashboard.yml` and
+  `skills/project-migration/SKILL.md` already call.
 - Run a Python server: `uv --directory mcp-servers/<name> run <name>` (the
   console script is named after the directory; ADR-0024). External
   servers: `scripts/install.sh` prints the launch command from the
