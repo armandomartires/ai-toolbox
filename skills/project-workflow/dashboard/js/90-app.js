@@ -331,10 +331,12 @@ window.PM = window.PM || {};
     }
     state.data = result.data;
 
-    if (state.data.schema_version !== 2 && window.console && console.warn) {
+    if (Number(state.data.schema_version) !== U.SCHEMA_VERSION &&
+        window.console && console.warn) {
       console.warn(
         "pm-dashboard: payload schema_version is " + state.data.schema_version +
-        ", this front end implements 2. Some panels may be wrong."
+        ", this front end implements " + U.SCHEMA_VERSION +
+        ". Some panels may be wrong."
       );
     }
 

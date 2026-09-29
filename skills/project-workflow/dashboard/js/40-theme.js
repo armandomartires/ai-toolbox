@@ -1015,11 +1015,13 @@ PM.views = PM.views || {};
           : U.badge("Not stated", "neutral")]
     ]));
 
-    if (data.schema_version != null && Number(data.schema_version) !== 1) {
+    if (data.schema_version != null &&
+        Number(data.schema_version) !== U.SCHEMA_VERSION) {
       card.body.appendChild(U.note(
         "This payload declares schema_version " + data.schema_version +
-        " and this front end implements 1. Field names may have moved, so " +
-        "anything above or on another tab may be mislabelled rather than wrong.",
+        " and this front end implements " + U.SCHEMA_VERSION + ". Field names " +
+        "may have moved, so anything above or on another tab may be " +
+        "mislabelled rather than wrong.",
         "bad"
       ));
     }

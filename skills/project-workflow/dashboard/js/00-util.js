@@ -436,6 +436,14 @@ window.PM = window.PM || {};
     card: card, kpi: kpi, table: table, badge: badge, empty: empty,
     note: note, section: section,
     toneFor: toneFor, stateTone: stateTone, stateLabel: stateLabel,
-    download: download, approxMark: approxMark
+    download: download, approxMark: approxMark,
+    /* The payload version THIS front end implements. One constant, because
+       three modules used to hold the number as a literal and a schema bump
+       updated one of them — so both remaining copies rendered a red "treat
+       everything below as unverified" banner over a payload that was correct.
+       A version check that cries wolf is worse than none: it teaches the
+       reader to ignore the one case it exists for. Bump this with
+       `pm_collect.SCHEMA_VERSION`; nothing else in `js/` may hold the number. */
+    SCHEMA_VERSION: 2
   };
 })();

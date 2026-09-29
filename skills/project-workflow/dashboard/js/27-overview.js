@@ -967,11 +967,13 @@ PM.views = PM.views || {};
 
     /* SCHEMA.md §1: a consumer reading an unexpected major version says so
        rather than rendering a confident guess over fields it invented. */
-    if (payload.schema_version != null && payload.schema_version !== 1) {
+    if (payload.schema_version != null &&
+        Number(payload.schema_version) !== U.SCHEMA_VERSION) {
       root.appendChild(U.note(
-        "This tab implements payload schema version 1, but the data says " +
-        "version " + String(payload.schema_version) + ". Fields may be " +
-        "missing or renamed; treat everything below as unverified.", "bad"
+        "This tab implements payload schema version " + U.SCHEMA_VERSION +
+        ", but the data says version " + String(payload.schema_version) +
+        ". Fields may be missing or renamed; treat everything below as " +
+        "unverified.", "bad"
       ));
     }
 
