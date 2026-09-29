@@ -13,9 +13,11 @@ export the variables from your shell profile — nothing in the repo loads
 
 | Variable | Needed for | Required? |
 |----------|-----------|-----------|
-| `GITHUB_URL` | pushing to the remote | only to push |
-| `GITHUB_TOKEN` | creating/pushing to the remote (`repo` scope) | only to push |
-| `GITLAB_URL` / `GITLAB_TOKEN` | a GitLab mirror; unused by any script today | no |
+| `GITLAB_URL` | base URL of the intranet GitLab that hosts `origin` (ADR-0028) | only to fetch/push `origin` |
+| `GITLAB_PUSH_TOKEN` | fetching/pushing `origin` — a project access token, `read_repository` + `write_repository`, this project only | only to fetch/push `origin` |
+| `GITLAB_TOKEN` | the human's own admin token; used only for API administration (creating the project and its push token). **Never sent by git** | no |
+| `GITHUB_URL` | the account that owns the `github` mirror | only to push the mirror |
+| `GITHUB_TOKEN` | pushing to the `github` mirror (`repo` scope) | only to push the mirror |
 | `WORKSPACE_ROOT` | the ansible MCP server (`mcp-servers/ansible/server.json`) | to run that server |
 
 Rules that are enforced, not merely advised:
@@ -132,7 +134,12 @@ cannot commit on `master` directly. It lands instead:
 git fetch origin
 git rebase origin/master          # replay this session's commits on top
 git push origin HEAD:master       # land them; master stays linear
+git push github HEAD:master       # then the public mirror
 ```
+
+`origin` is private, so the fetch and the push each need the credential
+header from *Authenticating a push* below; the commands are written bare here
+for readability.
 
 **This preserves `AGENTS.md`'s "one task = one commit" rule.** `master` still
 receives one commit per task, still linear, still gated — the only added step
@@ -410,13 +417,42 @@ the next reader knows the file's state.
 
 ## Authenticating a push
 
-The remote URL is token-free and must stay that way, so the credential is
-supplied per-command. **Use basic auth, not bearer:**
+There are two remotes (ADR-0028): `origin`, the private project on the
+intranet GitLab, and `github`, the public mirror. Push to both, in that
+order. Both URLs are token-free and must stay that way, so the credential is
+supplied per-command. **Use basic auth, not bearer**, for both:
 
+```bash
+# origin — the project access token, never GITLAB_TOKEN. The instance is
+# http:// only, so this header crosses the network in cleartext; that is why
+# the token it carries is repository-only, one project, and expiring.
+set -a; . ~/.config/ai-toolbox/env; set +a      # provides GITLAB_PUSH_TOKEN
+GL=$(printf 'git-push:%s' "$GITLAB_PUSH_TOKEN" | base64 -w0)
+git -c http.extraheader="AUTHORIZATION: basic $GL" push origin master
+
+# github — the public mirror
+GH=$(printf '<github-username>:%s' "$GITHUB_TOKEN" | base64 -w0)
+git -c http.extraheader="AUTHORIZATION: basic $GH" push github master
 ```
-b64 = base64("<github-username>:$GITHUB_TOKEN")
-git -c http.extraheader="AUTHORIZATION: basic <b64>" push origin master
+
+For a project access token the basic-auth username is ignored, but it must
+not be empty. `~/.config/ai-toolbox/env` is mode `600` on the WSL home — not
+on `/mnt/c`, where file modes are not enforced. **The token expires on
+2027-09-28.** To rotate it, create a new project access token on the project
+with the same two scopes and Maintainer role, and replace the
+`GITLAB_PUSH_TOKEN=` line.
+
+**Re-pointing another clone** made before 2026-09-29, whose `origin` is still
+GitHub:
+
+```bash
+git remote rename origin github
+git remote add origin "$GITLAB_URL/armando.martires/ai-toolbox.git"
+git fetch origin && git branch -u origin/master master
 ```
+
+Without this such a clone keeps pushing to the mirror only. Nothing fails
+loudly, since the mirror accepts it, and that is the risk.
 
 `AUTHORIZATION: bearer $GITHUB_TOKEN` fails against
 `github.com/<owner>/<repo>.git` with `remote: invalid credentials`, even
@@ -431,10 +467,11 @@ code (`reference/git-workflow.md`; AGENTS.md's Git rules):
 
 ```
 git rev-parse HEAD
-git ls-remote origin master
+git -c http.extraheader="AUTHORIZATION: basic $GL" ls-remote origin master
+git ls-remote github master
 ```
 
-Then check `git remote -v` is still token-free.
+All three hashes must match. Then check `git remote -v` is still token-free.
 
 ## Verifying remote branch state
 
@@ -466,5 +503,7 @@ before recording it — and again before acting on it.
 ## Human approval required for
 - Destructive tool capabilities in MCP servers.
 - Deleting or rewriting components (see AGENTS.md).
-- Publishing the repo, or changing remote visibility. `origin` is private
-  (TASK-0015); making it public is not meaningfully reversible.
+- Publishing the repo, or changing remote visibility. `origin` (GitLab) is
+  private; the `github` mirror is already public (TASK-0123), and making
+  anything public is not meaningfully reversible. A GitLab project must not be
+  made more visible than `private` without the human's authorization.

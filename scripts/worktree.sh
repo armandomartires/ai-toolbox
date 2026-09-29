@@ -17,8 +17,10 @@
 # BRANCHES ARE NOT OPTIONAL HERE: git refuses to check out the same branch in
 # two worktrees, so each gets `agent/<name>`. Land with a rebase and
 # `git push origin HEAD:master` - master stays linear and keeps receiving one
-# commit per task. The main checkout keeps `master` and is never a session's
-# worktree. Runbook: docs/operations/runbook.md.
+# commit per task - then the same to the `github` mirror (ADR-0028). The main
+# checkout keeps `master` and is never a session's worktree. Runbook:
+# docs/operations/runbook.md, which also has the credential header `origin`
+# needs.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 REPO=$(pwd -P)
@@ -83,6 +85,7 @@ case "$cmd" in
     echo "  cd \"$path\""
     echo "  # ... work, commit as usual; the pre-commit hook runs here too ..."
     echo "  git fetch origin && git rebase origin/master && git push origin HEAD:master"
+    echo "  git push github HEAD:master     # the public mirror; credentials: runbook"
     ;;
 
   list)

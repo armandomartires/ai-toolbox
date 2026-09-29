@@ -42,8 +42,9 @@ services, secrets.
 - Environment: copy `.env.example` to `.env` (gitignored — **never commit
   it**) or export the variables from your shell. All of it is optional for
   local work; `tests/validate.sh` is hermetic and passes with nothing set.
-  Needed only for specific operations: `GITHUB_URL` + `GITHUB_TOKEN` to
-  push to the remote (ADR-0007, ADR-0009); `WORKSPACE_ROOT` for the
+  Needed only for specific operations: `GITLAB_URL` + `GITLAB_PUSH_TOKEN`
+  to push to `origin`, and `GITHUB_TOKEN` to push to the `github` mirror
+  (ADR-0007, ADR-0009, ADR-0028); `WORKSPACE_ROOT` for the
   ansible MCP server. `.env.example` documents names and meanings only,
   never values; `validate.sh` enforces that every `required` variable in
   any `server.json` appears there.
@@ -101,23 +102,31 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   the rebase is an added step, not a branching workflow.
   Observed twice on 2026-09-23 before the decision existed.
 - Every project has a local git repository. A remote (GitHub, GitLab) is
-  recommended but not mandatory (ADR-0007). **This repo now has one:**
-  `origin` → `armandomartires/ai-toolbox` (**public**), added by
-  TASK-0015 from `GITHUB_URL`/`GITHUB_TOKEN` (ADR-0009). This line read
-  *private* until TASK-0123 checked it against the API and found
-  `"visibility": "public"` — `.ai/` reads over
+  recommended but not mandatory (ADR-0007). **This repo has two**
+  (ADR-0028, TASK-0126): `origin` → the private
+  `armando.martires/ai-toolbox` project on the intranet GitLab at
+  `$GITLAB_URL` — the **primary** — and `github` →
+  `armandomartires/ai-toolbox` on GitHub, a **public** mirror. The GitHub
+  repo read *private* here until TASK-0123 checked it against the API and
+  found `"visibility": "public"` — `.ai/` reads over
   `raw.githubusercontent.com` with no token. **Everything committed here
-  is world-readable**: every task brief, the backlog, every commit
-  subject and author name. The secrets rule above is therefore not
-  belt-and-braces, it is the only thing between this repo and a
-  published credential. The dashboard is served from it at
-  `.github/workflows/dashboard.yml`.
+  is world-readable** through the mirror: every task brief, the backlog,
+  every commit subject and author name. The secrets rule above is therefore
+  not belt-and-braces, it is the only thing between this repo and a
+  published credential — and for the same reason **the intranet hostname
+  never goes in a tracked file**; name `$GITLAB_URL` instead. CI and the
+  published dashboard run on the mirror (`.github/workflows/`), since
+  GitLab has no runner yet.
 - At task end: validate, review diff, commit, record the commit hash in
-  the task log. Push **if a remote is configured**, and record the push
-  result; if there is none, record that instead of treating it as a
-  missing step. Pushing needs `GITHUB_TOKEN` in the environment — never
-  put it in the remote URL or any tracked file; `git remote -v` must stay
-  token-free.
+  the task log. Push **to every configured remote** — `origin`, then
+  `github` — and record each push result; with no remote, record that
+  instead of treating it as a missing step. `origin` is authenticated with
+  `GITLAB_PUSH_TOKEN`, a repository-only project token, **never
+  `GITLAB_TOKEN`**: the instance is `http://` only, so the credential
+  crosses the network in cleartext (ADR-0028). The mirror uses
+  `GITHUB_TOKEN`. Never put a token in the remote URL or any tracked file;
+  `git remote -v` must stay token-free. Commands: runbook, *Authenticating
+  a push*.
 - CI (`.github/workflows/validate.yml`) re-runs `validate.sh` and the
   registry-staleness check on every push. It is a second opinion, not the
   gate: the hook prevents a bad commit, CI only reports one already made.

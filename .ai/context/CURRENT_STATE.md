@@ -1,5 +1,33 @@
 # Current State
 
+## The intranet GitLab is `origin`; GitHub is the mirror (`TASK-0126`, `ADR-0028`)
+
+**2026-09-29, the human's request and routing.** `origin` is now the private
+`armando.martires/ai-toolbox` project on `$GITLAB_URL`; the old `origin` is
+renamed `github` and kept as a **public mirror** that every task end pushes to
+as well. `master` tracks `origin/master`. All three of local, `origin` and
+`github` read `9a6c83b` after the first push, compared by hash.
+
+**Git never sends `GITLAB_TOKEN`.** The instance answers on `http://` only —
+its https port refuses connections — and that token is an admin token with
+`sudo`. Git instead sends `GITLAB_PUSH_TOKEN`, a project access token scoped
+`read_repository` + `write_repository` to this one project, expiring
+2027-09-28, stored at mode `600` in `~/.config/ai-toolbox/env`, outside every
+checkout. The cleartext exposure is **reduced, not removed**; removing it needs
+https on the instance.
+
+**CI still runs only on the mirror.** No GitLab runner is online, so
+`validate.yml`, `ci-alert.yml` and `dashboard.yml` stay GitHub Actions, reached
+only if the mirror push happens. **The intranet hostname is kept out of every
+new tracked file**, since the mirror is world-readable. One earlier record,
+`TASK-0015`, already names the host's stem and has been public since
+2026-09-13; it is left as written, because editing it would not remove it from
+the published history.
+
+**Not measured, and stated so nobody assumes it:** whether GitLab Pages is
+served on the instance. A probe of admin-only endpoints was denied by the
+Claude Code classifier and not retried. That is `TASK-0127`'s question.
+
 ## One dashboard, vendored from its source (`TASK-0125`)
 
 **2026-09-29.** `skills/project-workflow/` no longer carries its own dashboard
