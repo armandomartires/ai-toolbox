@@ -610,7 +610,21 @@ except (OSError, subprocess.SubprocessError):
     tracked = None
 
 bad = []
-for path in sorted(glob.glob("skills/*/scripts/*")):
+for found in sorted(glob.glob("skills/*/scripts/*")):
+    # `glob` returns OS-native separators, so on Windows these come back
+    # backslash-separated. Normalising here fixes two separate faults, and the
+    # first of them took the WHOLE GATE down rather than failing a check:
+    #
+    #   1. `path.split("/")[1]` yielded a one-element list and raised
+    #      IndexError, so validate.sh exited 1 on any Windows checkout with no
+    #      indication of which check had died.
+    #   2. `rel` is compared against `git ls-files`, which always emits forward
+    #      slashes -- so every declared asset would have been reported NOT
+    #      TRACKED even once the split was fixed. A check that reports a
+    #      correct repository as broken gets disabled.
+    #
+    # CI runs on Linux, which is why neither was ever visible there.
+    path = found.replace(os.sep, "/")
     if "_template" in path or not os.path.isfile(path):
         continue
     with open(path, encoding="utf-8", errors="replace") as fh:
