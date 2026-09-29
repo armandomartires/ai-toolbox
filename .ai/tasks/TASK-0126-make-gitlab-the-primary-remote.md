@@ -219,6 +219,8 @@ forecast under *Likely files*; its landing hint told every session to push
   nothing; the stem matches only `TASK-0015:28`, pre-existing. `check-artifact.sh`
   → `OK` for `ADR-0028` and this brief.
 - Result: done.
-- Commit: recorded in the follow-up commit, since a commit cannot contain its
-  own hash and landing rebases it.
-- Push: recorded in the follow-up commit.
+- Commit: `4927fcb` (this task), plus this record-keeping commit after it.
+- Push: **confirmed to both remotes** — `9a6c83b..4927fcb HEAD -> master` to
+  `origin` and to `github`; local, `origin` and `github` all read
+  `4927fcb3719c2e971b6b7bf1fd11e55f81e4875d` by `ls-remote`. The fetch and
+  push to `origin` used `GITLAB_PUSH_TOKEN`.
