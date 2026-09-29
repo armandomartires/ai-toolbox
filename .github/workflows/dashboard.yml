@@ -4,7 +4,7 @@
 #   bash skills/project-workflow/scripts/publish-dashboard.sh render
 # `render --check` fails when this copy and its template disagree.
 #
-# STATUS: UNVERIFIED as rendered by TASK-0127; its hand-written predecessor was VERIFIED on runs 36440566161 and 36440959217 (TASK-0123)
+# STATUS: VERIFIED on run 36608693753 (36ac929, push): success, guard reported 266 commits and a full clone, page HTTP 200 (TASK-0127)
 # The label moves only against an observed run, and names it.
 #
 # Regenerate the delivery dashboard and publish it to GitHub Pages. The local

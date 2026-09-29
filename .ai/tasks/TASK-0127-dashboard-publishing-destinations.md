@@ -196,7 +196,7 @@ since the regex is right to read literal calls wherever they appear.
 
 ## Status
 
-- Status: in_progress
+- Status: done
 - Owner: agent
 - Created: 2026-09-29
 - Updated: 2026-09-29
@@ -280,6 +280,26 @@ since the regex is right to read literal calls wherever they appear.
   (`test_driver.py`, `unattended-run.test.mjs`) also run git in scratch
   repositories. They are outside the gate today (`B-037`); whoever wires them
   in inherits this trap unless the same variables are cleared.
-- Result: built and gated; live observation below.
-- Commit: recorded in the follow-up commit.
-- Push: recorded in the follow-up commit.
+- **Commit through the real hook, after the fix**: `validate.sh: OK`, commit
+  `36ac929`; shared `.git/config` md5 `814d1291` before and after,
+  `core.bare=false`, worktree clean, main checkout still its original three
+  modified vendored files.
+- **Live observation, on the landed commit `36ac929`:**
+  - GitHub `dashboard` run **36608693753 → success**; `validate` run
+    36608693502 → success. The build job's log carries the skill's guard
+    output verbatim: `history OK: 266 commits, 124 task briefs, shape
+    numbered_task, full clone`. `https://armandomartires.github.io/ai-toolbox/`
+    → **HTTP 200**, 812 KB, generator `pm_dashboard.py 2.0.0`.
+  - GitLab pipeline **10** (source `push`) created with one job, `pages`,
+    stage `deploy`, status **`pending`** — no runner, as predicted.
+  - Both `STATUS:` labels moved in `dashboard-publish.conf` to what was
+    observed and re-rendered in the record-keeping commit: GitHub `VERIFIED`
+    naming run 36608693753; GitLab still `UNVERIFIED`, naming pipeline 10.
+- Result: **done.** GitHub Pages verified end to end; GitLab Pages built,
+  linted and queued, and verifiable only once a runner is registered and Pages
+  is confirmed enabled on the instance — the human's, not this repository's.
+- Commit: `36ac929` (this task), plus the record-keeping commit after it.
+- Push: **confirmed to both remotes** — `4927fcb..36ac929 HEAD -> master` to
+  `origin` and to `github` (the range carries `TASK-0126`'s record commit
+  `5a265e2` too); local, `origin` and `github` all read
+  `36ac929ccc5b6ab5c1e04c45723cc2865a1713cb` by `ls-remote`.

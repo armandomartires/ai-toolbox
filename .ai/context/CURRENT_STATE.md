@@ -20,11 +20,20 @@ plausible, truncated page. `publish-dashboard.sh guard` asks git
 fails on a *missing* model key rather than skipping it — the `TASK-0125`
 lesson, now a test.
 
-**Status, as observed**: see `TASK-0127`'s execution log for the GitHub run on
-the landed commit. **GitLab Pages is UNVERIFIED and cannot yet be verified**: its
-job passes the instance's own CI lint (`valid: true`, no warnings), but no
-runner is online, so every push to `origin` queues a `pages` job that does not
-start.
+**Status, as observed**: GitHub Pages **VERIFIED** on run 36608693753
+(`36ac929`) — the skill's guard printed `266 commits … full clone` on the
+runner and the page returned HTTP 200. **GitLab Pages is UNVERIFIED and cannot
+yet be verified**: its job passes the instance's own CI lint (`valid: true`, no
+warnings) and pipeline 10 created it, but no runner is online, so every push to
+`origin` queues a `pages` job that does not start.
+
+**Found the hard way, and now a comment in the suite**: a pre-commit hook
+exports `GIT_DIR`/`GIT_INDEX_FILE`, which override `git -C`. The suite's first
+run from the hook reached this repository through them — `core.bare = true`, a
+replaced index, a stray 423-file-deletion commit on the session branch, none of
+it pushed. Repaired, fixed, and reproduced against a sacrificial repo; details
+in `TASK-0127`. **Anyone wiring the binding suites into the gate (`B-037`)
+inherits the same trap**: they also run git in scratch repositories.
 
 **Cost to the gate, measured**: `check-publish.sh` 1.7 s on this `/mnt/c`
 worktree, after two fixes that took it from 3.4 s — a git call the library made
