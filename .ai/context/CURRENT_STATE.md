@@ -52,8 +52,9 @@ as well. `master` tracks `origin/master`. All three of local, `origin` and
 its https port refuses connections — and that token is an admin token with
 `sudo`. Git instead sends `GITLAB_PUSH_TOKEN`, a project access token scoped
 `read_repository` + `write_repository` to this one project, expiring
-2027-09-28, stored at mode `600` in `~/.config/ai-toolbox/env`, outside every
-checkout. The cleartext exposure is **reduced, not removed**; removing it needs
+2027-09-28, exported from the shell profile beside `GITLAB_TOKEN` (moved there
+2026-09-30 on the human's routing, from a separate file `TASK-0126` first
+used). The cleartext exposure is **reduced, not removed**; removing it needs
 https on the instance.
 
 **CI still runs only on the mirror.** No GitLab runner is online, so

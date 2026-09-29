@@ -180,7 +180,7 @@ forecast under *Likely files*; its landing hint told every session to push
 - Status: done
 - Owner: agent
 - Created: 2026-09-29
-- Updated: 2026-09-29
+- Updated: 2026-09-30
 
 ## Execution log
 
@@ -224,3 +224,26 @@ forecast under *Likely files*; its landing hint told every session to push
   `origin` and to `github`; local, `origin` and `github` all read
   `4927fcb3719c2e971b6b7bf1fd11e55f81e4875d` by `ls-remote`. The fetch and
   push to `origin` used `GITLAB_PUSH_TOKEN`.
+
+### Attempt 2
+
+- Date: 2026-09-30
+- Agent: Claude Code (claude-opus-5-5), worktree `agent/push-token-in-bashrc`
+- Actions: on the human's routing (*"the GITLAB_TOKEN is in the env vars of the
+  user session"*; asked as multiple choice, answered *push token into
+  `~/.bashrc`*), `export GITLAB_PUSH_TOKEN=…` was inserted in `~/.bashrc`
+  directly below `GITLAB_TOKEN`, with a two-line comment. The value was read
+  from the old file and never printed. `~/.config/ai-toolbox/env` and its
+  directory were deleted **after** the new source was proven. Runbook,
+  `.env.example`, `CURRENT_STATE.md` corrected; `ADR-0028` amended with a dated
+  bullet, its original text left as written.
+- Observations: a fresh `bash -i` exports a `GITLAB_PUSH_TOKEN`
+  byte-identical to the stored one (`cmp`), and `ls-remote origin master` with
+  it returned `a14cc24`, matching `origin/master`. **`~/.bashrc` is mode
+  `644`**, readable by every account on this machine, and it already held
+  `GITLAB_TOKEN` and `GITHUB_TOKEN`. Reported to the human, not changed: it is
+  their file.
+- Validation: see the commit's gate run.
+- Result: done. The part of the decision about which token git sends is
+  unchanged.
+- Commit / Push: this commit, landed to both remotes.

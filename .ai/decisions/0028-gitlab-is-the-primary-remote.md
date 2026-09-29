@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted (2026-09-29)
+Accepted (2026-09-29). **Amended 2026-09-30** on the human's routing: the
+push token lives in the session environment, exported from the shell profile
+next to `GITLAB_TOKEN`, not in a separate file. The text below records the file
+as first decided and is left as written; see the last **Consequences** bullet.
 
 Task: `TASK-0126`. Extends `ADR-0007` (a remote is recommended) and `ADR-0009`
 (configuration comes from the environment); supersedes neither. `ADR-0009`'s
@@ -83,3 +86,13 @@ the variable.
 - **Pages.** The project reports a `pages_access_level`, which suggests the
   feature exists on the instance but does not prove it is served. Publishing
   the dashboard there is `TASK-0127`'s question.
+- **Amendment, 2026-09-30 — where the push token lives.** The human pointed
+  out that `GITLAB_TOKEN` is a session environment variable, exported from the
+  shell profile with the other remote variables, and routed the push token
+  there too. `GITLAB_PUSH_TOKEN` is now exported from the same profile, and
+  `~/.config/ai-toolbox/env` is deleted. This matches `ADR-0009` (configuration
+  comes from the environment) better than a file only this repo knew to source.
+  **Unchanged**: git still sends only the narrow project token, never
+  `GITLAB_TOKEN`. That half of the decision, which is about cleartext exposure,
+  stands as written. Rotation now means replacing the `export
+  GITLAB_PUSH_TOKEN=` line in the profile.

@@ -426,7 +426,7 @@ supplied per-command. **Use basic auth, not bearer**, for both:
 # origin — the project access token, never GITLAB_TOKEN. The instance is
 # http:// only, so this header crosses the network in cleartext; that is why
 # the token it carries is repository-only, one project, and expiring.
-set -a; . ~/.config/ai-toolbox/env; set +a      # provides GITLAB_PUSH_TOKEN
+# GITLAB_PUSH_TOKEN comes from the session environment, like GITLAB_TOKEN.
 GL=$(printf 'git-push:%s' "$GITLAB_PUSH_TOKEN" | base64 -w0)
 git -c http.extraheader="AUTHORIZATION: basic $GL" push origin master
 
@@ -436,11 +436,12 @@ git -c http.extraheader="AUTHORIZATION: basic $GH" push github master
 ```
 
 For a project access token the basic-auth username is ignored, but it must
-not be empty. `~/.config/ai-toolbox/env` is mode `600` on the WSL home — not
-on `/mnt/c`, where file modes are not enforced. **The token expires on
-2027-09-28.** To rotate it, create a new project access token on the project
-with the same two scopes and Maintainer role, and replace the
-`GITLAB_PUSH_TOKEN=` line.
+not be empty. `GITLAB_PUSH_TOKEN` is exported from the shell profile together
+with the other remote variables (ADR-0028, amended 2026-09-30); keep that
+profile on the WSL home, not on `/mnt/c`, where file modes are not enforced.
+**The token expires on 2027-09-28.** To rotate it, create a new project access
+token on the project with the same two scopes and Maintainer role, and replace
+the `export GITLAB_PUSH_TOKEN=` line.
 
 **Re-pointing another clone** made before 2026-09-29, whose `origin` is still
 GitHub:
