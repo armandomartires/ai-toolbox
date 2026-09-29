@@ -211,7 +211,8 @@ forecast under *Likely files*; its landing hint told every session to push
     project. Suggestive that Pages exists on the instance; not proof it serves.
   - `git remote -v` shows no credential in either URL.
   - **Every commit's author email is on the intranet domain**
-    (`…@INTRA.SIGMARECON.COM`), and the mirror is public, so the domain has been
+    (`…@<intranet domain>` — redacted 2026-09-30; this line first spelled it out, which
+    the rule above forbids, and a case-sensitive leak scan missed it), and the mirror is public, so the domain has been
     world-readable since the first commit regardless of any file. Noted for the
     human; nothing here changes it.
 - Validation: `tests/validate.sh` → `validate.sh: OK`.
