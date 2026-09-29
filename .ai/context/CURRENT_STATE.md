@@ -1,5 +1,36 @@
 # Current State
 
+## The dashboard can publish to GitHub Pages or GitLab Pages (`TASK-0127`, `B-048` closed)
+
+**2026-09-29, the human's request.** `skills/project-workflow/` (`5.1.0`) now
+ships the publishing pipelines it used to leave to this repository:
+`assets/publish/{github-pages,gitlab-pages}.yml`, rendered by
+`scripts/publish-dashboard.sh render` from a repo-root `dashboard-publish.conf`.
+The local file stays the canonical output; publishing is opt-in per target.
+**`B-048`'s route 1** — the only one it costed that cannot rot: this
+repository's `.github/workflows/dashboard.yml` is now *rendered* (adopted once
+from the hand-written file), and `tests/validate.sh` runs `render --check` and
+the 32-case `check-publish.sh`.
+
+**The guard found a hole in the old one while moving.** The hand-written guard
+caught a shallow clone by `commits <= 1`. **GitLab clones 20 commits by
+default**, which that check passes, so on GitLab it would have published a
+plausible, truncated page. `publish-dashboard.sh guard` asks git
+(`--is-shallow-repository`) instead, and both templates set full depth. It also
+fails on a *missing* model key rather than skipping it — the `TASK-0125`
+lesson, now a test.
+
+**Status, as observed**: see `TASK-0127`'s execution log for the GitHub run on
+the landed commit. **GitLab Pages is UNVERIFIED and cannot yet be verified**: its
+job passes the instance's own CI lint (`valid: true`, no warnings), but no
+runner is online, so every push to `origin` queues a `pages` job that does not
+start.
+
+**Cost to the gate, measured**: `check-publish.sh` 1.7 s on this `/mnt/c`
+worktree, after two fixes that took it from 3.4 s — a git call the library made
+on every invocation even with `--repo` given, and ~40 reads of the script over
+the 9p bridge, now served from a copy in `mktemp`.
+
 ## The intranet GitLab is `origin`; GitHub is the mirror (`TASK-0126`, `ADR-0028`)
 
 **2026-09-29, the human's request and routing.** `origin` is now the private

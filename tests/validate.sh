@@ -1511,6 +1511,38 @@ if [ -e skills/unattended-ops/references/verdicts.md ]; then
   rm -f "$STANDARD.check"
 fi
 
+# The dashboard's publishing pipelines are RENDERED from the skill's templates
+# and must still match them (TASK-0127, closing B-048).
+#
+# WHY: the hand-written .github/workflows/dashboard.yml carried rules learned
+# by publishing a wrong page -- above all that a shallow clone produces a
+# complete-looking dashboard with a truncated history. As a hand-kept copy
+# those rules lasted until the next edit; B-040 found five templates here that
+# had rotted exactly that way. Rendered and checked, the copy cannot diverge.
+#
+# check-publish.sh runs the renderer's refusals and the guard's failure cases
+# in a throwaway repository under mktemp: hermetic, offline, about a second.
+# It is in the gate because B-037 measured what a suite outside it costs.
+#
+# WHAT THIS PROVES: that this repository's pipelines are exactly what the
+# templates render, and that the renderer and guard behave as documented.
+# WHAT IT DOES NOT PROVE: that either pipeline runs. Each rendered file's
+# STATUS line says whether a run has been observed.
+PUBLISH=skills/project-workflow/scripts/publish-dashboard.sh
+if [ -e dashboard-publish.conf ]; then
+  if ! PUBLISH_OUT="$(bash "$PUBLISH" render --check 2>&1)"; then
+    printf '%s\n' "$PUBLISH_OUT" | sed 's/^/PUBLISH: /'
+    echo "PUBLISH: run bash $PUBLISH render and commit the result"
+    fail=1
+  fi
+fi
+if [ -e skills/project-workflow/scripts/check-publish.sh ]; then
+  if ! PUBLISH_OUT="$(bash skills/project-workflow/scripts/check-publish.sh 2>&1)"; then
+    printf '%s\n' "$PUBLISH_OUT" | grep -v '^PASS' | sed 's/^/PUBLISH: /'
+    fail=1
+  fi
+fi
+
 # --------------------------------------------------------------------------
 # Planning templates are derived from the schemas that own their shape
 # (ADR-0027, TASK-0109), so they get the same staleness gate docs/registry.md

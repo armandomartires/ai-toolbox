@@ -1,10 +1,10 @@
 ---
 name: project-workflow
-description: "Scaffolds and maintains a project's .ai/ directory - a consistent plan/develop/test/validate documentation convention (sprint-prefixed task briefs, architecture decision records, roadmap, ad-hoc task list, review checkpoints), and generates each artifact from the schema that owns its shape. USE FOR: setting up project planning docs, scaffolding .ai, writing a task brief, writing an ADR, recording a decision, tracking sprint history, starting a new project's documentation structure, standardizing how a project plans/develops/tests/validates work, and rendering that layer as an agile HTML dashboard (burn-up, burn-down, cumulative flow, velocity, cycle time, dependencies, backlog, roadmap, forecast). DO NOT USE FOR: writing normative project documentation (AGENTS.md, docs/ reference guides) - this skill is only for the WHY/WHAT'S-NEXT layer, never the WHAT-IS layer."
+description: "Scaffolds and maintains a project's .ai/ directory - a consistent plan/develop/test/validate documentation convention (sprint-prefixed task briefs, architecture decision records, roadmap, ad-hoc task list, review checkpoints), and generates each artifact from the schema that owns its shape. USE FOR: setting up project planning docs, scaffolding .ai, writing a task brief, writing an ADR, recording a decision, tracking sprint history, starting a new project's documentation structure, standardizing how a project plans/develops/tests/validates work, and rendering that layer as an agile HTML dashboard (burn-up, burn-down, cumulative flow, velocity, cycle time, dependencies, backlog, roadmap, forecast), optionally published to GitHub Pages or GitLab Pages. DO NOT USE FOR: writing normative project documentation (AGENTS.md, docs/ reference guides) - this skill is only for the WHY/WHAT'S-NEXT layer, never the WHAT-IS layer."
 license: MIT
 metadata:
   author: armando.martires
-  version: "5.0.0"
+  version: "5.1.0"
 ---
 
 # project-workflow
@@ -113,6 +113,19 @@ commit and a sha256 per file; its `--check` exits non-zero on drift. One
 generator, so every project that adopts this skill renders the same dashboard.
 Editing the copy re-creates the split this arrangement exists to remove — two
 generators, written a week apart, neither aware of the other.
+
+**Publishing is optional; the local file is the dashboard.** To also put it on
+**GitHub Pages** and/or **GitLab Pages**, declare the destinations in a
+`dashboard-publish.conf` at the repository root and run
+`scripts/publish-dashboard.sh render`. It renders each CI pipeline from
+`assets/publish/`, refuses to overwrite a CI file it did not write, never edits
+an existing `.gitlab-ci.yml` (the GitLab job is an included fragment), and
+refuses a skill directory outside the repository, because a runner clones the
+repository and nothing else. `render --check` fails on drift; wire it into the
+project's gate. Each pipeline runs `publish-dashboard.sh guard`, which refuses
+to publish from a **shallow clone** — GitLab clones 20 commits by default, which
+a count-based check passes. Config keys and the full procedure:
+`references/dashboard.md`, *Publishing it*.
 
 `.ai/` is prose, and prose does not add up. The one figure this repository
 maintained by hand — `BACKLOG.md`'s open-item count — went stale twice in two

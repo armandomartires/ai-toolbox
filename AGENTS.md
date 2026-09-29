@@ -66,6 +66,14 @@ services, secrets.
   committed copy is stale the moment it lands. Regenerate it; never commit it.
   Component check: `skills/project-workflow/scripts/check-dashboard.sh`. What
   each metric does *not* prove: `skills/project-workflow/references/dashboard.md`.
+- Dashboard publishing: **optional**, declared in `dashboard-publish.conf` —
+  here GitHub Pages (on the `github` mirror) and GitLab Pages (on `origin`).
+  The pipelines are **rendered**, never hand-edited:
+  `skills/project-workflow/scripts/publish-dashboard.sh render` writes
+  `.github/workflows/dashboard.yml`, `.gitlab/ci/dashboard-pages.yml` and the
+  `.gitlab-ci.yml` stub, and `tests/validate.sh` runs `render --check` plus
+  `check-publish.sh` (TASK-0127). Each rendered file's `STATUS:` line comes from
+  the conf and moves only against an observed run.
 - **The generator itself is vendored, not ours to edit.** It lives in
   `skills/project-workflow/dashboard/` as a copy of the one developed in the
   `sigma-llmwiki` repository, synced by that repo's `sync_dashboard_skill.py`,
