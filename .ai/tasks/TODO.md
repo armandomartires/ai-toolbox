@@ -789,11 +789,12 @@ embody** — measured with the skill's own checker, not inferred. Raised
       Needed **two** gates, not one: re-inlining a heredoc was observed
       leaving the existing staleness check green, which is how the original
       defect survived a gate that was real and working
-- [ ] TASK-0120 — `B-041`: `SKILL.md` names a regeneration mechanism a
-      migrated repository cannot run. **`blocked` by design** on a route
-      choice — retract the claim, ship a regenerator, or ship regenerator
-      plus engine — because the third fires `TASK-0117`'s trigger and the
-      first ships nothing. Sequenced behind `TASK-0119`
+- [x] TASK-0120 — `B-041`: `SKILL.md` names a regeneration mechanism a
+      migrated repository cannot run (**done 2026-09-30**). The human chose
+      **route 1, retract**: `SKILL.md` `3.0.0` calls the emitted templates a
+      point-in-time copy and gives a check that works from inside the target,
+      proved there (exit 0 clean, exit 1 mutated). Reproducing from inside the
+      target found the same false claim in the templates' own banner — `B-051`
 - [ ] TASK-0121 — `B-043`: `loop.md` step 10 orders the closer to copy
       "every figure from the evidence file", which structurally has none —
       `run-gate.sh`'s `summary()` emits one format with no figure slot.

@@ -192,11 +192,11 @@ this is `blocked`.**
 
 ## Acceptance criteria
 
-- [ ] The route is named, dated and attributed in the Execution log, with the
+- [x] The route is named, dated and attributed in the Execution log, with the
       rejected routes and their reasons.
-- [ ] Step 2's reproduction is pasted: the instruction attempted from inside a
+- [x] Step 2's reproduction is pasted: the instruction attempted from inside a
       scratch migrated repository, and its failure.
-- [ ] `SKILL.md` line 23 describes something the reader can do, verified by
+- [x] `SKILL.md` line 23 describes something the reader can do, verified by
       step 8 from inside that scratch repository — not reasoned about from
       inside `ai-toolbox`.
 - [ ] *(Routes 2/3)* An ADR exists, is `Accepted`, and names the two routes not
@@ -207,16 +207,16 @@ this is `blocked`.**
 - [ ] *(Route 3)* The engine copy is byte-identical to its source, proved by a
       hash, and `TASK-0117` records that its trigger fired and no longer reads
       `blocked`.
-- [ ] No file under either `schemas/` directory changed.
-- [ ] `tests/validate.sh` exits 0.
-- [ ] `B-041` is closed in `BACKLOG.md` with the commit hash, and the
+- [x] No file under either `schemas/` directory changed.
+- [x] `tests/validate.sh` exits 0.
+- [x] `B-041` is closed in `BACKLOG.md` with the commit hash, and the
       open-items sentence agrees with the rows above it.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] A scaffold into a scratch directory, and the chosen route's instruction
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] A scaffold into a scratch directory, and the chosen route's instruction
       executed **from inside it**
 - [ ] *(Routes 2/3)* The new regenerator's `--check` mode, run clean and then
       mutated — it must pass, then fail
@@ -249,35 +249,95 @@ this is `blocked`.**
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `skills/project-migration/SKILL.md` | `3.0.0`. Line 23 no longer claims the migrated repo regenerates; it says the emitted templates are a point-in-time copy, names the banner's three ai-toolbox paths as absent there, and gives a check the reader can run |
+| `.ai/planning/BACKLOG.md` | `B-041` **done**; `B-051` raised; open count unchanged at 14 |
+| `docs/development/authoring-guide.md` | **Deliberately unchanged.** Its line-42 row describes ai-toolbox's own templates to ai-toolbox's developers, and is true for them |
+| `scripts/sync-templates.sh`, `skills/project-migration/templates/`, both `schemas/` | **Unchanged** — route 1 ships nothing, and the banner fix is `B-051`'s |
+| `.ai/tasks/TASK-0117-*.md` | **Not touched by this task.** Route 1 does not fire its trigger; it was scheduled separately, by the human, the same day |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Next task starts here**: a migrated repository is told the truth about its
+templates and can check them against the installed skill. The banner inside
+those templates still names ai-toolbox paths (`B-051`).
+
+**Deviation from the plan**: none in the route. One addition — the banner
+finding. Step 2 was planned to reproduce `SKILL.md`'s claim and did; it also
+showed the emitted files making the same claim. `SKILL.md` now warns about the
+banner, and fixing the banner is left to `B-051`.
 
 ## Status
 
-- Status: blocked   # planned|ready|in_progress|blocked|review|done|cancelled
-- Owner: human
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
+- Owner: agent
 - Created: 2026-09-27
-- Updated: 2026-09-27
+- Updated: 2026-09-30
 
-Blocked on step 0's route choice, which is a judgement about how much
-`project-migration` promises a repository it has migrated — the human's, not
-the agent's. Also sequenced behind `TASK-0119`: that task changes what a
-migrated repository receives, which changes what this one has to promise about
-keeping it current.
+Was blocked on step 0's route choice; the human chose route 1 on 2026-09-30.
+The `TASK-0119` sequencing was satisfied — it landed 2026-09-28 (`91b85e5`).
 
 ## Execution log
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-30
+- Agent: Claude Opus 5.5, Claude Code
+- **Route: 1, retract the claim** — chosen by the human (Armando Martires),
+  2026-09-30, asked with the three routes costed above. **Rejected**: route 2
+  (ship a regenerator) — it cures a problem no migrated repository has yet
+  had, since none has outlived a schema change, and `ADR-0027` names building
+  for an absent consumer as how a second owner appears; route 3 (regenerator
+  plus engine) — the same, plus `artifact_lib.py` copied in for this purpose.
+  *The engine copy is being built anyway, as `TASK-0117`, on its own trigger
+  3 — a separate decision, not this task's route.*
 - Actions:
+  1. **Inputs re-verified.** `TASK-0119` done (`91b85e5`);
+     `skills/project-migration/templates/{TASK,ADR,REVIEW,SESSION}.md` exist;
+     `SKILL.md` at `2.1.0`, not the `1.2.0`/`2.0.0` the table forecast.
+  2. **Reproduced from inside a scratch migrated repository.**
+     `ai-project-scaffold.sh demo --no-git` → exit 0; then, from `demo/`,
+     literally what line 23 names:
+
+     ```
+     $ bash scripts/sync-templates.sh
+     bash: scripts/sync-templates.sh: No such file or directory
+     exit=127
+     ```
+
+     **And the same claim, in the emitted file.** `demo/.ai/templates/TASK.md`
+     opens: *"GENERATED by scripts/sync-templates.sh — DO NOT EDIT. Shape is
+     owned by skills/project-migration/schemas/task.md; edit that and re-run.
+     tests/validate.sh fails on drift."* — none of the three exists in
+     `demo/`. Raised as `B-051`; not fixed (Scope: no change to what the
+     scaffold emits).
+  3. **The replacement procedure proved before it was written down**, from
+     inside `demo/`: scaffold to a `mktemp -d` path, `diff -r` the two
+     `.ai/templates/` → exit 0; append one line to `ADR.md` → exit 1 naming
+     `ADR.md` and the added line; restore → exit 0.
+  4. **Line 23 rewritten, `3.0.0`.** It keeps the true sentence about the
+     scaffold reading shipped `templates/` and says where those templates are
+     rendered (ai-toolbox). It states that the target has a point-in-time
+     copy with no regenerator or gate, names the banner's three absent paths
+     (`B-051`), and gives the check. Major bump because the skill now promises
+     less, as `TASK-0119`'s `1.2.0` → `2.0.0` was major for a change to
+     artifact production.
+  5. **Step 8** — the command copied out of the new `SKILL.md` text by `grep`,
+     `<skill dir>` substituted, `eval`'d inside `demo/` → exit 0. Again
+     through the installed path `~/.claude/skills/project-migration`
+     (a symlink into this tree) → exit 0.
 - Observations:
+  - **What a migrated repository gets is now stated, not only what it
+    lacks** (the brief's first risk). After `TASK-0119` the point-in-time copy
+    is a real guarantee: correct on the day, and checkable.
+  - **The defect had two sites, and only one was in the brief.** `SKILL.md`
+    made the claim to the migrator; the banner makes it to everyone who later
+    opens the template. Reproducing from inside the target is what exposed
+    the second, as the brief predicted: reading from inside `ai-toolbox` is
+    the reading that produced the false claim.
+  - `docs/development/authoring-guide.md` line 42 does **not** repeat the
+    claim; it describes ai-toolbox's own templates and is true there.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `git diff --stat -- skills/*/schemas/` → empty
+  - `tests/validate.sh` → `validate.sh: OK`
+  - `scripts/sync-registry.sh` → no diff (the registry carries no skill version)
+- Result: **done.** `B-041` closed; `B-051` raised.
+- Commit: recorded in the follow-up record commit
+- Push: recorded in the follow-up record commit
