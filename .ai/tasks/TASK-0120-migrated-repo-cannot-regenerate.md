@@ -339,5 +339,9 @@ The `TASK-0119` sequencing was satisfied — it landed 2026-09-28 (`91b85e5`).
   - `tests/validate.sh` → `validate.sh: OK`
   - `scripts/sync-registry.sh` → no diff (the registry carries no skill version)
 - Result: **done.** `B-041` closed; `B-051` raised.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `51e7632` — *Retract the migrated-repo template regeneration claim
+  (TASK-0120)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `800797d..51e7632 master -> master` to
+  `origin` and to `github` (the range carries `TASK-0116`'s record commit
+  `a57d621` too); `HEAD`, `origin/master` and `github/master` all read
+  `51e7632`, and `git remote -v` is token-free
