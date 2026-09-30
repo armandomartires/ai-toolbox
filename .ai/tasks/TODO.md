@@ -198,6 +198,10 @@ Phase 3 — enforcement and record:
 Sprint transition:
 - [x] TASK-0052 — Un-park S6, re-queue S8, correct D1–D4 in TASK-0031
       (**done**, commit `d278c64`, pushed)
+- [x] TASK-0053 — Correct the Bionic client snapshot's drifted observations
+      (done, `21a1bf8`)
+- [x] TASK-0054 — Ratify `ADR-0014`/`0015`/`0016`, close S6 on `REVIEW-0010`,
+      promote S8 (done, `3f513d7`)
 
 **B-010…B-013 remain open and `ready`**, all raised by PLAN-0003 and all
 still scoped against the S6 task numbers above — through the park *and* the
@@ -573,6 +577,8 @@ brief says they are *"not blocked by this ADR at all"*.
       recorded by `TASK-0076`. Ratified **as written**, after the spikes had
       corrected the draft. It unblocked the tasks below **without scheduling
       them**, and **did not promote S9**
+- [x] TASK-0077 — Promote sprint S9 and add Phase 9 in the same commit
+      (done, `7f21c2c`)
 - [x] TASK-0058 — Authoring guide: **`mode: all` REJECTED** with a reopening
       condition; `worktree-only` for Claude Code **left open, explicitly**;
       authored-MCP section verified against the template by reading (done)
@@ -612,6 +618,14 @@ than closing over it.
 Both ADRs it rests on are `Accepted`. It **allocates no task ids** — one is
 taken when a brief is written. **Next free: `TASK-0098`.**
 
+- [x] TASK-0082 — *Spike.* Does a trailing flag escape an OpenCode
+      allow-glob? Observed against the client (done, `fa1d588`)
+- [x] TASK-0083 — Close the trailing-flag holes, split by what they actually
+      are; `git add -- .` stays a stated limitation (done, `3a3faa2`)
+- [x] TASK-0084 — Ratify `ADR-0023` with `AGENTS.md` in the same commit
+      (done, `60ec36e`)
+- [x] TASK-0085 — Promote sprint S10 and add Phase 10 in the same commit
+      (done, `60b491d`)
 - [x] TASK-0086 — S10.1 — the OpenCode driver, `run-gate.sh` and binding (done —
       proven against a **stub** `opencode` only; 23 tests, 18 reverts red)
 - [x] TASK-0087 — S10.2 — the Claude Code Workflow binding (done — stub runtime only;
@@ -694,9 +708,14 @@ no sprint opened — the `Post-S4`/`Post-S5` shape:
       is accepted **silently** — worse, because the diagnostic it promises no
       longer appears.
 
-`TASK-0109` and `TASK-0110` followed on 2026-09-26/27 and are recorded in
-`CURRENT_STATE.md` rather than here, because they changed how every planning
-artifact is produced rather than discharging a queue item.
+`TASK-0109` and `TASK-0110` followed on 2026-09-26/27. They changed how every
+planning artifact is produced rather than discharging a queue item, and are
+also recorded in `CURRENT_STATE.md`:
+
+- [x] TASK-0109 — Give artifact shape one owner, and generate the skeleton
+      instead of copying a template (`ADR-0027`; done, `85ca681`)
+- [x] TASK-0110 — Migrate the repository onto the artifact schemas
+      (done, `9525af1`)
 
 **The rest of the queue was written up as briefs on 2026-09-27**, eight of
 them, on the human's instruction to cover every open item. Still no sprint —
@@ -789,13 +808,14 @@ embody** — measured with the skill's own checker, not inferred. Raised
 
 - [x] TASK-0123 — Publish the dashboard to GitHub Pages from CI; fix the
       core.filemode trap that had CI red for 14 commits (done)
-**`B-042` got no brief, deliberately** — the `plan` kind has six real
 - [x] TASK-0124 — Open a self-closing GitHub Issue when CI fails; no
       secret, no third-party action; all three paths verified (done)
 - [x] TASK-0125 — Retire this repo's dashboard generator for a vendored
       copy of the one in `sigma-llmwiki`, so one generator serves every
       project the skill is applied to. `SKILL.md` 4.1.0 → 5.0.0. The
       fixture found three defects in the incoming tool (done)
+
+**`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those
 six to find what they actually share. `ADR-0027` transcribed its schemas from
 artifacts that already existed; `ADR-0008` forbids inventing the requirement.
