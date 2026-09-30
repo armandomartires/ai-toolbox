@@ -673,7 +673,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0129`.**
+untested. **Next free number: `TASK-0130`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
 `TASK-0109` until `TASK-0118` corrected it on 2026-09-27, to `TASK-0119`;
@@ -832,6 +832,10 @@ embody** — measured with the skill's own checker, not inferred. Raised
       to upload a workstation build is rejected, fetching the published page
       back is adopted, and the daily rebuild is decided as a separate
       dispatcher workflow, to be built on its own
+- [ ] TASK-0129 — Rebuild the published dashboard daily from a separate
+      dispatcher workflow, the opt-in `github-pages-daily` target, which
+      waits for the run it starts and ends as it ends; `dashboard.yml`
+      unchanged (**in progress** until its first scheduled run is observed)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

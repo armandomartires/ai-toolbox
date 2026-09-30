@@ -18,8 +18,11 @@
 #   publish-dashboard.sh render [--check] [--adopt] [--repo DIR]
 #   publish-dashboard.sh guard --model PATH [--expect-shape SHAPE] [--repo DIR]
 #
-#   render   write each configured destination's CI file:
+#   render   write each configured target's CI file:
 #              github-pages -> .github/workflows/dashboard.yml
+#              github-pages-daily -> .github/workflows/dashboard-daily.yml,
+#                              which dispatches the github-pages workflow
+#                              once a day (refused without github-pages)
 #              gitlab-pages -> .gitlab/ci/dashboard-pages.yml, included from
 #                              .gitlab-ci.yml (a stub is written only when the
 #                              project has none; an existing one is never
@@ -32,14 +35,16 @@
 #            git was unavailable, or the corpus shape is not SHAPE.
 #   --repo   repository root. Default: the enclosing git work tree, else CWD.
 #
-# dashboard-publish.conf (`key = value`, `#` comments):
-#   targets        = github-pages gitlab-pages     # either or both
+# dashboard-publish.conf (`key = value`; a `#` comment must start its own line,
+# so the notes on the right are for reading, not for the file):
+#   targets        = github-pages gitlab-pages     # one or more targets above
 #   skill_dir      = skills/project-workflow       # inside the repo: a runner
 #                                                  # clones the repo, nothing else
 #   branch         = master                        # the branch that publishes
 #   root           = .ai                           # optional, default .ai
 #   expect_shape   = numbered_task                 # optional: numbered_task | sprint_brief
 #   status.github-pages = UNVERIFIED - never run   # required per target
+#   status.github-pages-daily = UNVERIFIED - never run
 #   status.gitlab-pages = UNVERIFIED - never run
 #
 # Exit codes: 0 ok, 1 stale (render --check) or guard failed, 2 refused.
@@ -48,7 +53,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-usage() { sed -n '2,46p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,51p' "$0" | sed 's/^# \{0,1\}//'; }
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
   "")        usage >&2; exit 2 ;;

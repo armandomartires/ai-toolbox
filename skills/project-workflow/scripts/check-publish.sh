@@ -12,12 +12,14 @@
 # `commits <= 1`, which a 20-commit truncated history passes - so on GitLab it
 # would have published a plausible, wrong page.
 #
-# WHAT THIS PROVES: the renderer's refusals, its drift detection and the
-# guard's failure conditions, each by a case that fails when the behaviour is
-# removed.
-# WHAT IT DOES NOT PROVE: that a rendered pipeline runs on GitHub or GitLab.
-# Only an observed run proves that, and the STATUS line in each rendered file
-# says whether one has been.
+# WHAT THIS PROVES: the renderer's refusals, its drift detection, the guard's
+# failure conditions, the lines the daily dispatcher cannot work without (the
+# branch it names, the file it dispatches, its schedule, its one scope, the
+# pipeline's dispatch trigger), and the dispatcher's wait-and-mirror logic, run
+# against a fake API - each by a case that fails when the behaviour is removed.
+# WHAT IT DOES NOT PROVE: that a rendered pipeline runs on GitHub or GitLab, or
+# that GitHub fires a schedule. Only an observed run proves that, and the
+# STATUS line in each rendered file says whether one has been.
 set -uo pipefail
 
 # SAFETY, AND IT WAS LEARNED THE EXPENSIVE WAY (TASK-0127). A pre-commit hook
@@ -168,6 +170,75 @@ conf_set "$R" targets github-pages
 expect 1 "a generated file for a dropped target is reported" "no longer in targets" -- "$PUB" render --check --repo "$R"
 
 expect 2 "no config means no publishing, and says so" "Publishing is optional" -- "$PUB" render --repo "$TMP"
+
+# --- the daily dispatcher ----------------------------------------------------
+# Its own fixture, publishing `trunk`: a template that hard-coded `master`
+# would pass against the master fixtures above by coincidence.
+GD=.github/workflows/dashboard-daily.yml
+R="$(mkrepo daily)"
+conf_set "$R" branch trunk
+conf_set "$R" targets "github-pages github-pages-daily"
+conf_set "$R" status.github-pages-daily "UNVERIFIED - test"
+expect 0 "render writes the daily dispatcher beside the pipeline" "wrote    $GD (github-pages-daily)" -- "$PUB" render --repo "$R"
+expect 0 "render --check is clean with the daily target" -- "$PUB" render --check --repo "$R"
+expect 1 "no placeholder survives in the dispatcher" -- grep -q '@@' "$R/$GD"
+expect 0 "the dispatcher names the configured branch" -- grep -qF '"ref":"trunk"' "$R/$GD"
+expect 0 "the dispatcher starts the github-pages workflow by its file name" -- grep -qF "actions/workflows/${GH##*/}/dispatches" "$R/$GD"
+expect 0 "the dispatcher runs daily, just after UTC midnight" -- grep -qxF "    - cron: '23 0 * * *'" "$R/$GD"
+expect 0 "the dispatcher asks for the one scope a dispatch needs" -- grep -qxF '  actions: write' "$R/$GD"
+expect 0 "the workflow it dispatches accepts a dispatch" -- grep -qx '  workflow_dispatch:' "$R/$GH"
+
+# Its wait-and-mirror logic, run for real: the step's `run:` block is lifted
+# out of the rendered file and executed with `curl` and `sleep` stubbed, so
+# what is tested is the shell GitHub will run.
+python3 - "$R/$GD" > "$TMP/dispatch.sh" <<'EXTRACT'
+import sys
+out, ind = [], None
+for line in open(sys.argv[1]).read().split("\n"):
+    if ind is None:
+        if line.strip() == "run: |":
+            ind = len(line) - len(line.lstrip()) + 2
+        continue
+    if line.strip() and len(line) - len(line.lstrip()) < ind:
+        break
+    out.append(line[ind:])
+print("\n".join(out))
+EXTRACT
+FAKE="$TMP/fakebin"; mkdir -p "$FAKE"
+cat > "$FAKE/curl" <<'STUB'
+#!/usr/bin/env bash
+# POST: the canned dispatch reply and exit code. GET: the next canned run state.
+case " $* " in
+  *" -X POST "*) cat "$FAKE_API/reply"; exit "$(cat "$FAKE_API/rc")" ;;
+esac
+n=$(( $(cat "$FAKE_API/n") + 1 )); echo "$n" > "$FAKE_API/n"
+sed -n "${n}p" "$FAKE_API/states"
+STUB
+cat > "$FAKE/sleep" <<'STUB'
+#!/usr/bin/env bash
+# The loop's only pause. A poll that never ends is a defect, not a wait, so
+# after 20 polls this stops the script under test instead of hanging the suite.
+n=$(( $(cat "$FAKE_API/polls" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$FAKE_API/polls"
+[ "$n" -le 20 ] || kill -TERM "$PPID"
+STUB
+chmod +x "$FAKE/curl" "$FAKE/sleep"
+api_case() { # name rc reply [state...] : a fake API, printed as its directory
+  local d="$TMP/api-$1"; mkdir -p "$d"
+  printf '%s' "$2" > "$d/rc"; printf '%s' "$3" > "$d/reply"; echo 0 > "$d/n"
+  shift 3; printf '%s\n' "$@" > "$d/states"; printf '%s' "$d"
+}
+dispatch() { FAKE_API="$1" PATH="$FAKE:$PATH" GH_TOKEN=t API=http://api.invalid REPO=o/r bash "$TMP/dispatch.sh"; }
+RID='{"workflow_run_id":7}'
+expect 0 "the dispatcher mirrors a run that succeeds" "run 7: completed success" -- dispatch "$(api_case ok 0 "$RID" '{"status":"queued","conclusion":null}' '{"status":"completed","conclusion":"success"}')"
+expect 1 "the dispatcher fails with a run that fails" "concluded failure" -- dispatch "$(api_case bad 0 "$RID" '{"status":"completed","conclusion":"failure"}')"
+expect 0 "a cancelled run is not a failure" "was cancelled" -- dispatch "$(api_case cancelled 0 "$RID" '{"status":"completed","conclusion":"cancelled"}')"
+expect 1 "a dispatch reply that names no run fails loudly" "names no run" -- dispatch "$(api_case norun 0 '')"
+expect 1 "a refused dispatch fails loudly" "dispatch refused" -- dispatch "$(api_case refused 22 '{"message":"Resource not accessible by integration"}')"
+
+conf_set "$R" targets github-pages-daily
+expect 2 "the daily target without github-pages is refused" "needs github-pages in targets" -- "$PUB" render --repo "$R"
+conf_set "$R" targets github-pages
+expect 1 "a dispatcher left by a dropped daily target is reported" "$GD was generated for github-pages-daily" -- "$PUB" render --check --repo "$R"
 
 # --- guard -------------------------------------------------------------------
 model() { # path commits tasks shape [drop-key]

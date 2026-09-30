@@ -14,7 +14,15 @@ from them, with `render --check` failing when the copy drifts. That is the only
 route B-048 costed that cannot rot: an ungated copy is what B-040 found had
 already rotted five times.
 
-WHAT `render --check` PROVES: that each configured destination's CI file is
+THE DAILY TARGET (TASK-0129). `github-pages-daily` is not a destination. It
+renders a second GitHub workflow whose only job is to dispatch the
+github-pages one once a day and wait for it, because the page is dated by the
+day it is built. It is a file of its own for the reason ai-toolbox's ADR-0029
+records; GitHub's limits on schedules are in references/dashboard.md. So it
+`needs` github-pages, and the file it dispatches is read from TARGETS rather
+than written into its template.
+
+WHAT `render --check` PROVES: that each configured target's CI file is
 exactly what its template renders to, and that GitLab's fragment is included.
 WHAT IT DOES NOT PROVE: that the pipeline runs. A byte-exact copy of a
 template nobody has run is still unrun; that is what the STATUS line in each
@@ -51,6 +59,14 @@ TARGETS = {
     "github-pages": {
         "template": asset("publish/github-pages.yml"),
         "out": ".github/workflows/dashboard.yml",
+    },
+    # Not a destination: a second GitHub workflow whose only job is to
+    # dispatch the github-pages one once a day and wait for it. `needs` names
+    # that target; load_conf refuses this one without it.
+    "github-pages-daily": {
+        "template": asset("publish/github-pages-daily.yml"),
+        "out": ".github/workflows/dashboard-daily.yml",
+        "needs": "github-pages",
     },
     "gitlab-pages": {
         "template": asset("publish/gitlab-pages.yml"),
@@ -129,6 +145,12 @@ def load_conf(repo):
     if not targets:
         raise Refusal("%s: `targets` is empty" % CONF)
     conf["targets"] = targets
+    for t in targets:
+        need = TARGETS[t].get("needs")
+        if need and need not in targets:
+            raise Refusal("%s: %s dispatches the %s workflow (%s), so it needs "
+                          "%s in targets too"
+                          % (CONF, t, need, TARGETS[need]["out"], need))
 
     for key in ("skill_dir", "root", "branch", "expect_shape"):
         value = conf.get(key)
@@ -210,6 +232,9 @@ def render_one(target, conf):
         "STATUS": conf["status." + target],
         "GUARD_ARGS": " --expect-shape %s" % shape if shape else "",
         "FRAGMENT": GITLAB_FRAGMENT,
+        # The daily dispatcher names the pipeline it starts by file name, read
+        # here so the pipeline's path keeps one owner.
+        "PAGES_WORKFLOW": os.path.basename(TARGETS["github-pages"]["out"]),
     }
     text = read_text(TARGETS[target]["template"])
     for key, value in values.items():

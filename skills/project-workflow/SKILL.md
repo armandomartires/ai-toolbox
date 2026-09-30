@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "5.1.2"
+  version: "5.2.0"
 ---
 
 # project-workflow
@@ -125,7 +125,9 @@ refuses a skill directory outside the repository, because a runner clones the
 repository and nothing else. `render --check` fails on drift; wire it into the
 project's gate. Each pipeline runs `publish-dashboard.sh guard`, which refuses
 to publish from a **shallow clone** — GitLab clones 20 commits by default, which
-a count-based check passes. Config keys and the full procedure:
+a count-based check passes. An opt-in `github-pages-daily` target adds a
+second workflow that rebuilds the GitHub page once a day, because the page is
+dated by the day it is built. Config keys and the full procedure:
 `references/dashboard.md`, *Publishing it*.
 
 `.ai/` is prose, and prose does not add up. The one figure this repository

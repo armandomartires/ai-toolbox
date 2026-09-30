@@ -209,11 +209,13 @@ which paints nothing. Set them in both theme blocks.
 **The local file is the dashboard until you publish it.** `build-dashboard.sh`
 writes one self-contained HTML file; it needs no config, no CI and no network.
 Publishing is optional, and means a pipeline building the page itself from the
-pushed branch. There are two destinations:
+pushed branch. There are two destinations, and a daily rebuild for the GitHub
+one:
 
 | Target | Rendered to | Runs on |
 |---|---|---|
 | `github-pages` | `.github/workflows/dashboard.yml` | GitHub Actions; deploys with `actions/deploy-pages` |
+| `github-pages-daily` | `.github/workflows/dashboard-daily.yml` | GitHub Actions, once a day: dispatches the `github-pages` workflow on `branch` and waits for it, so it needs `github-pages` too |
 | `gitlab-pages` | `.gitlab/ci/dashboard-pages.yml`, included from `.gitlab-ci.yml` | a GitLab runner; the `pages` job publishes `public/` |
 
 **Only the destination's own pipeline builds the published page; never upload
@@ -229,20 +231,27 @@ download the published page, which is the same single file. Why, and each
 route weighed: ai-toolbox's `ADR-0029`.
 
 **1. Declare the destinations** in `dashboard-publish.conf` at the repository
-root:
+root. A `#` starts a comment only at the start of a line:
 
 ```
-targets      = github-pages gitlab-pages      # either or both
-skill_dir    = skills/project-workflow        # MUST be inside the repository
-branch       = main                           # the branch that publishes
-root         = .ai                            # optional, default .ai
-expect_shape = sprint_brief                   # optional: sprint_brief | numbered_task
-status.github-pages = UNVERIFIED - never run  # required, per target
-status.gitlab-pages = UNVERIFIED - never run
+# any of the targets above; github-pages-daily needs github-pages
+targets      = github-pages github-pages-daily gitlab-pages
+# MUST be inside the repository
+skill_dir    = skills/project-workflow
+# the branch that publishes
+branch       = main
+# optional, default .ai
+root         = .ai
+# optional: sprint_brief | numbered_task
+expect_shape = sprint_brief
+# required, one per target
+status.github-pages       = UNVERIFIED - never run
+status.github-pages-daily = UNVERIFIED - never run
+status.gitlab-pages       = UNVERIFIED - never run
 ```
 
-Unknown keys, unknown targets and a target without a `status.` line are
-refused. The status is copied into the rendered file's header; change it only
+Unknown keys, unknown targets, a target without a `status.` line, and
+`github-pages-daily` without `github-pages` are refused. The status is copied into the rendered file's header; change it only
 after watching a run succeed, and name the run.
 
 **2. Render**, then commit what it wrote:
@@ -295,16 +304,47 @@ guard`, which refuses to publish when:
 The model JSON is deleted before upload: it is working data, and publishing it
 would put a second, unlabelled copy of every figure on the web.
 
+**The daily rebuild.** The page is dated by the day it is built: `project.today`
+is the `as_of` of every metric (`dashboard/SCHEMA.md`, §1.1), and the page
+header shows it. Rebuilt only on push, a quiet week's page stays a week old.
+`github-pages-daily` renders `.github/workflows/dashboard-daily.yml`, which just
+after midnight UTC dispatches the `github-pages` workflow on `branch`, waits for
+that run, and ends as it ends. The run it starts is an ordinary one — the same
+guard, the same deploy, the same `pages` concurrency group — so it cancels a
+push run in progress and a later push cancels it; a cancelled run does not fail
+the dispatcher. It is a workflow of its own rather than a schedule inside
+`dashboard.yml` (ai-toolbox's `ADR-0029`), for the first reason below. It waits
+because the run it starts is triggered by the workflow's own token, not by a
+person, so without the wait a failed nightly build might be reported to no one.
+
 **Per-destination notes.**
 
 - *GitHub Pages*: `configure-pages` runs with `enablement: true`, which needs
   repository admin on the token. Without it the step fails loudly, and you
   enable Pages once in Settings. A public repository publishes a public page.
+- *GitHub Pages, daily*: in a public repository GitHub disables a scheduled
+  workflow after 60 days without repository activity. Only `dashboard-daily.yml`
+  stops; publishing on push is unaffected. Its state then reads
+  `disabled_inactivity` (`GET /repos/{owner}/{repo}/actions/workflows/dashboard-daily.yml`);
+  re-enable it on the Actions tab or with `gh workflow enable dashboard-daily.yml`.
+  A schedule fires only from the default branch, so keep the dispatcher on the
+  default branch even when `branch` is another. Scheduled runs are delayed at
+  busy times, above all the start of an hour, and can be dropped under load, so
+  a day can pass without a rebuild; the header's date shows it. GitHub reports a
+  failed scheduled run to whoever last changed its cron line. The dispatcher
+  pins REST API version `2026-03-10`, under which the dispatch reply names the
+  run it started; a server without that version refuses the request, and the
+  run fails. In a private repository both runs spend the account's Actions
+  minutes, every day.
 - *GitLab Pages*: the instance must have Pages enabled and a runner online, and
   neither is visible from the repository. The job declares `image: python:3.12`
   for git, bash and python3. A shell-executor runner ignores `image` and needs
   those three on its host. Who can see the page follows the project's
-  *Pages* visibility setting, not the repository's.
+  *Pages* visibility setting, not the repository's. The skill ships no daily
+  rebuild for GitLab: a pipeline schedule there is a project setting
+  (**Build > Pipeline schedules**, or the pipeline schedules API), not part of
+  `.gitlab-ci.yml`, and whether the fragment's `rules:` admit a scheduled
+  pipeline has not been observed.
 
 **What publishing does not change:** the page is the same file either way.
 Nothing here is a gate on a commit. A failed deploy fails its own pipeline, and

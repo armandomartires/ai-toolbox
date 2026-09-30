@@ -1,5 +1,19 @@
 # Current State
 
+## A daily rebuild of the published dashboard is configured, not yet verified (`TASK-0129`, in progress)
+
+**2026-09-30, the human's decisions of the same day.** `skills/project-workflow/`
+(`5.2.0`) has an opt-in `github-pages-daily` target. `publish-dashboard.sh
+render` writes `.github/workflows/dashboard-daily.yml`, whose only job, once a
+day, is to dispatch the unchanged `.github/workflows/dashboard.yml` on the
+configured branch, wait for that run, and end as it ends. It is a file of its
+own for the reason `ADR-0029` records. GitHub's limits on it are in
+`skills/project-workflow/references/dashboard.md`, *Publishing it*.
+
+**Its `STATUS:` is `UNVERIFIED` until a scheduled run is observed**, and
+`TASK-0129` stays `in_progress` until then. The `TASK-0128` section below says
+the dispatcher is not built yet; that was true when it was written.
+
 ## The published dashboard is built only by CI; a local build is a preview (`TASK-0128`, `ADR-0029`)
 
 **2026-09-30, the human's decisions.** Asked why the published page is not

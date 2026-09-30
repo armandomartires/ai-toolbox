@@ -22,8 +22,10 @@ agent loops, prompts, agent roles, and client configurations.
 - Deploy: `scripts/install.sh`; validate: `tests/validate.sh`
 - Delivery dashboard: **https://armandomartires.github.io/ai-toolbox/**
   — regenerated from `.ai/` and republished on every push to `master`
-  (`.github/workflows/dashboard.yml`). A view of the governance layer,
-  not an audit of it
+  (`.github/workflows/dashboard.yml`); a daily rebuild just after midnight
+  UTC is configured (`.github/workflows/dashboard-daily.yml`, whose
+  `STATUS:` line says whether a scheduled run has been observed). A view of
+  the governance layer, not an audit of it
 
 ## Getting started
 
