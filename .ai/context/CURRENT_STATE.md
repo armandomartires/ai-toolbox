@@ -1,5 +1,24 @@
 # Current State
 
+## The published dashboard is built only by CI; a local build is a preview (`TASK-0128`, `ADR-0029`)
+
+**2026-09-30, the human's decisions.** Asked why the published page is not
+the local file sent to Pages, the human chose to keep CI as its only builder
+and to record why. `ADR-0029` does, weighing each route. Neither Pages
+platform accepts a page built outside its own CI. A local build reads the
+working tree and checked-out `HEAD`, so it could put what was never pushed on
+a public page.
+
+The rule is stated in `AGENTS.md` (*Delivery dashboard*) and in
+`skills/project-workflow/references/dashboard.md` (*Publishing it*; skill
+`5.1.2`). The "canonical output / optional copy" wording that invited the
+question is gone from the conf, the templates and the rendered pipelines.
+`build-dashboard.sh`'s header no longer says nothing runs it.
+
+The ADR also records the daily rebuild as a separate dispatcher workflow,
+which is not built yet. Until it is, the page's date-dependent figures are as
+of its last build. The measurements are in `TASK-0128`.
+
 ## `skills/ansible-ops/` exercised end to end, once (`TASK-0116` done)
 
 **2026-09-30, attempt 3.** Gates 6-9 ran on the human's in-file

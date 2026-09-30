@@ -206,15 +206,27 @@ which paints nothing. Set them in both theme blocks.
 
 ## Publishing it
 
-**The local file is the dashboard.** `build-dashboard.sh` writes one
-self-contained HTML file and that is the canonical output; it needs no config,
-no CI and no network. Publishing the same page to the web is optional, and
-there are two destinations:
+**The local file is the dashboard until you publish it.** `build-dashboard.sh`
+writes one self-contained HTML file; it needs no config, no CI and no network.
+Publishing is optional, and means a pipeline building the page itself from the
+pushed branch. There are two destinations:
 
 | Target | Rendered to | Runs on |
 |---|---|---|
 | `github-pages` | `.github/workflows/dashboard.yml` | GitHub Actions; deploys with `actions/deploy-pages` |
 | `gitlab-pages` | `.gitlab/ci/dashboard-pages.yml`, included from `.gitlab-ci.yml` | a GitLab runner; the `pages` job publishes `public/` |
+
+**Only the destination's own pipeline builds the published page; never upload
+one built on a workstation.** GitHub Pages, deploying from Actions, accepts a
+deployment only with an OIDC token that Actions issues to a workflow run, for
+an artifact a workflow run uploaded; no API uploads one from elsewhere. GitLab
+Pages has no upload API: only a Pages job in a pipeline, run by a runner,
+publishes. The pipeline's build is also the only one that matches the branch:
+it reads a full clone of what was pushed, while a local build reads your
+working tree and checked-out `HEAD`, so it shows what you have not committed
+or pushed. Build locally to preview exactly that; for an up-to-date copy,
+download the published page, which is the same single file. Why, and each
+route weighed: ai-toolbox's `ADR-0029`.
 
 **1. Declare the destinations** in `dashboard-publish.conf` at the repository
 root:

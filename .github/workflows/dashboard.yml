@@ -7,9 +7,9 @@
 # STATUS: VERIFIED on run 36608693753 (36ac929, push): success, guard reported 266 commits and a full clone, page HTTP 200 (TASK-0127)
 # The label moves only against an observed run, and names it.
 #
-# Regenerate the delivery dashboard and publish it to GitHub Pages. The local
-# file build-dashboard.sh writes is the canonical output; this is an optional
-# copy of it on the web.
+# Regenerate the delivery dashboard and publish it to GitHub Pages. This
+# pipeline's build, from a full clone of the pushed branch, is the published
+# page; a local build is a preview and is never uploaded.
 #
 # SEPARATE FROM ANY GATE WORKFLOW ON PURPOSE. A gate runs on every branch and
 # every pull request, and its token stays narrow. This runs on the default

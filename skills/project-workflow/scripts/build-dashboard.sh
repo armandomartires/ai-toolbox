@@ -21,10 +21,10 @@
 # governance layer, not an audit of it -- the same boundary tests/validate.sh
 # draws when it checks source completeness and stops there (ADR-0009).
 #
-# Nothing in this repository runs this script automatically, and it is not part
-# of any gate: it needs a working tree and, for its Activity tab, git history,
-# so it is neither hermetic nor offline in the way the mandatory gate must be.
-# Run it by hand, or from whatever publishes your docs.
+# It is not part of any gate: it needs a working tree and, for its Activity
+# tab, git history, so it is neither hermetic nor offline as a gate must be.
+# Run by hand, it renders the working tree and checked-out HEAD it runs in;
+# a published page is built by CI from a full clone (publish-dashboard.sh).
 #
 # Usage:
 #   build-dashboard.sh [--root .ai] [--out dashboard.html] [--repo DIR]

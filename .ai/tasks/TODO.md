@@ -673,11 +673,13 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0121`.**
+untested. **Next free number: `TASK-0129`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
-`TASK-0109` until `TASK-0118` corrected it on 2026-09-27; the queue itself is
-otherwise unchanged.
+`TASK-0109` until `TASK-0118` corrected it on 2026-09-27, to `TASK-0119`;
+`e27a61c` moved it to `TASK-0121` the same day, and it went stale on
+2026-09-28 when that id was taken (`0e5ed40`), until `TASK-0128` corrected it
+on 2026-09-30. The queue itself is otherwise unchanged.
 
 Two of that queue were taken up on 2026-09-26, on the human's routing, with
 no sprint opened — the `Post-S4`/`Post-S5` shape:
@@ -825,6 +827,11 @@ embody** — measured with the skill's own checker, not inferred. Raised
 - [x] TASK-0127 — Ship GitHub Pages and GitLab Pages as optional dashboard
       destinations. GitHub verified end to end; GitLab built, linted and
       queued, `UNVERIFIED` until a runner exists (done, `36ac929`)
+- [x] TASK-0128 — Record why only CI builds the published dashboard
+      (**done 2026-09-30**): `ADR-0029`, the human's decisions. Every route
+      to upload a workstation build is rejected, fetching the published page
+      back is adopted, and the daily rebuild is decided as a separate
+      dispatcher workflow, to be built on its own
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

@@ -3,9 +3,9 @@
 
 Driven by publish-dashboard.sh; see that file for usage. Standard library only.
 
-WHY THIS EXISTS (TASK-0127, closing B-048). The dashboard's local file is the
-canonical output. Publishing it to GitHub Pages or GitLab Pages is optional,
-and it used to be a property of one repository: a hand-written workflow that
+WHY THIS EXISTS (TASK-0127, closing B-048). Publishing the dashboard to GitHub
+Pages or GitLab Pages is optional - the destination's CI builds the page - and
+it used to be a property of one repository: a hand-written workflow that
 had learned, the hard way, that a shallow clone publishes a plausible page
 that is wrong. A consumer of this skill got the generator and none of that.
 

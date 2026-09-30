@@ -64,6 +64,10 @@ services, secrets.
   audits nothing, so it is deliberately not part of `tests/validate.sh` and not
   run by any hook. The output is **gitignored** — it reads the git log, so a
   committed copy is stale the moment it lands. Regenerate it; never commit it.
+  **The published page is the current `master` dashboard** — CI rebuilds it
+  from a full clone (URL and when: `README.md`). Build locally only to preview
+  state you have not pushed, and never upload a local build: it reads the
+  working tree and checked-out `HEAD`, not what was pushed (ADR-0029).
   Component check: `skills/project-workflow/scripts/check-dashboard.sh`. What
   each metric does *not* prove: `skills/project-workflow/references/dashboard.md`.
 - Dashboard publishing: **optional**, declared in `dashboard-publish.conf` —

@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "5.1.1"
+  version: "5.1.2"
 ---
 
 # project-workflow
@@ -114,8 +114,9 @@ generator, so every project that adopts this skill renders the same dashboard.
 Editing the copy re-creates the split this arrangement exists to remove — two
 generators, written a week apart, neither aware of the other.
 
-**Publishing is optional; the local file is the dashboard.** To also put it on
-**GitHub Pages** and/or **GitLab Pages**, declare the destinations in a
+**Publishing is optional; unpublished, the local file is the dashboard.** To
+have the destination's CI build and publish it on **GitHub Pages** and/or
+**GitLab Pages**, declare the destinations in a
 `dashboard-publish.conf` at the repository root and run
 `scripts/publish-dashboard.sh render`. It renders each CI pipeline from
 `assets/publish/`, refuses to overwrite a CI file it did not write, never edits

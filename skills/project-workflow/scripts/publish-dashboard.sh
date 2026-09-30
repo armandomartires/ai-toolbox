@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Publish the delivery dashboard to GitHub Pages and/or GitLab Pages.
 #
-# THE LOCAL FILE IS THE CANONICAL OUTPUT, AND NEEDS NONE OF THIS.
-# build-dashboard.sh writes one self-contained HTML file; that is the whole
-# dashboard. Publishing is optional: a project that wants the page on the web
-# declares its destinations in `dashboard-publish.conf` at its root, and this
-# script renders the CI pipeline for each one from the templates in
-# ../assets/publish/. See references/dashboard.md, "Publishing it".
+# A LOCAL BUILD NEEDS NONE OF THIS. build-dashboard.sh writes one
+# self-contained HTML file; unpublished, that is the whole dashboard.
+# Publishing is optional: a project that wants the page on the web declares
+# its destinations in `dashboard-publish.conf` at its root, and this script
+# renders, from ../assets/publish/, the CI pipeline that builds and publishes
+# the page for each one. See references/dashboard.md, "Publishing it".
 #
 # WHY RENDERED, NOT COPIED (TASK-0127, closing B-048). The pipeline carries
 # rules that were learned by publishing a wrong page - most of all that a

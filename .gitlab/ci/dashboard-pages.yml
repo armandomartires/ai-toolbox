@@ -7,9 +7,9 @@
 # STATUS: UNVERIFIED - CI lint valid; pipeline 10 (36ac929) created its pages job, which stays pending: no runner is online (TASK-0127)
 # The label moves only against an observed run, and names it.
 #
-# Regenerate the delivery dashboard and publish it to GitLab Pages. The local
-# file build-dashboard.sh writes is the canonical output; this is an optional
-# copy of it on the web.
+# Regenerate the delivery dashboard and publish it to GitLab Pages. This
+# pipeline's build, from a full clone of the pushed branch, is the published
+# page; a local build is a preview and is never uploaded.
 #
 # A FRAGMENT, INCLUDED - NOT THE PROJECT'S CI FILE. A project's .gitlab-ci.yml
 # is often its whole CI, so this job lives in its own file and is pulled in
