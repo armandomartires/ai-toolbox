@@ -135,6 +135,28 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   `GITHUB_TOKEN`. Never put a token in the remote URL or any tracked file;
   `git remote -v` must stay token-free. Commands: runbook, *Authenticating
   a push*.
+- **Recording the hash takes two commits**, because a commit cannot contain
+  its own hash. (1) The **task commit** — subject `<Imperative summary>
+  (TASK-NNNN)` — carries the work and a task log ending
+  `- Commit: recorded in the follow-up record commit` and
+  `- Push: recorded in the follow-up record commit`. Push it to both
+  remotes and confirm `git rev-parse HEAD` equals `ls-remote` on each.
+  (2) The **record commit** — subject `Record TASK-NNNN's landed commit and
+  both pushes`, touching only that task file — replaces the two lines with:
+
+  ```
+  - Commit: `<short hash>` — *<task commit subject>*, plus the record-keeping commit after it
+  - Push: **confirmed to both remotes** — `<old>..<new> master -> master` to
+    `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+    read `<short hash>`, and `git remote -v` is token-free
+  ```
+
+  Then push the record commit too. It is recorded only by coming after the
+  task commit, never in a third commit. If the push range also carries an
+  earlier task's record commit, name it (*"the range carries TASK-NNNN's
+  record commit `abc1234` too"*). Unattended runs, which push nothing, use
+  the landing placeholders in the runbook's *Landing an unattended run's
+  branch* instead. Examples: `TASK-0117`, `TASK-0120`, `TASK-0127`.
 - CI (`.github/workflows/validate.yml`) re-runs `validate.sh` and the
   registry-staleness check on every push. It is a second opinion, not the
   gate: the hook prevents a bad commit, CI only reports one already made.
