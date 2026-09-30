@@ -759,11 +759,12 @@ That became `TASK-0112` and displaced the order the briefs were planned in.
       content, backed by two controls because exit 0 alone proves nothing.
       Raised **`B-039`**
 - [ ] TASK-0116 — exercise `skills/ansible-ops/` against the live estate
-      (**partly done, still `blocked`**). Gates 1–3 ran against the real
-      estate and the instructions held; **gate 4 was denied by the Claude
-      Code auto-mode classifier**, not by the estate — `B-046` — so gate 5 is
-      unreachable and gates 6–9 stay unauthorized. The record checker was
-      exercised and routes correctly. Found: the estate is at **6-of-6
+      (**phase 1 done, still `blocked`**). Gates 1–3 ran 2026-09-28; gate 4
+      was denied by the Claude Code auto-mode classifier (`B-046`). **Gates
+      4–5 ran 2026-09-30** under a human-granted exact-match allow rule, after
+      a second barrier (ansible-core refuses non-blocking stdio) was cleared.
+      Gate 5 found `include_tasks` underivable from its own docs (`B-050`).
+      Gates 6–9 stay unauthorized. Found earlier: the estate is at **6-of-6
       quorum**, not the 3-of-4 its own `ansible.cfg` calls normal (`B-039`)
 - [ ] TASK-0117 — `B-036`, the generator unreachable from `project-migration`
       alone. **`blocked` by design**, on a stated trigger; the brief is the

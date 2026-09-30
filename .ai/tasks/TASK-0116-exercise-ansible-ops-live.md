@@ -220,16 +220,18 @@ and nothing else.
 | Artifact | End state |
 |----------|-----------|
 | `skills/ansible-ops/` | **Byte-identical.** Exercised, not edited — the run's whole point |
-| `/home/armando.martires/SIGMA-infrastructure/` | **Untouched and verified so**: `HEAD` `2a6be9a` unmoved, porcelain empty, every tracked write-target byte-identical by checksum, before and after. `ansible.log` grew (gitignored, untracked) — that is gates 2-3 logging |
-| `.ai/planning/BACKLOG.md` | `B-046` raised; `B-039` extended with a fourth, measured stale claim; summary 11 → 12 open |
-| `.ai/planning/SPRINT-CURRENT.md` | Item 7 narrowed from "never exercised" to "gates 1-3 exercised, 4 blocked, 5-9 not reached" |
-| `.ai/context/CURRENT_STATE.md` | New dated section |
-| `/tmp/opencode/ansible-ops-pilot/change-record.md` | Partial record, scratch, deliberately unclosed. Quoted below |
+| `/home/armando.martires/SIGMA-infrastructure/` | **Untouched and verified so**, after both attempts: `HEAD` `2a6be9a` unmoved, porcelain empty, every file under `state/baseline/` byte-identical by checksum and no new snapshot file, before and after. `ansible.log` grew (gitignored, untracked) — that is gates 2-4 logging |
+| `.ai/planning/BACKLOG.md` | Attempt 1: `B-046` raised; `B-039` extended with a fourth, measured stale claim. Attempt 2: `B-046` narrowed to a documentation item with its two-part prerequisite measured; **`B-050` raised** (gate 5 cannot derive a verdict for a control-flow action from its own documentation) |
+| `.ai/planning/SPRINT-CURRENT.md` | Item 7: attempt 1 "gates 1-3 exercised, 4 blocked"; attempt 2 **"gates 1-5 exercised, 6-9 unauthorized"** |
+| `.ai/context/CURRENT_STATE.md` | A dated section per attempt |
+| `/tmp/opencode/ansible-ops-pilot/change-record.md` | Scratch record, **seven of nine fields filled**, deliberately unclosed. The checker names exactly the gate-6 and gate-9 fields |
+| `.claude/settings.local.json` | **Gitignored, machine-local.** One exact-match allow rule for the gate-4 command, granted by the human 2026-09-30. Not a repo change; recorded because gate 4's evidence depends on it |
 | Authorization section | **Still unfilled.** Phase 2 never started |
 
-**This task is NOT done.** It stops at gate 4 and stays `blocked`. Closing it
-as `done` would claim the skill was exercised when two-thirds of its gates
-were not reached.
+**This task is NOT done.** Phase 1 (gates 1-5) is complete, which the
+acceptance criteria name as a complete outcome for this task — but the task
+stays `blocked` on the Authorization section, and closing it as `done` would
+claim the skill's estate-changing gates were exercised when none was.
 
 **Deviations.**
 
@@ -246,21 +248,32 @@ were not reached.
    from the estate's own files; what is untested is the skill's behaviour
    around an actual mutation.
 3. **Step 2's cluster check found the brief's own premise stale** — see below.
+4. **Attempt 2 ran gate 4 under a human-granted, single-command allow rule**
+   rather than the `TASK-0016` shape — the human's choice between the two
+   options attempt 1 left. The grant then exposed a second barrier nobody had
+   predicted (ansible-core refusing non-blocking stdio), so the command that
+   ran redirects its output to a file. The flags, limit and play are exactly
+   attempt 1's.
+5. **`include_tasks`'s fidelity verdict was declared, not derived.** Role 5
+   (the module's own documentation) returns `check_mode.support: none` for it,
+   which contradicts the observed run. Recorded as `not-applicable` on a
+   stated reason and raised as `B-050`, rather than papered over.
 
-**Next task starts here**: gates 1-3 are evidenced; gate 4 needs either a Bash
-permission grant for `ansible-playbook` or the `TASK-0016`/`TASK-0017` shape
-(human executes, agent records). Gates 6-9 need the Authorization section
-filled by a human. `B-046` and the `B-039` extension are open.
+**Next task starts here**: gates 1-5 are evidenced, with a seven-of-nine
+record whose checker complaint names only gates 6 and 9. Phase 2 needs a human
+to fill the Authorization section with a *mutating* change — the read-back
+play has no gate-6 snapshot worth taking. `B-046` (document the prerequisite
+in the loop), `B-050` and the `B-039` extension are open.
 
 ## Status
 
 - Status: blocked   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: human
 - Created: 2026-09-27
-- Updated: 2026-09-27
+- Updated: 2026-09-30
 
-Phase 1 (gates 1–5, read-only) is runnable by an agent now. Phase 2 (gates 6–9)
-is blocked until a human fills the Authorization section above. Owner is
+Phase 1 (gates 1–5, read-only) is **complete** as of attempt 2. Phase 2 (gates
+6–9) is blocked until a human fills the Authorization section above. Owner is
 `human` because the task cannot complete without that act.
 
 ## Execution log
@@ -342,3 +355,110 @@ is blocked until a human fills the Authorization section above. Owner is
 - Commit: `3beca5e` (partial — the task is not closed by it)
 - Push: confirmed — `e995b7f..3beca5e  master -> master` to `origin`;
   `git remote -v` token-free, `master...origin/master` in sync
+
+### Attempt 2
+
+- Date: 2026-09-30
+- Agent: Claude Opus 5.5, Claude Code
+- Actions:
+  1. **Route for gate 4 chosen by the human**, asked with the two options
+     attempt 1 left plus "leave blocked": *grant a narrow allow rule*. Written
+     to the gitignored `.claude/settings.local.json` as one exact-match rule —
+     the gate-4 command verbatim, no wildcard.
+  2. Estate before-state: `HEAD` `2a6be9a`, porcelain empty, md5 of all six
+     files under `state/baseline/` recorded; `community.proxmox 2.0.0`.
+  3. **Step 2's health check re-run** before anything connected, same tool,
+     same method (serial, `/proc/self/mounts`, never `/etc/pve`):
+
+     ```
+     node  nodes quorate votes   ring  coro_rss pmxcfs cfgver
+     sigsrvpve1   6  Yes  6/6  1.22d4  1045MB mounted 20
+     (pve2 170MB, pve3 170MB, pve7 186MB, pve4 186MB, pve6 186MB — otherwise identical)
+     PASS  all nodes share one Ring ID: 1.22d4
+     OVERALL: PASS - quorum, ring, pmxcfs and all services healthy
+     ```
+  4. **Gate 4, first try — the grant worked, a second barrier did not.** The
+     allow rule let the command through; ansible-core itself then refused:
+     `ERROR: Ansible requires blocking IO on stdin/stdout/stderr. Non-blocking
+     file handles detected: <stdout>, <stderr>`. The rule was narrowed to the
+     same command with `> <scratch>/gate4.log 2>&1 < /dev/null` appended —
+     still one exact string, now with blocking handles.
+  5. **Gate 4 — performed.** `ansible-playbook --check --diff --limit
+     sigsrvpve1 playbooks/capture_pve_baseline.yml`, exit 0:
+
+     ```
+     PLAY RECAP
+     sigsrvpve1 : ok=18 changed=2 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
+     ```
+
+     Every task ran `-> localhost` against the API. The two `changed` are the
+     two `copy` tasks: a new `state/baseline/2026-09-30T00:36:18Z.json` and a
+     unified diff of `latest.json` (`captured_at` 2026-09-22 → 2026-09-30, plus
+     the live payload). That is the play's intended effect, predicted and not
+     performed. 3,088 lines of output, kept in scratch, not pasted: they carry
+     internal addressing, and this repository is public.
+  6. **Gate 5 — per module, from role 5** (`ansible-doc --json`, installed
+     versions ansible-core 2.21.4 / community.proxmox 2.0.0):
+
+     | Module | Documented `check_mode.support` | Verdict | Why |
+     |---|---|---|---|
+     | `ansible.builtin.copy` | full | `proven` | Touches file content; the diff shows it comparing content |
+     | `ansible.builtin.file` | full | `proven` | Touches directory existence; reported `ok` on the existing dir |
+     | `community.proxmox.proxmox_cluster_status_info` | full — "does not modify state" | `proven` | Check path is the run path; returned live data |
+     | `community.proxmox.proxmox_node_info` | full — same | `proven` | same |
+     | `community.proxmox.proxmox_node_network_info` | full — "fully supported" | `proven` | same |
+     | `community.proxmox.proxmox_storage_info` | full — "does not modify state" | `proven` | same. **Not** `proxmox_storage`, the module `check-mode-fidelity.md`'s dated 2.0.0 illustration concerns — same collection version, different module, and the illustration is not generalised |
+     | `community.proxmox.proxmox_vm_info` | full — same | `proven` | same |
+     | `ansible.builtin.debug` | full | `not-applicable` | Touches no state |
+     | `ansible.builtin.set_fact` | full | `not-applicable` | In-memory facts only |
+     | `ansible.builtin.include_tasks` | **none** | `not-applicable` | **Declared, not derived** — see observations |
+
+  7. Estate after-state verified; record filled through gate 5; checker run.
+- Observations:
+  - **Gates 4 and 5 were followable as written.** Gate 4 needed nothing the
+    skill did not say. Gate 5's role-5 derivation produced an answer for nine
+    of ten modules directly from the installed documentation.
+  - **The tenth is a real misfit, not awkwardness.** `include_tasks`
+    documents `check_mode.support: none` with the generic text *"if not
+    supported the action will be skipped"* — and it was **not** skipped: the
+    tasks it includes ran under `--check`, visibly, in the log. Role 5 applied
+    literally yields `none`, which is no legal verdict; the nearest is
+    `unknown`, which **stops the change** — on a play whose every
+    state-touching module is `full`. Gate 1 listed it in `modules_touched`
+    because it is invoked, and the skill gives no rule for control-flow
+    actions. Raised as **`B-050`**. The skill is not edited (Scope).
+  - **`B-046` has two parts, and attempt 1 could only see the first.** The
+    classifier denial is answered by an exact-match allow rule; behind it,
+    ansible-core 2.21.4 refuses non-blocking stdio, which this harness's Bash
+    tool supplies. A loop that documented only the permission would still fail
+    here. Both are now measured, which turns `B-046` from an open question
+    into a documentation item.
+  - **The record checker routes correctly for a second time.** Against the
+    seven-of-nine record:
+
+    ```
+    RECORD NOT ACCEPTED: /tmp/opencode/ansible-ops-pilot/change-record.md
+      MISSING FIELD: snapshot_ref
+      MISSING FIELD: rollback_verified
+      MISSING FIELD: approver
+    ```
+
+    Gates 6 and 9, and nothing else; the ten fidelity entries were accepted.
+  - **The cluster moved between attempts and still passes.** Ring `1.22c3` →
+    `1.22d4` means at least one membership event since 2026-09-28; quorum is
+    6-of-6 either side. `sigsrvpve1`'s corosync RSS is **1045 MB** against
+    ~180 MB on its five peers; the tool does not flag it and nothing here
+    depends on it. Recorded as an observation, not raised — it is the estate's
+    to judge, and this task edits nothing there.
+- Validation:
+  - `tools/pve_verify_cluster.py` → `OVERALL: PASS`, exit 0
+  - gate 4 → exit 0, `failed=0`
+  - `check-change-record.sh` → exit 1, three named missing fields (expected)
+  - Estate: `HEAD` `2a6be9a` and porcelain empty before and after;
+    `md5sum -c` over `state/baseline/*` all `OK`; no new file
+  - `git diff --stat -- skills/ansible-ops/` → empty
+  - `tests/validate.sh`, `scripts/sync-registry.sh` — see the commit
+- Result: **Phase 1 complete; task stays `blocked` on phase 2's
+  Authorization.** `B-046` narrowed; `B-050` raised.
+- Commit: recorded in the follow-up record commit
+- Push: recorded in the follow-up record commit

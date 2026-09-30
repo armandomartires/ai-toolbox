@@ -144,8 +144,9 @@ mean inventing the second case it waits for.
    re-measured — changing the tool in that run would make the delta
    unattributable. Raised instead: **`B-039`**, three now-false claims in the
    estate's own `ansible.cfg`, which this repository cannot fix.
-7. **`skills/ansible-ops/` — PARTLY exercised 2026-09-28 by `TASK-0116`, and
-   the limitation is narrowed rather than lifted.** Its closing item
+7. **`skills/ansible-ops/` — gates 1-5 exercised by `TASK-0116` (1-3 on
+   2026-09-28, 4-5 on 2026-09-30); the limitation is narrowed, not lifted —
+   every gate that changes state (6-9) is still unexercised.** Its closing item
    (`B-010`) was closed *with this limitation stated*; a closed item is not a
    claim of quality, and that still holds for gates 4-9.
 
@@ -175,6 +176,17 @@ mean inventing the second case it waits for.
    quorum with no verified margin" that `ansible.cfg` calls the current normal
    is false. Added to `B-039`. Also nearly got wrong and worth stating: `ping`
    reports every node unreachable because ICMP is filtered; TCP/22 is open.
+
+   **2026-09-30, attempt 2: gates 4 and 5 ran.** The human granted one
+   exact-match allow rule; behind it sat a second barrier — ansible-core
+   2.21.4 refuses non-blocking stdio — cleared by redirecting to a file. Gate 4
+   exit 0, `ok=18 changed=2 failed=0`, the two `changed` being the play's own
+   predicted snapshot writes; estate verified untouched by checksum. Gate 5
+   derived nine of ten verdicts from installed documentation;
+   **`include_tasks` documents check-mode support `none` yet ran**, so role 5
+   cannot answer for control-flow actions — `B-050`. `B-046` is now a
+   documentation item with both parts measured. The checker names only gates
+   6 and 9. **Phase 2 still needs the Authorization section filled by a human.**
 8. **An untested commitment, stated a third time.** *"If a sprint shrinks, the
    honest cut is a product, never the spike"* has now been stated by three
    sprints and exercised by none. Neither S9 nor S10 shrank either. It

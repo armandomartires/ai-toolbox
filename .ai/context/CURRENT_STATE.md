@@ -1,5 +1,23 @@
 # Current State
 
+## `skills/ansible-ops/` gates 4-5 exercised live (`TASK-0116` attempt 2, `B-050` raised)
+
+**2026-09-30.** Gate 4 — `--check --diff --limit sigsrvpve1` of the read-back
+baseline play — ran against the real estate, exit 0, `ok=18 changed=2
+failed=0`; the two `changed` are the play's own snapshot writes, predicted and
+not performed (estate `HEAD`, porcelain and every `state/baseline/` checksum
+identical either side). **The skill is now exercised through gate 5; gates 6-9,
+the only ones that change state, are not**, and wait on a human filling the
+task file's Authorization section with a mutating change.
+
+**Two things only running it could show.** `B-046`'s prerequisite has two
+parts: an exact-match allow rule clears the classifier, and then ansible-core
+2.21.4 refuses non-blocking stdio, which the Bash tool supplies — redirect to a
+file. And gate 5's role-5 derivation **cannot answer for control-flow actions**:
+`include_tasks` documents check-mode support `none` and ran anyway, so the rule
+as written would stop a change whose every state-touching module is `full`
+(`B-050`). `skills/ansible-ops/` byte-identical; fixes are separate tasks.
+
 ## The dashboard can publish to GitHub Pages or GitLab Pages (`TASK-0127`, `B-048` closed)
 
 **2026-09-29, the human's request.** `skills/project-workflow/` (`5.1.0`) now
