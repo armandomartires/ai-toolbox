@@ -440,5 +440,8 @@ same framing, and was reworded too.
 - Result: done. The page's rebuild on the landed commit is observed before
   the record commit and reported to the human. It is not recorded here,
   because the record commit replaces only the two lines below.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `d3981d1` — *Record why only CI builds the published dashboard
+  (TASK-0128)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `cafbfe3..d3981d1 HEAD -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `d3981d1`, and `git remote -v` is token-free
