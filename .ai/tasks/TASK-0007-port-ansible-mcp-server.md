@@ -149,32 +149,32 @@ The server exposes 10 tools. These are **not read-only**:
     the diff. Commit.
 
 ## Acceptance criteria
-- [ ] `mcp-servers/ansible/server.json` exists, conforms to the
+- [x] `mcp-servers/ansible/server.json` exists, conforms to the
       documented schema, and contains **no vendored upstream source**.
-- [ ] Manifest lists every destructive tool and points
+- [x] Manifest lists every destructive tool and points
       `authorization.task` at this file.
-- [ ] `docs/registry.md` (generated) lists `ansible` with shape
+- [x] `docs/registry.md` (generated) lists `ansible` with shape
       `external`.
-- [ ] All three `configs/*/README.md` files carry an ansible wiring
+- [x] All three `configs/*/README.md` files carry an ansible wiring
       snippet with required env vars and the destructive-capability
       warning; any unverified snippet is labelled as such.
-- [ ] The version-pinning decision is made and recorded, and the
+- [x] The version-pinning decision is made and recorded, and the
       manifest and all snippets agree with it.
-- [ ] `runtime.declared` and `runtime.tested` both recorded.
-- [ ] Phase 3 client verification done from a clean start, **or** its
+- [x] `runtime.declared` and `runtime.tested` both recorded.
+- [x] Phase 3 client verification done from a clean start, **or** its
       absence explicitly recorded.
-- [ ] Nothing in `scripts/` or the schema changed by this task.
+- [x] Nothing in `scripts/` or the schema changed by this task.
 
 ## Mandatory validations
-- [ ] `bash tests/validate.sh` — passes.
-- [ ] Authorization check seen to fail: set
+- [x] `bash tests/validate.sh` — passes.
+- [x] Authorization check seen to fail: set
       `authorization.granted: false`, confirm non-zero exit with the
       expected message, restore, re-confirm pass. Record both outputs.
-- [ ] `bash scripts/sync-registry.sh` — registry regenerated; diff
+- [x] `bash scripts/sync-registry.sh` — registry regenerated; diff
       reviewed; no template rows.
-- [ ] `bash scripts/install.sh link` — clean run, ansible launch line
+- [x] `bash scripts/install.sh link` — clean run, ansible launch line
       printed.
-- [ ] Live server re-verified: tool list captured in the execution log
+- [x] Live server re-verified: tool list captured in the execution log
       and compared against the authorized destructive-tool table.
 - [ ] `git status` clean at end.
 

@@ -103,24 +103,24 @@ an unbounded instruction, which is how an agent ends up retrying forever.
    commit.
 
 ## Acceptance criteria
-- [ ] `loops/release-check/loop.md` exists with all five required
+- [x] `loops/release-check/loop.md` exists with all five required
       elements, and its `name` matches the directory.
-- [ ] The loop links to `AGENTS.md` for rules rather than restating them —
+- [x] The loop links to `AGENTS.md` for rules rather than restating them —
       no rule text duplicated from `AGENTS.md` or the runbook.
-- [ ] Exit conditions cover success *and* failure, with a retry bound and
+- [x] Exit conditions cover success *and* failure, with a retry bound and
       an escalation path.
-- [ ] `tests/validate.sh` rejects: missing `name`, missing `description`,
+- [x] `tests/validate.sh` rejects: missing `name`, missing `description`,
       `name`≠directory, and each missing required section.
-- [ ] Authoring guide documents the loop structure at the same depth as
+- [x] Authoring guide documents the loop structure at the same depth as
       the skills and MCP sections.
-- [ ] `docs/registry.md` lists `release-check` under Loops; no template
+- [x] `docs/registry.md` lists `release-check` under Loops; no template
       appears in any table.
-- [ ] Backlog B-006 marked done, with its verb corrected from "port" to
+- [x] Backlog B-006 marked done, with its verb corrected from "port" to
       "author" for the record.
 
 ## Mandatory validations
-- [ ] `bash tests/validate.sh` — passes.
-- [ ] **Fails-when-broken proof**, each observed failing for its own
+- [x] `bash tests/validate.sh` — passes.
+- [x] **Fails-when-broken proof**, each observed failing for its own
       expected reason, then removed:
       1. loop dir with no frontmatter `name`;
       2. no frontmatter `description`;
@@ -133,8 +133,8 @@ an unbounded instruction, which is how an agent ends up retrying forever.
       Record each observed message.
 - [ ] `bash scripts/sync-registry.sh`; `git diff docs/registry.md` shows
       only the new Loops row.
-- [ ] `bash scripts/install.sh link` — unchanged behaviour, still clean.
-- [ ] **Dogfood check:** follow `release-check` itself to close this task.
+- [x] `bash scripts/install.sh link` — unchanged behaviour, still clean.
+- [x] **Dogfood check:** follow `release-check` itself to close this task.
       If the loop cannot be followed for its own commit, it is wrong —
       record where it failed and fix it rather than shipping a workflow
       that does not survive first use.

@@ -83,19 +83,19 @@ label. What was really changed is in **Outputs / handover**.
 
 ## Acceptance criteria
 
-- [ ] `ADR-0023` reads **`Accepted — 2026-09-23`** and names who ratified it.
-- [ ] The prior `Proposed` text is **preserved**, not deleted.
-- [ ] `AGENTS.md` no longer calls it `Proposed`, and says `master` still takes
+- [x] `ADR-0023` reads **`Accepted — 2026-09-23`** and names who ratified it.
+- [x] The prior `Proposed` text is **preserved**, not deleted.
+- [x] `AGENTS.md` no longer calls it `Proposed`, and says `master` still takes
       one commit per task — so a reader cannot mistake this for a branching
       workflow, which is the misreading the ADR named.
-- [ ] Clause 5's no-check stance is recorded as ratified, not as a gap.
-- [ ] The ADR and `AGENTS.md` move in **one commit**.
-- [ ] `tests/validate.sh` passes; no component file changed.
+- [x] Clause 5's no-check stance is recorded as ratified, not as a gap.
+- [x] The ADR and `AGENTS.md` move in **one commit**.
+- [x] `tests/validate.sh` passes; no component file changed.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `git status --porcelain`
+- [x] `tests/validate.sh`
+- [x] `git status --porcelain`
 
 ## Risks and rollback
 

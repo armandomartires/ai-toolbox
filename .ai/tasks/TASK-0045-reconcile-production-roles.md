@@ -229,28 +229,28 @@ scope changes before it starts.
 13. Review the diff; commit; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] All three boundaries preserved, **verified in emitted output** per
+- [x] All three boundaries preserved, **verified in emitted output** per
       client rather than in the source
-- [ ] **`review` demonstrably cannot edit or write** in either client
-- [ ] **`qa-test`'s test-files-only edit demonstrated in both directions**:
+- [x] **`review` demonstrably cannot edit or write** in either client
+- [x] **`qa-test`'s test-files-only edit demonstrated in both directions**:
       a test file editable, an application file not
-- [ ] **`git-ops` demonstrably cannot force-push, hard-reset or rebase**,
+- [x] **`git-ops` demonstrably cannot force-push, hard-reset or rebase**,
       and `git push` resolves to `ask`
-- [ ] The ownership question **decided with reasoning**; exactly one owner
+- [x] The ownership question **decided with reasoning**; exactly one owner
       per role afterwards; `install-tiers.ps1` still functional
-- [ ] The `shell-runner` question decided with reasoning
-- [ ] It is recorded that `plan`/`build` cannot be `agents/` components, and
+- [x] The `shell-runner` question decided with reasoning
+- [x] It is recorded that `plan`/`build` cannot be `agents/` components, and
       how the loop accommodates a mixed role set
-- [ ] No client-native permission syntax in any source file
-- [ ] If `qa-test`'s glob-scoped edit is unexpressible, it is **recorded as
+- [x] No client-native permission syntax in any source file
+- [x] If `qa-test`'s glob-scoped edit is unexpressible, it is **recorded as
       a documented limitation** of ADR-0018 and escalated — not worked
       around per client
-- [ ] No `agent` key added to any `opencode.jsonc`
-- [ ] `tests/validate.sh` green; registry regenerated and committed
+- [x] No `agent` key added to any `opencode.jsonc`
+- [x] `tests/validate.sh` green; registry regenerated and committed
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **required**
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **required**
 
 ## Risks and rollback
 - **Risk: `review` emitted with edit rights.** The highest-consequence error

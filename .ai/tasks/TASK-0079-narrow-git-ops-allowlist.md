@@ -116,19 +116,19 @@ label. What was really changed is in **Outputs / handover**.
 
 ## Acceptance criteria
 
-- [ ] `git add -A`, `git add .`, `git checkout -- *`, `git restore *`,
+- [x] `git add -A`, `git add .`, `git checkout -- *`, `git restore *`,
       `git rm *`, `git stash drop`, `git branch -D`, `git remote set-url`
       all resolve to **deny**.
-- [ ] `git add -- <path>` and `git commit -m <msg>` resolve to **allow**.
-- [ ] `git push` still resolves to **ask**, unchanged.
-- [ ] Both shipped loops' step 7 needs nothing outside the list.
-- [ ] The role's body states the mandatory `--` staging form.
-- [ ] `tests/validate.sh` passes; the registry row is unchanged.
+- [x] `git add -- <path>` and `git commit -m <msg>` resolve to **allow**.
+- [x] `git push` still resolves to **ask**, unchanged.
+- [x] Both shipped loops' step 7 needs nothing outside the list.
+- [x] The role's body states the mandatory `--` staging form.
+- [x] `tests/validate.sh` passes; the registry row is unchanged.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff — description unchanged)
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff — description unchanged)
 - [ ] `git status --porcelain`
 
 ## Risks and rollback

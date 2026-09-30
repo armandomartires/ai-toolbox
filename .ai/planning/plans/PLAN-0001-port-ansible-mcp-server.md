@@ -168,15 +168,15 @@ rather than filling it in, that is TASK-0006's work leaking — stop and
 re-scope rather than absorbing it.
 
 ## Acceptance criteria (plan level)
-- [ ] `mcp-servers/` contains a real, non-template external server.
-- [ ] `docs/registry.md` lists it, generated — not hand-edited — with
+- [x] `mcp-servers/` contains a real, non-template external server.
+- [x] `docs/registry.md` lists it, generated — not hand-edited — with
       its shape stated.
-- [ ] `tests/validate.sh` mechanically enforces the destructive-
+- [x] `tests/validate.sh` mechanically enforces the destructive-
       capability authorization rule that is currently prose-only.
-- [ ] No upstream source is vendored (ADR-0005 compliance).
-- [ ] The wiring snippet is verified from a clean start in ≥1 client, or
+- [x] No upstream source is vendored (ADR-0005 compliance).
+- [x] The wiring snippet is verified from a clean start in ≥1 client, or
       the absence of that verification is recorded.
-- [ ] `AGENTS.md`, the authoring guide, `PROJECT_MAP.md`, `GLOSSARY.md`
+- [x] `AGENTS.md`, the authoring guide, `PROJECT_MAP.md`, `GLOSSARY.md`
       and ADR-0005 all agree on where external-server metadata lives.
 
 ## Risks

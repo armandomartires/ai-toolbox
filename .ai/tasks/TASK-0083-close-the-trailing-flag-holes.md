@@ -97,22 +97,22 @@ writing and nothing guarantees it still is.
 
 ## Acceptance criteria
 
-- [ ] All three forms resolve to **deny**, **observed against the client**,
+- [x] All three forms resolve to **deny**, **observed against the client**,
       with the tool state recorded — or any that cannot is recorded as a
       stated limitation with its reason.
-- [ ] The controls from `TASK-0082` still behave: `git commit -m msg` and
+- [x] The controls from `TASK-0082` still behave: `git commit -m msg` and
       `git add -- file` remain **allowed**; a narrowing has not become a
       blanket denial.
-- [ ] `no-bypass` is defined in the guide before it is enforced anywhere.
-- [ ] Pairing `no-bypass` with `no-bash` fails the gate, observed.
-- [ ] Counts agree across guide, gate and emitter.
-- [ ] `tests/validate.sh` passes; the registry is unchanged.
+- [x] `no-bypass` is defined in the guide before it is enforced anywhere.
+- [x] Pairing `no-bypass` with `no-bash` fails the gate, observed.
+- [x] Counts agree across guide, gate and emitter.
+- [x] `tests/validate.sh` passes; the registry is unchanged.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff)
-- [ ] `git status --porcelain`
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff)
+- [x] `git status --porcelain`
 
 ## Risks and rollback
 

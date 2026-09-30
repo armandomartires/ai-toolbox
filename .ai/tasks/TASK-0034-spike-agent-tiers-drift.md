@@ -164,27 +164,27 @@ paths are the same tree and a diff between them would be meaningless.
     brief, so the gate should be green throughout.
 
 ## Acceptance criteria
-- [ ] The current differing set is recorded, measured rather than cited
-- [ ] Each differing file has a content diff and a newer-side determination
+- [x] The current differing set is recorded, measured rather than cited
+- [x] Each differing file has a content diff and a newer-side determination
       **with its basis stated** (mtime, git log, or content)
-- [ ] Whether the newer side is **consistent across files** is answered
+- [x] Whether the newer side is **consistent across files** is answered
       explicitly — it decides pick-a-side vs merge-per-file
-- [ ] Every citation in `SKILL.md` that would dangle after the move is
+- [x] Every citation in `SKILL.md` that would dangle after the move is
       listed, so ADR-0017 clause 1 has a concrete target list
-- [ ] The five model IDs are checked against a live `opencode models`
+- [x] The five model IDs are checked against a live `opencode models`
       listing, with the date recorded, and the result stated per ID
-- [ ] A recommendation on whether `tier3.md`/`bmad.md` are in scope for the
+- [x] A recommendation on whether `tier3.md`/`bmad.md` are in scope for the
       import, with reasoning
-- [ ] A per-file drift resolution recommendation sufficient for ADR-0017 to
+- [x] A per-file drift resolution recommendation sufficient for ADR-0017 to
       cite
-- [ ] `git status` in `opencode-customization` byte-identical before and
+- [x] `git status` in `opencode-customization` byte-identical before and
       after
-- [ ] `~/.config/opencode/` unmodified; no `agent` key added to
+- [x] `~/.config/opencode/` unmodified; no `agent` key added to
       `opencode.jsonc`
-- [ ] No secret material read, copied, or printed
+- [x] No secret material read, copied, or printed
 
 ## Mandatory validations
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 - [ ] scripts/sync-registry.sh (if components changed) — **not expected**;
       this task adds no component
 

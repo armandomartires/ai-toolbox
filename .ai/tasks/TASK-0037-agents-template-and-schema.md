@@ -177,29 +177,29 @@ of order.
 12. Review the diff; commit; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] `docs/development/authoring-guide.md` has an Agents section with a
+- [x] `docs/development/authoring-guide.md` has an Agents section with a
       rule table whose every row states a **reason**, matching the three
       existing sections' style
-- [ ] The abstract capability vocabulary is enumerated, each term mapped to
+- [x] The abstract capability vocabulary is enumerated, each term mapped to
       **both** clients, with the exclusion rule stated
-- [ ] The guide states explicitly that a role file must not contain
+- [x] The guide states explicitly that a role file must not contain
       client-native permission syntax, and why
-- [ ] The guide states that **no size budget exists** for agent files, in
+- [x] The guide states that **no size budget exists** for agent files, in
       the same terms as `:17-21` does for skills
-- [ ] Claude Code's 15,000-token description warning is documented as a
+- [x] Claude Code's 15,000-token description warning is documented as a
       vendor threshold, explicitly **not** a gated rule
-- [ ] `agents/_template/agent.md` exists and satisfies every schema rule
+- [x] `agents/_template/agent.md` exists and satisfies every schema rule
       except name↔directory
-- [ ] The schema can express all four `agent-tiers` role boundaries; any it
+- [x] The schema can express all four `agent-tiers` role boundaries; any it
       cannot is **recorded as a finding**, not silently dropped
-- [ ] `agents/README.md` points at the guide rather than restating rules
-- [ ] `tests/validate.sh` green, **with the note that this proves nothing
+- [x] `agents/README.md` points at the guide rather than restating rules
+- [x] `tests/validate.sh` green, **with the note that this proves nothing
       about `agents/` yet**
-- [ ] `scripts/sync-registry.sh` produces no diff
+- [x] `scripts/sync-registry.sh` produces no diff
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — run it; the correct
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — run it; the correct
       result is **no diff**, since no agent kind exists yet. Running it
       proves that rather than asserting it
 

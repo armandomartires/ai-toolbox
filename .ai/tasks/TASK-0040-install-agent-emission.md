@@ -179,31 +179,31 @@ current line numbers.
 16. Review the diff; commit; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] `CLIENTS` carries each client's agents target; the choice of fourth
+- [x] `CLIENTS` carries each client's agents target; the choice of fourth
       column vs second table is **recorded with its reasoning**
-- [ ] `validate.sh`'s config-pairing check still passes **and is observed
+- [x] `validate.sh`'s config-pairing check still passes **and is observed
       still failing** on a bogus client row
-- [ ] An emitted file is produced per role per supporting client, from one
+- [x] An emitted file is produced per role per supporting client, from one
       source
-- [ ] **Every capability vocabulary term is demonstrated** emitting the
+- [x] **Every capability vocabulary term is demonstrated** emitting the
       correct client-native syntax in both clients — recorded per term, not
       summarised
-- [ ] No `link` or `copy` mode for agents
-- [ ] `_template*` not emitted
-- [ ] A comment at the emission point states why no freshness check exists,
+- [x] No `link` or `copy` mode for agents
+- [x] `_template*` not emitted
+- [x] A comment at the emission point states why no freshness check exists,
       citing ADR-0018 clause 4 and ADR-0009
-- [ ] Absent-parent clients are skipped without creating anything; an
+- [x] Absent-parent clients are skipped without creating anything; an
       existing parent's missing agents subdirectory **is** created
-- [ ] No `agent` key written to any `opencode.jsonc`
-- [ ] All three `configs/*/README.md` state their agents position; LM
+- [x] No `agent` key written to any `opencode.jsonc`
+- [x] All three `configs/*/README.md` state their agents position; LM
       Studio's says not supported
-- [ ] The **stale-emitted-file** behaviour after a role is removed is
+- [x] The **stale-emitted-file** behaviour after a role is removed is
       recorded as a known property
-- [ ] `tests/validate.sh` green; `scripts/sync-registry.sh` run
+- [x] `tests/validate.sh` green; `scripts/sync-registry.sh` run
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — run it; a diff is
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — run it; a diff is
       possible if fixtures were left, which would itself be the finding
 
 ## Risks and rollback

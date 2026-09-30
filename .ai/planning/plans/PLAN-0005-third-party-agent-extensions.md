@@ -232,31 +232,31 @@ collision explicitly before parallelising.
 
 Sprint-level. Per-task criteria live in the task files.
 
-- [ ] `ADR-0021` is ratified or rejected by a human, on `TASK-0048`'s
+- [x] `ADR-0021` is ratified or rejected by a human, on `TASK-0048`'s
       evidence — not on agreement with its prose.
-- [ ] No `plugins/` directory exists; `install.sh`, `sync-registry.sh` and
+- [x] No `plugins/` directory exists; `install.sh`, `sync-registry.sh` and
       `validate.sh` have **no** new-category plumbing. (A precondition-aware
       fix to `smoke-mcp.sh` is permitted and is not category plumbing.)
-- [ ] No third-party source is vendored: `skills/`, `agents/`, `loops/`
+- [x] No third-party source is vendored: `skills/`, `agents/`, `loops/`
       gain nothing from ponytail, graphify or omniroute.
-- [ ] `mcp-servers/graphify/server.json` exists, passes the manifest
+- [x] `mcp-servers/graphify/server.json` exists, passes the manifest
       checks, and is pinned to an exact upstream version.
-- [ ] Every required env var in that manifest appears in `.env.example`
+- [x] Every required env var in that manifest appears in `.env.example`
       (the gate enforces this; if the manifest needs none, that is stated).
-- [ ] Each of the three `configs/*/README.md` describes ponytail's real
+- [x] Each of the three `configs/*/README.md` describes ponytail's real
       mechanism *for that client*, or states plainly that there is none.
-- [ ] Bionic's ponytail status is recorded as **unverified**, with the
+- [x] Bionic's ponytail status is recorded as **unverified**, with the
       B-018 approval-gating constraint referenced rather than restated.
-- [ ] `docs/development/third-party-tools.md` documents omniroute as
+- [x] `docs/development/third-party-tools.md` documents omniroute as
       optional and never-installed, including `mcpAutoEmit`'s config
       mutation.
-- [ ] The authoring guide carries the placement rule, so the category
+- [x] The authoring guide carries the placement rule, so the category
       question is answered where an author will look.
-- [ ] Every capability claim about a client is labelled *vendor doc* or
+- [x] Every capability claim about a client is labelled *vendor doc* or
       *observed on <date>, <version>*.
-- [ ] `tests/validate.sh` passes; `scripts/sync-registry.sh` re-run and the
+- [x] `tests/validate.sh` passes; `scripts/sync-registry.sh` re-run and the
       regenerated registry committed.
-- [ ] `REVIEW-0009` answers its pre-committed question with evidence.
+- [x] `REVIEW-0009` answers its pre-committed question with evidence.
 
 ## Risks
 

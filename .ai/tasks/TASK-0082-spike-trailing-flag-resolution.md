@@ -87,19 +87,19 @@ This task file only, plus a scratch directory outside the repo.
 
 ## Acceptance criteria
 
-- [ ] The `opencode` version is recorded verbatim, with the date.
-- [ ] Each of the three forms carries **confirmed / falsified / unsettled**,
+- [x] The `opencode` version is recorded verbatim, with the date.
+- [x] Each of the three forms carries **confirmed / falsified / unsettled**,
       with the command and the observed outcome.
-- [ ] Both controls are recorded, and the discriminating one is shown to deny.
-- [ ] The fixture's permission block is byte-identical to the emitted
+- [x] Both controls are recorded, and the discriminating one is shown to deny.
+- [x] The fixture's permission block is byte-identical to the emitted
       `closer`'s, and that is shown rather than asserted.
-- [ ] No component file changed; fixtures removed and removal verified.
-- [ ] Anything unreached is recorded as unsettled, never reasoned to.
+- [x] No component file changed; fixtures removed and removal verified.
+- [x] Anything unreached is recorded as unsettled, never reasoned to.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `git status --porcelain` — this task file only
+- [x] `tests/validate.sh`
+- [x] `git status --porcelain` — this task file only
 
 ## Risks and rollback
 

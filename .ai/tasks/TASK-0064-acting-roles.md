@@ -141,28 +141,28 @@ them as universal.
 
 ## Acceptance criteria
 
-- [ ] Five role directories exist; all five emit for opencode only, and the
+- [x] Five role directories exist; all five emit for opencode only, and the
       emitter **refuses** `claude-code` for each.
-- [ ] Each emitted `bash` map begins with `"*": deny`, and every narrowing deny
+- [x] Each emitted `bash` map begins with `"*": deny`, and every narrowing deny
       follows the allow it narrows.
-- [ ] `git add -A`, `git add .` and `git push` each resolve to **deny** in the
+- [x] `git add -A`, `git add .` and `git push` each resolve to **deny** in the
       emitted closer, **verified by reading the emitted file**, with the
       resolution recorded here.
-- [ ] `git stash drop` and `git stash clear` resolve to deny in `park-steward`.
-- [ ] The closer's body states why `push-requires-confirmation` is absent.
-- [ ] `park-steward`'s body explains why `read-only` and stashing are compatible.
-- [ ] `gate-runner`'s description claims only what its allowlist permits, and
+- [x] `git stash drop` and `git stash clear` resolve to deny in `park-steward`.
+- [x] The closer's body states why `push-requires-confirmation` is absent.
+- [x] `park-steward`'s body explains why `read-only` and stashing are compatible.
+- [x] `gate-runner`'s description claims only what its allowlist permits, and
       this file states plainly that **B-021 is not closed**.
-- [ ] `git-ops` no longer permits `git add -A`, and both existing loops still
-      work with the narrowed allowlist.
-- [ ] If F4 was falsified, the fallback chosen is named with its reason.
-- [ ] Registry regenerated with client coverage.
+- [x] `git-ops` no longer permits `git add -A`, and both existing loops still
+      work with the narrowed allowlist. — met later by TASK-0079
+- [x] If F4 was falsified, the fallback chosen is named with its reason.
+- [x] Registry regenerated with client coverage.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` then `git diff --exit-code docs/registry.md`
-- [ ] `python3 scripts/emit-agents.py` for both clients; the refusal captured
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` then `git diff --exit-code docs/registry.md`
+- [x] `python3 scripts/emit-agents.py` for both clients; the refusal captured
 
 ## Risks and rollback
 

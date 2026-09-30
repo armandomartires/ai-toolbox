@@ -101,24 +101,24 @@ let a skip masquerade as a pass in the output.
    Mandatory validations). Close B-003.
 
 ## Acceptance criteria
-- [ ] `bash tests/smoke-mcp.sh` verifies every external server via a real
+- [x] `bash tests/smoke-mcp.sh` verifies every external server via a real
       MCP `initialize` handshake and prints the returned `serverInfo`.
-- [ ] `--server ansible` tests one server; unknown name exits non-zero.
-- [ ] A hanging or non-speaking server fails within a bounded timeout
+- [x] `--server ansible` tests one server; unknown name exits non-zero.
+- [x] A hanging or non-speaking server fails within a bounded timeout
       rather than hanging.
-- [ ] PASS / FAIL / SKIP are distinct in both output and exit code; a SKIP
+- [x] PASS / FAIL / SKIP are distinct in both output and exit code; a SKIP
       is never reported as a PASS.
-- [ ] `tests/validate.sh` remains offline-safe and fast — confirm its
+- [x] `tests/validate.sh` remains offline-safe and fast — confirm its
       runtime and network behaviour are unchanged.
-- [ ] No destructive tool is invoked; only `initialize` (and optionally
+- [x] No destructive tool is invoked; only `initialize` (and optionally
       `tools/list`).
-- [ ] Runbook and `AGENTS.md` Commands document the harness.
-- [ ] Backlog B-003 closed.
+- [x] Runbook and `AGENTS.md` Commands document the harness.
+- [x] Backlog B-003 closed.
 
 ## Mandatory validations
-- [ ] `bash tests/smoke-mcp.sh` → PASS for ansible, printing its real
+- [x] `bash tests/smoke-mcp.sh` → PASS for ansible, printing its real
       `serverInfo.name`.
-- [ ] **Fails-when-broken proof**, each observed and then reverted:
+- [x] **Fails-when-broken proof**, each observed and then reverted:
       1. a fixture manifest whose `launch.command` is a command that
          exits immediately → FAIL, not PASS;
       2. a fixture whose `launch.command` is a process that produces no
@@ -127,8 +127,8 @@ let a skip masquerade as a pass in the output.
          parse error, not a crash;
       4. the real ansible manifest → PASS.
       Record each observed message.
-- [ ] `bash tests/validate.sh` → still OK, still offline-safe.
-- [ ] `git status` clean at end; every fixture removed.
+- [x] `bash tests/validate.sh` → still OK, still offline-safe.
+- [x] `git status` clean at end; every fixture removed.
 
 ## Risks and rollback
 - **Risk: a flaky network turns into a false repo defect.** The reason for

@@ -167,28 +167,28 @@ ADR-0008 forbids.
 14. Review the diff; commit; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] Every rule in the guide's Agents table has a corresponding check
-- [ ] **Every check is observed failing** on a fixture violating exactly
+- [x] Every rule in the guide's Agents table has a corresponding check
+- [x] **Every check is observed failing** on a fixture violating exactly
       that rule, with the intended message — each failure recorded
       individually in the execution log, not summarised as "all proven"
-- [ ] A misnamed file in `agents/*/` is **reported, not skipped**, and this
+- [x] A misnamed file in `agents/*/` is **reported, not skipped**, and this
       is demonstrated
-- [ ] The client-native-syntax body check is demonstrated failing on a raw
+- [x] The client-native-syntax body check is demonstrated failing on a raw
       `permission:` block
-- [ ] `agents/_template/` passes, exempt only from name↔directory
-- [ ] The check group's source carries a `## What this does not prove`
+- [x] `agents/_template/` passes, exempt only from name↔directory
+- [x] The check group's source carries a `## What this does not prove`
       comment naming the emitted-file gap
-- [ ] **No check touches deployed files, installed clients, env vars, or the
+- [x] **No check touches deployed files, installed clients, env vars, or the
       network** — verified by reading the added code, not by it passing
-- [ ] No budget invented
-- [ ] Gate runtime measured before and after; still sub-second, or the
+- [x] No budget invented
+- [x] Gate runtime measured before and after; still sub-second, or the
       regression reported
-- [ ] No fixture committed
-- [ ] `tests/validate.sh` green with only the template present
+- [x] No fixture committed
+- [x] `tests/validate.sh` green with only the template present
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — run it; expect no
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — run it; expect no
       diff, since the agent kind arrives in TASK-0039
 
 ## Risks and rollback

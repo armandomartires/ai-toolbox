@@ -92,20 +92,20 @@ it and this task should stop rather than overwrite.
 
 ## Acceptance criteria
 
-- [ ] `ADR-0022` reads **`Accepted — 2026-09-23`** and names who ratified it.
-- [ ] The prior `Proposed` text is **preserved**, not deleted.
-- [ ] What ratification does **not** cover is stated — specifically that it
+- [x] `ADR-0022` reads **`Accepted — 2026-09-23`** and names who ratified it.
+- [x] The prior `Proposed` text is **preserved**, not deleted.
+- [x] What ratification does **not** cover is stated — specifically that it
       does not make the falsified F1 claim retroactively true, and does not
       promote S9.
-- [ ] Both open questions are recorded as open.
-- [ ] Every **live** file asserting `Proposed` is updated; every **historical**
+- [x] Both open questions are recorded as open.
+- [x] Every **live** file asserting `Proposed` is updated; every **historical**
       one is left alone, and this file says which are which.
-- [ ] `tests/validate.sh` passes; no component file changed.
+- [x] `tests/validate.sh` passes; no component file changed.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `git status --porcelain` — `.ai/` only
+- [x] `tests/validate.sh`
+- [x] `git status --porcelain` — `.ai/` only
 
 ## Risks and rollback
 

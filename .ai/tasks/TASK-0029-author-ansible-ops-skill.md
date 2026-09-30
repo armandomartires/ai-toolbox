@@ -208,25 +208,25 @@ component ends up encoding a shape that then changes. Re-read
 10. Update `.ai/context/CURRENT_STATE.md`.
 
 ## Acceptance criteria
-- [ ] `skills/ansible-ops/SKILL.md` exists and passes every frontmatter
+- [x] `skills/ansible-ops/SKILL.md` exists and passes every frontmatter
       rule in `authoring-guide.md:8-15`
-- [ ] `name` equals the directory name; `description` is a single line;
+- [x] `name` equals the directory name; `description` is a single line;
       `metadata.version` is `1.0.0` and valid semver
-- [ ] **No size budget is stated** anywhere in the skill
-- [ ] No `README.md` inside the skill folder
-- [ ] The invariant core contains all seven rules, with the staging
+- [x] **No size budget is stated** anywhere in the skill
+- [x] No `README.md` inside the skill folder
+- [x] The invariant core contains all seven rules, with the staging
       correction and the check-mode caveat present and explained
-- [ ] `templates/` contains **no** estate-specific facts — verified by
+- [x] `templates/` contains **no** estate-specific facts — verified by
       reading, not by intent
 - [ ] The frontmatter checks were **observed failing** against this skill's
       own file (name mismatch and multi-line description), then restored
-- [ ] `docs/registry.md` regenerated with exactly one new row
-- [ ] `tests/validate.sh` OK
-- [ ] `SIGMA-infrastructure` untouched
+- [x] `docs/registry.md` regenerated with exactly one new row
+- [x] `tests/validate.sh` OK
+- [x] `SIGMA-infrastructure` untouched
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **required here**
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **required here**
 
 ## Risks and rollback
 - **Risk: writing a generic Ansible tutorial.** The value is in the

@@ -190,35 +190,35 @@ is still untested and this is the test.
     authorization to push; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] **Both loops were executed**, not simulated — the execution log shows
+- [x] **Both loops were executed**, not simulated — the execution log shows
       per-iteration detail, not a summary of outputs
-- [ ] `skills/ansible-ops/` exists and passes every ADR-0003 frontmatter
+- [x] `skills/ansible-ops/` exists and passes every ADR-0003 frontmatter
       rule; **no size budget invented** (ADR-0008)
-- [ ] `loops/ansible-change/loop.md` carries the three sections with bounded
+- [x] `loops/ansible-change/loop.md` carries the three sections with bounded
       retries and escalate-without-retry for destructive actions
-- [ ] **Which exit condition fired is recorded for each loop**, with the
+- [x] **Which exit condition fired is recorded for each loop**, with the
       iteration count
-- [ ] **What the critique step found is recorded.** If it found nothing,
+- [x] **What the critique step found is recorded.** If it found nothing,
       that is reported as a finding about the method (ADR-0019 clause 1.3),
       not as a clean pass
-- [ ] Whether the design loop converged, hit its cap, or was accepted
+- [x] Whether the design loop converged, hit its cap, or was accepted
       trivially is stated plainly
-- [ ] The production loop **stopped at the merge gate**, demonstrated
-- [ ] Whether any role's emitted boundary blocked anything is recorded; a
+- [x] The production loop **stopped at the merge gate**, demonstrated
+- [x] Whether any role's emitted boundary blocked anything is recorded; a
       boundary that never bound is noted as untested
-- [ ] Cold-start sufficiency of this brief's `Inputs` recorded (S5
+- [x] Cold-start sufficiency of this brief's `Inputs` recorded (S5
       follow-up 1)
-- [ ] The ADR-0014/0015 gap resolution recorded, with what it permits the
+- [x] The ADR-0014/0015 gap resolution recorded, with what it permits the
       pilot to claim about `ansible-ops`
-- [ ] S6's TASK-0029/0030 disposition **decided and recorded**
-- [ ] `SIGMA-infrastructure` byte-identical before and after; unpushed
+- [x] S6's TASK-0029/0030 disposition **decided and recorded**
+- [x] `SIGMA-infrastructure` byte-identical before and after; unpushed
       commits untouched
-- [ ] No playbook run in any mode
-- [ ] `tests/validate.sh` green; registry regenerated and committed
+- [x] No playbook run in any mode
+- [x] `tests/validate.sh` green; registry regenerated and committed
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **required**; this
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **required**; this
       task adds a skill and a loop
 
 ## Risks and rollback

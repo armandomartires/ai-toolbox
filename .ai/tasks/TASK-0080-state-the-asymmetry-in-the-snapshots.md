@@ -86,20 +86,20 @@ this repo have already been wrong about exactly this kind of number.
 
 ## Acceptance criteria
 
-- [ ] Each of the three snapshots names the unattended harness and states this
+- [x] Each of the three snapshots names the unattended harness and states this
       client's coverage.
-- [ ] Claude Code's says **seven of nine roles are not emitted here**, and
+- [x] Claude Code's says **seven of nine roles are not emitted here**, and
       names the two that are.
-- [ ] Bionic's says it receives **zero** roles, on `ADR-0020`'s established
+- [x] Bionic's says it receives **zero** roles, on `ADR-0020`'s established
       finding rather than on S10's unestablished one.
-- [ ] All three state that **no binding exists yet**.
-- [ ] None restates the skill's method; each links to it.
-- [ ] `REVIEW-0011`'s grep — the checkpoint's own test — now passes.
+- [x] All three state that **no binding exists yet**.
+- [x] None restates the skill's method; each links to it.
+- [x] `REVIEW-0011`'s grep — the checkpoint's own test — now passes.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff)
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff)
 - [ ] `git status --porcelain`
 
 ## Risks and rollback

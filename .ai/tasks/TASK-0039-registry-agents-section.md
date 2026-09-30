@@ -142,25 +142,25 @@ prior task in the sprint may have shifted them.
     registry; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] `extract()` handles `agent` **within** the existing frontmatter
+- [x] `extract()` handles `agent` **within** the existing frontmatter
       branch; no duplicated iteration logic anywhere
-- [ ] Exactly one new `emit_section` call
-- [ ] `docs/registry.md` regenerated and committed, with an Agents section
-- [ ] `agents/_template/` **absent** from the registry, excluded by the
+- [x] Exactly one new `emit_section` call
+- [x] `docs/registry.md` regenerated and committed, with an Agents section
+- [x] `agents/_template/` **absent** from the registry, excluded by the
       central skip — verified by reading the code path
-- [ ] The section is **proven to populate**, using a temporary fixture role,
+- [x] The section is **proven to populate**, using a temporary fixture role,
       not assumed from an empty header
-- [ ] `validate.sh`'s registry-integrity checks **observed failing** on a
+- [x] `validate.sh`'s registry-integrity checks **observed failing** on a
       malformed row in the new section, in both directions (extra cell,
       missing cell)
-- [ ] No Shape column; no Mode column unless deliberately decided and
+- [x] No Shape column; no Mode column unless deliberately decided and
       recorded with the column counts re-verified
-- [ ] No fixture committed
-- [ ] `tests/validate.sh` green
+- [x] No fixture committed
+- [x] `tests/validate.sh` green
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **required**; this
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **required**; this
       task changes the generator, so the regenerated registry must be
       committed in the same commit. CI re-runs a staleness check
 

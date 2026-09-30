@@ -88,21 +88,21 @@ label. What was really changed is in **Outputs / handover**.
 
 ## Acceptance criteria
 
-- [ ] `ROADMAP.md` has a Phase 10 with exit criteria written before the work.
-- [ ] `SPRINT-CURRENT.md` is S10; none of the four stale claims survives.
-- [ ] S10.1's row names the **driver** as what remains, and says the contract,
+- [x] `ROADMAP.md` has a Phase 10 with exit criteria written before the work.
+- [x] `SPRINT-CURRENT.md` is S10; none of the four stale claims survives.
+- [x] S10.1's row names the **driver** as what remains, and says the contract,
       checker and fixtures already ship.
-- [ ] The checkpoint question has a half that is **still open**.
-- [ ] `sprints/SPRINT-S10-unattended-bindings.md` no longer exists.
-- [ ] Phase 10 and the move are in **one commit**.
-- [ ] Carried-forward items survive; nothing closed is re-listed.
-- [ ] No component file changed; `tests/validate.sh` passes.
+- [x] The checkpoint question has a half that is **still open**.
+- [x] `sprints/SPRINT-S10-unattended-bindings.md` no longer exists.
+- [x] Phase 10 and the move are in **one commit**.
+- [x] Carried-forward items survive; nothing closed is re-listed.
+- [x] No component file changed; `tests/validate.sh` passes.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff)
-- [ ] `git status --porcelain` — `.ai/` only
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff)
+- [x] `git status --porcelain` — `.ai/` only
 
 ## Risks and rollback
 

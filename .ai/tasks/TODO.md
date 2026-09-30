@@ -399,14 +399,15 @@ Phase 4 — the production half, owned here:
       precedent. **Both loops' role sets now exist.**)
 
 Phase 5 — exercise it:
-- [ ] TASK-0046 — **Pilot.** Run both loops to produce S6's `ansible-ops`
+- [x] TASK-0046 — **Pilot.** Run both loops to produce S6's `ansible-ops`
       and `ansible-change` (needs TASK-0043, TASK-0045). **The task that
       decides whether S7 delivered anything**
       (Its task file has been `done` since 2026-09-15 with a recorded
-      commit and push. This box is unticked in error — the *second* instance
+      commit and push. This box was unticked in error — the *second* instance
       of the TASK-0019 omission class noted below, found by TASK-0047 while
-      reading this file. Left unticked deliberately: correcting it belongs
-      to a commit about the pilot, not to a commit about client naming.)
+      reading this file, and left unticked then because correcting it
+      belonged to a commit about the pilot, not about client naming.
+      Ticked 2026-09-30 in the tick audit of every brief.)
 
 Out of sprint — corrections found by inspection:
 - [x] TASK-0047 — The LM Studio client is **Bionic**;

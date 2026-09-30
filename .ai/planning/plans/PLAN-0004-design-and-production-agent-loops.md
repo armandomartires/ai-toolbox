@@ -390,41 +390,41 @@ not pre-empted here.
 
 ## Acceptance criteria
 
-- [ ] `.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md` exists;
+- [x] `.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md` exists;
       `SPRINT-CURRENT.md` is S7; S6's parked status and reason are recorded
-      in both `SPRINT-CURRENT.md` and `BACKLOG.md`
-- [ ] `ROADMAP.md` has a **Phase 6** section (currently missing entirely)
+      in both `SPRINT-CURRENT.md` and `BACKLOG.md` — met at S7 open (9105246); file since renamed SPRINT-S6-ansible-guardrails.md, SPRINT-CURRENT has moved on
+- [x] `ROADMAP.md` has a **Phase 6** section (currently missing entirely)
       and a Phase 7 section
 - [ ] `agent-tiers` exists at `skills/agent-tiers/`, its drift resolved
       with the resolution recorded, `metadata.version` bumped, and the
       installed copy is a **symlink** into this repo
-- [ ] ADR-0018 states the per-client mapping, the emission mechanism, and
+- [x] ADR-0018 states the per-client mapping, the emission mechanism, and
       **explicitly** that agents have no `link` mode and why
-- [ ] `docs/development/authoring-guide.md` carries a normative agent
+- [x] `docs/development/authoring-guide.md` carries a normative agent
       schema table **before** `validate.sh` enforces any of it; no budget
       is invented (ADR-0008)
 - [ ] `validate.sh` fails on a deliberately malformed agent file, **observed
       failing**, and stays offline, hermetic and sub-second (measured)
-- [ ] `docs/registry.md` has an Agents section, generated, with no
+- [x] `docs/registry.md` has an Agents section, generated, with no
       `_template*` row
-- [ ] `install.sh` emits per-client agent files; `validate.sh`'s
+- [x] `install.sh` emits per-client agent files; `validate.sh`'s
       client↔config pairing still passes with the extended `CLIENTS` block
-- [ ] `loops/design-brief/loop.md` and `loops/project-build/loop.md` both
+- [x] `loops/design-brief/loop.md` and `loops/project-build/loop.md` both
       carry `## Trigger`, `## Steps`, `## Exit conditions`, each with a
       bounded iteration count and an explicit escalation path
-- [ ] ADR-0019 records the autonomy boundary against `AGENTS.md`'s four
+- [x] ADR-0019 records the autonomy boundary against `AGENTS.md`'s four
       colliding rules (F6), and records dynamic workflows as rejected with
       the vendor's own constraint quoted (F3)
-- [ ] The pilot **ran**: `skills/ansible-ops/` and `loops/ansible-change/`
+- [x] The pilot **ran**: `skills/ansible-ops/` and `loops/ansible-change/`
       exist and were produced *through* the loops, with the execution log
       recording where each loop's exit conditions actually fired
-- [ ] `SIGMA-infrastructure`'s `git status` is byte-identical before and
+- [x] `SIGMA-infrastructure`'s `git status` is byte-identical before and
       after, and its unpushed commits are untouched (S6's standing
       constraint, unchanged by parking)
-- [ ] `tests/validate.sh` green; `scripts/sync-registry.sh` regenerated and
+- [x] `tests/validate.sh` green; `scripts/sync-registry.sh` regenerated and
       committed
-- [ ] `.ai/context/CURRENT_STATE.md` updated
-- [ ] No secrets in any emitted file, any config snippet, or any commit
+- [x] `.ai/context/CURRENT_STATE.md` updated
+- [x] No secrets in any emitted file, any config snippet, or any commit
 
 ## Risks
 

@@ -85,22 +85,22 @@ guessed one is not.
 
 ## Acceptance criteria
 
-- [ ] Every falsifiable claim carries the verdict the spikes produced, or is
+- [x] Every falsifiable claim carries the verdict the spikes produced, or is
       explicitly marked unsettled with the reason.
-- [ ] Every disagreement between the draft and the evidence is corrected **and
+- [x] Every disagreement between the draft and the evidence is corrected **and
       the correction is visible**, not silently applied.
-- [ ] Both client versions and the evidence date are recorded.
-- [ ] Status reads `Proposed`.
-- [ ] The four Decision clauses are each traceable to evidence or to an existing
+- [x] Both client versions and the evidence date are recorded.
+- [x] Status reads `Proposed`.
+- [x] The four Decision clauses are each traceable to evidence or to an existing
       accepted ADR.
-- [ ] Clause 4's list of what is *not* narrowed is present and correct against
+- [x] Clause 4's list of what is *not* narrowed is present and correct against
       ADR-0019 as actually written.
-- [ ] No component file changed.
+- [x] No component file changed.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `git status --porcelain` — `.ai/` only
+- [x] `tests/validate.sh`
+- [x] `git status --porcelain` — `.ai/` only
 
 ## Risks and rollback
 

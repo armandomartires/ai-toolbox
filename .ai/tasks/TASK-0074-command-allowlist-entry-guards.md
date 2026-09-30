@@ -90,20 +90,20 @@ of them pass.
 
 ## Acceptance criteria
 
-- [ ] `bash_allow` and `test_allow` are guarded identically, by one rule.
-- [ ] A **bare `*`** is rejected in both keys — observed.
-- [ ] A **chaining metacharacter** is rejected in both keys — observed.
-- [ ] **`*pytest*` is accepted** in both keys — observed. This is the
+- [x] `bash_allow` and `test_allow` are guarded identically, by one rule.
+- [x] A **bare `*`** is rejected in both keys — observed.
+- [x] A **chaining metacharacter** is rejected in both keys — observed.
+- [x] **`*pytest*` is accepted** in both keys — observed. This is the
       regression test for the over-shoot.
-- [ ] `git-ops`, `review` and `qa-test` pass unchanged.
-- [ ] The guide states the rule once and shows the correction.
-- [ ] Fixtures removed, removal verified.
+- [x] `git-ops`, `review` and `qa-test` pass unchanged.
+- [x] The guide states the rule once and shows the correction.
+- [x] Fixtures removed, removal verified.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff)
-- [ ] `git status --porcelain`
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff)
+- [x] `git status --porcelain`
 
 ## Risks and rollback
 

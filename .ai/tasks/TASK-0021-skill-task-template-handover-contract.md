@@ -122,8 +122,8 @@ table with an *expected state* column does not.
       `Outputs / handover`. See log.
 
 ## Mandatory validations
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` — no diff expected; confirmed, not assumed
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` — no diff expected; confirmed, not assumed
 - [x] **Deployment shape recorded for every client in `install.sh`'s
       `CLIENTS` list** — `LinkType` and `readlink -f` per target, so the
       record states what was actually verified. Both `claude-code`

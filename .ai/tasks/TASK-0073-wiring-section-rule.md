@@ -114,22 +114,22 @@ gate, the same `_template*` carve-out every other loop makes.
 
 ## Acceptance criteria
 
-- [ ] The guide states the three triggers, what exempt means, and why
+- [x] The guide states the three triggers, what exempt means, and why
       graphify is exempt despite a working-directory-sensitive launch.
-- [ ] The gate fails on a fixture server that owes a section and has none —
+- [x] The gate fails on a fixture server that owes a section and has none —
       **observed**, with the message recorded here.
-- [ ] The gate passes on the real tree, and `_template-external` does not
+- [x] The gate passes on the real tree, and `_template-external` does not
       trip it despite declaring a required variable.
-- [ ] Each `configs/*/README.md` tells a reader why some servers have no
+- [x] Each `configs/*/README.md` tells a reader why some servers have no
       subsection, by pointing at the rule rather than restating it.
-- [ ] No graphify wiring section was written.
-- [ ] Fixture removed, removal verified.
+- [x] No graphify wiring section was written.
+- [x] Fixture removed, removal verified.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff)
-- [ ] `git status --porcelain`
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff)
+- [x] `git status --porcelain`
 
 ## Risks and rollback
 

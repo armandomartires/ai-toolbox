@@ -159,28 +159,28 @@ tasks to avoid.
 10. Update `.ai/context/CURRENT_STATE.md`.
 
 ## Acceptance criteria
-- [ ] `loops/ansible-change/loop.md` has all three mandatory sections as
+- [x] `loops/ansible-change/loop.md` has all three mandatory sections as
       exactly-anchored headings and passes `validate.sh`
-- [ ] `name` equals the directory; `description` is a single line
-- [ ] Every step states an expected output
+- [x] `name` equals the directory; `description` is a single line
+- [x] Every step states an expected output
 - [ ] `snapshot-possible?` precedes `snapshot`, and `delete snapshot`
       follows verification — both present, both explained
-- [ ] **No staging step**, and the reason is stated so a future reader does
+- [x] **No staging step**, and the reason is stated so a future reader does
       not "restore" it
-- [ ] Exit conditions include bounded retries with a limit, a hard stop on
+- [x] Exit conditions include bounded retries with a limit, a hard stop on
       secrets, escalate-without-retry for destructive actions, a stop when
       check-mode is not meaningful, and a stop when verification disagrees
       with Ansible's report
 - [ ] The loop links the skill's rules rather than restating them
 - [ ] The checks were **observed failing** (missing section, name mismatch)
       then restored
-- [ ] `docs/registry.md` regenerated with exactly one new row
-- [ ] `tests/validate.sh` OK
-- [ ] `SIGMA-infrastructure` untouched
+- [x] `docs/registry.md` regenerated with exactly one new row
+- [x] `tests/validate.sh` OK
+- [x] `SIGMA-infrastructure` untouched
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **required here**
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **required here**
 
 ## Risks and rollback
 - **Risk: restating the skill's rules.** Creates two owners for one fact

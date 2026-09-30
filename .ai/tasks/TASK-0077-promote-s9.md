@@ -91,21 +91,21 @@ trusting the table.
 
 ## Acceptance criteria
 
-- [ ] All seven outstanding S9 briefs (`TASK-0058`…`0064`) confirmed present
+- [x] All seven outstanding S9 briefs (`TASK-0058`…`0064`) confirmed present
       **by counting them**, not by reading the table.
-- [ ] `ROADMAP.md` has a Phase 9 with exit criteria written **before** the work.
-- [ ] `SPRINT-CURRENT.md` is S9, and none of the five stale claims survives.
-- [ ] `sprints/SPRINT-S9-unattended-runs.md` no longer exists.
-- [ ] Phase 9 and the promotion are in **one commit**.
-- [ ] Still-open items from the no-sprint queue are carried forward, and
+- [x] `ROADMAP.md` has a Phase 9 with exit criteria written **before** the work.
+- [x] `SPRINT-CURRENT.md` is S9, and none of the five stale claims survives.
+- [x] `sprints/SPRINT-S9-unattended-runs.md` no longer exists.
+- [x] Phase 9 and the promotion are in **one commit**.
+- [x] Still-open items from the no-sprint queue are carried forward, and
       closed ones are not.
-- [ ] No component file changed; `tests/validate.sh` passes.
+- [x] No component file changed; `tests/validate.sh` passes.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `git status --porcelain` — `.ai/` only
-- [ ] `git show --stat` on the commit — Phase 9 and the move together
+- [x] `tests/validate.sh`
+- [x] `git status --porcelain` — `.ai/` only
+- [x] `git show --stat` on the commit — Phase 9 and the move together
 
 ## Risks and rollback
 

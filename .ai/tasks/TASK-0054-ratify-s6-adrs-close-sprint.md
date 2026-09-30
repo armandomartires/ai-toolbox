@@ -83,21 +83,21 @@ than a rewrite, matching how `ADR-0006` was superseded.
 7. Review diff, commit, push, record hash.
 
 ## Acceptance criteria
-- [ ] All three ADRs read **Accepted — 2026-09-22**, ratified by the human,
+- [x] All three ADRs read **Accepted — 2026-09-22**, ratified by the human,
       with their existing Status narrative preserved rather than replaced.
-- [ ] No live status page still calls them `Proposed`.
-- [ ] `SPRINT-CURRENT.md` holds **S8**; S6 is at
+- [x] No live status page still calls them `Proposed`.
+- [x] `SPRINT-CURRENT.md` holds **S8**; S6 is at
       `.ai/planning/sprints/SPRINT-S6-ansible-guardrails.md`, closed on
       `REVIEW-0010`.
-- [ ] `ROADMAP.md` Phase 6 complete, Phase 8 current.
-- [ ] `TASK-0048…0051` still `planned`; ADR-0021 still `Proposed`.
-- [ ] B-018…B-021 still `ready`.
-- [ ] Dated records unchanged.
-- [ ] `tests/validate.sh` passes; tree clean after commit.
+- [x] `ROADMAP.md` Phase 6 complete, Phase 8 current.
+- [x] `TASK-0048…0051` still `planned`; ADR-0021 still `Proposed`.
+- [x] B-018…B-021 still `ready`.
+- [x] Dated records unchanged.
+- [x] `tests/validate.sh` passes; tree clean after commit.
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (expect no diff — no component changed)
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (expect no diff — no component changed)
 
 ## Risks and rollback
 - **Risk: promotion read as starting S8.** Mitigated by leaving all four

@@ -111,26 +111,26 @@ repository.
 
 ## Acceptance criteria
 
-- [ ] `build-dashboard.sh --root .ai --project ai-toolbox --out … --json …`
+- [x] `build-dashboard.sh --root .ai --project ai-toolbox --out … --json …`
       runs from a clean checkout and writes both files.
-- [ ] The emitted page is self-contained: `grep -Eic '(src|href)="(https?:|//)|@import'` → 0.
-- [ ] Counts match this repository, verified independently: 121 briefs,
+- [x] The emitted page is self-contained: `grep -Eic '(src|href)="(https?:|//)|@import'` → 0.
+- [x] Counts match this repository, verified independently: 121 briefs,
       48 backlog rows, 10 phases, 27 ADRs, 12 reviews.
-- [ ] `check-dashboard.sh` passes against the fixture, including its open sprint.
-- [ ] `tests/validate.sh` → `OK`.
-- [ ] `scripts/sync-registry.sh` leaves `docs/registry.md` with no diff.
-- [ ] The workflow guard fails on a degraded history and passes on a full one,
+- [x] `check-dashboard.sh` passes against the fixture, including its open sprint.
+- [x] `tests/validate.sh` → `OK`.
+- [x] `scripts/sync-registry.sh` leaves `docs/registry.md` with no diff.
+- [x] The workflow guard fails on a degraded history and passes on a full one,
       both observed.
-- [ ] No dashboard HTML is committed.
-- [ ] The drift check reports in sync from the source side.
+- [x] No dashboard HTML is committed.
+- [x] The drift check reports in sync from the source side.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh
-- [ ] `check-dashboard.sh`
-- [ ] The self-containment grep
-- [ ] The guard, exercised both ways
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh
+- [x] `check-dashboard.sh`
+- [x] The self-containment grep
+- [x] The guard, exercised both ways
 
 ## Risks and rollback
 

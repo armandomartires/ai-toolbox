@@ -161,27 +161,27 @@ it would mean the schemas were transcribed wrongly in `TASK-0109`.
 
 ## Acceptance criteria
 
-- [ ] `tests/validate.sh` exits 0 with all four kinds gated and
+- [x] `tests/validate.sh` exits 0 with all four kinds gated and
       `FIRST_GENERATED_TASK = 24`.
 - [ ] 27/27 ADRs, 30/30 sessions, 12/12 reviews, and every brief from
       `TASK-0024` pass their schema.
-- [ ] `TASK-0001`–`TASK-0023` are **byte-identical** to their pre-task state
+- [x] `TASK-0001`–`TASK-0023` are **byte-identical** to their pre-task state
       (`git diff` shows nothing for them).
-- [ ] Each of the nine carries a dated line stating the section was not
+- [x] Each of the nine carries a dated line stating the section was not
       recorded — and **no reconstructed content**.
 - [ ] `REVIEW-0012`'s body is byte-identical apart from two heading lines.
-- [ ] Fails-when-reverted: restoring any one repair fails the gate for the
+- [x] Fails-when-reverted: restoring any one repair fails the gate for the
       expected reason.
-- [ ] `ADR-0027` no longer claims only task briefs are gated.
-- [ ] Gate runtime measured, native and `/mnt/c`, and reported.
-- [ ] Diff reviewed file by file against the authorization table; no file
+- [x] `ADR-0027` no longer claims only task briefs are gated.
+- [x] Gate runtime measured, native and `/mnt/c`, and reported.
+- [x] Diff reviewed file by file against the authorization table; no file
       outside it is modified.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 - [ ] scripts/sync-registry.sh (if components changed)
-- [ ] scripts/sync-templates.sh --check
+- [x] scripts/sync-templates.sh --check
 
 ## Risks and rollback
 

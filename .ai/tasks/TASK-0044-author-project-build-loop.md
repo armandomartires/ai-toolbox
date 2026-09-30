@@ -175,30 +175,30 @@ its content and this brief's line references are to the pre-import file.
 12. Review the diff; commit; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] `loops/project-build/loop.md` carries the three sections, `name`
+- [x] `loops/project-build/loop.md` carries the three sections, `name`
       equal to the directory, single-line `description`
-- [ ] Every step states its expected output and its role
-- [ ] `## Trigger` requires a brief in the **locked** state per TASK-0041's
+- [x] Every step states its expected output and its role
+- [x] `## Trigger` requires a brief in the **locked** state per TASK-0041's
       mechanism
-- [ ] The **fix-loop cap** and the **review-rejection path** are distinct
+- [x] The **fix-loop cap** and the **review-rejection path** are distinct
       and cannot be read as one bound
-- [ ] Reaching the cap **stops and reports**; it does not loop again
-- [ ] Merge and push are stated as **outside** the loop, requiring the human
-- [ ] A genuinely ambiguous requirement **stops the loop** (ADR-0019 clause
+- [x] Reaching the cap **stops and reports**; it does not loop again
+- [x] Merge and push are stated as **outside** the loop, requiring the human
+- [x] A genuinely ambiguous requirement **stops the loop** (ADR-0019 clause
       2.5), and this is distinguished from asking about settled decisions
-- [ ] Destructive actions escalate **without retrying**, matching
+- [x] Destructive actions escalate **without retrying**, matching
       `release-check`
-- [ ] The `release-check` overlap is **decided with reasoning**, with a
+- [x] The `release-check` overlap is **decided with reasoning**, with a
       caveat if referenced
-- [ ] The loop **links** to ADR-0019, `skills/agent-tiers/` and `AGENTS.md`
+- [x] The loop **links** to ADR-0019, `skills/agent-tiers/` and `AGENTS.md`
       rather than restating them
-- [ ] It is stated which of this loop and `bmad-workflow.md` is
+- [x] It is stated which of this loop and `bmad-workflow.md` is
       authoritative for the sequence
-- [ ] `tests/validate.sh` green; registry regenerated and committed
+- [x] `tests/validate.sh` green; registry regenerated and committed
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **required**
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **required**
 
 ## Risks and rollback
 - **Risk: two owners for one sequence.** `bmad-workflow.md` stays in the

@@ -162,35 +162,35 @@ A forecast, written before the work.
 
 ## Acceptance criteria
 
-- [ ] `tests/validate.sh` exits 0; runtime not materially above the ~920 ms
+- [x] `tests/validate.sh` exits 0; runtime not materially above the ~920 ms
       this `/mnt/c` checkout already records.
-- [ ] `check-artifact.sh` **fails** on `fixtures/incomplete-task.md` naming
+- [x] `check-artifact.sh` **fails** on `fixtures/incomplete-task.md` naming
       the specific missing heading, and **passes** on
       `fixtures/complete-task.md`. Both messages recorded verbatim.
-- [ ] A stale heading injected into a scratch task file at or above
+- [x] A stale heading injected into a scratch task file at or above
       `FIRST_GENERATED_TASK` **fails** the gate for the expected reason;
       removing it returns green. Failure text recorded.
-- [ ] A hand-edited regenerated template **fails** the gate;
+- [x] A hand-edited regenerated template **fails** the gate;
       `scripts/sync-templates.sh` returns it to green.
-- [ ] **Guidance equivalence**: the same task generated at all four levels,
+- [x] **Guidance equivalence**: the same task generated at all four levels,
       with every `<!-- … -->` stripped, is byte-identical across all four.
       If not, the levels are changing the artifact and the design is wrong.
-- [ ] The 105 pre-existing task files are untouched and still pass;
+- [x] The 105 pre-existing task files are untouched and still pass;
       `TASK-0001`'s superseded `## Preconditions` / `## Dependencies` is
       **not** flagged.
-- [ ] No byte or line cap is introduced anywhere (`ADR-0008`).
-- [ ] No tier→model mapping is introduced anywhere (`ADR-0018` clause 7).
-- [ ] Cold end-to-end: generate at `--guidance literal`, fill following
+- [x] No byte or line cap is introduced anywhere (`ADR-0008`).
+- [x] No tier→model mapping is introduced anywhere (`ADR-0018` clause 7).
+- [x] Cold end-to-end: generate at `--guidance literal`, fill following
       **only** the emitted comments without reading `SKILL.md`, checker
       passes.
-- [ ] `metadata.version` bumped in both edited skills; registry regenerated.
+- [x] `metadata.version` bumped in both edited skills; registry regenerated.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (components changed)
-- [ ] `scripts/sync-templates.sh` (new; templates are now derived)
-- [ ] `bash skills/project-workflow/scripts/check-artifact.sh` against both fixtures
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (components changed)
+- [x] `scripts/sync-templates.sh` (new; templates are now derived)
+- [x] `bash skills/project-workflow/scripts/check-artifact.sh` against both fixtures
 
 ## Risks and rollback
 

@@ -272,28 +272,28 @@ express the safe workflow but can execute unsafely).
 
 ## Acceptance criteria
 
-- [ ] `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
+- [x] `server.json` no longer claims `WORKSPACE_ROOT` bounds remote
       execution or system package installation; the per-tool reality is
       stated instead
-- [ ] `ansible_navigator` is disabled in all three wiring snippets, each
+- [x] `ansible_navigator` is disabled in all three wiring snippets, each
       carrying the reason, and the `authorization` block reflects the
       narrowed set rather than the original five
 - [ ] `configs/lm-studio/README.md` states models-only, no agentic work
-- [ ] `skills/ansible-ops/SKILL.md` passes every ADR-0003 frontmatter
+- [x] `skills/ansible-ops/SKILL.md` passes every ADR-0003 frontmatter
       rule; **no size budget is invented** (ADR-0008)
-- [ ] `loops/ansible-change/loop.md` carries `## Trigger`, `## Steps`,
+- [x] `loops/ansible-change/loop.md` carries `## Trigger`, `## Steps`,
       `## Exit conditions`, with bounded retries and explicit
       escalate-without-retry for destructive actions
-- [ ] The guard **is observed failing** on a deliberately broken fixture
+- [x] The guard **is observed failing** on a deliberately broken fixture
       and on an ambiguous `hosts:` case, and observed silent on the two
       known-good playbooks. All four demonstrated, none asserted
-- [ ] `tests/validate.sh` green; `scripts/sync-registry.sh` regenerated
+- [x] `tests/validate.sh` green; `scripts/sync-registry.sh` regenerated
       and the result committed
-- [ ] `.ai/context/CURRENT_STATE.md` updated
-- [ ] **`git status` in `/home/armando.martires/SIGMA-infrastructure` is
+- [x] `.ai/context/CURRENT_STATE.md` updated
+- [x] **`git status` in `/home/armando.martires/SIGMA-infrastructure` is
       byte-identical before and after S6**, and its 42 unpushed commits
-      are untouched
-- [ ] Every ADR records evidence read, not belief
+      are untouched — see REVIEW-0010 finding 1 (verification method no longer reproducible)
+- [x] Every ADR records evidence read, not belief
 
 ## Risks
 

@@ -122,8 +122,8 @@ section's own header row, and the header detection matches on `| Name `.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` followed by `git diff --exit-code docs/registry.md`
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` followed by `git diff --exit-code docs/registry.md`
 
 ## Risks and rollback
 

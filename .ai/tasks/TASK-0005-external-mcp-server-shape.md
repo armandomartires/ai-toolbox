@@ -169,32 +169,32 @@ ansible, drop it from the template.
 11. Update `CURRENT_STATE.md`; review diff; commit.
 
 ## Acceptance criteria
-- [ ] `docs/development/authoring-guide.md` documents the `server.json`
+- [x] `docs/development/authoring-guide.md` documents the `server.json`
       schema normatively, with every field's meaning.
-- [ ] `mcp-servers/_template-external/server.json` exists and conforms
+- [x] `mcp-servers/_template-external/server.json` exists and conforms
       to that documentation.
-- [ ] `scripts/sync-registry.sh` discovers both shapes and emits a Shape
+- [x] `scripts/sync-registry.sh` discovers both shapes and emits a Shape
       column; `docs/registry.md` regenerated; **no `_template*` row in
       the output**.
-- [ ] `scripts/install.sh` prints a usable launch line for external
+- [x] `scripts/install.sh` prints a usable launch line for external
       servers, sourced from the manifest.
-- [ ] `tests/validate.sh` enforces: exactly one of
+- [x] `tests/validate.sh` enforces: exactly one of
       `pyproject.toml`/`server.json` per server dir; manifest parses;
       required keys present; `capabilities.destructive: true` requires
       `authorization.granted: true` and an existing
       `authorization.task` file.
-- [ ] ADR-0005 carries a dated Clarification note; no doc still implies
+- [x] ADR-0005 carries a dated Clarification note; no doc still implies
       `configs/*/README.md` is the machine-readable source.
-- [ ] `AGENTS.md` declares the `python3` prerequisite.
-- [ ] No real (non-template) server added by this task.
+- [x] `AGENTS.md` declares the `python3` prerequisite.
+- [x] No real (non-template) server added by this task.
 
 ## Mandatory validations
-- [ ] `bash tests/validate.sh` — passes on the repo as committed.
-- [ ] `bash scripts/sync-registry.sh` — then `git diff docs/registry.md`
+- [x] `bash tests/validate.sh` — passes on the repo as committed.
+- [x] `bash scripts/sync-registry.sh` — then `git diff docs/registry.md`
       shows only the intended change.
-- [ ] `bash scripts/install.sh link` — runs clean; output lists no
+- [x] `bash scripts/install.sh link` — runs clean; output lists no
       template as a real component.
-- [ ] **Fails-when-broken proof** (per the Definition of Done's
+- [x] **Fails-when-broken proof** (per the Definition of Done's
       "new behaviour is proven by a test that fails when the change is
       reverted" — here, the behaviour *is* a test, so the equivalent is
       proving it rejects what it exists to reject). For each of the four
@@ -209,7 +209,7 @@ ansible, drop it from the template.
          but `authorization.task` pointing at a nonexistent path.
       Record each fixture's observed error message in the execution log.
       A check that was never seen to fail has not been validated.
-- [ ] `git status` clean at end — confirm every fixture was removed.
+- [x] `git status` clean at end — confirm every fixture was removed.
 
 ## Risks and rollback
 - **Risk: template dirs leak into the registry** as real components. The

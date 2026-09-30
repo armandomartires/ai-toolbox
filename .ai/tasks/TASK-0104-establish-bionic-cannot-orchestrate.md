@@ -112,22 +112,22 @@ rather than cite the stale version string.
 
 ## Acceptance criteria
 
-- [ ] The claim is either established with dated, sourced evidence, or
+- [x] The claim is either established with dated, sourced evidence, or
       explicitly retracted — no third outcome.
-- [ ] The evidence distinguishes "no scriptable entry point exists" from "a
+- [x] The evidence distinguishes "no scriptable entry point exists" from "a
       driver could be written that uses this client's model purely as an
       LLM backend" — the latter does not establish the former's negation.
-- [ ] `configs/lm-studio-bionic/README.md` no longer says the claim is "not
+- [x] `configs/lm-studio-bionic/README.md` no longer says the claim is "not
       yet established."
-- [ ] `ADR-0022` gains a dated verification pointer, not a rewritten claim.
-- [ ] `SPRINT-CURRENT.md` row S10.4 reads `done`, naming this task.
-- [ ] No component file changed.
+- [x] `ADR-0022` gains a dated verification pointer, not a rewritten claim.
+- [x] `SPRINT-CURRENT.md` row S10.4 reads `done`, naming this task.
+- [x] No component file changed.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff)
-- [ ] `git status --porcelain` — `.ai/` and `configs/lm-studio-bionic/`
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff)
+- [x] `git status --porcelain` — `.ai/` and `configs/lm-studio-bionic/`
       only.
 
 ## Risks and rollback

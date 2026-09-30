@@ -110,24 +110,24 @@ block becomes a client name the gate then demands a `configs/` directory for.
 
 ## Acceptance criteria
 
-- [ ] `--bionic-project DIR` deploys every non-template skill to
+- [x] `--bionic-project DIR` deploys every non-template skill to
       `DIR/.agents/skills/`, in both `link` and `copy` modes, **observed**.
-- [ ] Re-running is idempotent — no duplication, no error.
-- [ ] Bionic selected without a project directory fails with a message naming
+- [x] Re-running is idempotent — no duplication, no error.
+- [x] Bionic selected without a project directory fails with a message naming
       the approval gate, **observed**.
-- [ ] A default run writes nothing under any Bionic path, **observed**.
-- [ ] No script in this repo writes `~/.lmstudio/skills/`.
-- [ ] `tests/validate.sh` passes and its client-pairing check is unchanged.
-- [ ] `configs/lm-studio-bionic/README.md` no longer says deployment is *"not
+- [x] A default run writes nothing under any Bionic path, **observed**.
+- [x] No script in this repo writes `~/.lmstudio/skills/`.
+- [x] `tests/validate.sh` passes and its client-pairing check is unchanged.
+- [x] `configs/lm-studio-bionic/README.md` no longer says deployment is *"not
       automated"* without qualification, and states the global gate as the
       reason the other half is manual.
-- [ ] Scratch directory removed, removal verified.
+- [x] Scratch directory removed, removal verified.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (no component added; expect no diff)
-- [ ] `git status --porcelain`
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (no component added; expect no diff)
+- [x] `git status --porcelain`
 
 ## Risks and rollback
 

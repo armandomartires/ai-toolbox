@@ -145,29 +145,29 @@ a stale row here is the one failure this convention cannot catch.
     `git log origin/master`; record the push result.
 
 ## Acceptance criteria
-- [ ] `.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md` exists,
+- [x] `.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md` exists,
       carries the parking note, and preserves the original content unedited
       below it
-- [ ] `SPRINT-CURRENT.md` is S7 and names S6 as parked with its archive path
-- [ ] `ROADMAP.md` has a Phase 6 section that **records having been written
+- [x] `SPRINT-CURRENT.md` is S7 and names S6 as parked with its archive path
+- [x] `ROADMAP.md` has a Phase 6 section that **records having been written
       one sprint late**, and a Phase 7 section
-- [ ] B-014…B-017 in `BACKLOG.md`, and the open-item count updated from
+- [x] B-014…B-017 in `BACKLOG.md`, and the open-item count updated from
       four to eight with B-010…B-013 still `ready`
-- [ ] ADR-0017, 0018, 0019 exist, all **proposed**, each naming what blocks
+- [x] ADR-0017, 0018, 0019 exist, all **proposed**, each naming what blocks
       it or what it awaits
-- [ ] 14 briefs exist, all matching `TASK-####-*.md`, all with non-empty
+- [x] 14 briefs exist, all matching `TASK-####-*.md`, all with non-empty
       `## Inputs` and `## Outputs / handover`
-- [ ] Every unexecuted brief labels its outputs as **intended**, not claimed
-- [ ] Both session records exist with `INDEX.md` rows; the S6 one is
+- [x] Every unexecuted brief labels its outputs as **intended**, not claimed
+- [x] Both session records exist with `INDEX.md` rows; the S6 one is
       labelled **reconstructed**
-- [ ] `tests/validate.sh` green
-- [ ] `scripts/sync-registry.sh` produces **no diff**
-- [ ] No component directory appears in `git diff --name-only`
-- [ ] Commit hash and confirmed push recorded in this brief
+- [x] `tests/validate.sh` green
+- [x] `scripts/sync-registry.sh` produces **no diff**
+- [x] No component directory appears in `git diff --name-only`
+- [x] Commit hash and confirmed push recorded in this brief
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **run it anyway**,
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **run it anyway**,
       and the correct result is *no diff*. Running it proves the no-diff
       claim rather than asserting it.
 

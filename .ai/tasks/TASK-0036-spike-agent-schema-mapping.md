@@ -174,28 +174,28 @@ is what ADR-0018 must cite, not this brief's creation date.
     brief, so the gate should be green throughout.
 
 ## Acceptance criteria
-- [ ] All three vendor pages re-fetched, with the **retrieval date
+- [x] All three vendor pages re-fetched, with the **retrieval date
       recorded** for ADR-0018 to cite
-- [ ] A field-by-field table marking each row confirmed / changed /
+- [x] A field-by-field table marking each row confirmed / changed /
       unverifiable; every "changed" row called out as a finding
-- [ ] Each client's behaviour on an unrecognised frontmatter key
+- [x] Each client's behaviour on an unrecognised frontmatter key
       **established by observation**, not inferred from silence in the docs
-- [ ] The superset-file option genuinely assessed, with a stated reason for
+- [x] The superset-file option genuinely assessed, with a stated reason for
       accepting or rejecting it — **not** assumed away because the human
       chose emission
-- [ ] The actual agent directory name confirmed for both clients
-- [ ] Claude Code's `AskUserQuestion` strip and OpenCode's default
+- [x] The actual agent directory name confirmed for both clients
+- [x] Claude Code's `AskUserQuestion` strip and OpenCode's default
       `subagent_depth` both confirmed, since they force
       `designer-manager` to be primary
-- [ ] A capability-vocabulary table covering the four existing roles'
+- [x] A capability-vocabulary table covering the four existing roles'
       boundaries, marking any term unexpressible in either client
-- [ ] Directional expressiveness answered: which mapping direction loses
+- [x] Directional expressiveness answered: which mapping direction loses
       information
-- [ ] A mechanism recommendation sufficient for ADR-0018 to cite
-- [ ] No real client config modified; scratch confined to `/tmp/opencode/`
+- [x] A mechanism recommendation sufficient for ADR-0018 to cite
+- [x] No real client config modified; scratch confined to `/tmp/opencode/`
 
 ## Mandatory validations
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 - [ ] scripts/sync-registry.sh (if components changed) — **not expected**;
       this task adds no component
 

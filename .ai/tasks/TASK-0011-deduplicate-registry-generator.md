@@ -94,23 +94,23 @@ a legibility one.
 7. Close B-007; validate; follow `release-check` to commit.
 
 ## Acceptance criteria
-- [ ] `sync-registry.sh` skips templates in exactly **one** place, and
+- [x] `sync-registry.sh` skips templates in exactly **one** place, and
       that place demonstrably governs all three sections.
-- [ ] Regenerated `docs/registry.md` is byte-identical to the pre-refactor
+- [x] Regenerated `docs/registry.md` is byte-identical to the pre-refactor
       file (same md5).
-- [ ] `tests/validate.sh` fails if any registry row's path matches
+- [x] `tests/validate.sh` fails if any registry row's path matches
       `_template`, and does not false-positive on the word "template"
       appearing in a description.
-- [ ] Registry format unchanged: Skills/Loops keep 3 columns, MCP Servers
+- [x] Registry format unchanged: Skills/Loops keep 3 columns, MCP Servers
       keeps 4 including `Shape`.
-- [ ] `validate.sh` remains offline and well under a second (it is about to
+- [x] `validate.sh` remains offline and well under a second (it is about to
       become a pre-commit gate — TASK-0010).
-- [ ] Backlog B-007 closed.
+- [x] Backlog B-007 closed.
 
 ## Mandatory validations
-- [ ] `md5sum docs/registry.md` identical before and after the refactor.
-- [ ] `bash tests/validate.sh` → OK.
-- [ ] **Fails-when-broken proof**, each observed then reverted:
+- [x] `md5sum docs/registry.md` identical before and after the refactor.
+- [x] `bash tests/validate.sh` → OK.
+- [x] **Fails-when-broken proof**, each observed then reverted:
       1. inject a `| template-skill | ... | skills/_template |` row into
          `docs/registry.md` → validate fails naming that row;
       2. a row whose *description* contains "template" but whose path does
@@ -118,10 +118,10 @@ a legibility one.
       3. break the single template skip in the generator → **all three**
          sections leak in one regeneration, proving one source of truth;
          restore and confirm the checksum returns.
-- [ ] `bash scripts/install.sh link` → unaffected, still clean.
-- [ ] `bash tests/smoke-mcp.sh --server ansible` → still PASS (the
+- [x] `bash scripts/install.sh link` → unaffected, still clean.
+- [x] `bash tests/smoke-mcp.sh --server ansible` → still PASS (the
       manifest reader is untouched, but confirm rather than assume).
-- [ ] Timing check: `validate.sh` still sub-second.
+- [x] Timing check: `validate.sh` still sub-second.
 - [ ] `git status` clean at end.
 
 ## Risks and rollback

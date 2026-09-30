@@ -192,21 +192,21 @@ TASK-0021 before TASK-0022 is deliberate: the skill is canonical
 adopts a finished shape rather than both drifting mid-change.
 
 ## Acceptance criteria (plan level)
-- [ ] The skill states a session-boundary rule and a cold-start read
+- [x] The skill states a session-boundary rule and a cold-start read
       order, which it currently does not state anywhere.
-- [ ] `00.CONVENTIONS.md` is **under** its declared byte budget — a
+- [x] `00.CONVENTIONS.md` is **under** its declared byte budget — a
       measured number, and better than the 3087 bytes it starts at.
-- [ ] The skill's task template names both what a task consumes and what
+- [x] The skill's task template names both what a task consumes and what
       the next task picks up.
-- [ ] `metadata.version` is `3.1.0` and the deployed copy matches the
-      repo byte-for-byte.
-- [ ] This repo's task template carries the contract with **no net
+- [x] `metadata.version` is `3.1.0` and the deployed copy matches the
+      repo byte-for-byte. — met at S5 close (REVIEW-0007); skill has since moved to 5.0.0
+- [x] This repo's task template carries the contract with **no net
       growth in section count** and no fact owned twice.
-- [ ] `validate.sh` detects a deleted or empty handover section, is
+- [x] `validate.sh` detects a deleted or empty handover section, is
       proven to fail for the right reason, and is honest in its own
       source comment about what it does not prove.
-- [ ] TASK-0001…0019 remain untouched and still pass.
-- [ ] `validate.sh` stays offline, hermetic, and sub-second.
+- [x] TASK-0001…0019 remain untouched and still pass.
+- [x] `validate.sh` stays offline, hermetic, and sub-second. — met at S5 close (REVIEW-0007, ~0.4 s); since exceeded, see REVIEW-0008 finding 2
 
 ## Risks
 - **The convention grows the thing it exists to bound.** This plan adds a

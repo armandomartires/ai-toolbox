@@ -185,30 +185,30 @@ and step 7's commit delegation are sequence, not method, and need none.
 11. Review the diff; commit; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] `skills/design-flow/SKILL.md` passes every ADR-0003 frontmatter rule;
+- [x] `skills/design-flow/SKILL.md` passes every ADR-0003 frontmatter rule;
       `name` equals the directory; `description` single-line
-- [ ] **No size budget invented**, and `SKILL.md` is terse by construction
+- [x] **No size budget invented**, and `SKILL.md` is terse by construction
       with detail in `references/`
-- [ ] The **critique** step enumerates what it is obliged to examine, so an
+- [x] The **critique** step enumerates what it is obliged to examine, so an
       empty critique means "examined and found nothing"
-- [ ] The **ideate** step states a concrete distinctness requirement, so
+- [x] The **ideate** step states a concrete distinctness requirement, so
       three variants of one idea do not pass as three alternatives
-- [ ] The **converge** step states what an accepted brief must contain, and
+- [x] The **converge** step states what an accepted brief must contain, and
       supports the loop's lock mechanism
-- [ ] The skill **links** to `loops/design-brief/` and ADR-0019 rather than
+- [x] The skill **links** to `loops/design-brief/` and ADR-0019 rather than
       restating the sequence or the exit conditions
-- [ ] An explicit "what this is not" section: no governance framework, no
+- [x] An explicit "what this is not" section: no governance framework, no
       task IDs, no sprints, with `project-workflow`/`project-migration`
       named as the layer that does that (ADR-0013's pattern)
-- [ ] Templates carry the copy-never-symlink rule
-- [ ] No `README.md` inside the skill folder
-- [ ] The read-back (step 7) confirms no loop exit condition is re-decided
+- [x] Templates carry the copy-never-symlink rule
+- [x] No `README.md` inside the skill folder
+- [x] The read-back (step 7) confirms no loop exit condition is re-decided
       in the skill
-- [ ] `tests/validate.sh` green; registry regenerated and committed
+- [x] `tests/validate.sh` green; registry regenerated and committed
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **required**; this
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **required**; this
       task adds a skill
 
 ## Risks and rollback

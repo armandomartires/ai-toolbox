@@ -177,26 +177,26 @@ spikes: it depends on no spike, and its only gate is met.
 11. Review the diff; commit; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] `loops/design-brief/loop.md` carries `## Trigger`, `## Steps`,
+- [x] `loops/design-brief/loop.md` carries `## Trigger`, `## Steps`,
       `## Exit conditions`, with `name` equal to the directory and a
       single-line `description`
-- [ ] Every step states its **expected output**, matching `release-check`
-- [ ] The iteration cap has a **stated value and reasoning**, and it is
+- [x] Every step states its **expected output**, matching `release-check`
+- [x] The iteration cap has a **stated value and reasoning**, and it is
       unambiguous what counts as one iteration
-- [ ] Reaching the cap without acceptance **escalates and stops** — it does
+- [x] Reaching the cap without acceptance **escalates and stops** — it does
       not loop again with a longer prompt
-- [ ] The exit conditions state explicitly that **an empty critique round is
+- [x] The exit conditions state explicitly that **an empty critique round is
       not convergence**
-- [ ] Every failure path has a bound or an escalation; none is open-ended
-- [ ] The **lock mechanism is concrete** — a named field, path, or
+- [x] Every failure path has a bound or an escalation; none is open-ended
+- [x] The **lock mechanism is concrete** — a named field, path, or
       convention, not the adjective "locked"
-- [ ] The loop **links** to ADR-0019 and `skills/design-flow/` rather than
+- [x] The loop **links** to ADR-0019 and `skills/design-flow/` rather than
       restating them
-- [ ] A disagreement-precedence line is present
-- [ ] No step requires a subagent to ask the user or to spawn a worker —
+- [x] A disagreement-precedence line is present
+- [x] No step requires a subagent to ask the user or to spawn a worker —
       verified by the step-by-step read-back
 - [ ] No governance opinion: no task IDs, sprints, or `.ai/` structure
-- [ ] `tests/validate.sh` green; registry regenerated and committed
+- [x] `tests/validate.sh` green; registry regenerated and committed
 
 ## Mandatory validations
 

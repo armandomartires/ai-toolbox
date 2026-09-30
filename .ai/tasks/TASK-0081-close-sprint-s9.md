@@ -81,20 +81,20 @@ label. What was really changed is in **Outputs / handover**.
 
 ## Acceptance criteria
 
-- [ ] `sprints/SPRINT-S9-unattended-runs.md` exists and carries the closure.
-- [ ] `SPRINT-CURRENT.md` holds a no-sprint-open state naming what is
+- [x] `sprints/SPRINT-S9-unattended-runs.md` exists and carries the closure.
+- [x] `SPRINT-CURRENT.md` holds a no-sprint-open state naming what is
       outstanding, and says the state is deliberate.
-- [ ] Phase 9 reads **COMPLETE** with all seven criteria judged and evidenced.
-- [ ] Every still-open item survives the move; no closed item is re-listed.
-- [ ] Phase 9's completion and the archive are in **one commit**, the same
+- [x] Phase 9 reads **COMPLETE** with all seven criteria judged and evidenced.
+- [x] Every still-open item survives the move; no closed item is re-listed.
+- [x] Phase 9's completion and the archive are in **one commit**, the same
       control the promotion used.
-- [ ] `tests/validate.sh` passes; no component file changed.
+- [x] `tests/validate.sh` passes; no component file changed.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff)
-- [ ] `git status --porcelain` — `.ai/` only
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff)
+- [x] `git status --porcelain` — `.ai/` only
 
 ## Risks and rollback
 

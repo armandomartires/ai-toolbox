@@ -97,27 +97,27 @@ present and runnable; leave activation to `install.sh` and document it.
    dogfood.
 
 ## Acceptance criteria
-- [ ] `.githooks/pre-commit` exists, is tracked with mode 100755, and runs
+- [x] `.githooks/pre-commit` exists, is tracked with mode 100755, and runs
       `tests/validate.sh`.
-- [ ] A commit whose tree fails validation is **blocked**, with a message
+- [x] A commit whose tree fails validation is **blocked**, with a message
       naming what failed and how to bypass.
-- [ ] `git commit --no-verify` bypasses the hook (verified, not assumed).
-- [ ] `scripts/install.sh` sets `core.hooksPath=.githooks`, is idempotent,
+- [x] `git commit --no-verify` bypasses the hook (verified, not assumed).
+- [x] `scripts/install.sh` sets `core.hooksPath=.githooks`, is idempotent,
       and announces the change only when it makes one.
-- [ ] `tests/validate.sh` fails if the hook is missing or not executable,
+- [x] `tests/validate.sh` fails if the hook is missing or not executable,
       but does **not** require `core.hooksPath` to be set (a fresh clone
       must still be able to commit).
-- [ ] `tests/smoke-mcp.sh` is **not** invoked by the hook.
-- [ ] `.github/workflows/validate.yml` exists and is labelled unverified.
-- [ ] `AGENTS.md`'s push rule is conditional on a remote existing.
-- [ ] This task's own commit passed through the hook.
+- [x] `tests/smoke-mcp.sh` is **not** invoked by the hook.
+- [x] `.github/workflows/validate.yml` exists and is labelled unverified.
+- [x] `AGENTS.md`'s push rule is conditional on a remote existing.
+- [x] This task's own commit passed through the hook.
 
 ## Mandatory validations
-- [ ] `bash tests/validate.sh` → OK; still offline; still sub-second
+- [x] `bash tests/validate.sh` → OK; still offline; still sub-second
       (re-measure, since it now runs on every commit).
-- [ ] `git config --get core.hooksPath` → `.githooks` after install.
-- [ ] `git ls-files -s .githooks/pre-commit` → mode `100755`.
-- [ ] **Fails-when-broken proof**, each observed then reverted:
+- [x] `git config --get core.hooksPath` → `.githooks` after install.
+- [x] `git ls-files -s .githooks/pre-commit` → mode `100755`.
+- [x] **Fails-when-broken proof**, each observed then reverted:
       1. hook missing → validate fails naming it;
       2. hook present but not executable → validate fails;
       3. a staged tree that fails validation → `git commit` **refused**,
@@ -126,9 +126,9 @@ present and runnable; leave activation to `install.sh` and document it.
       5. a valid tree → commit succeeds through the hook.
       Record each observed message. Use a scratch branch or reset so no
       junk commit survives on `master`.
-- [ ] `bash scripts/install.sh link` twice → second run reports no hook
+- [x] `bash scripts/install.sh link` twice → second run reports no hook
       change (idempotent).
-- [ ] `git status` clean at end; no leftover test commits.
+- [x] `git status` clean at end; no leftover test commits.
 
 ## Risks and rollback
 - **Risk: the hook blocks legitimate work.** Mitigated by documenting

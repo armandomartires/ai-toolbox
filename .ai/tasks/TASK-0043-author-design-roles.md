@@ -197,31 +197,31 @@ to paper over per client.
 11. Review the diff; commit; record the hash; push; confirm; record.
 
 ## Acceptance criteria
-- [ ] `designer-manager` is **primary** in both clients' emitted output,
+- [x] `designer-manager` is **primary** in both clients' emitted output,
       verified by inspection
-- [ ] `ideator`, `critic` and `design-doc-writer` (if authored) are
+- [x] `ideator`, `critic` and `design-doc-writer` (if authored) are
       subagents
-- [ ] **`critic` is provably read-only in both clients** — the emitted
+- [x] **`critic` is provably read-only in both clients** — the emitted
       files inspected, not the profile trusted
-- [ ] Every role uses only the enumerated capability vocabulary; **no
+- [x] Every role uses only the enumerated capability vocabulary; **no
       client-native permission syntax** in any source file
-- [ ] The `design-doc-writer` question is **decided with reasoning
+- [x] The `design-doc-writer` question is **decided with reasoning
       recorded**, not defaulted
-- [ ] No name collides with a built-in in either client
-- [ ] Descriptions are short, with detail in the prompt body
-- [ ] `tests/validate.sh` passes on real agent content — the **first
+- [x] No name collides with a built-in in either client
+- [x] Descriptions are short, with detail in the prompt body
+- [x] `tests/validate.sh` passes on real agent content — the **first
       evidence** TASK-0038's checks work on something other than a fixture
-- [ ] `docs/registry.md`'s Agents section **populates** with the real roles
+- [x] `docs/registry.md`'s Agents section **populates** with the real roles
       and excludes `_template`
-- [ ] Emission verified per role per client, with the client-native
+- [x] Emission verified per role per client, with the client-native
       permissions inspected and recorded
-- [ ] No `agent` key added to any `opencode.jsonc`
-- [ ] Any Phase 2 defect found is **recorded and attributed to its owning
+- [x] No `agent` key added to any `opencode.jsonc`
+- [x] Any Phase 2 defect found is **recorded and attributed to its owning
       task**, not silently patched here
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — **required**; this
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — **required**; this
       task adds components and populates a registry section for the first
       time
 

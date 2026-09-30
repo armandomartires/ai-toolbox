@@ -123,36 +123,36 @@ Decided:
 8. Update runbook and planning docs; validate; review diff; commit.
 
 ## Acceptance criteria
-- [ ] `install.sh` deploys skills to Claude Code **and** OpenCode;
+- [x] `install.sh` deploys skills to Claude Code **and** OpenCode;
       `--client` selects one; absent clients are skipped, not created.
-- [ ] `~/.config/opencode/skills/project-workflow` resolves to the repo's
+- [x] `~/.config/opencode/skills/project-workflow` resolves to the repo's
       `3.0.0`, and `agent-tiers` is still present and unmodified.
-- [ ] No pre-existing directory is replaced without a printed notice.
-- [ ] `docs/registry.md` no longer lists `template-skill`; no template
+- [x] No pre-existing directory is replaced without a printed notice.
+- [x] `docs/registry.md` no longer lists `template-skill`; no template
       appears in any table.
-- [ ] `tests/validate.sh` fails if a client known to `install.sh` has no
+- [x] `tests/validate.sh` fails if a client known to `install.sh` has no
       `configs/<client>/README.md`.
-- [ ] All three client READMEs document skills deployment *and* MCP
+- [x] All three client READMEs document skills deployment *and* MCP
       wiring, each marked verified or unverified per client.
-- [ ] LM Studio ansible wiring verified, or its inability to be verified
+- [x] LM Studio ansible wiring verified, or its inability to be verified
       recorded with the reason.
-- [ ] `agent-tiers` untouched; no unrelated skill pruned.
+- [x] `agent-tiers` untouched; no unrelated skill pruned.
 
 ## Mandatory validations
-- [ ] `bash tests/validate.sh` — passes.
-- [ ] **Fails-when-broken proof** for the new client-README check:
+- [x] `bash tests/validate.sh` — passes.
+- [x] **Fails-when-broken proof** for the new client-README check:
       temporarily rename `configs/opencode/README.md`, confirm
       `validate.sh` exits non-zero naming that client, restore, confirm
       pass. Record both outputs.
-- [ ] `bash scripts/install.sh link` then `--client opencode` and
+- [x] `bash scripts/install.sh link` then `--client opencode` and
       `--client claude` — each run clean and idempotent (run twice;
       second run must not report spurious replacements).
-- [ ] `readlink -f ~/.config/opencode/skills/project-workflow` and
+- [x] `readlink -f ~/.config/opencode/skills/project-workflow` and
       `grep version` through the link → `3.0.0`.
-- [ ] `ls ~/.config/opencode/skills/` → still contains `agent-tiers`.
-- [ ] `bash scripts/sync-registry.sh`; `git diff docs/registry.md` shows
+- [x] `ls ~/.config/opencode/skills/` → still contains `agent-tiers`.
+- [x] `bash scripts/sync-registry.sh`; `git diff docs/registry.md` shows
       only the `template-skill` row removed.
-- [ ] `python3 -m json.tool` on LM Studio's `mcp.json` after editing, and
+- [x] `python3 -m json.tool` on LM Studio's `mcp.json` after editing, and
       confirmation it was restored (checksum or content compare).
 - [ ] `git status` clean at end.
 

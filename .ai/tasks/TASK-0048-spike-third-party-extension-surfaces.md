@@ -160,28 +160,28 @@ belongs in Outputs as a finding.
 
 ## Acceptance criteria
 
-- [ ] Both client versions and both package versions recorded, from the
+- [x] Both client versions and both package versions recorded, from the
       tools themselves.
-- [ ] **Q1 answered**: graphify's OpenCode integration is stated as plugin,
+- [x] **Q1 answered**: graphify's OpenCode integration is stated as plugin,
       `AGENTS.md`, or both, with the observed output quoted.
-- [ ] **Q2 answered**: `graphify serve` with no graph — exit code and
+- [x] **Q2 answered**: `graphify serve` with no graph — exit code and
       stderr recorded verbatim; the `serve.ts:188-195` reading confirmed or
       corrected.
 - [ ] **Q3 answered**: whether ponytail loads from an npm `plugin` entry,
       evidenced by OpenCode's log rather than by inference.
-- [ ] Every out-of-repo file created or modified is listed by absolute
+- [x] Every out-of-repo file created or modified is listed by absolute
       path, including anything no uninstaller removes.
-- [ ] The machine is reverted, and the revert is **verified** by comparison
+- [x] The machine is reverted, and the revert is **verified** by comparison
       with the backups — not asserted.
-- [ ] Each of `ADR-0021`'s three named falsifiable claims is marked
+- [x] Each of `ADR-0021`'s three named falsifiable claims is marked
       confirmed, corrected, or untested — with untested being an acceptable
       recorded outcome.
-- [ ] No component file in this repo was changed.
-- [ ] `tests/validate.sh` passes.
+- [x] No component file in this repo was changed.
+- [x] `tests/validate.sh` passes.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 - [ ] scripts/sync-registry.sh (if components changed — **expected: not
       run, because nothing should change**. If it *is* needed, that is a
       scope breach worth recording.)

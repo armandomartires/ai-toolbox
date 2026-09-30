@@ -196,29 +196,29 @@ failure this convention cannot catch for you.
 10. Review the diff, commit, push, record hash and push result.
 
 ## Acceptance criteria
-- [ ] `SPRINT-CURRENT.md` holds S6, un-parked, with the original parking
+- [x] `SPRINT-CURRENT.md` holds S6, un-parked, with the original parking
       note still visible
-- [ ] S8 is at `sprints/SPRINT-S8-third-party-extensions.md` with a
+- [x] S8 is at `sprints/SPRINT-S8-third-party-extensions.md` with a
       re-queued note; its four briefs and `PLAN-0005` are **unmodified**
       (verified by `git status`, not by intention)
-- [ ] S6's task table shows `TASK-0029`/`0030` as done-by-S7, agreeing with
+- [x] S6's task table shows `TASK-0029`/`0030` as done-by-S7, agreeing with
       those files
-- [ ] All four defects D1–D4 are recorded in this brief **and** reflected in
+- [x] All four defects D1–D4 are recorded in this brief **and** reflected in
       `TASK-0031`'s Scope and Acceptance criteria
-- [ ] `TASK-0031` carries a sixth fixture: PVE host by **bare hostname**,
+- [x] `TASK-0031` carries a sixth fixture: PVE host by **bare hostname**,
       `gather_facts: true`, no exclusion → guard must **fail**
-- [ ] `ROADMAP.md` Phase 6 reads current; Phase 8 reads re-queued
-- [ ] B-010…B-013, B-019, B-020 all still `ready` — no item resolved by a
+- [x] `ROADMAP.md` Phase 6 reads current; Phase 8 reads re-queued
+- [x] B-010…B-013, B-019, B-020 all still `ready` — no item resolved by a
       sprint transition
-- [ ] `tests/validate.sh` reports OK
-- [ ] `scripts/sync-registry.sh` produces no diff
-- [ ] A session record and `INDEX.md` row exist
-- [ ] No file under `/home/armando.martires/SIGMA-infrastructure` is
+- [x] `tests/validate.sh` reports OK
+- [x] `scripts/sync-registry.sh` produces no diff
+- [x] A session record and `INDEX.md` row exist
+- [x] No file under `/home/armando.martires/SIGMA-infrastructure` is
       modified
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
 
 ## Risks and rollback
 - **Risk: a sprint transition silently resolves a backlog item.** Parking

@@ -129,25 +129,25 @@ one existing count is already wrong.
 
 ## Acceptance criteria
 
-- [ ] The guide defines `test-allowlist` and `test_allow` before either other
+- [x] The guide defines `test-allowlist` and `test_allow` before either other
       file references them, and states the per-client coverage explicitly.
-- [ ] `tests/validate.sh` rejects all five malformed cases, **each observed
+- [x] `tests/validate.sh` rejects all five malformed cases, **each observed
       failing with its message recorded in this file**.
-- [ ] A correct `qa-test` passes the gate.
-- [ ] `scripts/emit-agents.py` emits the merged deny-first `bash:` map with
+- [x] A correct `qa-test` passes the gate.
+- [x] `scripts/emit-agents.py` emits the merged deny-first `bash:` map with
       `"*": "deny"` first, and **refuses** a claude-code emission of the term.
-- [ ] `agents/qa-test/agent.md`'s description is true of the role as emitted.
-- [ ] Vocabulary counts agree across guide, gate and emitter — including the
+- [x] `agents/qa-test/agent.md`'s description is true of the role as emitted.
+- [x] Vocabulary counts agree across guide, gate and emitter — including the
       stale docstring.
-- [ ] `docs/registry.md` is regenerated and its `qa-test` row is unchanged.
-- [ ] Fixtures removed, removal verified.
-- [ ] `B-021` closed in `BACKLOG.md` with what was decided and what was left.
+- [x] `docs/registry.md` is regenerated and its `qa-test` row is unchanged.
+- [x] Fixtures removed, removal verified.
+- [x] `B-021` closed in `BACKLOG.md` with what was decided and what was left.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` — components changed
-- [ ] `git status --porcelain` — no fixture or scratch file left behind
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` — components changed
+- [x] `git status --porcelain` — no fixture or scratch file left behind
 
 ## Risks and rollback
 

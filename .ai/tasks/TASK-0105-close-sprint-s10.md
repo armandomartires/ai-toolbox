@@ -102,21 +102,21 @@ have sent a reader to finished work.
 
 ## Acceptance criteria
 
-- [ ] `sprints/SPRINT-S10-unattended-bindings.md` exists and carries the
+- [x] `sprints/SPRINT-S10-unattended-bindings.md` exists and carries the
       closure header.
-- [ ] `SPRINT-CURRENT.md` holds a no-sprint-open state naming what is
+- [x] `SPRINT-CURRENT.md` holds a no-sprint-open state naming what is
       outstanding, including `B-035`.
-- [ ] Phase 10 reads **COMPLETE** with all seven criteria judged, criterion 3
+- [x] Phase 10 reads **COMPLETE** with all seven criteria judged, criterion 3
       shown as *partly* met, not upgraded.
-- [ ] Every still-open item survives the move; no closed item is re-listed.
-- [ ] Phase 10's completion and the archive are in **one commit**.
-- [ ] `tests/validate.sh` passes; no component file changed.
+- [x] Every still-open item survives the move; no closed item is re-listed.
+- [x] Phase 10's completion and the archive are in **one commit**.
+- [x] `tests/validate.sh` passes; no component file changed.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh` (expect no diff)
-- [ ] `git status --porcelain` — `.ai/` only
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh` (expect no diff)
+- [x] `git status --porcelain` — `.ai/` only
 
 ## Risks and rollback
 

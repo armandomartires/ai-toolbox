@@ -126,21 +126,21 @@ or re-stat'd on 2026-09-22 before this brief was written.
 7. Review the diff, commit, push, record hash and push result.
 
 ## Acceptance criteria
-- [ ] No file in the repo states the installed Bionic version as 1.1.1+5 as a
+- [x] No file in the repo states the installed Bionic version as 1.1.1+5 as a
       *current* observation; dated records that say so are untouched.
-- [ ] No file states that `~/.lmstudio/mcp.json` currently holds the `ansible`
+- [x] No file states that `~/.lmstudio/mcp.json` currently holds the `ansible`
       entry.
-- [ ] The clearing evidence (same-second mtimes, empty `last-synced-mcp-state`)
+- [x] The clearing evidence (same-second mtimes, empty `last-synced-mcp-state`)
       is recorded with its date stamp, and its cause is marked as unestablished.
-- [ ] `ng-mcp-managed-oauth` is recorded; the `ng-mcp.json`-still-absent claim
+- [x] `ng-mcp-managed-oauth` is recorded; the `ng-mcp.json`-still-absent claim
       is re-verified and retained.
-- [ ] Bionic's MCP status remains **inferred, not verified**.
-- [ ] `ADR-0020`, `ADR-0006` and `TASK-0047` are byte-identical to before.
-- [ ] `tests/validate.sh` passes; `git status` clean after commit.
+- [x] Bionic's MCP status remains **inferred, not verified**.
+- [x] `ADR-0020`, `ADR-0006` and `TASK-0047` are byte-identical to before.
+- [x] `tests/validate.sh` passes; `git status` clean after commit.
 
 ## Mandatory validations
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (expect no diff — no component changed)
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (expect no diff — no component changed)
 
 ## Risks and rollback
 - **Risk: over-correcting into the ADRs**, destroying the dated evidence that

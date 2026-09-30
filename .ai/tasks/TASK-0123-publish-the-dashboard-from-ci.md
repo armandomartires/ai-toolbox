@@ -129,24 +129,24 @@ A forecast, written before the work.
 
 ## Acceptance criteria
 
-- [ ] A push to `master` triggers the workflow and it concludes `success`,
+- [x] A push to `master` triggers the workflow and it concludes `success`,
       observed through the API, not inferred.
-- [ ] The deployed page is reachable over HTTPS and returns 200.
-- [ ] The deployed page reports the **full** commit count, not 1 — the
+- [x] The deployed page is reachable over HTTPS and returns 200.
+- [x] The deployed page reports the **full** commit count, not 1 — the
       shallow-checkout trap, checked on the live page.
-- [ ] The workflow fails, rather than deploying, if the generated model
+- [x] The workflow fails, rather than deploying, if the generated model
       carries a degenerate history.
-- [ ] No dashboard HTML is committed; `git status` is clean after a run.
-- [ ] `validate.yml` is unchanged.
-- [ ] `AGENTS.md` no longer claims the repository is private.
-- [ ] The workflow's status label matches observed reality.
+- [x] No dashboard HTML is committed; `git status` is clean after a run.
+- [x] `validate.yml` is unchanged.
+- [x] `AGENTS.md` no longer claims the repository is private.
+- [x] The workflow's status label matches observed reality.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 - [ ] scripts/sync-registry.sh (if components changed)
-- [ ] The workflow run's conclusion, read from the API
-- [ ] An HTTP fetch of the published page, with its commit count
+- [x] The workflow run's conclusion, read from the API
+- [x] An HTTP fetch of the published page, with its commit count
 
 ## Risks and rollback
 

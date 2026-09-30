@@ -107,24 +107,24 @@ is a check shaped by one example.
 
 ## Acceptance criteria
 
-- [ ] The check **fires on `designer-manager`'s pre-fix state** — observed,
+- [x] The check **fires on `designer-manager`'s pre-fix state** — observed,
       with the message recorded here. This is the acceptance criterion that
       matters; a check that only fires on invented fixtures has not been shown
       to catch the thing it exists for.
-- [ ] The check fires on a delegate that does not exist at all — observed.
-- [ ] The gate passes on the corrected tree.
-- [ ] `~/.claude/agents/designer-manager.md` is no longer emitted; emission
+- [x] The check fires on a delegate that does not exist at all — observed.
+- [x] The gate passes on the corrected tree.
+- [x] `~/.claude/agents/designer-manager.md` is no longer emitted; emission
       **skips** the role for claude-code with exit 0, rather than refusing.
-- [ ] Both wiring snapshots state the new counts **and** that the design-brief
+- [x] Both wiring snapshots state the new counts **and** that the design-brief
       loop is OpenCode-only.
-- [ ] `TASK-0059`'s brief records what this task already did.
-- [ ] Fixtures removed, removal verified.
+- [x] `TASK-0059`'s brief records what this task already did.
+- [x] Fixtures removed, removal verified.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `scripts/sync-registry.sh`
-- [ ] `git status --porcelain`
+- [x] `tests/validate.sh`
+- [x] `scripts/sync-registry.sh`
+- [x] `git status --porcelain`
 
 ## Risks and rollback
 

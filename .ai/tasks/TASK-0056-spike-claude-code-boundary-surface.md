@@ -89,22 +89,22 @@ This task file only. A scratch fixture directory outside the repo.
 
 ## Acceptance criteria
 
-- [ ] The `claude` version is recorded verbatim, with the date.
-- [ ] F5 carries a verdict of **confirmed / falsified / unsettled**, with the
+- [x] The `claude` version is recorded verbatim, with the date.
+- [x] F5 carries a verdict of **confirmed / falsified / unsettled**, with the
       observed output, against both the live emission and a control fixture.
-- [ ] The `disallowedTools` specifier behaviour is recorded as observed, not
+- [x] The `disallowedTools` specifier behaviour is recorded as observed, not
       cited.
-- [ ] `isolation: worktree` is characterised well enough for `TASK-0058` to
+- [x] `isolation: worktree` is characterised well enough for `TASK-0058` to
       decide whether `worktree-only` emits it or refuses the client — **or the
       question is explicitly recorded as still open**, which is an acceptable
       outcome and better than a guess.
-- [ ] Every claim has a control shown to fail.
-- [ ] No component file changed.
+- [x] Every claim has a control shown to fail.
+- [x] No component file changed.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `git status --porcelain` — this task file only
+- [x] `tests/validate.sh`
+- [x] `git status --porcelain` — this task file only
 
 ## Risks and rollback
 

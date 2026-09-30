@@ -116,23 +116,23 @@ skill.
 
 ## Acceptance criteria
 
-- [ ] A simulated failure creates exactly one issue, read back from the API.
-- [ ] A second simulated failure adds a comment and creates **no** second
+- [x] A simulated failure creates exactly one issue, read back from the API.
+- [x] A second simulated failure adds a comment and creates **no** second
       issue, proven by the open-issue count staying at one.
-- [ ] A simulated success closes that issue, proven by its `state`.
-- [ ] The workflow requests `issues: write` and nothing wider, and adds no
+- [x] A simulated success closes that issue, proven by its `state`.
+- [x] The workflow requests `issues: write` and nothing wider, and adds no
       repository secret.
-- [ ] No third-party action appears in it; every call is `curl` or `python3`
+- [x] No third-party action appears in it; every call is `curl` or `python3`
       against the REST API with the built-in token.
-- [ ] `validate.yml` and `dashboard.yml` are unchanged.
-- [ ] `tests/validate.sh` exits `OK`.
+- [x] `validate.yml` and `dashboard.yml` are unchanged.
+- [x] `tests/validate.sh` exits `OK`.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 - [ ] scripts/sync-registry.sh (if components changed)
-- [ ] The three simulated runs, each conclusion read from the API
-- [ ] The issue's state read back after each
+- [x] The three simulated runs, each conclusion read from the API
+- [x] The issue's state read back after each
 
 ## Risks and rollback
 

@@ -212,38 +212,38 @@ under `skills/project-migration/`.
       error.
 - [ ] `grep -Eic 'https?://|cdn|<script src|@import url' <output>` returns 0 —
       the self-containment claim is checked, not asserted.
-- [ ] The emitted dashboard reports counts that match the repository,
+- [x] The emitted dashboard reports counts that match the repository,
       verified independently: 121 tasks, 27 ADRs, 12 reviews, 10 sprints,
       46 backlog rows, 10 roadmap phases.
-- [ ] Every one of the nine tabs renders with non-empty content.
-- [ ] Burn-up shows **both** completed and total-scope lines, so scope
+- [x] Every one of the nine tabs renders with non-empty content.
+- [x] Burn-up shows **both** completed and total-scope lines, so scope
       growth is visible rather than hidden.
-- [ ] Every chart has a reachable table view.
-- [ ] Both themes render; the toggle persists across reload; `auto` follows
+- [x] Every chart has a reachable table view.
+- [x] Both themes render; the toggle persists across reload; `auto` follows
       `prefers-color-scheme`.
-- [ ] `--css` inlines an override that visibly changes chart colour **without
+- [x] `--css` inlines an override that visibly changes chart colour **without
       any JS edit**, demonstrated.
-- [ ] `--json` emits the same figures the HTML shows, spot-checked on at
+- [x] `--json` emits the same figures the HTML shows, spot-checked on at
       least three.
-- [ ] The generator runs with `git` unavailable (`--no-git`) and still
+- [x] The generator runs with `git` unavailable (`--no-git`) and still
       produces every non-git chart.
-- [ ] `python3 -c 'import dashboard_lib'` requires nothing outside the
+- [x] `python3 -c 'import dashboard_lib'` requires nothing outside the
       standard library.
-- [ ] `tests/validate.sh` exits `OK` — specifically its `skills/*/scripts/*`
+- [x] `tests/validate.sh` exits `OK` — specifically its `skills/*/scripts/*`
       wiring-claim scan, which the two new scripts are subject to.
-- [ ] `references/dashboard.md` contains an explicit "what this does not
+- [x] `references/dashboard.md` contains an explicit "what this does not
       prove" section naming the reconstructed CFD and the default estimate.
-- [ ] `SKILL.md` version bumped and the registry regenerated.
+- [x] `SKILL.md` version bumped and the registry regenerated.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] `skills/project-workflow/scripts/build-dashboard.sh` against this repo,
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] `skills/project-workflow/scripts/build-dashboard.sh` against this repo,
       exit 0
-- [ ] The same, with `--no-git`, exit 0
+- [x] The same, with `--no-git`, exit 0
 - [ ] The self-containment grep above, returning 0
-- [ ] `check-artifact.sh` on this brief, once complete
+- [x] `check-artifact.sh` on this brief, once complete
 
 ## Risks and rollback
 

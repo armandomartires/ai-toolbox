@@ -105,21 +105,21 @@ finding worth recording and probably a mistake.
 
 ## Acceptance criteria
 
-- [ ] The `opencode` version is recorded verbatim, with the date.
-- [ ] F1, F2 and F4 each carry a verdict of **confirmed / falsified /
+- [x] The `opencode` version is recorded verbatim, with the date.
+- [x] F1, F2 and F4 each carry a verdict of **confirmed / falsified /
       unsettled**, each with the command run and the observed output.
 - [ ] Every claim has a negative control, and the control is shown to fail.
-- [ ] Both secondary observations are recorded, or explicitly marked not reached.
-- [ ] No component file changed; `git status --porcelain` shows only this task
+- [x] Both secondary observations are recorded, or explicitly marked not reached.
+- [x] No component file changed; `git status --porcelain` shows only this task
       file.
-- [ ] Fixtures removed and their removal verified, not assumed.
-- [ ] Anything that could not be settled is recorded as **unsettled**, never as
+- [x] Fixtures removed and their removal verified, not assumed.
+- [x] Anything that could not be settled is recorded as **unsettled**, never as
       a reasoned conclusion.
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh`
-- [ ] `git status --porcelain` — this task file only
+- [x] `tests/validate.sh`
+- [x] `git status --porcelain` — this task file only
 
 ## Risks and rollback
 
