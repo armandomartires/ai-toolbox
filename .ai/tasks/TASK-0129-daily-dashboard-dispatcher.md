@@ -446,5 +446,8 @@ ticked in the observation commit.
 - Result: built, gated and ready to land. The live checks A7-A10 (the
   manual dispatch, then the first scheduled run) are pending, and are
   recorded in a later commit.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `5d746b4` — *Rebuild the published dashboard daily via a dispatcher
+  (TASK-0129)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `d69bafe..5d746b4 HEAD -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `5d746b4`, and `git remote -v` is token-free
