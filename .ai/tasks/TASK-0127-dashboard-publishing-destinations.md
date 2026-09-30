@@ -129,32 +129,32 @@ Constraints:
 
 ## Acceptance criteria
 
-- [ ] `publish-dashboard.sh render --check` exits 0 on this repository, and
+- [x] `publish-dashboard.sh render --check` exits 0 on this repository, and
       exits non-zero naming the file when any rendered file is edited by hand.
-- [ ] `render` refuses (non-zero, file untouched) to overwrite a CI file
+- [x] `render` refuses (non-zero, file untouched) to overwrite a CI file
       lacking the generated marker, without `--adopt`.
-- [ ] `render` refuses a `skill_dir` outside the repository, naming why.
-- [ ] `render` never overwrites an existing non-generated `.gitlab-ci.yml`,
+- [x] `render` refuses a `skill_dir` outside the repository, naming why.
+- [x] `render` never overwrites an existing non-generated `.gitlab-ci.yml`,
       and `--check` fails when one does not include the fragment.
-- [ ] `guard` fails on a shallow clone **of more than one commit** — the
+- [x] `guard` fails on a shallow clone **of more than one commit** — the
       GitLab default case the old guard passed.
-- [ ] `guard` fails on `commits <= 1`, zero tasks, and a wrong corpus shape.
-- [ ] `check-publish.sh` is in `tests/validate.sh`, and each of its cases was
+- [x] `guard` fails on `commits <= 1`, zero tasks, and a wrong corpus shape.
+- [x] `check-publish.sh` is in `tests/validate.sh`, and each of its cases was
       seen to fail with the behaviour reverted.
-- [ ] GitHub's `dashboard` workflow **succeeds** on the landed commit and the
+- [x] GitHub's `dashboard` workflow **succeeds** on the landed commit and the
       page returns HTTP 200.
-- [ ] GitLab's CI lint reports the pushed configuration **valid**, and the
+- [x] GitLab's CI lint reports the pushed configuration **valid**, and the
       pipeline it creates contains a `pages` job. Its status is recorded as it
       is, not as hoped.
-- [ ] Nothing under `skills/project-workflow/dashboard/` changed.
+- [x] Nothing under `skills/project-workflow/dashboard/` changed.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed) — the skill changed
-- [ ] `skills/project-workflow/scripts/check-publish.sh`
-- [ ] `skills/project-workflow/scripts/check-dashboard.sh` (unchanged generator, still green)
-- [ ] `git diff --stat -- skills/project-workflow/dashboard/` empty
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed) — the skill changed
+- [x] `skills/project-workflow/scripts/check-publish.sh`
+- [x] `skills/project-workflow/scripts/check-dashboard.sh` (unchanged generator, still green)
+- [x] `git diff --stat -- skills/project-workflow/dashboard/` empty
 
 ## Risks and rollback
 

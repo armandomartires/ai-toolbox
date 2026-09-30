@@ -118,27 +118,28 @@ the ADR refer to `$GITLAB_URL`, never its value.
 
 ## Acceptance criteria
 
-- [ ] `git remote -v` lists exactly `origin` (GitLab) and `github`, and
+- [x] `git remote -v` lists exactly `origin` (GitLab) and `github`, and
       neither URL carries a credential.
-- [ ] `master` tracks `origin/master`.
-- [ ] After landing, `git ls-remote origin master` and
+- [x] `master` tracks `origin/master`.
+- [x] After landing, `git ls-remote origin master` and
       `git ls-remote github master` both equal `git rev-parse master`.
-- [ ] The GitLab project reads back `private`, default branch `master`.
-- [ ] The push used the project token: a push with that token succeeds, and
+- [x] The GitLab project reads back `private`, default branch `master`.
+- [x] The push used the project token: a push with that token succeeds, and
       the token's scopes read back as `read_repository`, `write_repository`
       only.
-- [ ] `~/.config/ai-toolbox/env` is mode `600` and no tracked file contains the
-      token or the intranet hostname:
+- [x] `~/.config/ai-toolbox/env` is mode `600` and no tracked file contains the
+      token or the intranet hostname (met in Attempt 1; the file was removed in
+      Attempt 2, the token now lives in `~/.bashrc`):
       `git grep -I -e "$GITLAB_PUSH_TOKEN" -e "<host>"` returns nothing.
-- [ ] `ADR-0028` passes `check-artifact.sh`; `tests/validate.sh` exits OK.
+- [x] `ADR-0028` passes `check-artifact.sh`; `tests/validate.sh` exits OK.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 - [ ] scripts/sync-registry.sh (if components changed) — no component changes;
       not applicable
-- [ ] `git grep` for the token value and the intranet host returns nothing
-- [ ] hash comparison against both remotes
+- [x] `git grep` for the token value and the intranet host returns nothing
+- [x] hash comparison against both remotes
 
 ## Risks and rollback
 

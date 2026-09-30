@@ -814,6 +814,11 @@ embody** — measured with the skill's own checker, not inferred. Raised
       copy of the one in `sigma-llmwiki`, so one generator serves every
       project the skill is applied to. `SKILL.md` 4.1.0 → 5.0.0. The
       fixture found three defects in the incoming tool (done)
+- [x] TASK-0126 — Make the intranet GitLab the primary remote; GitHub becomes
+      the public mirror, `ADR-0028` (done, `4927fcb`)
+- [x] TASK-0127 — Ship GitHub Pages and GitLab Pages as optional dashboard
+      destinations. GitHub verified end to end; GitLab built, linted and
+      queued, `UNVERIFIED` until a runner exists (done, `36ac929`)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those
