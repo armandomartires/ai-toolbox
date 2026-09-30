@@ -367,5 +367,8 @@ A forecast, written before the work.
 - Result: built and gated. L0-L4 (the landed runs, the approved simulations,
   the real close, and the label) are pending, and are recorded in later
   commits.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `2de6f52` — *Close the CI alert only when no watched workflow is red
+  (TASK-0130)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `dde2a98..2de6f52 HEAD -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `2de6f52`, and `git remote -v` is token-free
