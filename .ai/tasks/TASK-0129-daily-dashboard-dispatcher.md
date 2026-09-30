@@ -261,9 +261,9 @@ ticked in the observation commit.
 - [x] A5b Nothing under `skills/project-workflow/dashboard/` changed.
 - [x] A6 The docs are updated, `SKILL.md` reads `5.2.0`, and
       `docs/registry.md` is unchanged.
-- [ ] A7 After landing, GitHub lists `dashboard-daily` as `active`, and the
+- [x] A7 After landing, GitHub lists `dashboard-daily` as `active`, and the
       landed commit's `validate` and `dashboard` push runs succeed.
-- [ ] A8 A human-approved dispatch of `dashboard-daily` starts a `dashboard`
+- [x] A8 A human-approved dispatch of `dashboard-daily` starts a `dashboard`
       run (`workflow_dispatch`, `master`) whose build and deploy succeed. The
       page's `generated_at` moves to that run.
 - [ ] A9 The first scheduled `dashboard-daily` run succeeds, and so does the
@@ -451,3 +451,36 @@ ticked in the observation commit.
 - Push: **confirmed to both remotes** — `d69bafe..5d746b4 HEAD -> master` to
   `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
   read `5d746b4`, and `git remote -v` is token-free
+
+### Live verification, after landing
+
+Recorded after the record commit, in a separate commit, because the record
+commit may touch only its two lines. The first scheduled run is still to come.
+
+- **A7**, the task commit `5d746b4` landing:
+  - `validate` `36774256538` and `dashboard` `36774256709` both succeeded,
+    and so did their ci-alert runs.
+  - GitHub listed `dashboard-daily` (`.github/workflows/dashboard-daily.yml`)
+    as `active`, with 0 runs, and the page returned HTTP 200.
+- **A8**, the manual dispatch the human approved, at 2026-09-30T20:43:20Z:
+  - `POST …/actions/workflows/dashboard-daily.yml/dispatches` with
+    `X-GitHub-Api-Version: 2026-03-10` answered **HTTP 200** with
+    `workflow_run_id` `36774605074`. That is the reply this version
+    documents, and the one the dispatcher relies on.
+  - The dispatcher run `36774605074` (`workflow_dispatch`, `master`,
+    `dde2a98`) succeeded. Its log shows the wait working live:
+    `dispatched run 36774619004`, `run 36774619004: in_progress -`, then
+    `run 36774619004: completed success`.
+  - The dashboard run `36774619004` was `workflow_dispatch` on `master` at
+    `dde2a98`, with `actor` and `triggering_actor` both
+    `github-actions[bot]`. It ran from 20:43:29Z to 20:43:58Z and succeeded.
+  - The page's `generated_at` then read 2026-09-30T20:43:36Z, with newest
+    commit `dde2a98`: that run rebuilt it.
+- **ci-alert and the dispatched run**: no ci-alert run followed
+  `36774619004`. The last ones, at 20:42:33Z and 20:42:47Z, were for the
+  preceding push. So a run dispatched with the workflow token starts no
+  `workflow_run`, as the community report said. That is why `TASK-0130`
+  watches `dashboard-daily`, whose own run mirrors the build.
+- **Still pending**:
+  - A9 and A9b, the first scheduled run, due 2026-10-01 at 00:23 UTC;
+  - A10, the label move, made only against that run.
