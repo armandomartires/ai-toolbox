@@ -457,8 +457,12 @@ Phase 1 (gates 1–5, read-only) is **complete** as of attempt 2. Phase 2 (gates
   - Estate: `HEAD` `2a6be9a` and porcelain empty before and after;
     `md5sum -c` over `state/baseline/*` all `OK`; no new file
   - `git diff --stat -- skills/ansible-ops/` → empty
-  - `tests/validate.sh`, `scripts/sync-registry.sh` — see the commit
+  - `tests/validate.sh` → `validate.sh: OK` (and again in the pre-commit
+    hook); `scripts/sync-registry.sh` → no diff
 - Result: **Phase 1 complete; task stays `blocked` on phase 2's
   Authorization.** `B-046` narrowed; `B-050` raised.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `800797d` — *Run ansible-ops gates 4-5 against the live estate
+  (TASK-0116)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `9f8ce7a..800797d master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `800797d`, and `git remote -v` is token-free
