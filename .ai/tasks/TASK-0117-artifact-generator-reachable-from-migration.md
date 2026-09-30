@@ -294,5 +294,9 @@ when the human scheduled it.
   - `scripts/sync-registry.sh` → no diff
   - `git diff --stat -- skills/*/schemas/` → empty
 - Result: **done.** `B-036` closed.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `1de2115` — *Ship the artifact engine inside project-migration
+  (TASK-0117)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `51e7632..1de2115 master -> master` to
+  `origin` and to `github` (the range carries `TASK-0120`'s record commit
+  `a306e33` too); `HEAD`, `origin/master` and `github/master` all read
+  `1de2115`, and `git remote -v` is token-free
