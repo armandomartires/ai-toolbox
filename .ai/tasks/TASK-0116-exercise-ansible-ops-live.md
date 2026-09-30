@@ -93,6 +93,17 @@ connect to hosts at gate 4, so the hazard review at gate 1 governs them.
 - Authorized by: *(unfilled)*
 - Date: *(unfilled)*
 
+- Change authorized: Apply `playbooks/capture_pve_baseline.yml` without
+  `--check` at estate commit `2a6be9a`. Expected effect, as predicted by
+  gate 4 on 2026-09-30: one new `state/baseline/<UTC>.json` and a rewritten
+  `state/baseline/latest.json` on the control node; no host-side change.
+  Rollback: `git checkout -- state/baseline/latest.json` and delete the new
+  file. Stop if the pre-run cluster health check is not PASS. After gate 8,
+  leave the result uncommitted in the estate for me to commit or roll back.
+- Hosts / `--limit`: `--limit sigsrvpve1`; `forks` unchanged at 2
+- Authorized by: Armando Martires
+- Date: 2026-09-30
+
 ## Scope
 
 One exercise of the skill, in two phases, with the second gated on a human.
@@ -168,31 +179,32 @@ and nothing else.
 
 ## Acceptance criteria
 
-- [ ] Every gate attempted has a recorded outcome and the raw command output
+- [x] Every gate attempted has a recorded outcome and the raw command output
       behind it.
-- [ ] The gate-1 derivation of the `--limit` is recorded as a derivation, and
+- [x] The gate-1 derivation of the `--limit` is recorded as a derivation, and
       the bound was actually applied at gate 4.
-- [ ] Gate 5 has a **per-module** verdict, not one verdict for the play.
-- [ ] Each of gates 1–5 carries an explicit note on whether the skill's
+- [x] Gate 5 has a **per-module** verdict, not one verdict for the play.
+- [x] Each of gates 1–5 carries an explicit note on whether the skill's
       instruction was followable as written.
-- [ ] The cluster-health check at step 2 is recorded, with its method named.
-- [ ] If phase 2 ran, the Authorization section is filled, dated and signed by a
+- [x] The cluster-health check at step 2 is recorded, with its method named.
+- [x] If phase 2 ran, the Authorization section is filled, dated and signed by a
       human, and the authorized `--limit` matches the one used.
-- [ ] If phase 2 did not run, this task ends `blocked` with phase 1 written up —
-      and that is recorded as a complete outcome, not a failure.
-- [ ] `check-change-record.sh` exits 0 against the record, or its complaint is
+- [ ] ~~If phase 2 did not run, this task ends `blocked` with phase 1 written up —
+      and that is recorded as a complete outcome, not a failure.~~ *Not
+      applicable: phase 2 ran (attempt 3).*
+- [x] `check-change-record.sh` exits 0 against the record, or its complaint is
       recorded and explained.
-- [ ] `skills/ansible-ops/` is byte-identical to its pre-task state.
-- [ ] The estate's `git status --porcelain` shows only the authorized change, or
+- [x] `skills/ansible-ops/` is byte-identical to its pre-task state.
+- [x] The estate's `git status --porcelain` shows only the authorized change, or
       is empty if phase 2 did not run.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] `skills/ansible-ops/scripts/check-change-record.sh` against the record
-- [ ] `git -C /home/armando.martires/SIGMA-infrastructure status --porcelain`, before and after
-- [ ] `git -C ... diff --stat` of `skills/ansible-ops/` is empty
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] `skills/ansible-ops/scripts/check-change-record.sh` against the record
+- [x] `git -C /home/armando.martires/SIGMA-infrastructure status --porcelain`, before and after
+- [x] `git -C ... diff --stat` of `skills/ansible-ops/` is empty
 
 ## Risks and rollback
 
@@ -220,18 +232,13 @@ and nothing else.
 | Artifact | End state |
 |----------|-----------|
 | `skills/ansible-ops/` | **Byte-identical.** Exercised, not edited — the run's whole point |
-| `/home/armando.martires/SIGMA-infrastructure/` | **Untouched and verified so**, after both attempts: `HEAD` `2a6be9a` unmoved, porcelain empty, every file under `state/baseline/` byte-identical by checksum and no new snapshot file, before and after. `ansible.log` grew (gitignored, untracked) — that is gates 2-4 logging |
-| `.ai/planning/BACKLOG.md` | Attempt 1: `B-046` raised; `B-039` extended with a fourth, measured stale claim. Attempt 2: `B-046` narrowed to a documentation item with its two-part prerequisite measured; **`B-050` raised** (gate 5 cannot derive a verdict for a control-flow action from its own documentation) |
-| `.ai/planning/SPRINT-CURRENT.md` | Item 7: attempt 1 "gates 1-3 exercised, 4 blocked"; attempt 2 **"gates 1-5 exercised, 6-9 unauthorized"** |
+| `/home/armando.martires/SIGMA-infrastructure/` | Attempts 1-2: **untouched and verified so** (`HEAD` `2a6be9a`, porcelain empty, every `state/baseline/` checksum identical). Attempt 3: **exactly the authorized change and nothing else**: ` M state/baseline/latest.json` plus one new git-ignored `state/baseline/2026-09-30T12:06:02Z.json`, byte-identical to each other. `HEAD` still `2a6be9a`. **Left uncommitted, for the human to keep or roll back**, per the Authorization section |
+| `.ai/planning/BACKLOG.md` | Attempt 1: `B-046` raised; `B-039` extended with a fourth, measured stale claim. Attempt 2: `B-046` narrowed to a documentation item with its two-part prerequisite measured; **`B-050` raised** (gate 5 cannot derive a verdict for a control-flow action from its own documentation). Attempt 3: `B-046` extended — on Claude Code the harness also refuses gates 6-8 to the agent, with or without an in-file authorization |
+| `.ai/planning/SPRINT-CURRENT.md` | Item 7: attempt 1 "gates 1-3 exercised, 4 blocked"; attempt 2 "gates 1-5 exercised, 6-9 unauthorized"; attempt 3 **"all nine exercised once"** |
 | `.ai/context/CURRENT_STATE.md` | A dated section per attempt |
-| `/tmp/opencode/ansible-ops-pilot/change-record.md` | Scratch record, **seven of nine fields filled**, deliberately unclosed. The checker names exactly the gate-6 and gate-9 fields |
+| `/tmp/opencode/ansible-ops-pilot/change-record.md` | Scratch record, **closed**: all nine fields filled; `check-change-record.sh` → `RECORD OK`, exit 0. Scratch because the skill leaves the record's location to the estate, and this estate has no convention for one yet |
 | `.claude/settings.local.json` | **Gitignored, machine-local.** One exact-match allow rule for the gate-4 command, granted by the human 2026-09-30. Not a repo change; recorded because gate 4's evidence depends on it |
-| Authorization section | **Still unfilled.** Phase 2 never started |
-
-**This task is NOT done.** Phase 1 (gates 1-5) is complete, which the
-acceptance criteria name as a complete outcome for this task — but the task
-stays `blocked` on the Authorization section, and closing it as `done` would
-claim the skill's estate-changing gates were exercised when none was.
+| Authorization section | **Filled by the human in the file**, 2026-09-30: change, `--limit sigsrvpve1`, rollback, stop condition, signature. The four original `*(unfilled)*` placeholder lines were left above it by the human's edit and are deliberately not removed by the agent |
 
 **Deviations.**
 
@@ -259,22 +266,37 @@ claim the skill's estate-changing gates were exercised when none was.
    which contradicts the observed run. Recorded as `not-applicable` on a
    stated reason and raised as `B-050`, rather than papered over.
 
-**Next task starts here**: gates 1-5 are evidenced, with a seven-of-nine
-record whose checker complaint names only gates 6 and 9. Phase 2 needs a human
-to fill the Authorization section with a *mutating* change — the read-back
-play has no gate-6 snapshot worth taking. `B-046` (document the prerequisite
-in the loop), `B-050` and the `B-039` extension are open.
+6. **Gates 6-8 were executed by the human, not the agent** — the `TASK-0016` /
+   `TASK-0017` shape. After the human authorized in conversation (a one-time
+   override the agent declined to write into the file itself) and then in the
+   file, the Claude Code auto-mode classifier refused the agent every phase-2
+   action: writing the authorization (*Production Deploy*), a read-only
+   `git status` (*Instruction Poisoning*), and the gate-6 snapshot (*Modify
+   Shared Resources*). **None was routed around.** The agent wrote the
+   commands, the human ran them and pasted the output, and the agent verified
+   it against gate 4's prediction and closed gate 9.
+7. **The mutation is the gentlest one available**: two files on the control
+   node, behind a PVEAuditor token. So gate 6's snapshot is a git blob, not a
+   PVE `qm snapshot`, and the estate's guest-snapshot procedure
+   (`8.5.1-change-management.md`, *pre-<change>-<YYYYMMDD>*) is **still
+   unexercised by this skill**. Chosen on purpose, and stated so that
+   "all nine gates exercised" is not read as more than it is.
+
+**Next task starts here**: every gate has run once, and the record closes
+clean. The estate holds an uncommitted `latest.json` plus a new baseline for
+the human to keep or roll back. `B-046` (now covering gates 4 and 6-8 on
+Claude Code), `B-050` and the `B-039` extension are open. A guest-level change
+with a real PVE snapshot is the untested remainder.
 
 ## Status
 
-- Status: blocked   # planned|ready|in_progress|blocked|review|done|cancelled
-- Owner: human
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
+- Owner: agent
 - Created: 2026-09-27
 - Updated: 2026-09-30
 
-Phase 1 (gates 1–5, read-only) is **complete** as of attempt 2. Phase 2 (gates
-6–9) is blocked until a human fills the Authorization section above. Owner is
-`human` because the task cannot complete without that act.
+Phase 1 (gates 1–5) completed in attempt 2; phase 2 (gates 6–9) in attempt 3,
+with gates 6–8 run by the human.
 
 ## Execution log
 
@@ -466,3 +488,77 @@ Phase 1 (gates 1–5, read-only) is **complete** as of attempt 2. Phase 2 (gates
 - Push: **confirmed to both remotes** — `9f8ce7a..800797d master -> master` to
   `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
   read `800797d`, and `git remote -v` is token-free
+
+### Attempt 3
+
+- Date: 2026-09-30
+- Agent: Claude Opus 5.5, Claude Code; **gates 6-8 executed by the human**
+- Actions:
+  1. **Authorization.** The agent put a draft to the human. The human
+     authorized in conversation as a one-time override ("development stage").
+     The agent's attempt to write that into this file was refused by the
+     harness (*Production Deploy*), and nothing was written. The human then
+     wrote it into the Authorization section themselves.
+  2. **Pre-change health check** (the authorization's stop condition), by the
+     agent: `tools/pve_verify_cluster.py` → 6/6, ring `1.22d4`, all services
+     active, `OVERALL: PASS`.
+  3. **Gate 6 refused to the agent** (*Modify Shared Resources*). Not retried
+     piecemeal. The agent wrote a gate 6-8 command block; the human ran it in
+     their own terminal and pasted the output.
+  4. **Gate 6** (human):
+
+     ```
+     2a6be9a
+     rollback source OK
+     latest.json == HEAD
+     2026-09-09T20:39:45Z.json … 2026-09-22T22:44:52Z.json  latest.json   (6 files)
+     ```
+
+     Empty porcelain. The snapshot is the HEAD blob of the one tracked target;
+     the rollback path was verified to **exist** (`git cat-file -e`, blob equal
+     to the working copy), not assumed.
+  5. **Gate 7** (human), `ansible-playbook --limit sigsrvpve1
+     playbooks/capture_pve_baseline.yml`, no `--check`:
+
+     ```
+     sigsrvpve1 : ok=18 changed=2 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
+     ```
+
+     Same `ok`/`changed` counts gate 4 predicted.
+  6. **Gate 8** (human's output, verified by the agent), **read from state, not
+     from the exit code**:
+
+     ```
+      M state/baseline/latest.json
+     … 2026-09-30T12:06:02Z.json  latest.json   (7 files)
+     latest.json == state/baseline/2026-09-30T12:06:02Z.json
+     2026-09-30T12:06:02Z 6 True
+     ```
+
+     Exactly the two writes gate 4 predicted and nothing else: one tracked
+     file modified, one ignored file added, the pair identical, and the
+     content a fresh capture of a 6-node quorate cluster.
+  7. **Gate 9** (agent): the record's `snapshot_ref`, `rollback_verified` and
+     `approver` were filled from the output above, and the checker was run.
+- Observations:
+  - **The skill's nine gates held end to end on a real change.** No
+    instruction was wrong. Gate 8's rule (*"verify the effect, not the exit
+    code"*) was what produced the `cmp`/`captured_at` lines, and those are the
+    evidence; the recap alone would not have been.
+  - **On Claude Code, phase 2 is human-executed whatever the file says.** The
+    classifier refused three separate phase-2 actions, one of them read-only.
+    It weighs the outcome, not the command, and an in-file authorization does
+    not move it. Extends `B-046`: the loop's Claude Code prerequisite is
+    either per-command allow rules for gates 6-8 or human execution of them.
+  - **The checker's own caveat is correct and worth keeping**: `RECORD OK`
+    *"proves the fields are present. Does not prove the gates were
+    performed"*. What proves they were performed is the pasted output above.
+- Validation:
+  - `check-change-record.sh` → `RECORD OK … (nine fields present, none
+    unknown, every module covered)`, exit 0
+  - Estate: `HEAD` `2a6be9a`; porcelain ` M state/baseline/latest.json` only
+  - `git diff --stat -- skills/ansible-ops/` → empty
+  - `tests/validate.sh` → see the commit
+- Result: **done.** All nine gates exercised once; record closed.
+- Commit: recorded in the follow-up record commit
+- Push: recorded in the follow-up record commit

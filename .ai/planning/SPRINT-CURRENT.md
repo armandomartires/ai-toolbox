@@ -144,9 +144,9 @@ mean inventing the second case it waits for.
    re-measured — changing the tool in that run would make the delta
    unattributable. Raised instead: **`B-039`**, three now-false claims in the
    estate's own `ansible.cfg`, which this repository cannot fix.
-7. **`skills/ansible-ops/` — gates 1-5 exercised by `TASK-0116` (1-3 on
-   2026-09-28, 4-5 on 2026-09-30); the limitation is narrowed, not lifted —
-   every gate that changes state (6-9) is still unexercised.** Its closing item
+7. **`skills/ansible-ops/` — all nine gates exercised once by `TASK-0116`
+   (1-3 on 2026-09-28, 4-9 on 2026-09-30), `done`. What remains unexercised is
+   a guest-level change with a real PVE snapshot.** Its closing item
    (`B-010`) was closed *with this limitation stated*; a closed item is not a
    claim of quality, and that still holds for gates 4-9.
 
@@ -186,7 +186,18 @@ mean inventing the second case it waits for.
    **`include_tasks` documents check-mode support `none` yet ran**, so role 5
    cannot answer for control-flow actions — `B-050`. `B-046` is now a
    documentation item with both parts measured. The checker names only gates
-   6 and 9. **Phase 2 still needs the Authorization section filled by a human.**
+   6 and 9.
+
+   **2026-09-30, attempt 3: gates 6-9 ran**, on the human's in-file
+   authorization of the gentlest real mutation available: applying the same
+   read-back play for real, which writes two files on the control node. The
+   harness refused the agent every phase-2 action, so **the human ran gates
+   6-8** and pasted the output (`B-046` extended). Gate 7 `ok=18 changed=2
+   failed=0`. Gate 8, read from state: only `latest.json` modified plus one
+   new baseline, identical to each other. The record checker returned `RECORD
+   OK` for the first time. The estate result is left uncommitted for the
+   human. Gate 6's snapshot was a git blob, so the estate's guest-snapshot
+   procedure is still untested by this skill.
 8. **An untested commitment, stated a third time.** *"If a sprint shrinks, the
    honest cut is a product, never the spike"* has now been stated by three
    sprints and exercised by none. Neither S9 nor S10 shrank either. It

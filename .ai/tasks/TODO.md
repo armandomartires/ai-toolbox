@@ -758,8 +758,9 @@ That became `TASK-0112` and displaced the order the briefs were planned in.
       **53 rules, 15 tags, 0 failures, exit 0**, over roughly eight times the
       content, backed by two controls because exit 0 alone proves nothing.
       Raised **`B-039`**
-- [ ] TASK-0116 — exercise `skills/ansible-ops/` against the live estate
-      (**phase 1 done, still `blocked`**). Gates 1–3 ran 2026-09-28; gate 4
+- [x] TASK-0116 — exercise `skills/ansible-ops/` against the live estate
+      (**done 2026-09-30**; all nine gates once, gates 6-8 human-executed
+      because the harness refused them to the agent, record `RECORD OK`). Gates 1–3 ran 2026-09-28; gate 4
       was denied by the Claude Code auto-mode classifier (`B-046`). **Gates
       4–5 ran 2026-09-30** under a human-granted exact-match allow rule, after
       a second barrier (ansible-core refuses non-blocking stdio) was cleared.

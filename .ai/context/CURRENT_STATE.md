@@ -1,5 +1,19 @@
 # Current State
 
+## `skills/ansible-ops/` exercised end to end, once (`TASK-0116` done)
+
+**2026-09-30, attempt 3.** Gates 6-9 ran on the human's in-file
+authorization. The change was the gentlest real mutation available: the
+read-back baseline play applied for real, which writes `latest.json` and one
+new snapshot file on the control node, behind a read-only PVE token. **The
+human executed gates 6-8**, because the Claude Code classifier refused them to
+the agent even with the authorization in the file (`B-046` extended). Gate 8
+read the effect from state: exactly the two writes gate 4 predicted and nothing
+else. The change record closed with `RECORD OK`. The estate's new baseline is
+**uncommitted, for the human to keep or roll back**. What is still untested is
+a guest-level change with a real PVE snapshot; this change's snapshot was a git
+blob.
+
 ## `project-migration` generates its own artifacts, installed alone (`TASK-0117`, `B-036` closed)
 
 **2026-09-30, scheduled by the human (trigger 3).** No consumer had been
