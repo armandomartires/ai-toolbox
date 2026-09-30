@@ -465,6 +465,17 @@ class TestVerdictDispatch(Harness):
         got = self.prompt_inputs(self.invocations("closer")[0])["log_lines"]
         self.assertEqual(got, [l[2:] for l in LOG_LINES])
 
+    def test_the_closer_is_handed_the_gate_runners_figures(self):
+        # B-043 / TASK-0121: the evidence line carries no figure, so the
+        # figure the gate-runner quoted from the log is the only path by
+        # which the closer can obtain the one it is told to copy.
+        self.make_repo()
+        agents = happy()
+        agents["gate-runner"] = [{"auto": "gate-runner", "figures": ["241 passed, 0 failed"]}]
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        reports = self.prompt_inputs(self.invocations("closer")[0])["gate_reports"]
+        self.assertEqual([r["figures"] for r in reports], [["241 passed, 0 failed"]])
+
     def test_closer_refusal_parks_and_is_not_retried(self):
         self.make_repo()
         agents = happy()

@@ -522,7 +522,9 @@ class Driver:
                     fail("gate-runner reported a line not in the evidence file: %r" % (row,))
         report = self.ask("gate-runner", prompt(
             "gate-runner", "Steps 7/13. Report each gate below from the run's evidence file. "
-            "You are a runner, not a judge. Quote every line and figure verbatim.",
+            "You are a runner, not a judge. Quote every line verbatim. The lines carry no "
+            "figure: quote any figure the task's criteria want, verbatim, from the log at "
+            "that line's LOG= (references/evidence.md).",
             {"evidence_file": self.b.evidence, "gates": [r["handle"] for r in results],
              "task_file": task_file},
             '{"gates": [{"handle": "...", "state": "...", "exit": 0, "elapsed": "...", '
@@ -600,20 +602,23 @@ class Driver:
             return {"verdict": "park", "reason": "retry is not available on attempt %d" % attempt}
         return got
 
-    def step10_close(self, task, impl):
+    def step10_close(self, task, impl, gates):
         """Step 10 — closer stages, commits and reports; the driver verifies."""
         before = self.git("rev-parse", "HEAD")
         declared = sorted(set(impl.get("files_changed", []) + [task["file"]] + (
             [] if self.b.tracker == "not-applicable" else [self.b.tracker])))
         got = self.ask("closer", prompt(
             "closer", "Step 10. Close task %s: re-check the porcelain against the declared "
-            "paths, update the task file and the tracker row from the evidence file, stage "
+            "paths, update the task file and the tracker row, copying every figure from "
+            "gate_reports (each was quoted from a log the evidence file names) and refusing "
+            "one with nothing behind it, stage "
             "each path with `git add -- <path>`, commit, report the hash. Push nothing. The "
             "task file's Commit and Push entries are log_lines, written verbatim: a commit "
             "cannot contain its own hash, and landing records it." % task["id"],
             {"task_file": task["file"], "tracker": self.b.tracker,
              "declared_paths": declared, "log_lines": self.log_lines(),
-             "evidence_file": self.b.evidence, "commit_shape": self.b.commit_shape},
+             "evidence_file": self.b.evidence, "gate_reports": gates["report"],
+             "commit_shape": self.b.commit_shape},
             '{"commit": "<hash>"} or {"refused": "<what was found>"}'))
         after = self.git("rev-parse", "HEAD")
         if isinstance(got, dict) and got.get("refused"):
@@ -711,7 +716,7 @@ class Driver:
                 verdict = self.step9_adjudicate(task, attempt, impl, gates, refutation)
                 v = verdict["verdict"]
                 if v == "accept":
-                    self.step10_close(task, impl)
+                    self.step10_close(task, impl, gates)
                     return
                 if v == "halt-run":
                     self.halted = "adjudicator halt-run on %s: %s" % (task["id"], verdict.get("reasoning"))

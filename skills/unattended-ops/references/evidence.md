@@ -1,11 +1,33 @@
 # The evidence rule
 
-> **The run's evidence file is the only admissible source for a figure, and a
-> gate nobody read there did not run.**
+> **The run's evidence file, and the gate logs it names, are
+> the only admissible source for a figure, and a gate nobody read there did
+> not run.**
 
 One sentence, two halves, and both are load-bearing. The first says where a
 number may come from. The second says what an unrecorded gate is worth:
 nothing, regardless of whether it ran.
+
+## Is a gate's log admissible?
+
+**Yes, and only under all three of these conditions.** The evidence line the
+entry point writes carries state, exit code, elapsed time and a `LOG=` path,
+and no figure — so a figure a task's criteria want can only come from the log
+that line names.
+
+1. **The evidence line names it.** The log is the one at `LOG=` on that
+   gate's line in the evidence file. A log found any other way is not
+   evidence.
+2. **This run wrote it.** The gate's entry point wrote the log while the gate
+   ran (`ADR-0025`). A log from an earlier run, a CI page or a terminal
+   scrollback is excluded below.
+3. **The figure is quoted verbatim.** Copied character for character, not
+   paraphrased and not rounded.
+
+A recollection, a paraphrase and a rounded figure stay inadmissible however
+they were obtained. Meeting the three conditions is not the same as being
+believed: a figure the closer cannot find in the named log is a figure with
+nothing behind it, and the closer refuses.
 
 ## Why this is the rule rather than a preference
 
@@ -21,7 +43,9 @@ without this rule; this is its mechanism.
   evidence file by the gate's entry point at the moment the gate ran
   (`ADR-0025`).
 - For each gate: its state, its **exit code**, its **elapsed time**, the
-  verbatim evidence line, and any figure the task's criteria would want.
+  verbatim evidence line, and any figure the task's criteria would want. The
+  first four come from the evidence line; a figure comes from the log that
+  line names, under the three conditions above.
 
 ## What is not admissible, however plausible
 
@@ -36,8 +60,9 @@ without this rule; this is its mechanism.
   the task's files exits 0 exactly like one that opened all of them
   (`references/gate-map.md`, rule B).
 - **A gate result recovered from a terminal scrollback, a CI page or a log
-  the run did not write.** If it is not in the evidence file, the gate did not
-  run, and re-running it is the remedy.
+  the run did not write, or a log the gate's evidence line does not name.** If
+  the gate is not in the evidence file, it did not run, and re-running it is
+  the remedy.
 
 ## `Pending` is an unwritten test, not a pass
 
@@ -54,15 +79,16 @@ somewhere with nobody watching.
 ## Who depends on this rule
 
 - **The `gate-runner`** reads the evidence file its entry point wrote
-  (`ADR-0025`) and reports from it, and is a runner rather than
+  (`ADR-0025`) and reports from it, quoting any figure the task's criteria
+  want from the log each evidence line names. It is a runner rather than
   a judge. It reports what happened; it does not decide whether the task is
   acceptable.
 - **The `refuter`** checks every acceptance criterion against evidence in the
-  diff or the evidence file. A criterion with no evidence is an unevidenced
+  diff, the evidence file or a log the evidence file names. A criterion with no evidence is an unevidenced
   criterion, which is a finding — **not** an assumption that it must be fine.
-- **The `closer`** copies **every figure from the evidence file** into the
-  task file, and **refuses** if a figure it is asked to write has nothing
-  behind it. That refusal is the boundary working; it is a `park`, never a
+- **The `closer`** copies **every figure the gate-runner reported** into the
+  task file, each one quoted from a log the evidence file names, and
+  **refuses** if a figure it is asked to write has nothing behind it. That refusal is the boundary working; it is a `park`, never a
   retry.
 
 ## The evidence file itself

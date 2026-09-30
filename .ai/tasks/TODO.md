@@ -801,15 +801,12 @@ embody** — measured with the skill's own checker, not inferred. Raised
       point-in-time copy and gives a check that works from inside the target,
       proved there (exit 0 clean, exit 1 mutated). Reproducing from inside the
       target found the same false claim in the templates' own banner — `B-051`
-- [ ] TASK-0121 — `B-043`: `loop.md` step 10 orders the closer to copy
-      "every figure from the evidence file", which structurally has none —
-      `run-gate.sh`'s `summary()` emits one format with no figure slot.
-      **Not client-specific**: the Claude Code binding's `gate_entry_point`
-      *is* the OpenCode binding's `run-gate.sh`. Sharper than `B-043`'s row:
-      both bindings already collect `figures[]` in the gate-runner and then
-      **drop them** — the closer takes no gates parameter — so the fix may be
-      wiring rather than a new capability. `ready`, with the standard's scope
-      as a costed route choice (`ready`)
+- [x] TASK-0121 — `B-043`: the closer is handed the gate-runner's `figures[]`,
+      and `evidence.md` states that a log named by an evidence line's `LOG=`
+      is admissible under three conditions (**done 2026-09-30**). The human
+      chose **route B**. `run-gate.sh` unchanged; both bindings wired in one
+      commit; a test per binding, observed failing with the wiring reverted.
+      Eleven sites stated the rule, not the two the brief named
 - [x] TASK-0122 — Agile HTML dashboard for the .ai governance layer:
       generator, nine tabs, burn-up/burn-down/CFD/velocity/flow/forecast,
       both frameworks, light+dark, CSS-customizable (done; raised B-047)

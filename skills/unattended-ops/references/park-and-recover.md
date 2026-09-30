@@ -59,7 +59,8 @@ standard** for the park entries:
 - **Where the work is** — the stash entry by name.
 - **What was already proven**, so the recovery does not start from zero. A
   gate that ran and passed before the park still ran and passed, and its
-  evidence line is still the only admissible source for its figure
+  evidence line, with the log it names, is still the only admissible source
+  for its figure
   (`references/evidence.md`).
 
 ## Parks that are not ambiguities

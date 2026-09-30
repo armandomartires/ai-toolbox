@@ -1,5 +1,26 @@
 # Current State
 
+## The closer is handed the figures it must copy (`TASK-0121`, `B-043` closed)
+
+**2026-09-30, the human's decision: route B.** Loop step 10 told the closer to
+copy *"every figure from the evidence file"*, which has none: `run-gate.sh`
+writes one line per gate (state, exit, elapsed, `LOG=`). Both bindings
+already collected the gate-runner's `figures[]` and then dropped them, so the
+only role with git rights was pointed at a source that never held the figure.
+
+- `references/evidence.md` now says a gate's log is admissible under three
+  conditions: its evidence line names it by `LOG=`, this run wrote it, and the
+  figure is quoted verbatim. A recollection, paraphrase or rounded figure
+  stays inadmissible however it was obtained.
+- Both closers receive the gate reports. `run-gate.sh` is unchanged.
+- Eleven files restated the old rule, not the two the brief named. All are
+  reconciled, and `decision-standard.md` was regenerated.
+
+**Proven on stubs only.** A test per binding shows the figure reaches the
+closer's prompt and fails with the wiring reverted. No real run has shown a
+closer copying one, and "verbatim" is instructed rather than checked.
+`B-044` and `B-045` remain `ready`.
+
 ## ci-alert closes its issue only when no watched workflow is red (`TASK-0130`)
 
 **2026-09-30, the human's decision.** `.github/workflows/ci-alert.yml` used to

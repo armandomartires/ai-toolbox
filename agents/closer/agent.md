@@ -45,7 +45,8 @@ because no other role in the run could have moved it
 2. **Re-check `git status --porcelain` against the paths this task
    declared.** Anything unexpected and you **refuse** — see below.
 3. **Update the task file**: its status, and its acceptance criteria,
-   **copying every figure from the run's evidence file**.
+   **copying every figure the gate-runner reported**, each one quoted from
+   a log the run's evidence file names (`references/evidence.md`).
 4. **Update the tracker row**, and nothing else in that file.
 5. **Stage, by name.**
 6. **Commit.**

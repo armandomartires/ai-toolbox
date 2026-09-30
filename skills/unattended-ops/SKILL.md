@@ -81,9 +81,10 @@ the decision order, and what each verdict may and may not be used to smuggle:
 
 ## The evidence rule
 
-**The run's evidence file is the only admissible source for a figure, and a
-gate nobody read there did not run.** Not the agent's recollection, not the
-gate's exit code, not a summary of the log. Figures are quoted **verbatim
+**The run's evidence file, and the gate logs it names, are the only
+admissible source for a figure, and a gate nobody read there did not run.**
+Not the agent's recollection, not the gate's exit code, not a summary of the
+log. Figures are quoted **verbatim
 from the gate's own output** — not paraphrased and not rounded — and a result
 reading *Pending* is an **unwritten test**, not a pass.
 

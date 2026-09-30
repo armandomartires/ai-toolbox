@@ -59,7 +59,8 @@ def main():
         rows = []
         for h in got["gates"]:
             line = next(l for l in lines if l.startswith("GATE %s " % h))
-            rows.append({"handle": h, "evidence_line": line, "figures": []})
+            rows.append({"handle": h, "evidence_line": line,
+                         "figures": resp.get("figures", [])})
         text = "```json\n%s\n```" % json.dumps({"gates": rows})
     if resp.get("auto") == "stash":
         msg = inputs_of(prompt)["stash_message"]

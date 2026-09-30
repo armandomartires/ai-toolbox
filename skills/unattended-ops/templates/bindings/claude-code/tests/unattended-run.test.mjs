@@ -138,6 +138,18 @@ test('closes a task, and only the closer is asked to stage or commit', async () 
   assert.equal(r.result.pushed, false)
 })
 
+test('the closer is handed the gate-runner\'s figures, the only path to the one it must copy (B-043)', async () => {
+  const r = await run(baseArgs(), {
+    'gate-runner': (prompt, opts, state, d) => {
+      const got = d['gate-runner'](prompt)
+      got.gates.forEach(g => { g.figures = ['241 passed, 0 failed'] })
+      return got
+    },
+  })
+  assert.equal(r.result.halted, null)
+  assert.match(r.calls('closer')[0].prompt, /Gate reports: .*241 passed, 0 failed/)
+})
+
 test('the two thinking roles run as their own agent types, the rest as workflow subagents', async () => {
   const r = await run(baseArgs())
   for (const c of r.s.calls) {

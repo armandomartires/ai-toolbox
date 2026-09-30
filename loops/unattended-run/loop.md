@@ -192,10 +192,12 @@ leaves an honest tracker rather than a half-ticked one.
    file**; the `gate-runner` then reads that file and reports from it.
    Expected: per gate — the state, the exit code, the elapsed time, the
    verbatim evidence line, and any figure the task's criteria would want,
-   **quoted from the gate's own log, not paraphrased and not rounded**.
+   **quoted from the log that line names (`LOG=`), not paraphrased and not
+   rounded**.
    This role is a runner, not a judge: it reports what happened and does not
-   decide whether the task is acceptable. The evidence file is the **only**
-   admissible source downstream — a gate nobody read there did not run.
+   decide whether the task is acceptable. The evidence file, with the logs its
+   lines name, is the **only** admissible source downstream — a gate nobody
+   read there did not run.
 
 8. **Try to refute the claim of completeness.** (`refuter`, read-only,
    adversarial.) Check the *claim*, not the code's style: every acceptance
@@ -231,9 +233,10 @@ leaves an honest tracker rather than a half-ticked one.
     rights, and it runs only on `accept`.) In order, stopping if any part
     cannot be done honestly: re-check `git status --porcelain` against the
     paths this task declared and **refuse on anything unexpected**; update
-    the task file's status and its criteria, copying **every figure from
-    the evidence file**; update the tracker row and nothing else in that
-    file; stage; commit; report the hash.
+    the task file's status and its criteria, copying **every figure the
+    `gate-runner` reported at step 7**, each quoted from a log the evidence
+    file names; update the tracker row and nothing else in that file; stage;
+    commit; report the hash.
     Expected: one logical change committed, the hash returned, a clean
     tree, and **nothing pushed**. Staging uses **`git add -- <path>`, by
     name, always** — the boundary that denies `git add -A` and `git add .`

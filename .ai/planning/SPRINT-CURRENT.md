@@ -96,7 +96,8 @@ mean inventing the second case it waits for.
    would hand an unsatisfiable instruction to the only role with git rights.
    That is the loop working, on a defect nobody had seen.
 
-   **`B-043` is routed as of 2026-09-28 by `TASK-0121`** (`ready`), which
+   **`B-043` is CLOSED 2026-09-30 by `TASK-0121`**, route B; the paragraph
+   below is the routing as written on 2026-09-28. It was routed by `TASK-0121`, which
    sharpens it: both bindings already collect `figures[]` in the gate-runner
    and then **discard them** — the closer takes no gates parameter in either —
    so the figure never had a path to the role told to write it. The open part

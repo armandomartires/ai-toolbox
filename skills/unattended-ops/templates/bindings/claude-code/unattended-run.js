@@ -255,7 +255,7 @@ async function runGates(pairs, step, phaseName, label) {
       `  ${gateEnv()} ${B.gate_entry_point} start <handle> <gate>\n` +
       `  then repeat \`${gateEnv()} ${B.gate_entry_point} wait <handle> 420\` while it exits 2.\n` +
       `Do not open the gate map and do not run any gate command yourself (rule 2). A gate that times out is retried at most once, under the handle suffixed .retry.\n\n` +
-      `Then report each handle from ${EVIDENCE}: the line beginning \`GATE <handle> \`, verbatim, and any figure the task's criteria want, quoted from the gate's log (references/evidence.md). You are a runner, not a judge.\n\n${lines}`,
+      `Then report each handle from ${EVIDENCE}: the line beginning \`GATE <handle> \`, verbatim, and any figure the task's criteria want, quoted verbatim from the log at that line's LOG= (references/evidence.md). You are a runner, not a judge.\n\n${lines}`,
       GATE_SCHEMA, label)
   } catch (e) {
     if (e instanceof Mechanical) return pairs.map(p => ({ handle: p.handle, state: 'NOT-RUN', evidenceLine: '' }))
@@ -326,16 +326,16 @@ async function verifyHead() {
     VERIFY_SCHEMA, 'verify')
 }
 
-async function step10Close(task, impl) {
+async function step10Close(task, impl, gates) {
   const before = await verifyHead()
   const declared = Array.from(new Set((impl.filesChanged || []).concat([task.file], TRACKER === 'not-applicable' ? [] : [TRACKER])))
   const got = await call('closer', 10, 'Close',
     `Close task ${task.id}; the adjudicator accepted it. In order, stopping if any part cannot be done honestly (agents/closer/):\n` +
     `1. \`git status --porcelain\`; refuse on any path not in ${JSON.stringify(declared)}.\n` +
-    `2. Update ${task.file}'s status and criteria, copying every figure from ${EVIDENCE} (rule 4).\n` +
+    `2. Update ${task.file}'s status and criteria, copying every figure from the gate reports below, each quoted from a log ${EVIDENCE} names, and refusing one with nothing behind it (rule 4).\n` +
     (TRACKER === 'not-applicable' ? '' : `3. Update ${task.id}'s row in ${TRACKER} and nothing else there.\n`) +
     `4. Stage each path with \`git add -- <path>\`, by name (ADR-0022 clause 5.4); commit in this shape: ${B.commit_shape}. The message must contain ${task.id}.\n` +
-    `5. Push nothing (ADR-0022 clause 4.1). Return the full commit hash, or refused with what you found.`,
+    `5. Push nothing (ADR-0022 clause 4.1). Return the full commit hash, or refused with what you found.\n\nGate reports: ${JSON.stringify(gates)}`,
     CLOSE_SCHEMA, task.id)
   const after = await verifyHead()
   if (got && got.refused) {
@@ -394,7 +394,7 @@ async function cycle(task) {
       const gates = await step7Gates(task, attempt)
       const refutation = await step8Refute(task, impl, gates)
       const v = await step9Adjudicate(task, attempt, impl, gates, refutation)
-      if (v.verdict === 'accept') { await step10Close(task, impl); return }
+      if (v.verdict === 'accept') { await step10Close(task, impl, gates); return }
       if (v.verdict === 'halt-run') {
         halted = `adjudicator halt-run on ${task.id}: ${v.reasoning}`
         await step11Park(task, 'halt-run')

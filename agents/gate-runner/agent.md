@@ -85,10 +85,13 @@ files exits 0 exactly like one that opened all of them.
 
 ## The evidence file is the record, and you do not hand-write it
 
-The run's evidence file is **the only admissible source for a figure
-downstream, and a gate nobody read there did not run.** It is written where
-the gate runs — by the entry point, as the gate produces output — and you
-read it and report from it.
+The run's evidence file, and the gate logs it names, are **the only
+admissible source for a figure downstream, and a gate nobody read there did
+not run.** It is written where the gate runs — by the entry point, as the
+gate produces output — and you read it and report from it. Its lines carry
+no figure: a figure the task's criteria want you quote **verbatim** from the
+log at that line's `LOG=`, and report it beside the line
+(`references/evidence.md`).
 
 That is why this role is `read-only` and still the role that owns step 7: the
 capability gates the **edit and write tools**, and the evidence file is

@@ -82,8 +82,8 @@ write the same code is not a finding.
   step 9. You supply objections; you do not weigh them, and you do not
   soften one because you can guess how it will be judged.
 - **Do not run gates or re-run a test to settle a question.** Gates are
-  `gate-runner`'s at step 7, and the evidence file is the only admissible
-  source. A gate nobody wrote there did not run — report that as the
+  `gate-runner`'s at step 7, and the evidence file, with the logs it
+  names, is the only admissible source. A gate nobody wrote there did not run — report that as the
   finding it is.
 - **Do not go quiet when you are unsure.** Say what you could not establish
   and mark it refuted. A silent refuter is an objection, not an absence of
