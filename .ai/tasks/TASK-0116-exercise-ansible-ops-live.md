@@ -558,7 +558,10 @@ with gates 6–8 run by the human.
     unknown, every module covered)`, exit 0
   - Estate: `HEAD` `2a6be9a`; porcelain ` M state/baseline/latest.json` only
   - `git diff --stat -- skills/ansible-ops/` → empty
-  - `tests/validate.sh` → see the commit
+  - `tests/validate.sh` → `validate.sh: OK` (and again in the pre-commit hook)
 - Result: **done.** All nine gates exercised once; record closed.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `a35e0fe` — *Run ansible-ops gates 6-9 on an authorized change
+  (TASK-0116)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `ccc1855..a35e0fe master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `a35e0fe`, and `git remote -v` is token-free
