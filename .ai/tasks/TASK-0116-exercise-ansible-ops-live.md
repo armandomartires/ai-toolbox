@@ -88,11 +88,6 @@ count — `AGENTS.md` requires it **in the task file**.
 Gates 1–5 are read-only and are authorized by this task's existence. They still
 connect to hosts at gate 4, so the hazard review at gate 1 governs them.
 
-- Change authorized: *(unfilled)*
-- Hosts / `--limit`: *(unfilled)*
-- Authorized by: *(unfilled)*
-- Date: *(unfilled)*
-
 - Change authorized: Apply `playbooks/capture_pve_baseline.yml` without
   `--check` at estate commit `2a6be9a`. Expected effect, as predicted by
   gate 4 on 2026-09-30: one new `state/baseline/<UTC>.json` and a rewritten
@@ -238,7 +233,7 @@ and nothing else.
 | `.ai/context/CURRENT_STATE.md` | A dated section per attempt |
 | `/tmp/opencode/ansible-ops-pilot/change-record.md` | Scratch record, **closed**: all nine fields filled; `check-change-record.sh` → `RECORD OK`, exit 0. Scratch because the skill leaves the record's location to the estate, and this estate has no convention for one yet |
 | `.claude/settings.local.json` | **Gitignored, machine-local.** One exact-match allow rule for the gate-4 command, granted by the human 2026-09-30. Not a repo change; recorded because gate 4's evidence depends on it |
-| Authorization section | **Filled by the human in the file**, 2026-09-30: change, `--limit sigsrvpve1`, rollback, stop condition, signature. The four original `*(unfilled)*` placeholder lines were left above it by the human's edit and are deliberately not removed by the agent |
+| Authorization section | **Filled by the human in the file**, 2026-09-30: change, `--limit sigsrvpve1`, rollback, stop condition, signature. The four original `*(unfilled)*` placeholder lines were removed afterwards, at the human's request |
 
 **Deviations.**
 
