@@ -1544,6 +1544,28 @@ if [ -e skills/project-workflow/scripts/check-publish.sh ]; then
 fi
 
 # --------------------------------------------------------------------------
+# ci-alert's issue rule, proven offline (TASK-0130).
+#
+# WHY: .github/workflows/ci-alert.yml's `workflow_run` path only runs for the
+# copy on the default branch, so it cannot be exercised before it lands, and
+# the path that matters most - a green run that must NOT close the alert while
+# another watched workflow is red - cannot be shown live without a red default
+# branch. tests/test-ci-alert.sh extracts the program the workflow embeds and
+# runs it against a fake API: one python3, no network, no git.
+#
+# WHAT THIS PROVES: the embedded program's action and requests for every
+# fixture, and that its watched list, concurrency and permissions match what
+# it relies on.
+# WHAT IT DOES NOT PROVE: that GitHub delivers the events or answers the API
+# as the fixtures assume; ci-alert.yml's STATUS line says what was observed.
+# Deliberately unconditional: a deleted test fails here rather than skipping
+# quietly (ADR-0009).
+if ! CI_ALERT_OUT="$(bash tests/test-ci-alert.sh 2>&1)"; then
+  printf '%s\n' "$CI_ALERT_OUT" | grep -v '^PASS' | sed 's/^/CI-ALERT: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # Planning templates are derived from the schemas that own their shape
 # (ADR-0027, TASK-0109), so they get the same staleness gate docs/registry.md
 # and decision-standard.md already carry. Rendered to a scratch tree and

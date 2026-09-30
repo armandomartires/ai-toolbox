@@ -1,5 +1,31 @@
 # Current State
 
+## ci-alert closes its issue only when no watched workflow is red (`TASK-0130`, in progress)
+
+**2026-09-30, the human's decision.** `.github/workflows/ci-alert.yml` used to
+close its alert on *any* green run. A push's green `dashboard` would therefore
+have closed the alert that the same push's red `validate` had just opened.
+This was latent: no red run has happened on `master` while ci-alert existed.
+
+The workflow now:
+- re-reads each watched workflow's latest run on the default branch, and
+  closes the alert only when none of them is red;
+- ignores runs off the default branch, which it never checked before;
+- watches `dashboard-daily` (`TASK-0129`).
+
+The rule and its reasons are in the workflow's header. The offline proof is
+`tests/test-ci-alert.sh`, run by `tests/validate.sh`.
+
+**`UNVERIFIED` until observed after landing.** One path cannot be shown live
+without a red `master`: a green run that must not close the alert. That path is
+proven offline only.
+
+**A correction to `TASK-0124`'s section below.** Its *Known limit* says a
+side-branch failure raises nothing, because `workflow_run` fires only for the
+file on the default branch. That rule concerns where the listener lives, not
+the branch of the run it hears. Until `TASK-0130`, a side-branch failure would
+have opened the issue.
+
 ## A daily rebuild of the published dashboard is configured, not yet verified (`TASK-0129`, in progress)
 
 **2026-09-30, the human's decisions of the same day.** `skills/project-workflow/`

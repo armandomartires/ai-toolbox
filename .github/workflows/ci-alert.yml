@@ -1,7 +1,11 @@
-# Open a GitHub Issue when a workflow fails, and close it when CI recovers.
+# Open a GitHub Issue when a watched workflow fails on the default branch, and
+# close it once none of them is red there.
 #
-# STATUS: VERIFIED. All three paths exercised on 2026-09-28, each read back
-# from the API rather than inferred:
+# STATUS: UNVERIFIED. TASK-0130 replaced the close rule and added the branch
+# filter, and no run has exercised them yet: `workflow_run` only fires for this
+# file on the default branch, so they can only be observed after landing. The
+# rule it replaced was VERIFIED on 2026-09-28 (TASK-0124), each result read
+# back from the API:
 #   36443923514  dispatch failure  -> OPENED issue #1
 #   36443928448  workflow_run      -> a REAL green `validate` on 2bfda15
 #                                     commented "Recovered" and CLOSED #1.
@@ -14,9 +18,9 @@
 #                                     1 -> 2, issue count unchanged)
 #   36444136192  dispatch success  -> CLOSED #2, state_reason `completed`,
 #                                     0 issues left open
-# Issues #1 and #2 are the test artifacts and are left closed as the record.
-# Same rule as the other two workflows: this label moves only against a real
-# run, and names it.
+# Issues #1 and #2 are that test's artifacts and are left closed as the
+# record. Same rule as every workflow here: this label moves only against a
+# real run, and names it.
 #
 # WHY THIS EXISTS (TASK-0123, TASK-0124): validate was red for FOURTEEN
 # consecutive commits and nobody knew. GitHub's own failure email defaults to
@@ -30,34 +34,74 @@
 # `issues: write` is already in the runner, where SMTP would mean credentials
 # in the secrets of a PUBLIC repository whose first security rule is never to
 # commit one, plus a marketplace action where ADR-0021 says third-party
-# extensions are wired and not vendored. Every call below is curl + python3
+# extensions are wired and not vendored. Every call below is python3's urllib
 # against the REST API.
 #
 # AND AN ISSUE IS DURABLE. It persists until closed, it sits beside the
-# badges in the repo, and it is CLOSED AUTOMATICALLY when CI goes green --
-# which makes it a state indicator rather than a notification. GitHub still
-# emails about it through the normal path, so the human gets mail; the
+# badges in the repo, and it is CLOSED AUTOMATICALLY once nothing watched is
+# red -- which makes it a state indicator rather than a notification. GitHub
+# still emails about it through the normal path, so the human gets mail; the
 # difference is that the record does not depend on the mail being read.
 #
 # ONE ISSUE, NOT ONE PER FAILURE. A fourteen-commit red streak must produce
 # one thread with fourteen comments. The alternative gets muted, and a muted
 # alert is exactly as useful as the unread email it replaced.
 #
-# `workflow_run` ONLY FIRES FOR THE FILE ON THE DEFAULT BRANCH. This cannot
-# be tested from a side branch, and an edit here takes effect only once it is
-# on master. That is why `workflow_dispatch` below carries a simulation:
-# testing an alert by deliberately breaking master would put a real red
-# commit in history to prove a notification works.
+# WHEN IT CLOSES (TASK-0130). A green run closes the issue only when no
+# watched workflow's latest run on the default branch that succeeded or failed
+# is a failure, read from the Actions API at that moment; otherwise it
+# comments naming what is still red. Until TASK-0130 any green run closed it,
+# so a push whose `validate` failed would have had its alert closed by the
+# same push's green `dashboard`, which finishes later. The issue text promised
+# to close once both report success; this implements that as no watched
+# workflow's latest success-or-failure run being a failure.
+#
+# STATELESS ON PURPOSE. The verdict is re-read from the runs, never remembered
+# in the issue, so a missed, failed or out-of-order alert run cannot hold the
+# issue open past the next green run that finds nothing red, nor let it close
+# while something is red. What it cannot repair is a missed failure: a green
+# run never opens the issue. Every green run evaluates, even with nothing
+# open, so each green push exercises the query and a broken one fails here,
+# loudly.
+#
+# ONLY THE DEFAULT BRANCH IS EVIDENCE. A watched workflow may also run on other
+# branches and on pull requests, forks' included, and a job started by
+# `workflow_run` gets write access even for a fork's run. Until TASK-0130
+# nothing here checked, so a side branch's failure would have opened this
+# issue and a fork's green pull request could have closed it. Now a run that is
+# off the default branch, of another repository, or for a pull request opens,
+# comments on and closes nothing, and never counts as evidence.
+#
+# `dashboard-daily` IS WATCHED BECAUSE NOTHING ELSE REPORTS THE NIGHTLY BUILD.
+# The dashboard run it dispatches is started by the workflow's own token, and
+# such a run starts no `workflow_run` here (observed 2026-09-30, TASK-0129).
+# The dispatcher waits for that run and ends as it ends, so its own run
+# carries the result.
+#
+# PROVEN OFFLINE by tests/test-ci-alert.sh, run from tests/validate.sh: it
+# extracts the program below and runs it against a fake API - every decision
+# and every request it would make - including the path no live run can show
+# without a red default branch: a green run that must not close while another
+# watched workflow is red.
+#
+# `workflow_run` ONLY FIRES FOR THE FILE ON THE DEFAULT BRANCH, so its path
+# cannot be exercised before it lands. That is why `workflow_dispatch` below
+# carries a simulation: testing an alert by deliberately breaking master would
+# put a real red commit in history to prove a notification works. A simulated
+# success is not evidence: it re-reads the real runs, so a dispatch cannot
+# fake a green.
 name: ci-alert
 
 on:
   workflow_run:
-    workflows: [validate, dashboard]
+    # Must equal WATCHED in the program below; tests/test-ci-alert.sh fails
+    # when the two differ.
+    workflows: [validate, dashboard, dashboard-daily]
     types: [completed]
   workflow_dispatch:
     inputs:
       simulate:
-        description: "Pretend a workflow reported this conclusion"
+        description: "Pretend a workflow reported this conclusion (a simulated success re-reads the real runs and closes only if none is red)"
         required: true
         default: failure
         type: choice
@@ -67,41 +111,55 @@ on:
         required: false
         default: validate
 
+# `actions: read` reads the watched workflows' runs (TASK-0130). Declared, not
+# assumed: a permission not listed here is none.
 permissions:
   contents: read
+  actions: read
   issues: write
 
 # Serialised: two workflows finishing together must not both decide whether
 # the issue exists. Not cancel-in-progress -- a cancelled alert is a missed
-# one, which is the whole failure mode here.
+# one, which is the whole failure mode here. And `queue: max` (TASK-0130): by
+# default a group keeps ONE pending run and cancels it when the next one
+# arrives, which drops an alert just as surely.
 concurrency:
   group: ci-alert
   cancel-in-progress: false
+  queue: max
 
 jobs:
   alert:
     runs-on: ubuntu-latest
     steps:
       - name: Open, comment on, or close the CI failure issue
+        # Event fields reach the program only through env, never pasted into
+        # it: a branch name or a commit subject is anyone's to choose on a
+        # public repository.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           API: ${{ github.api_url }}
           EV: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           WF_NAME: ${{ github.event.workflow_run.name }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_CREATED: ${{ github.event.workflow_run.created_at }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
           TITLE_MSG: ${{ github.event.workflow_run.display_title }}
           SIM: ${{ inputs.simulate }}
           SIM_NAME: ${{ inputs.name }}
         run: |
           python3 - <<'PY'
+          import datetime
           import json
           import os
-          import sys
-          import urllib.error
+          import urllib.parse
           import urllib.request
 
           # The fixed string that makes one issue findable again. Matched on
@@ -109,86 +167,242 @@ jobs:
           # a second thing that can fail in an alert whose job is not to.
           MARKER = "[ci-alert] CI is failing on the default branch"
 
-          API = os.environ["API"].rstrip("/")
-          REPO = os.environ["REPO"]
-          TOKEN = os.environ["GH_TOKEN"]
+          # Watched workflow name -> its file. The names are the trigger list
+          # above; tests/test-ci-alert.sh fails when the two differ, or when a
+          # file's own `name:` is not its key.
+          WATCHED = {
+              "validate": "validate.yml",
+              "dashboard": "dashboard.yml",
+              "dashboard-daily": "dashboard-daily.yml",
+          }
+          # The only conclusions that are evidence. cancelled, skipped,
+          # timed_out - and an unfinished run, which has none yet - say
+          # nothing either way.
+          ACTIONABLE = ("failure", "success")
+          PR_EVENTS = ("pull_request", "pull_request_target")
+          PAGE = 30
 
-          simulated = os.environ.get("EV") == "workflow_dispatch"
-          if simulated:
-              conclusion = os.environ.get("SIM") or "failure"
-              wf = os.environ.get("SIM_NAME") or "validate"
-              run_url = "(simulated run - no URL)"
-              sha, branch, subject = "0000000", "master", "simulated by workflow_dispatch"
-          else:
-              conclusion = os.environ.get("CONCLUSION") or ""
-              wf = os.environ.get("WF_NAME") or "?"
-              run_url = os.environ.get("RUN_URL") or ""
-              sha = (os.environ.get("HEAD_SHA") or "")[:7]
-              branch = os.environ.get("HEAD_BRANCH") or ""
-              subject = os.environ.get("TITLE_MSG") or ""
 
-          def call(method, path, payload=None):
-              url = path if path.startswith("http") else "%s/%s" % (API, path)
-              data = json.dumps(payload).encode() if payload is not None else None
-              req = urllib.request.Request(url, data=data, method=method)
-              req.add_header("Authorization", "Bearer %s" % TOKEN)
-              req.add_header("Accept", "application/vnd.github+json")
-              if data:
-                  req.add_header("Content-Type", "application/json")
-              # No try/except around the call on purpose. If the API errors,
-              # this job must FAIL LOUDLY. An alert that swallows its own
-              # failure is another unread second opinion, which is the exact
-              # defect this workflow exists to answer.
-              with urllib.request.urlopen(req, timeout=30) as resp:
-                  body = resp.read().decode("utf-8")
-              return json.loads(body) if body.strip() else {}
+          def about_default_branch(run, repo, default):
+              """Evidence about the default branch: a run of this repository,
+              on that branch, not for a pull request."""
+              head = (run.get("head_repository") or {}).get("full_name")
+              return (run.get("head_branch") == default
+                      and run.get("event") not in PR_EVENTS
+                      and head == repo)
 
-          # A conclusion that is neither of these - cancelled, skipped,
-          # timed_out - is not evidence either way, so nothing is touched.
-          if conclusion not in ("failure", "success"):
-              print("conclusion %r is not actionable; nothing to do" % conclusion)
-              sys.exit(0)
 
-          issues = call("GET", "repos/%s/issues?state=open&per_page=100" % REPO)
-          existing = next((i for i in issues
-                           if MARKER in i.get("title", "")
-                           and "pull_request" not in i), None)
+          def created(run):
+              stamp = (run.get("created_at") or "1970-01-01T00:00:00Z").replace("Z", "+00:00")
+              return (datetime.datetime.fromisoformat(stamp), run.get("id") or 0)
 
-          where = "%s on `%s`" % (wf, branch or "?")
-          detail = "\n".join([
-              "- workflow: **%s**" % wf,
-              "- conclusion: **%s**" % conclusion,
-              "- commit: `%s` %s" % (sha, subject),
-              "- run: %s" % run_url,
-              "- simulated: %s" % ("yes - `workflow_dispatch`" if simulated else "no"),
-          ])
 
-          if conclusion == "failure":
-              if existing:
-                  call("POST", "repos/%s/issues/%d/comments" % (REPO, existing["number"]),
+          def latest_conclusive(name, runs, repo, default):
+              evidence = [r for r in runs if about_default_branch(r, repo, default)
+                          and r.get("conclusion") in ACTIONABLE]
+              if evidence:
+                  return max(evidence, key=created)  # the API documents no order
+              if len(runs) >= PAGE:
+                  # A full page with nothing usable on it proves nothing, and
+                  # calling it green could close the issue while an older run
+                  # is still red.
+                  raise SystemExit("ci-alert: no run of %s in the latest %d that "
+                                   "succeeded or failed on %s; refusing to call "
+                                   "it green" % (name, PAGE, default))
+              return None
+
+
+          def evaluate(fetch, trigger, repo, default):
+              latest = {}
+              for name in WATCHED:
+                  runs = list(fetch(name))
+                  if trigger is not None and trigger["name"] == name:
+                      # Counted before the API shows it finished.
+                      runs = [r for r in runs if r.get("id") != trigger["id"]]
+                      runs.append(trigger)
+                  latest[name] = latest_conclusive(name, runs, repo, default)
+              return latest
+
+
+          def red(latest):
+              return [n for n in WATCHED if latest.get(n) is not None
+                      and latest[n].get("conclusion") == "failure"]
+
+
+          def decide(ev, find_open, fetch):
+              """The rule. Returns (action, open issue or None, latest runs or
+              None); calls find_open and fetch only when it needs them."""
+              trigger = ev["trigger"]
+              if trigger is not None and not about_default_branch(trigger, ev["repo"], ev["default"]):
+                  return "ignore-branch", None, None
+              if ev["conclusion"] not in ACTIONABLE:
+                  return "ignore-conclusion", None, None
+              existing = find_open()
+              if ev["conclusion"] == "failure":
+                  return ("comment" if existing else "open"), existing, None
+              latest = evaluate(fetch, trigger, ev["repo"], ev["default"])
+              if existing is None:
+                  return "none", None, latest
+              return ("keep-open" if red(latest) else "close"), existing, latest
+
+
+          def event_from_env(env):
+              default = env.get("DEFAULT_BRANCH") or ""
+              if not default:
+                  # Without it every run would look off-branch and be ignored,
+                  # silently.
+                  raise SystemExit("ci-alert: the event names no default branch")
+              base = {"repo": env["REPO"], "default": default}
+              if env.get("EV") == "workflow_dispatch":
+                  # A simulation is not a run, so it is not evidence: a
+                  # simulated success re-reads the real runs like any green.
+                  return dict(base, trigger=None, simulated=True,
+                              conclusion=env.get("SIM") or "failure",
+                              name=env.get("SIM_NAME") or "validate")
+              trigger = {
+                  "name": env.get("WF_NAME") or "?",
+                  "id": int(env.get("RUN_ID") or 0),
+                  "created_at": env.get("RUN_CREATED") or "",
+                  "conclusion": env.get("CONCLUSION") or "",
+                  "event": env.get("RUN_EVENT") or "",
+                  "head_branch": env.get("HEAD_BRANCH") or "",
+                  "head_sha": env.get("HEAD_SHA") or "",
+                  "head_repository": {"full_name": env.get("HEAD_REPO") or ""},
+                  "html_url": env.get("RUN_URL") or "",
+                  "display_title": env.get("TITLE_MSG") or "",
+              }
+              return dict(base, trigger=trigger, simulated=False,
+                          conclusion=trigger["conclusion"], name=trigger["name"])
+
+
+          def verdicts(latest, default):
+              lines = []
+              for name in WATCHED:
+                  r = latest.get(name)
+                  if r is None:
+                      lines.append("- `%s`: no run on `%s` that succeeded or failed yet"
+                                   % (name, default))
+                  else:
+                      lines.append("- `%s`: **%s** on `%s` - %s" % (
+                          name, r.get("conclusion"), (r.get("head_sha") or "")[:7],
+                          r.get("html_url") or ""))
+              return "\n".join(lines)
+
+
+          def issue_body(detail, default):
+              names = ", ".join("`%s`" % n for n in WATCHED)
+              return (
+                  "%s\n\n"
+                  "This issue was opened automatically and **closes itself** once "
+                  "no watched workflow (%s) is red on `%s`: the latest run of each "
+                  "there that succeeded or failed must be a success. Cancelled and "
+                  "skipped runs do not count, and a workflow that has not run there "
+                  "yet does not hold it open. A green run while another is still "
+                  "red adds a comment naming it instead. It exists because a red "
+                  "gate once went unnoticed for fourteen commits (`TASK-0123`); see "
+                  "`.github/workflows/ci-alert.yml` for the rule and for why it is "
+                  "an issue rather than an email.\n\n"
+                  "Further failures are added as comments here rather than as new "
+                  "issues." % (detail, names, default))
+
+
+          def run(env, call):
+              """Everything the job does, with the HTTP call injected, so the
+              test can run it against a fake API and see every request."""
+              ev = event_from_env(env)
+              repo, default, trigger = ev["repo"], ev["default"], ev["trigger"]
+
+              def find_open():
+                  issues = call("GET", "repos/%s/issues?state=open&per_page=100" % repo)
+                  return next((i for i in issues
+                               if MARKER in i.get("title", "")
+                               and "pull_request" not in i), None)
+
+              def fetch(name):
+                  query = urllib.parse.urlencode(
+                      {"branch": default, "status": "completed", "per_page": PAGE})
+                  return call("GET", "repos/%s/actions/workflows/%s/runs?%s"
+                              % (repo, WATCHED[name], query)).get("workflow_runs", [])
+
+              action, existing, latest = decide(ev, find_open, fetch)
+              if latest is not None:
+                  print("latest run of each watched workflow on %s:" % default)
+                  print(verdicts(latest, default))
+
+              if action == "ignore-branch":
+                  print("%s is not about %s (branch %r, event %r, repository %r); "
+                        "nothing to do" % (ev["name"], default, trigger["head_branch"],
+                                           trigger["event"],
+                                           trigger["head_repository"]["full_name"]))
+                  return action
+              if action == "ignore-conclusion":
+                  print("conclusion %r is not actionable; nothing to do" % ev["conclusion"])
+                  return action
+
+              if ev["simulated"]:
+                  sha, branch, subject = "0000000", default, "simulated by workflow_dispatch"
+                  run_url = "(simulated run - no URL)"
+              else:
+                  sha, branch = trigger["head_sha"][:7], trigger["head_branch"]
+                  subject, run_url = trigger["display_title"], trigger["html_url"]
+              where = "%s on `%s`" % (ev["name"], branch or "?")
+              detail = "\n".join([
+                  "- workflow: **%s**" % ev["name"],
+                  "- conclusion: **%s**" % ev["conclusion"],
+                  "- commit: `%s` %s" % (sha, subject),
+                  "- run: %s" % run_url,
+                  "- simulated: %s" % ("yes - `workflow_dispatch`" if ev["simulated"] else "no"),
+              ])
+
+              if action == "open":
+                  made = call("POST", "repos/%s/issues" % repo,
+                              {"title": MARKER, "body": issue_body(detail, default)})
+                  print("opened #%d" % made["number"])
+              elif action == "comment":
+                  call("POST", "repos/%s/issues/%d/comments" % (repo, existing["number"]),
                        {"body": "Still failing - %s\n\n%s" % (where, detail)})
                   print("commented on #%d (no second issue)" % existing["number"])
-              else:
-                  body = (
-                      "%s\n\n"
-                      "This issue was opened automatically and will **close "
-                      "itself** when `validate` and `dashboard` next report "
-                      "success on the default branch. It exists because a red "
-                      "gate once went unnoticed for fourteen commits "
-                      "(`TASK-0123`); see `.github/workflows/ci-alert.yml` for "
-                      "why it is an issue rather than an email.\n\n"
-                      "Further failures are added as comments here rather than "
-                      "as new issues." % detail)
-                  made = call("POST", "repos/%s/issues" % REPO,
-                              {"title": MARKER, "body": body})
-                  print("opened #%d" % made["number"])
-          else:
-              if existing:
-                  call("POST", "repos/%s/issues/%d/comments" % (REPO, existing["number"]),
-                       {"body": "Recovered - %s\n\n%s" % (where, detail)})
-                  call("PATCH", "repos/%s/issues/%d" % (REPO, existing["number"]),
+              elif action == "keep-open":
+                  still = ", ".join("`%s`" % n for n in red(latest))
+                  call("POST", "repos/%s/issues/%d/comments" % (repo, existing["number"]),
+                       {"body": "Not closing - %s is green, but still red on `%s`: %s. "
+                                "This closes when no watched workflow is red there; "
+                                "re-run the red run.\n\nLatest run of each watched "
+                                "workflow on `%s`:\n%s\n\n%s"
+                                % (where, default, still, default,
+                                   verdicts(latest, default), detail)})
+                  print("kept #%d open; still red: %s" % (existing["number"], still))
+              elif action == "close":
+                  call("POST", "repos/%s/issues/%d/comments" % (repo, existing["number"]),
+                       {"body": "Recovered - %s. No watched workflow is red on `%s`:\n%s\n\n%s"
+                                % (where, default, verdicts(latest, default), detail)})
+                  call("PATCH", "repos/%s/issues/%d" % (repo, existing["number"]),
                        {"state": "closed", "state_reason": "completed"})
                   print("closed #%d" % existing["number"])
               else:
                   print("green, and nothing was open; nothing to do")
+              return action
+
+
+          def http_call(api, token):
+              def call(method, path, payload=None):
+                  url = path if path.startswith("http") else "%s/%s" % (api, path)
+                  data = json.dumps(payload).encode() if payload is not None else None
+                  req = urllib.request.Request(url, data=data, method=method)
+                  req.add_header("Authorization", "Bearer %s" % token)
+                  req.add_header("Accept", "application/vnd.github+json")
+                  if data:
+                      req.add_header("Content-Type", "application/json")
+                  # No try/except around the call on purpose. If the API errors,
+                  # this job must FAIL LOUDLY. An alert that swallows its own
+                  # failure is another unread second opinion, which is the exact
+                  # defect this workflow exists to answer.
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      body = resp.read().decode("utf-8")
+                  return json.loads(body) if body.strip() else {}
+              return call
+
+
+          if __name__ == "__main__":
+              run(os.environ, http_call(os.environ["API"].rstrip("/"), os.environ["GH_TOKEN"]))
           PY
