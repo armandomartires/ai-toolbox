@@ -61,6 +61,14 @@ observed failing before it is trusted — `sync-templates.sh --check` and
 Absent all three, this task stays `blocked`. Starting it early is the defect it
 describes, committed deliberately.
 
+**Fired 2026-09-30: trigger 3.** The human (Armando Martires) scheduled it
+explicitly, asked alongside `TASK-0120`'s route choice with "leave blocked" as
+the recommended option, and chose *"Schedule it now"*. Triggers 1 and 2 have
+**not** fired: no consumer has been observed stranded, and `install.sh` still
+deploys every skill together. `TASK-0120` took route 1 the same day, so this
+engine copy does not arrive through that task's route 3; it is this task's own
+schedule.
+
 ## Inputs
 
 | Artifact | Produced by | Expected state |
@@ -134,25 +142,25 @@ one failure this convention cannot catch for you.
 
 ## Acceptance criteria
 
-- [ ] The trigger that fired is named and dated in this file.
-- [ ] The copy is byte-identical to `skills/project-workflow/scripts/artifact_lib.py`,
+- [x] The trigger that fired is named and dated in this file.
+- [x] The copy is byte-identical to `skills/project-workflow/scripts/artifact_lib.py`,
       proved by a hash comparison pasted in.
-- [ ] The drift gate is **observed failing** on a mutated copy and passing on a
+- [x] The drift gate is **observed failing** on a mutated copy and passing on a
       restored one; both outputs recorded.
-- [ ] The gate does not use `git diff`, and the log says which mechanism it uses.
-- [ ] Step 7's reachability proof covers all four kinds with `project-workflow`
+- [x] The gate does not use `git diff`, and the log says which mechanism it uses.
+- [x] Step 7's reachability proof covers all four kinds with `project-workflow`
       absent.
-- [ ] No file under `skills/project-migration/schemas/` changed.
-- [ ] `tests/validate.sh` exits 0, and its artifact count is recorded before and
+- [x] No file under `skills/project-migration/schemas/` changed.
+- [x] `tests/validate.sh` exits 0, and its artifact count is recorded before and
       after so the added cost is visible.
-- [ ] `ADR-0027`'s Consequences records the arrival; `B-036` is closed with the
+- [x] `ADR-0027`'s Consequences records the arrival; `B-036` is closed with the
       commit hash.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
-- [ ] The new regenerator's `--check` mode, run twice: clean, then mutated
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
+- [x] The new regenerator's `--check` mode, run twice: clean, then mutated
 
 ## Risks and rollback
 
@@ -172,33 +180,119 @@ one failure this convention cannot catch for you.
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+| `skills/project-migration/scripts/{artifact_lib.py,new-artifact.sh,check-artifact.sh}` | **New.** Byte-identical copies of the owners in `project-workflow/scripts/` |
+| `scripts/sync-artifact-engine.sh` | **New.** Writes the copies; `--check` `cmp`s them in memory; `ENGINE_OUT` redirects a real write |
+| `tests/validate.sh` | Runs `sync-artifact-engine.sh --check` **unconditionally**, with no `[ -x ]` guard that could skip it |
+| `skills/project-workflow/scripts/{artifact_lib.py,new-artifact.sh,check-artifact.sh}` | An OWNER AND COPY header in each. The wrappers resolve "my own schemas" from their own directory name (`SELF`), and their `--help` ranges now end at the header's end. **Engine behaviour unchanged** |
+| `skills/project-migration/SKILL.md` | `3.1.0`: names its own `scripts/new-artifact.sh` / `check-artifact.sh` |
+| `skills/project-migration/scripts/ai-project-scaffold.sh` | The closing report prints the skill's own generator path; the "if that skill is not installed" fallback is gone |
+| `skills/project-workflow/SKILL.md` | `5.1.1` (headers and self-resolution only) |
+| `.ai/decisions/0027-*.md` | Dated clarification; the original Consequences text is left as written |
+| `skills/*/schemas/` | **Unchanged** |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
+**Next task starts here**: `project-migration` generates and checks its own
+artifacts with nothing else installed. The copies move only when
+`sync-artifact-engine.sh` is re-run after an owner edit.
+
+**Deviations from the plan.**
+1. **The wrappers are copied verbatim too**, rather than written as
+   migration-specific thin wrappers. A hand-written wrapper would have been a
+   second owner of the CLI. Making a verbatim copy correct needed the `SELF`
+   change (item 4 of the log).
+2. **The header lives in the owner**, so the copy can be byte-identical *and*
+   say what it is. The brief asked for both, and a header added only to the
+   copy would have broken the hash criterion.
+3. **The scaffold's closing report changed**, which the Likely files did not
+   list. It still named `<project-workflow skill>` and a fallback for its
+   absence, and that stopped being true once this task landed.
 
 ## Status
 
-- Status: blocked   # planned|ready|in_progress|blocked|review|done|cancelled
-- Owner: human
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
+- Owner: agent
 - Created: 2026-09-27
-- Updated: 2026-09-27
+- Updated: 2026-09-30
 
-Blocked by design, on the Trigger section above. `B-036` stays `ready` in the
-backlog; this file is its written route, not a schedule. Owner is `human`
-because only a human decides the trigger has fired.
+Was blocked by design on the Trigger section. Trigger 3 fired on 2026-09-30,
+when the human scheduled it.
 
 ## Execution log
 
 ### Attempt 1
 
-- Date:
-- Agent:
+- Date: 2026-09-30
+- Agent: Claude Opus 5.5, Claude Code
 - Actions:
+  1. **Trigger recorded** in the Trigger section, before any code: trigger 3,
+     human, 2026-09-30.
+  2. Re-read `sync-decision-standard.sh` and `sync-templates.sh`. The new
+     regenerator follows the latter: `--check` compares in memory and writes
+     nothing, and an `*_OUT` variable redirects a real write.
+  3. **Owner-side, behaviour-neutral.** An OWNER AND COPY paragraph went into
+     all three owner files, so a verbatim copy states what it is. In both
+     wrappers, `[ "$FRAMEWORK" != "project-workflow" ]` became `!= "$SELF"`,
+     with `SELF="$(basename "$(dirname "$HERE")")"`, and the `--help` ranges
+     were moved to the header's new end.
+  4. **Generated, then hashed** (sha256, owner = copy for all three):
+
+     ```
+     1555e07f…052171a7  artifact_lib.py
+     7044a910…43a1af6f  new-artifact.sh
+     21ceae7b…6a3cfe    check-artifact.sh
+     ```
+
+  5. **Gate observed failing before it was trusted.** `--check` before
+     generation → exit 1, three `ENGINE: … differs from its owner` lines.
+     After generation → exit 0. Through `tests/validate.sh`, with `# local
+     edit` appended to the copied `artifact_lib.py`:
+
+     ```
+     ENGINE: skills/project-migration/scripts/artifact_lib.py differs from its owner skills/project-workflow/scripts/artifact_lib.py —
+     ENGINE: run scripts/sync-artifact-engine.sh and commit the result
+     mutated: exit=1
+     validate.sh: OK
+     restored: exit=0
+     ```
+
+     **Mechanism: `cmp -s`, byte for byte, in memory. Not `git diff`.**
+  6. **Reachability, with `project-workflow` absent.** `skills/project-migration`
+     alone copied into an empty `mktemp -d` tree:
+
+     ```
+     task:    generate exit=0 (identical to owner's output) | check skeleton exit=1 | check TASK-0120 exit=0
+     adr:     generate exit=0 (identical to owner's output) | check skeleton exit=1 | check 0027 exit=0
+     review:  generate exit=0 (identical to owner's output) | check skeleton exit=1 | check REVIEW-0011 exit=0
+     session: generate exit=0 (identical to owner's output) | check skeleton exit=1 | check SESSION-20260930-0100 exit=0
+     --framework project-migration (self): exit=0
+     --framework project-workflow (absent): exit=1, "cannot read schema: …/project-workflow/schemas/task.md"
+     ```
+
+     Each skeleton is rejected for the right reason: a surviving `<!-- FILL:`
+     marker. The first review tried, REVIEW-0012, failed. **The owner fails it
+     identically**, and `validate.sh` exempts it by name (the one review using
+     `## Closing`/`## Follow-ups`), so it is a property of that artifact, not of
+     the copy.
+  7. `SKILL.md` line 23 and the scaffold's closing report now name the
+     skill's own scripts; `ADR-0027` has a dated clarification; `B-036` is
+     closed.
 - Observations:
+  - **The brief's two demands on the copy were in tension**: byte-identical,
+    and carrying a header. Putting the header in the owner satisfies both,
+    and it tells an editor of the owner that a copy exists — which is the
+    reader who most needs to know.
+  - **A verbatim copy of a self-referencing file is wrong in its new
+    location.** The wrappers named their own skill in a string. Copied,
+    `--framework project-workflow` would have silently read
+    `project-migration`'s schemas. The same failure applies to any future
+    verbatim copy of a file that names where it lives.
+  - **Gate cost**: `tests/validate.sh` 7.65 s before, 7.59 s after, both
+    single runs on `/mnt/c`, so noise. The artifact count it checks is
+    unchanged: the task adds files, not artifacts.
 - Validation:
-- Result:
-- Commit:
-- Push:
+  - `scripts/sync-artifact-engine.sh --check` → exit 1 before, exit 0 after
+  - `tests/validate.sh` → `validate.sh: OK`, and exit 1 on a mutated copy
+  - `scripts/sync-registry.sh` → no diff
+  - `git diff --stat -- skills/*/schemas/` → empty
+- Result: **done.** `B-036` closed.
+- Commit: recorded in the follow-up record commit
+- Push: recorded in the follow-up record commit

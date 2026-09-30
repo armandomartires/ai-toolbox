@@ -766,9 +766,12 @@ That became `TASK-0112` and displaced the order the briefs were planned in.
       Gate 5 found `include_tasks` underivable from its own docs (`B-050`).
       Gates 6–9 stay unauthorized. Found earlier: the estate is at **6-of-6
       quorum**, not the 3-of-4 its own `ansible.cfg` calls normal (`B-039`)
-- [ ] TASK-0117 — `B-036`, the generator unreachable from `project-migration`
-      alone. **`blocked` by design**, on a stated trigger; the brief is the
-      route, not a schedule
+- [x] TASK-0117 — `B-036`, the generator unreachable from `project-migration`
+      alone (**done 2026-09-30**, on trigger 3: scheduled by the human).
+      Byte-identical copies of the engine and both wrappers, written by
+      `scripts/sync-artifact-engine.sh` and `cmp`-gated in `validate.sh`
+      (observed failing first). All four kinds generate and check from a tree
+      with `project-workflow` removed
 
 **Two more briefs were written on 2026-09-27**, from a review of whether
 `project-workflow` and `project-migration` are fully integrated and share

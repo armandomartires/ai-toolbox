@@ -1561,6 +1561,29 @@ if [ -x scripts/sync-templates.sh ]; then
 fi
 
 # --------------------------------------------------------------------------
+# project-migration carries a byte-identical copy of the artifact engine and
+# its two wrappers, so it can generate and check its own artifacts when
+# installed without project-workflow (B-036, TASK-0117).
+#
+# WHY: the copies are only safe while they ARE copies. One edited in place
+# becomes a second owner of how a schema is read -- the defect ADR-0027
+# exists to prevent -- and would go unnoticed, because inside this repo every
+# caller reaches the owner, never the copy.
+#
+# HOW: `cmp` of each copy against its owner, in memory. Never `git diff`,
+# which passes vacuously on an untracked copy. Deliberately unconditional:
+# no `[ -x ]` guard, so a deleted regenerator fails here rather than
+# skipping quietly (ADR-0009).
+#
+# WHAT THIS PROVES: that the three copies are byte-identical to their owners.
+# WHAT IT DOES NOT PROVE: that the copies work installed alone. That was
+# shown once, by hand, with project-workflow removed (TASK-0117 step 7), and
+# nothing here re-runs it.
+if ! bash scripts/sync-artifact-engine.sh --check; then
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # The migration scaffold emits its four schema-backed templates by READING
 # skills/project-migration/templates/, not by carrying its own copy (B-040,
 # TASK-0119). The check above proves those files match their schemas; this

@@ -1,5 +1,20 @@
 # Current State
 
+## `project-migration` generates its own artifacts, installed alone (`TASK-0117`, `B-036` closed)
+
+**2026-09-30, scheduled by the human (trigger 3).** No consumer had been
+observed stranded. `skills/project-migration/scripts/` now carries
+**byte-identical** copies of `artifact_lib.py`, `new-artifact.sh` and
+`check-artifact.sh`. The owners stay in `project-workflow`;
+`scripts/sync-artifact-engine.sh` writes the copies, and `tests/validate.sh`
+`cmp`s them, a gate observed failing on a mutated copy before it was trusted.
+**Proved from a tree containing only `project-migration`**: all four kinds
+generate byte-identical to the owner's output, the checker rejects every
+unfilled skeleton, and it passes real artifacts. `SKILL.md` (`3.1.0`) and the
+scaffold's closing report now point at the skill's own scripts. Making a
+verbatim copy correct needed one owner-side change: each wrapper now reads its
+own skill's name instead of having `project-workflow` written into it.
+
 ## A migrated repository is told the truth about its templates (`TASK-0120`, `B-041` closed)
 
 **2026-09-30, route 1 by human choice.** `skills/project-migration/SKILL.md`

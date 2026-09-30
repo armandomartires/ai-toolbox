@@ -240,10 +240,33 @@ green — observed, not reasoned — which is precisely how the original defect
 survived a gate that was real and working.
 
 
+## Clarification (2026-09-30, `TASK-0117`)
+
+**The "one stated gap" in Consequences is closed.** It was deferred until a
+trigger fired; **trigger 3 fired** — a human scheduled it explicitly. No
+consumer was observed stranded, and that is recorded rather than implied.
+
+The route is the one Consequences named. `skills/project-migration/scripts/`
+now holds **byte-identical** copies of `artifact_lib.py`, `new-artifact.sh`
+and `check-artifact.sh`, written by `scripts/sync-artifact-engine.sh`.
+`tests/validate.sh` compares them with `cmp` and fails on any difference. The
+gate was observed failing on a mutated copy before it was trusted. **This
+ADR's single-owner rule holds**: each file in `project-workflow` is still the
+only owner, and no schema was copied between frameworks (`ADR-0013`).
+
+**One owner-side change was needed to make a verbatim copy correct.** Each
+wrapper used to treat `--framework project-workflow` as "my own schemas", a
+self-reference written into the file. A copy in `project-migration` would
+then have resolved that flag to the wrong skill. Both wrappers now read their
+own skill's name from their directory. In the owner's location the result is
+unchanged.
+
+
 ## Provenance
 
 - Task: `.ai/tasks/TASK-0109-artifact-schema-one-owner.md`;
-  clarified by `.ai/tasks/TASK-0110-migrate-repo-onto-schemas.md`
+  clarified by `.ai/tasks/TASK-0110-migrate-repo-onto-schemas.md` and
+  `.ai/tasks/TASK-0117-artifact-generator-reachable-from-migration.md`
 - Related ADRs: `ADR-0008` (no invented size gate), `ADR-0012` (the
   handover contract these schemas encode), `ADR-0013` (two frameworks, kept
   divergent), `ADR-0017` (rejected — tier ownership), `ADR-0018` clause 7
