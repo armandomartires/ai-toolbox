@@ -836,10 +836,10 @@ embody** — measured with the skill's own checker, not inferred. Raised
       dispatcher workflow, the opt-in `github-pages-daily` target, which
       waits for the run it starts and ends as it ends; `dashboard.yml`
       unchanged (**in progress** until its first scheduled run is observed)
-- [ ] TASK-0130 — ci-alert closes its issue only when no watched workflow's
+- [x] TASK-0130 — ci-alert closes its issue only when no watched workflow's
       latest run on `master` is red (it closed on any green run), ignores runs
-      off the default branch, and watches `dashboard-daily`. Gated offline;
-      `UNVERIFIED` until observed after landing (**in progress**)
+      off the default branch, and watches `dashboard-daily`. Gated offline,
+      verified live on test issue #3 (done, `2de6f52`)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

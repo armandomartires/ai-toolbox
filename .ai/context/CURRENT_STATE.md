@@ -1,6 +1,6 @@
 # Current State
 
-## ci-alert closes its issue only when no watched workflow is red (`TASK-0130`, in progress)
+## ci-alert closes its issue only when no watched workflow is red (`TASK-0130`)
 
 **2026-09-30, the human's decision.** `.github/workflows/ci-alert.yml` used to
 close its alert on *any* green run. A push's green `dashboard` would therefore
@@ -16,9 +16,10 @@ The workflow now:
 The rule and its reasons are in the workflow's header. The offline proof is
 `tests/test-ci-alert.sh`, run by `tests/validate.sh`.
 
-**`UNVERIFIED` until observed after landing.** One path cannot be shown live
-without a red `master`: a green run that must not close the alert. That path is
-proven offline only.
+**Verified after landing**, on the runs the workflow's header names. Test
+issue #3 was opened and commented on by simulations, and a real green run
+closed it. One path cannot be shown live without a red `master`: a green run
+that must not close the alert. That path is proven offline only.
 
 **A correction to `TASK-0124`'s section below.** Its *Known limit* says a
 side-branch failure raises nothing, because `workflow_run` fires only for the

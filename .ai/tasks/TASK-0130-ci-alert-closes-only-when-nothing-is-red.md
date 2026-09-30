@@ -222,18 +222,18 @@ A forecast, written before the work.
 - [x] T6 These files are identical to `dde2a98`: `validate.yml`,
       `dashboard.yml`, `dashboard-daily.yml`, `skills/`, `README.md`,
       `AGENTS.md` and `docs/`.
-- [ ] L0 After landing, the landed commit's green `validate` and `dashboard`
+- [x] L0 After landing, the landed commit's green `validate` and `dashboard`
       runs each start a ci-alert run that succeeds.
-- [ ] L0b Each of those ci-alert runs logs three verdict lines and "nothing
+- [x] L0b Each of those ci-alert runs logs three verdict lines and "nothing
       was open".
-- [ ] L1 A simulated failure opens exactly one marker issue.
-- [ ] L1b Its body states the rule and names the three watched workflows.
-- [ ] L2 A second simulated failure comments on that issue, and no second
+- [x] L1 A simulated failure opens exactly one marker issue.
+- [x] L1b Its body states the rule and names the three watched workflows.
+- [x] L2 A second simulated failure comments on that issue, and no second
       issue is opened.
-- [ ] L3 The record commit's real green run closes it, with `state_reason`
+- [x] L3 The record commit's real green run closes it, with `state_reason`
       `completed`.
-- [ ] L3b The closing *Recovered* comment lists three green verdicts.
-- [ ] L4 `ci-alert.yml`'s `STATUS:` reads `VERIFIED`, naming L0-L3's runs,
+- [x] L3b The closing *Recovered* comment lists three green verdicts.
+- [x] L4 `ci-alert.yml`'s `STATUS:` reads `VERIFIED`, naming L0-L3's runs,
       with a line naming what is proven offline only.
 
 ## Mandatory validations
@@ -249,7 +249,7 @@ A forecast, written before the work.
 - [x] `git diff --stat dde2a98 -- <the T6 list>` is empty, and
       `git ls-files -s tests/test-ci-alert.sh` shows `100755`
 - [x] The staged-diff and commit-message leak scans
-- [ ] The landed runs and the simulations, read back from the API
+- [x] The landed runs and the simulations, read back from the API
 
 ## Risks and rollback
 
@@ -289,7 +289,7 @@ A forecast, written before the work.
 
 ## Status
 
-- Status: in_progress   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent (the decisions are the human's)
 - Created: 2026-09-30
 - Updated: 2026-09-30
@@ -372,3 +372,40 @@ A forecast, written before the work.
 - Push: **confirmed to both remotes** — `dde2a98..2de6f52 HEAD -> master` to
   `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
   read `2de6f52`, and `git remote -v` is token-free
+
+### Live verification, after landing
+
+Recorded in a later commit, after the record commit, because the record commit
+may touch only its two lines.
+
+- **L0**, the task commit `2de6f52` landing:
+  - `validate` `36781136442` and `dashboard` `36781136398` both succeeded,
+    and ci-alert stayed `active`. GitHub accepted the file, `queue: max`
+    included.
+  - The ci-alert run `36781161730`, for `validate`, logged three verdicts:
+    - `validate` success on `2de6f52`, the trigger itself, counted before the
+      API showed it finished;
+    - `dashboard` success on `dde2a98`, run `36774619004`, the dispatched
+      one;
+    - `dashboard-daily` success on `dde2a98`.
+
+    It then logged `green, and nothing was open; nothing to do`.
+  - The ci-alert run `36781183799`, for `dashboard`, logged the same.
+- **L1**: the simulated `validate` failure (run `36781317379`) opened **#3**
+  under the marker title. Its body names `validate`, `dashboard`,
+  `dashboard-daily` and `master`, and says it closes itself.
+- **L2**: the simulated `dashboard` failure (run `36781340022`) commented
+  *"Still failing - dashboard on `master`"*, and #3 was still the only open
+  issue.
+- **L3**, the record commit `ff45845` landing:
+  - `validate` `36781443257` and `dashboard` `36781443265` both succeeded.
+  - The ci-alert run `36781466900` (`validate`) commented *"Recovered -
+    validate on `master`. No watched workflow is red on `master`"*, with
+    three green verdicts, then closed #3. The close was read back as
+    `state_reason: completed`, at 21:45:46Z.
+  - The ci-alert run `36781495396` (`dashboard`) logged
+    `green, and nothing was open; nothing to do`.
+  - 0 issues were open.
+- **L4**: `ci-alert.yml`'s `STATUS:` moves to `VERIFIED` in this commit,
+  naming those runs, with a line naming what is proven offline only. The
+  embedded program is byte-identical to the task commit's.

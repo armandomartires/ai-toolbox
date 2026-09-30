@@ -1,26 +1,28 @@
 # Open a GitHub Issue when a watched workflow fails on the default branch, and
 # close it once none of them is red there.
 #
-# STATUS: UNVERIFIED. TASK-0130 replaced the close rule and added the branch
-# filter, and no run has exercised them yet: `workflow_run` only fires for this
-# file on the default branch, so they can only be observed after landing. The
-# rule it replaced was VERIFIED on 2026-09-28 (TASK-0124), each result read
-# back from the API:
-#   36443923514  dispatch failure  -> OPENED issue #1
-#   36443928448  workflow_run      -> a REAL green `validate` on 2bfda15
-#                                     commented "Recovered" and CLOSED #1.
-#                                     Not a simulation: the live trigger.
-#   36443970361  workflow_run      -> real green `dashboard`, nothing open,
-#                                     nothing done
-#   36444043239  dispatch failure  -> OPENED #2
-#   36444075034  dispatch failure  -> COMMENTED "Still failing" on #2 and
-#                                     created NO second issue (#2 comments
-#                                     1 -> 2, issue count unchanged)
-#   36444136192  dispatch success  -> CLOSED #2, state_reason `completed`,
-#                                     0 issues left open
-# Issues #1 and #2 are that test's artifacts and are left closed as the
-# record. Same rule as every workflow here: this label moves only against a
-# real run, and names it.
+# STATUS: VERIFIED on 2026-09-30 (TASK-0130), each result read back from the
+# API after landing:
+#   36781161730  workflow_run      -> real green `validate` on 2de6f52: three
+#                                     verdicts logged, nothing open, nothing
+#                                     done - the query runs on real payloads
+#   36781183799  workflow_run      -> real green `dashboard`: the same
+#   36781317379  dispatch failure  -> OPENED #3, its body naming the rule and
+#                                     all three watched workflows
+#   36781340022  dispatch failure  -> COMMENTED "Still failing" on #3, NO
+#                                     second issue
+#   36781466900  workflow_run      -> a REAL green `validate` on ff45845 found
+#                                     nothing red, commented "Recovered" with
+#                                     three green verdicts and CLOSED #3,
+#                                     state_reason `completed`
+#   36781495396  workflow_run      -> real green `dashboard`, nothing open
+# NOT OBSERVED LIVE, proven only by tests/test-ci-alert.sh: a green run held
+# open by another watched workflow's red run (it needs a red default branch),
+# and a run off the default branch being ignored.
+# The rule this replaced was VERIFIED on 2026-09-28 on six runs that
+# TASK-0124's brief lists. Issues #1, #2 and #3 are test artifacts, left closed
+# as the record. Same rule as every workflow here: this label moves only
+# against a real run, and names it.
 #
 # WHY THIS EXISTS (TASK-0123, TASK-0124): validate was red for FOURTEEN
 # consecutive commits and nobody knew. GitHub's own failure email defaults to
