@@ -246,16 +246,16 @@ one failure this convention cannot catch for you.
 
 ## Acceptance criteria
 
-- [ ] `tests/validate.sh` passes. It runs `tests/test-vault-secrets.sh`
+- [x] `tests/validate.sh` passes. It runs `tests/test-vault-secrets.sh`
       unconditionally, and that test fails when the script is missing.
-- [ ] Each of the four revert proofs makes its named case fail, and the
+- [x] Each of the four revert proofs makes its named case fail, and the
       failure output is recorded in this file.
-- [ ] No tracked file names an internal hostname, IP address or the CA's
+- [x] No tracked file names an internal hostname, IP address or the CA's
       subject. Checked by grepping the diff for the domain stem and the
       address prefix.
-- [ ] `secrets.map` holds names and paths only, and every variable in it
+- [x] `secrets.map` holds names and paths only, and every variable in it
       appears as `^VAR=` in `.env.example` (gated).
-- [ ] The token file is mode 600 and holds the child token. Neither the
+- [x] The token file is mode 600 and holds the child token. Neither the
       parent token nor any value appears in the script's stdout or stderr
       (gated by the leak scan).
 - [ ] Live, after the human's steps:
@@ -265,8 +265,8 @@ one failure this convention cannot catch for you.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
+- [x] tests/validate.sh
+- [x] scripts/sync-registry.sh (if components changed)
 - [ ] `bash tests/test-vault-secrets.sh` on its own, plus the four revert proofs
 - [ ] `git diff --staged | grep -iE '<domain stem>|<address prefix>'` returns nothing (run with the real values, never written here)
 
@@ -328,7 +328,7 @@ push.
 - Status: in_progress
 - Owner: agent (Claude Code), human for the Vault-side and push steps
 - Created: 2026-10-03
-- Updated: 2026-10-03
+- Updated: 2026-10-04
 
 ## Execution log
 
@@ -378,5 +378,64 @@ push.
     records, not this change.
 - Result: code complete and gated. **Live verification pending** on the
   human steps above, so the status stays `in_progress`.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `010e0fe` — *Source secrets from the intranet Vault (TASK-0131)*, plus
+  the record-keeping commit after it. It was first committed as `dd63acb` and
+  rebased onto TASK-0121's record commit `3acfc9f` before landing; the gate was
+  re-run after the rebase and printed `validate.sh: OK`.
+- Push: **confirmed to both remotes** — `3acfc9f..010e0fe HEAD -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `010e0fe`, and `git remote -v` is token-free. The same session landed
+  TASK-0121 first: `a440d43..13b254c` and its record commit
+  `13b254c..3acfc9f`, to both remotes.
+
+### Attempt 2 — live verification (partial)
+
+- Date: 2026-10-03..04
+- Agent: Claude Code (Opus 5.5), with the human for every credential step
+- Actions and observations, as printed:
+  - **Vault setup re-applied by the human** with the `auth/token/create`
+    grant (Deviation 3). It printed `Policies workstation-read and
+    secrets-writer / written`.
+  - **Human `login`:** `logged in: policies ['default', 'workstation-read'],
+    valid 8h00m, stored in ~/.vault-token (mode 600)`. This proves the
+    child-token narrowing against the real Vault: the human's LDAP token
+    carries `admin`, and the stored one does not.
+  - **Human `put`:**
+    - `wrote GITLAB_TOKEN to kv/ai-toolbox/gitlab-admin#token (version 1)`
+    - `wrote GITHUB_TOKEN to kv/ai-toolbox/github#token (version 1)`
+    - `put GITLAB_PUSH_TOKEN` printed `vault-secrets: empty value: nothing
+      written`. The empty-value guard fired live.
+  - **Why the push token was empty: it was in no profile file at all.**
+    `grep -c` returned 0 for `~/.bashrc`, `~/.profile`, `~/.bash_profile` and
+    the retired `~/.config/ai-toolbox/env`. TASK-0126 attempt 2 records moving
+    it into `~/.bashrc`; that record does not match the file. This explains
+    TASK-0128's and this task's "unset in the session". GitLab shows a token
+    value only at creation, so the human created a new push token.
+  - **The agent's `check`, from its own session** (exports removed): Vault
+    reachable with the certificate verified; token `['default',
+    'workstation-read']`; `GITLAB_TOKEN` and `GITHUB_TOKEN` `readable from
+    kv/…`; `GITLAB_PUSH_TOKEN: MISSING`; exit 1.
+  - **Hash comparisons** (equal or not, no values printed): the profile's old
+    exports equal Vault's `GITLAB_TOKEN` and `GITHUB_TOKEN`. The human's
+    `~/.bashrc` is now mode 600 with no token exports, only `GITLAB_URL`,
+    `GITHUB_URL`, `VAULT_ADDR` and `VAULT_CACERT`.
+  - **The agent's attempt to write the new push token was blocked** by
+    Claude Code's auto-mode classifier, `[Secret-Store Writes]`. That is the
+    same refusal as for the Vault setup, so the write is left to the human,
+    consistent with ADR-0019/0022.
+  - **Pushes via the runbook's `vgit`**, with the session's stale token copies
+    unset:
+    - `github`: all three pushes took `GITHUB_TOKEN` **from Vault** through
+      the read-only child token. This is the first live push through Vault.
+    - `origin`: the new push token was not in Vault yet, so it came from the
+      human's local, gitignored file through the documented fallback
+      (`ADR-0030` clause 5, an exported value wins).
+  - **A finding, reported to the human, not changed:** that local file holds
+    other infrastructure credentials, including the Vault root token. Details
+    stay out of this record because the mirror is public.
+- Result: **partial.**
+  - Live and passing: login narrowing, two writes, the empty-value guard,
+    named-only `check`, and Vault-sourced pushes to `github`.
+  - Open: `GITLAB_PUSH_TOKEN` in Vault, then `check` exiting 0 and an
+    `origin` push through Vault. Status stays `in_progress` until then; the
+    closing evidence goes in a follow-up commit, as TASK-0130 did.
