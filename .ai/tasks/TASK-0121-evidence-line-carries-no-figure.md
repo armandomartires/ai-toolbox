@@ -391,5 +391,9 @@ No sprint is open; scheduling is the human's, as with `TASK-0111`…`TASK-0120`.
     reason. Wiring restored by `git stash pop`.
   - `run-gate.sh` is byte-identical to `HEAD`.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `13b254c` — *Hand the closer the gate-runner's figures (TASK-0121)*,
+  plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `a440d43..13b254c master -> master` to
+  `origin` and to `github` (landed 2026-10-04 from `TASK-0131`'s session);
+  `HEAD`, `origin/master` and `github/master` all read `13b254c`, and
+  `git remote -v` is token-free
