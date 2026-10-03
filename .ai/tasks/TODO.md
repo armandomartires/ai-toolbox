@@ -673,7 +673,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0133`.**
+untested. **Next free number: `TASK-0134`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
 `TASK-0109` until `TASK-0118` corrected it on 2026-09-27, to `TASK-0119`;
@@ -848,6 +848,8 @@ embody** — measured with the skill's own checker, not inferred. Raised
       combine. On the human's request, the local `.env`'s secrets were moved
       to `kv/ai-toolbox/`, their names into a private map. Live `check` read all
       34 through the identity (done)
+- [x] TASK-0133 — `B-053`: `.gitignore` ignores every `.env` variant except
+      `.env.example`, gated in `tests/validate.sh` (done)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

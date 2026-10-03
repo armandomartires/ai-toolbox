@@ -4,7 +4,10 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+# Local secret files, in every variant; the template stays tracked (B-053).
 .env
+.env.*
+!.env.example
 node_modules/
 .DS_Store
 .ai/tasks/completed/archive/

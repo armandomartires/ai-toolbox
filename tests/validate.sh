@@ -1593,6 +1593,34 @@ if ! VAULT_SECRETS_OUT="$(bash tests/test-vault-secrets.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# Local secret files stay out of git (TASK-0133, B-053).
+#
+# WHY: the mirror is public (ADR-0028), so a committed `.env.local` is a
+# published credential. Until 2026-10-04 `.gitignore` ignored exactly `.env`,
+# and every other variant was committable. `.env.example` must stay addable,
+# or a fresh copy is skipped in silence -- TASK-0122's dashboard.html shape.
+#
+# WHAT THIS PROVES: git's own ignore resolution for these four names, with no
+# such file needed (--no-index).
+# WHAT IT DOES NOT PROVE: anything about other secret-bearing names, or about
+# a file already tracked -- an ignore rule never untracks one.
+# Outside a git work tree it says it could not run, rather than passing.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  for f in .env .env.local .env.production; do
+    if ! git check-ignore -q --no-index "$f"; then
+      echo "NOT IGNORED: $f -- a local secret file could be committed (B-053)"
+      fail=1
+    fi
+  done
+  if git check-ignore -q --no-index .env.example; then
+    echo "IGNORED: .env.example -- git add would skip the tracked template (B-053)"
+    fail=1
+  fi
+else
+  echo "SKIPPED: the .env ignore check needs a git work tree (B-053)"
+fi
+
+# --------------------------------------------------------------------------
 # Planning templates are derived from the schemas that own their shape
 # (ADR-0027, TASK-0109), so they get the same staleness gate docs/registry.md
 # and decision-standard.md already carry. Rendered to a scratch tree and
