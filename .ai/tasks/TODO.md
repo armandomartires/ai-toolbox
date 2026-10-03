@@ -837,12 +837,12 @@ embody** — measured with the skill's own checker, not inferred. Raised
       latest run on `master` is red (it closed on any green run), ignores runs
       off the default branch, and watches `dashboard-daily`. Gated offline,
       verified live on test issue #3 (done, `2de6f52`)
-- [ ] TASK-0131 — Source secrets from the intranet Vault, with the environment
+- [x] TASK-0131 — Source secrets from the intranet Vault, with the environment
       as the interface (`ADR-0030`): the `vault-secrets` skill (`login`,
       `exec`, `check`, `put`, `logout`), `secrets.map` for the three git
       tokens, and an offline test in the gate. On the human's request; GitHub
-      and GitLab CI variables were rejected as the store (**in progress**
-      until the human loads the values and a push goes through Vault)
+      and GitLab CI variables were rejected as the store. Verified live:
+      `check` exit 0, and pushes authenticated from Vault (done, `010e0fe`)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

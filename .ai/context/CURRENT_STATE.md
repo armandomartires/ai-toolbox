@@ -1,6 +1,6 @@
 # Current State
 
-## Secrets come from Vault; the environment stays the interface (`TASK-0131`, `ADR-0030`, in progress)
+## Secrets come from Vault; the environment stays the interface (`TASK-0131`, `ADR-0030`)
 
 **2026-10-01..03, the human's decisions.** The three git tokens lived as
 exports in one host's `~/.bashrc`. That file was world-readable, the exports
@@ -19,12 +19,16 @@ session.
 - GitHub and GitLab CI variables were rejected as the store (`ADR-0030`). CI
   is unchanged and needs no custom secret.
 
-**Proven offline only so far.** `tests/test-vault-secrets.sh` (34 cases, in
-the gate) runs against a loopback stub, and each guarded behaviour was shown
-failing with it broken. **Not yet live:** loading the values into Vault, the
-first `login`, and removing the `~/.bashrc` exports are human steps.
-`TASK-0131` stays `in_progress` until `check` reads all three from Vault and a
-push goes through `vgit`. The estate's Ansible Vault password is `B-052`.
+**Proven offline and live.** Offline: `tests/test-vault-secrets.sh` (34
+cases, in the gate) runs against a loopback stub, and each guarded behaviour
+was shown failing with it broken. Live, on 2026-10-03..04:
+- `login` stores only `['default', 'workstation-read']`;
+- `check` exits 0 with all three tokens readable from Vault;
+- both remotes accept pushes authenticated with tokens from Vault.
+
+The `~/.bashrc` token exports are gone. A push token that turned out to exist
+in no file at all was replaced. The estate's Ansible Vault password is
+`B-052`.
 
 ## The closer is handed the figures it must copy (`TASK-0121`, `B-043` closed)
 
