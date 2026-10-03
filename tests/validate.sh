@@ -1566,6 +1566,31 @@ if ! CI_ALERT_OUT="$(bash tests/test-ci-alert.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# The vault-secrets loader, proven offline (TASK-0131, ADR-0030).
+#
+# WHY: skills/vault-secrets/scripts/vault_secrets.py decides which token lands
+# on disk, which secrets reach a command, and whether a request may go out in
+# cleartext. None of that can be shown against the real Vault without real
+# credentials, and an agent may not hold those (ADR-0019). The test drives the
+# script against a stub Vault on 127.0.0.1 with a throwaway HOME and no
+# controlling terminal, so a password prompt cannot block this gate. It also
+# checks that secrets.map is well-formed and that every variable in it is
+# documented in .env.example.
+#
+# WHAT THIS PROVES: the loader's decisions and requests for each case, and that
+# no password, token or value appears in its output.
+# WHAT IT DOES NOT PROVE: that the real Vault, its policies or its certificate
+# behave as the stub does; TASK-0131's live verification records that.
+# COST, measured 2026-10-03: ~1.6 s on a native filesystem, ~3.7 s on a /mnt/c
+# checkout -- 19 interpreter starts, which the Windows filesystem bridge triples.
+# Deliberately unconditional: a deleted test fails here rather than skipping
+# quietly (ADR-0009).
+if ! VAULT_SECRETS_OUT="$(bash tests/test-vault-secrets.sh 2>&1)"; then
+  printf '%s\n' "$VAULT_SECRETS_OUT" | grep -v '^PASS' | sed 's/^/VAULT-SECRETS: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # Planning templates are derived from the schemas that own their shape
 # (ADR-0027, TASK-0109), so they get the same staleness gate docs/registry.md
 # and decision-standard.md already carry. Rendered to a scratch tree and

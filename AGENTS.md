@@ -15,6 +15,13 @@ services, secrets.
 - MCP servers must not expose destructive capabilities without explicit
   human authorization in the task file.
 - Scan new components for credentials before commit.
+- Secret values live in the intranet Vault, not in shell profiles or `.env`
+  (ADR-0030). A command that needs one runs through
+  `skills/vault-secrets/scripts/vault_secrets.py exec <VAR> -- <command>`,
+  naming only the variables it needs. An agent never reads, prints or copies
+  a value or `~/.vault-token`. A missing or rejected secret is a stop: logging
+  in and writing values are human steps. CI variables are only for secrets a
+  CI job itself consumes.
 
 ## Technology stack
 - Skills: Agent Skills spec (SKILL.md, YAML frontmatter `name`,
@@ -44,7 +51,9 @@ services, secrets.
   local work; `tests/validate.sh` is hermetic and passes with nothing set.
   Needed only for specific operations: `GITLAB_URL` + `GITLAB_PUSH_TOKEN`
   to push to `origin`, and `GITHUB_TOKEN` to push to the `github` mirror
-  (ADR-0007, ADR-0009, ADR-0028); `WORKSPACE_ROOT` for the
+  (ADR-0007, ADR-0009, ADR-0028), the two tokens coming from Vault as
+  `secrets.map` names them, with `VAULT_ADDR`/`VAULT_CACERT` exported
+  (ADR-0030; setup: runbook, *Secrets on a new host*); `WORKSPACE_ROOT` for the
   ansible MCP server. `.env.example` documents names and meanings only,
   never values; `validate.sh` enforces that every `required` variable in
   any `server.json` appears there.
@@ -127,7 +136,8 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   every commit subject and author name. The secrets rule above is therefore
   not belt-and-braces, it is the only thing between this repo and a
   published credential — and for the same reason **the intranet hostname
-  never goes in a tracked file**; name `$GITLAB_URL` instead. CI and the
+  never goes in a tracked file**; name `$GITLAB_URL` (or `$VAULT_ADDR`)
+  instead. CI and the
   published dashboard run on the mirror (`.github/workflows/`), since
   GitLab has no runner yet.
 - At task end: validate, review diff, commit, record the commit hash in

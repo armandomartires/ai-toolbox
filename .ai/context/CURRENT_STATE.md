@@ -1,5 +1,31 @@
 # Current State
 
+## Secrets come from Vault; the environment stays the interface (`TASK-0131`, `ADR-0030`, in progress)
+
+**2026-10-01..03, the human's decisions.** The three git tokens lived as
+exports in one host's `~/.bashrc`. That file was world-readable, the exports
+were not always present in a session, and no other host had them. They now
+belong in the intranet Vault: TLS on, LDAP login against AD over `ldaps://`,
+KV v2 at `kv/`. The human set that up; the root credential never entered the
+session.
+
+- `skills/vault-secrets/scripts/vault_secrets.py exec <VAR> -- <cmd>` fetches
+  only the named variables into that one command's environment. `login`
+  stores only a read-only child token, for 8 hours. `put` writes with a fresh
+  login. `check` reports by name. A non-loopback `http://` is refused, and an
+  exported variable wins over Vault.
+- `secrets.map` maps the three tokens. The runbook's *Secrets on a new host*
+  and *Authenticating a push* (`vgit`) are the procedures.
+- GitHub and GitLab CI variables were rejected as the store (`ADR-0030`). CI
+  is unchanged and needs no custom secret.
+
+**Proven offline only so far.** `tests/test-vault-secrets.sh` (34 cases, in
+the gate) runs against a loopback stub, and each guarded behaviour was shown
+failing with it broken. **Not yet live:** loading the values into Vault, the
+first `login`, and removing the `~/.bashrc` exports are human steps.
+`TASK-0131` stays `in_progress` until `check` reads all three from Vault and a
+push goes through `vgit`. The estate's Ansible Vault password is `B-052`.
+
 ## The closer is handed the figures it must copy (`TASK-0121`, `B-043` closed)
 
 **2026-09-30, the human's decision: route B.** Loop step 10 told the closer to

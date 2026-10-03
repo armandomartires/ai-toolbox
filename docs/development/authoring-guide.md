@@ -266,6 +266,28 @@ Note also that graphify's **OpenCode-native** surface
 (`graphify opencode install`) is a *separate* question from its MCP wiring,
 per `ADR-0021`'s non-exclusive rows. Do not settle both in one section.
 
+### A server that needs a secret
+
+No server here takes one yet. The pattern is fixed in advance so the first one
+does not invent its own (`ADR-0030`, `TASK-0131`):
+
+- **The manifest still declares only the variable's name and meaning**, in
+  `environment`, and `.env.example` documents it. The gated rules above apply
+  unchanged: a required variable means a wiring section in every
+  `configs/<client>/README.md`.
+- **The value lives in Vault.** Add a line to `secrets.map`, e.g.
+  `EXAMPLE_API_KEY=kv/ai-toolbox/example#key`. `tests/test-vault-secrets.sh`
+  fails if that variable is missing from `.env.example`.
+- **The client launches the server through the loader:** `python3
+  <skills>/vault-secrets/scripts/vault_secrets.py exec --map <repo>/secrets.map
+  EXAMPLE_API_KEY -- <the manifest's launch command>`. The wiring section shows
+  that command line. **It never puts the value in a client config file's
+  `env` block**: those files are plain text, often synced, and outside every
+  gate here.
+- **A client that cannot run a wrapper** is the third, judgment-only trigger
+  above. Its section says how the value gets there instead, or that the
+  server is not wired for that client.
+
 ## Loops
 A loop is a repeatable multi-step agent workflow. `loop.md` is required;
 copy from `loops/_template/`. `tests/validate.sh` enforces the **Gated**

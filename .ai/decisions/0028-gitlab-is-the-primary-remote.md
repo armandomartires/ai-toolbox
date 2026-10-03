@@ -6,6 +6,8 @@ Accepted (2026-09-29). **Amended 2026-09-30** on the human's routing: the
 push token lives in the session environment, exported from the shell profile
 next to `GITLAB_TOKEN`, not in a separate file. The text below records the file
 as first decided and is left as written; see the last **Consequences** bullet.
+**Amended again 2026-10-03 by `ADR-0030`:** the token lives in Vault, no
+longer in the shell profile.
 
 Task: `TASK-0126`. Extends `ADR-0007` (a remote is recommended) and `ADR-0009`
 (configuration comes from the environment); supersedes neither. `ADR-0009`'s

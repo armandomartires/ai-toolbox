@@ -673,7 +673,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0131`.**
+untested. **Next free number: `TASK-0132`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
 `TASK-0109` until `TASK-0118` corrected it on 2026-09-27, to `TASK-0119`;
@@ -837,6 +837,12 @@ embody** — measured with the skill's own checker, not inferred. Raised
       latest run on `master` is red (it closed on any green run), ignores runs
       off the default branch, and watches `dashboard-daily`. Gated offline,
       verified live on test issue #3 (done, `2de6f52`)
+- [ ] TASK-0131 — Source secrets from the intranet Vault, with the environment
+      as the interface (`ADR-0030`): the `vault-secrets` skill (`login`,
+      `exec`, `check`, `put`, `logout`), `secrets.map` for the three git
+      tokens, and an offline test in the gate. On the human's request; GitHub
+      and GitLab CI variables were rejected as the store (**in progress**
+      until the human loads the values and a push goes through Vault)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

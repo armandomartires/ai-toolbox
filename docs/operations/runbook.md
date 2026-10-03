@@ -7,18 +7,24 @@
   and lab machines, via `scripts/install.sh`.
 
 ## Environment variables
-`.env.example` is the committed template. Copy it to `.env` (gitignored) or
-export the variables from your shell profile — nothing in the repo loads
-`.env` automatically.
+`.env.example` is the committed template. **Secret values live in Vault**
+(ADR-0030). `secrets.map` names which variable comes from which secret, and
+`skills/vault-secrets/scripts/vault_secrets.py exec <VAR> -- <command>` puts
+them into that one command's environment, never into a shell. Everything
+else, which is configuration and not secret, is exported from your shell
+profile or a `.env` you source; nothing in the repo loads `.env`
+automatically. An exported value always wins over Vault.
 
-| Variable | Needed for | Required? |
-|----------|-----------|-----------|
-| `GITLAB_URL` | base URL of the intranet GitLab that hosts `origin` (ADR-0028) | only to fetch/push `origin` |
-| `GITLAB_PUSH_TOKEN` | fetching/pushing `origin` — a project access token, `read_repository` + `write_repository`, this project only | only to fetch/push `origin` |
-| `GITLAB_TOKEN` | the human's own admin token; used only for API administration (creating the project and its push token). **Never sent by git** | no |
-| `GITHUB_URL` | the account that owns the `github` mirror | only to push the mirror |
-| `GITHUB_TOKEN` | pushing to the `github` mirror (`repo` scope) | only to push the mirror |
-| `WORKSPACE_ROOT` | the ansible MCP server (`mcp-servers/ansible/server.json`) | to run that server |
+| Variable | Needed for | Required? | Comes from |
+|----------|-----------|-----------|------------|
+| `GITLAB_URL` | base URL of the intranet GitLab that hosts `origin` (ADR-0028) | only to fetch/push `origin` | shell profile |
+| `GITLAB_PUSH_TOKEN` | fetching/pushing `origin` — a project access token, `read_repository` + `write_repository`, this project only | only to fetch/push `origin` | Vault |
+| `GITLAB_TOKEN` | the human's own admin token; used only for API administration (creating the project and its push token). **Never sent by git** | no | Vault |
+| `GITHUB_URL` | the account that owns the `github` mirror | only to push the mirror | shell profile |
+| `GITHUB_TOKEN` | pushing to the `github` mirror (`repo` scope) | only to push the mirror | Vault |
+| `VAULT_ADDR` | `https://` address of the intranet Vault; internal, so never in a tracked file | to use any secret | shell profile |
+| `VAULT_CACERT` | the internal root CA certificate that verifies Vault | unless the system trusts that CA | shell profile |
+| `WORKSPACE_ROOT` | the ansible MCP server (`mcp-servers/ansible/server.json`) | to run that server | wiring |
 
 Rules that are enforced, not merely advised:
 
@@ -33,6 +39,39 @@ Rules that are enforced, not merely advised:
   passes with the whole file empty.
 - **Never put a token in a remote URL.** `git remote -v` must stay
   token-free; authenticate the push instead.
+- **`secrets.map` holds names and paths only, and each of its variables
+  appears in `.env.example`.** `tests/test-vault-secrets.sh`, run by the gate,
+  checks both.
+
+## Secrets on a new host
+
+Once per host, and the host then needs no exported token at all (ADR-0030):
+
+1. **Trust the internal root CA.** Copy its *public* certificate to a stable
+   place, for example `~/.config/vault/root-ca.crt`. The domain's CA publishes
+   it. Then confirm it verifies Vault: `curl --cacert <file>
+   "$VAULT_ADDR/v1/sys/health"` must succeed without `-k`. It is public, but
+   it names internal hosts, so it never goes in this repository.
+2. **Export the two non-secret variables** from the shell profile:
+   `VAULT_ADDR=https://<vault-host>:8200` and
+   `VAULT_CACERT=~/.config/vault/root-ca.crt`.
+3. **Log in**, from the repo root:
+   `python3 skills/vault-secrets/scripts/vault_secrets.py login`. It asks
+   for your AD password. Only a child token limited to `workstation-read` is
+   stored, in `~/.vault-token` at mode 600, and it lasts 8 hours. Log in again
+   when it expires; `exec` exits 3 and says so.
+4. **Check:** `python3 skills/vault-secrets/scripts/vault_secrets.py check`.
+   Every variable in `secrets.map` must read `readable from …`. One that
+   reads `shadows Vault` is still exported somewhere, typically the shell
+   profile: remove that export.
+
+**Writing or rotating a secret** is a human step. Run
+`python3 skills/vault-secrets/scripts/vault_secrets.py put <VAR>`, then paste
+the value at the hidden prompt, or pipe it in from somewhere that keeps it
+out of shell history. It asks for your AD password again, because writes
+never use the stored read-only token. No host needs changing afterwards.
+What the Vault side must provide is in
+`skills/vault-secrets/references/vault-layout.md`.
 
 ## Procedures
 - Run locally: clone on WSL; `bash scripts/install.sh link` (deploys
@@ -138,8 +177,8 @@ git push github HEAD:master       # then the public mirror
 ```
 
 `origin` is private, so the fetch and the push each need the credential
-header from *Authenticating a push* below; the commands are written bare here
-for readability.
+from *Authenticating a push* below (`vgit GITLAB_PUSH_TOKEN git-push …`); the
+commands are written bare here for readability.
 
 **This preserves `AGENTS.md`'s "one task = one commit" rule.** `master` still
 receives one commit per task, still linear, still gated — the only added step
@@ -420,28 +459,40 @@ the next reader knows the file's state.
 There are two remotes (ADR-0028): `origin`, the private project on the
 intranet GitLab, and `github`, the public mirror. Push to both, in that
 order. Both URLs are token-free and must stay that way, so the credential is
-supplied per-command. **Use basic auth, not bearer**, for both:
+supplied per-command, from Vault (ADR-0030; set the host up first, under
+*Secrets on a new host*). **Use basic auth, not bearer**, for both. Define
+this once, in the shell profile or the session, from the repo root:
 
 ```bash
+# Run git with one remote's credential, fetched from Vault. The token reaches
+# git only through its environment (GIT_CONFIG_*, git >= 2.31) -- never argv,
+# where `ps` would show it, and never the calling shell.
+vgit() {  # vgit <TOKEN_VAR> <basic-auth-user> <git args...>
+  local var=$1 user=$2; shift 2
+  python3 skills/vault-secrets/scripts/vault_secrets.py exec "$var" -- \
+    env VGIT_VAR="$var" VGIT_USER="$user" bash -c '
+      export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraheader
+      GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf "%s:%s" "$VGIT_USER" "${!VGIT_VAR}" | base64 -w0)"
+      export GIT_CONFIG_VALUE_0
+      exec git "$@"' vgit "$@"
+}
+
 # origin — the project access token, never GITLAB_TOKEN. The instance is
 # http:// only, so this header crosses the network in cleartext; that is why
 # the token it carries is repository-only, one project, and expiring.
-# GITLAB_PUSH_TOKEN comes from the session environment, like GITLAB_TOKEN.
-GL=$(printf 'git-push:%s' "$GITLAB_PUSH_TOKEN" | base64 -w0)
-git -c http.extraheader="AUTHORIZATION: basic $GL" push origin master
+vgit GITLAB_PUSH_TOKEN git-push push origin master
 
 # github — the public mirror
-GH=$(printf '<github-username>:%s' "$GITHUB_TOKEN" | base64 -w0)
-git -c http.extraheader="AUTHORIZATION: basic $GH" push github master
+vgit GITHUB_TOKEN <github-username> push github master
 ```
 
 For a project access token the basic-auth username is ignored, but it must
-not be empty. `GITLAB_PUSH_TOKEN` is exported from the shell profile together
-with the other remote variables (ADR-0028, amended 2026-09-30); keep that
-profile on the WSL home, not on `/mnt/c`, where file modes are not enforced.
-**The token expires on 2027-09-28.** To rotate it, create a new project access
-token on the project with the same two scopes and Maintainer role, and replace
-the `export GITLAB_PUSH_TOKEN=` line.
+not be empty. Both tokens live in Vault (`secrets.map`), no longer in the
+shell profile; that location replaces ADR-0028's 2026-09-30 amendment. A token
+still exported somewhere wins over Vault, and `vault_secrets.py check` names
+it. **The push token expires on 2027-09-28.** To rotate it, create a new
+project access token on the project with the same two scopes and Maintainer
+role, then run `vault_secrets.py put GITLAB_PUSH_TOKEN`.
 
 **Re-pointing another clone** made before 2026-09-29, whose `origin` is still
 GitHub:
@@ -468,7 +519,7 @@ code (`reference/git-workflow.md`; AGENTS.md's Git rules):
 
 ```
 git rev-parse HEAD
-git -c http.extraheader="AUTHORIZATION: basic $GL" ls-remote origin master
+vgit GITLAB_PUSH_TOKEN git-push ls-remote origin master
 git ls-remote github master
 ```
 
