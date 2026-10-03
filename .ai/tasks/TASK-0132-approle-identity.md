@@ -272,5 +272,10 @@ wiring can now read `kv/ai-toolbox/ansible#vault_password`.
   - Scan of 613 added lines for hostnames, the address prefix, the private
     systems' names, token shapes and the `secret_id` accessor: clean.
 - Result: done. Every acceptance criterion is met, live included.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `993a422` — *Give ai-toolbox an AppRole identity in Vault
+  (TASK-0132)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `d93442b..993a422 HEAD -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `993a422`, and `git remote -v` is token-free. Both pushes
+  authenticated with tokens fetched by this task's own AppRole identity
+  (`VAULT_AUTH_METHOD=approle`, the runbook's `vgit`)
