@@ -1,5 +1,23 @@
 # Current State
 
+## The codebase has its own Vault identity (`TASK-0132`, `ADR-0031`)
+
+**2026-10-04, the human's decisions.** ai-toolbox authenticates to Vault as
+the AppRole `ai-toolbox`. Its tokens can create, read and update
+`kv/ai-toolbox/*`, can never delete, and live 10 minutes. The loader logs in
+per command and keeps no token: `exec` revokes before the child starts. The
+credential file is refused if anyone else can read it.
+
+The human's local `.env` held 34 variables in a folder every agent can read.
+All 32 secrets in it moved to `kv/ai-toolbox/`, verified by sha256 and then
+deleted from `.env`; their names sit in a private, untracked map. Maps now
+combine (`--map` repeated, or `VAULT_SECRETS_MAPS`).
+
+Proven offline: 46 cases, and each new safeguard was shown failing with it
+broken. The Vault-side setup ran live, and the AppRole login returned only
+`ai-toolbox-app`. Through the loader, with that identity and both maps, `check`
+read all 34 variables, exit 0.
+
 ## Secrets come from Vault; the environment stays the interface (`TASK-0131`, `ADR-0030`)
 
 **2026-10-01..03, the human's decisions.** The three git tokens lived as

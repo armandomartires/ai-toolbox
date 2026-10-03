@@ -1566,7 +1566,8 @@ if ! CI_ALERT_OUT="$(bash tests/test-ci-alert.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
-# The vault-secrets loader, proven offline (TASK-0131, ADR-0030).
+# The vault-secrets loader, proven offline (TASK-0131, ADR-0030; AppRole and
+# several maps, TASK-0132, ADR-0031).
 #
 # WHY: skills/vault-secrets/scripts/vault_secrets.py decides which token lands
 # on disk, which secrets reach a command, and whether a request may go out in
@@ -1581,8 +1582,9 @@ fi
 # no password, token or value appears in its output.
 # WHAT IT DOES NOT PROVE: that the real Vault, its policies or its certificate
 # behave as the stub does; TASK-0131's live verification records that.
-# COST, measured 2026-10-03: ~1.6 s on a native filesystem, ~3.7 s on a /mnt/c
-# checkout -- 19 interpreter starts, which the Windows filesystem bridge triples.
+# COST, measured 2026-10-04: ~2.2 s on a native filesystem, ~5.3 s on a
+# /mnt/c checkout -- 28 interpreter starts, which the Windows filesystem bridge
+# roughly triples (2026-10-03, before the AppRole cases: ~1.6 s and ~3.7 s).
 # Deliberately unconditional: a deleted test fails here rather than skipping
 # quietly (ADR-0009).
 if ! VAULT_SECRETS_OUT="$(bash tests/test-vault-secrets.sh 2>&1)"; then

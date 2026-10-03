@@ -60,6 +60,33 @@ A token may create children only with policies it holds itself, so granting
   per AD group, so that membership of a broad group grants nothing. The
   owner gets `workstation-read` and `secrets-writer`.
 
+## A codebase's application identity (AppRole)
+
+Added 2026-10-04 (ai-toolbox `TASK-0132`, `ADR-0031`):
+
+```hcl
+# policy ai-toolbox-app -- the whole grant; no delete, no destroy
+path "kv/data/ai-toolbox/*"     { capabilities = ["create", "read", "update"] }
+path "kv/metadata/ai-toolbox/*" { capabilities = ["read", "list"] }
+```
+
+- AppRole auth at `approle/`. Role `ai-toolbox` has `token_policies =
+  ["ai-toolbox-app"]`, `token_ttl = 10m`, `token_max_ttl = 30m`,
+  `secret_id_ttl = 8760h` and `secret_id_num_uses = 0`.
+- **The credential** is a JSON file `{role_id, secret_id, secret_id_accessor}`
+  at mode 600, under `~/.config/vault/`, never inside a repository. The
+  loader refuses it if group or others can read it.
+- **Issue one `secret_id` per host:** `POST
+  auth/approle/role/ai-toolbox/secret-id`, with admin rights. Then any host
+  can be cut off alone.
+- **Revoke a host:** `POST
+  auth/approle/role/ai-toolbox/secret-id-accessor/destroy` with its accessor.
+  The accessor is not secret; it is kept in the file and printed when the
+  `secret_id` is issued.
+- **The private map** of variables moved out of a local `.env` sits beside
+  the credential, also mode 600, and also outside every repository: its
+  names describe internal systems.
+
 ## Root credential
 
 The root token and unseal keys come from `vault operator init`, and **never

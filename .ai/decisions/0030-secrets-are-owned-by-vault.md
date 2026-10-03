@@ -3,7 +3,9 @@
 ## Status
 
 Accepted (2026-10-03), on the human's decisions of 2026-10-01..03. Task:
-`TASK-0131`, which records the live verification.
+`TASK-0131`, which records the live verification. **Clause 3 amended
+2026-10-04 by `ADR-0031`:** a host may also hold the codebase's AppRole
+credential, which can write, but only under `kv/ai-toolbox/`.
 
 Amends `ADR-0009` (configuration comes from the environment): the interface
 stands, and the *source* of secret values changes. Amends `ADR-0028` on where

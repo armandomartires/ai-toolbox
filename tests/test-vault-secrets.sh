@@ -19,6 +19,10 @@
 # policies allow these calls, or that TLS verifies against the real CA.
 # TASK-0131's live verification records that.
 #
+# TASK-0132 adds the AppRole method and several maps: T17-T25. The case that
+# matters most there is T17 -- a token minted for one command is revoked BEFORE
+# the child starts, so no live token outlives the fetch.
+#
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -33,6 +37,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SCRIPT = os.path.abspath(sys.argv[1])
@@ -51,16 +56,20 @@ ROOT = "hvs.ROOT-token-0003"
 STALE = "hvs.STALE-token-0004"
 NEW_VALUE = "VAL-new-github-77e"
 PUSH_VALUE, GITHUB_VALUE = "VAL-gitlab-push-9a1", "VAL-github-4c2"
+ROLE_ID, SECRET_ID, APP = "role-id-5a7c", "sid-Secret-91fe", "hvs.APPROLE-token-0005"
+PRIVATE_VALUE, APP_VALUE = "VAL-private-3d8", "VAL-written-by-approle-6b0"
 TOKENS = {
     PARENT: ["admin", "default", "secrets-writer", "workstation-read"],
     CHILD: ["default", "workstation-read"],
     ROOT: ["root"],
+    APP: ["ai-toolbox-app", "default"],
 }
 state = {
     "requests": [],
     "store": {
         "ai-toolbox/gitlab-push": ({"token": PUSH_VALUE}, 1),
         "ai-toolbox/github": ({"token": GITHUB_VALUE, "note": "keep-me"}, 3),
+        "ai-toolbox/private": ({"password": PRIVATE_VALUE}, 1),
     },
 }
 
@@ -82,7 +91,7 @@ class Stub(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(n)) if n else None
         token = self.headers.get("X-Vault-Token")
         path = self.path[len("/v1/"):]
-        state["requests"].append((method, path, token, body))
+        state["requests"].append((method, path, token, body, time.time()))
         deny = {"errors": ["permission denied"]}
         if path == "sys/health":
             return self.reply(200, {"initialized": True, "sealed": False})
@@ -91,6 +100,11 @@ class Stub(BaseHTTPRequestHandler):
                 return self.reply(200, {"auth": {"client_token": PARENT, "policies": TOKENS[PARENT],
                                                  "lease_duration": 28800}})
             return self.reply(400, {"errors": ["ldap operation failed: failed to bind as user"]})
+        if path == "auth/approle/login" and method == "POST":
+            if body == {"role_id": ROLE_ID, "secret_id": SECRET_ID}:
+                return self.reply(200, {"auth": {"client_token": APP, "policies": TOKENS[APP],
+                                                 "lease_duration": 600}})
+            return self.reply(400, {"errors": ["invalid role or secret ID"]})
         if path == "auth/token/lookup-self":
             if token in TOKENS:
                 return self.reply(200, {"data": {"policies": TOKENS[token], "ttl": 28000}})
@@ -114,7 +128,7 @@ class Stub(BaseHTTPRequestHandler):
                     return self.reply(404, {"errors": []})
                 data, version = state["store"][key]
                 return self.reply(200, {"data": {"data": data, "metadata": {"version": version}}})
-            if "secrets-writer" not in TOKENS[token]:
+            if not {"secrets-writer", "ai-toolbox-app"} & set(TOKENS[token]):
                 return self.reply(403, deny)
             current = state["store"].get(key, ({}, 0))[1]
             if body["options"]["cas"] != current:
@@ -157,6 +171,8 @@ BASE_ENV.update({"HOME": HOME, "VAULT_USER": "tester",
 
 
 def run(args, stdin="", env=None):
+    if os.path.exists(PROBE):  # one case's leftover must not satisfy the next
+        os.remove(PROBE)
     e = dict(BASE_ENV)
     e.update(env or {})
     e = {k: v for k, v in e.items() if v is not None}
@@ -167,7 +183,8 @@ def run(args, stdin="", env=None):
 
 
 def probe_cmd(*names):
-    code = "import json,os,sys; json.dump({k: os.environ.get(k) for k in sys.argv[2:]}, open(sys.argv[1], 'w'))"
+    code = ("import json,os,sys,time; d = {k: os.environ.get(k) for k in sys.argv[2:]}; "
+            "d['_started'] = time.time(); json.dump(d, open(sys.argv[1], 'w'))")
     return ["--", sys.executable, "-c", code, PROBE] + list(names)
 
 
@@ -318,11 +335,86 @@ try:
     check("T14 a malformed map line fails with its line number, unechoed",
           p.returncode == 1 and "bad.map:1" in p.stderr and "ghp_PASTEDVALUE123" not in p.stdout + p.stderr)
 
+    # T17-T25 - the AppRole method and several maps (TASK-0132).
+    vault_dir = os.path.join(HOME, ".config", "vault")
+    os.makedirs(vault_dir)
+    def cred(name, secret_id, mode):
+        path = os.path.join(vault_dir, name)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump({"role_id": ROLE_ID, "secret_id": secret_id}, fh)
+        os.chmod(path, mode)
+        return path
+    APPROLE, LOOSE, BADSID = cred("app.approle", SECRET_ID, 0o600), cred("loose.approle", SECRET_ID, 0o644), \
+        cred("bad.approle", "sid-wrong", 0o600)
+    EXTRA = write("private.map", "PRIVATE_PASSWORD=kv/ai-toolbox/private#password\n")
+    DUP = write("dup.map", "GITHUB_TOKEN=kv/ai-toolbox/elsewhere#token\n")
+    approle = {"VAULT_AUTH_METHOD": "approle", "VAULT_APPROLE_FILE": APPROLE}
+
+    clear_tok(); taken()
+    current = state["store"]["ai-toolbox/github"][0]["token"]  # T12 rewrote it
+    p = run(["exec", "--map", MAP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN"), env=approle)
+    seen, r = probe() or {}, taken()
+    revokes = [x for x in r if x[1] == "auth/token/revoke-self" and x[2] == APP]
+    check("T17 approle exec delivers the value with no stored token and no prompt",
+          p.returncode == 0 and seen.get("GITHUB_TOKEN") == current and tok() is None, p.stderr.strip())
+    check("T17 the value was read with the AppRole token",
+          any(x[1] == "kv/data/ai-toolbox/github" and x[2] == APP for x in r))
+    check("T17 the AppRole token is revoked BEFORE the child starts",
+          len(revokes) == 1 and "_started" in seen and revokes[0][4] < seen["_started"])
+
+    p = run(["put", "--map", MAP, "GITHUB_TOKEN"], stdin=APP_VALUE + "\n", env=approle)
+    r = taken()
+    writes = [x for x in r if x[0] == "POST" and x[1] == "kv/data/ai-toolbox/github"]
+    check("T18 approle put writes with the AppRole token, no password prompt",
+          p.returncode == 0 and len(writes) == 1 and writes[0][2] == APP
+          and writes[0][3]["data"]["token"] == APP_VALUE, p.stderr.strip())
+    check("T18 the AppRole token is revoked after the write",
+          any(x[1] == "auth/token/revoke-self" and x[2] == APP for x in r))
+
+    p = run(["exec", "--map", MAP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN"),
+            env=dict(approle, VAULT_APPROLE_FILE=LOOSE))
+    check("T19 a credential file readable by others is refused before any login",
+          p.returncode == 1 and "readable by group or others" in p.stderr and probe() is None
+          and not any(x[1] == "auth/approle/login" for x in taken()), p.stderr.strip())
+
+    p = run(["exec", "--map", MAP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN"),
+            env=dict(approle, VAULT_APPROLE_FILE=BADSID))
+    check("T20 a wrong secret_id exits 3 and runs nothing",
+          p.returncode == 3 and "AppRole login failed" in p.stderr and probe() is None, p.stderr.strip())
+
+    p = run(["login"], env=approle)
+    check("T21 approle login verifies, prints policies, stores nothing",
+          p.returncode == 0 and "ai-toolbox-app" in p.stdout and tok() is None
+          and any(x[1] == "auth/token/revoke-self" and x[2] == APP for x in taken()), p.stderr.strip())
+
+    set_tok(CHILD)
+    p = run(["exec", "--map", MAP, "--map", EXTRA, "GITHUB_TOKEN", "PRIVATE_PASSWORD"]
+            + probe_cmd("GITHUB_TOKEN", "PRIVATE_PASSWORD"))
+    seen = probe() or {}
+    check("T22 two --map files combine", p.returncode == 0 and seen.get("PRIVATE_PASSWORD") == PRIVATE_VALUE
+          and seen.get("GITHUB_TOKEN") == APP_VALUE, p.stderr.strip())
+    p = run(["exec", "--map", MAP, "--map", DUP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN"))
+    check("T23 a variable mapped in two files is an error, not an override",
+          p.returncode == 1 and "mapped twice" in p.stderr and probe() is None, p.stderr.strip())
+    p = run(["exec", "PRIVATE_PASSWORD"] + probe_cmd("PRIVATE_PASSWORD"),
+            env={"VAULT_SECRETS_MAPS": MAP + ":" + EXTRA})
+    check("T24 VAULT_SECRETS_MAPS names the maps when no --map is given",
+          p.returncode == 0 and (probe() or {}).get("PRIVATE_PASSWORD") == PRIVATE_VALUE, p.stderr.strip())
+
+    clear_tok(); taken()
+    p = run(["check", "--map", MAP, "--map", EXTRA], env=approle)
+    check("T25 approle check reads every mapped variable and revokes its token",
+          p.returncode == 0 and "PRIVATE_PASSWORD: readable" in p.stdout and "revoked after this check" in p.stdout
+          and any(x[1] == "auth/token/revoke-self" and x[2] == APP for x in taken()), (p.stdout + p.stderr).strip())
+
     # T15 - nothing secret in any output, across every run above.
     blob = "\n".join(outputs)
     leaked = [name for name, s in (("password", PASSWORD), ("LDAP token", PARENT), ("child token", CHILD),
                                    ("root token", ROOT), ("stale token", STALE), ("new value", NEW_VALUE),
-                                   ("push value", PUSH_VALUE), ("github value", GITHUB_VALUE)) if s in blob]
+                                   ("push value", PUSH_VALUE), ("github value", GITHUB_VALUE),
+                                   ("role_id", ROLE_ID), ("secret_id", SECRET_ID), ("AppRole token", APP),
+                                   ("private value", PRIVATE_VALUE), ("approle-written value", APP_VALUE))
+              if s in blob]
     check("T15 no password, token or value in any output (%d runs)" % len(outputs), not leaked, ", ".join(leaked))
 
     # T16 - the repo's own map: well-formed, and documented in .env.example.

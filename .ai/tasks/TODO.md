@@ -673,7 +673,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0132`.**
+untested. **Next free number: `TASK-0133`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
 `TASK-0109` until `TASK-0118` corrected it on 2026-09-27, to `TASK-0119`;
@@ -843,6 +843,11 @@ embody** — measured with the skill's own checker, not inferred. Raised
       tokens, and an offline test in the gate. On the human's request; GitHub
       and GitLab CI variables were rejected as the store. Verified live:
       `check` exit 0, and pushes authenticated from Vault (done, `010e0fe`)
+- [x] TASK-0132 — Give ai-toolbox an AppRole identity (`ADR-0031`): the
+      loader logs in per command and keeps no token, and several maps
+      combine. On the human's request, the local `.env`'s secrets were moved
+      to `kv/ai-toolbox/`, their names into a private map. Live `check` read all
+      34 through the identity (done)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

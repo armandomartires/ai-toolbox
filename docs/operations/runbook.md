@@ -73,6 +73,37 @@ never use the stored read-only token. No host needs changing afterwards.
 What the Vault side must provide is in
 `skills/vault-secrets/references/vault-layout.md`.
 
+## An application identity for this codebase (AppRole)
+
+This codebase also has its own Vault identity (ADR-0031). It can read,
+create and edit secrets under `kv/ai-toolbox/*`, never delete them, and asks
+for no password. Turn it on for a shell with:
+
+```bash
+export VAULT_AUTH_METHOD=approle
+export VAULT_APPROLE_FILE=~/.config/vault/ai-toolbox.approle
+export VAULT_SECRETS_MAPS=secrets.map:$HOME/.config/vault/ai-toolbox.map
+```
+
+- **Two files, both mode 600 and outside the repo:**
+  - the credential (`role_id` and `secret_id`), which the loader refuses if
+    anyone else can read it;
+  - the private map, which names the secrets moved out of the old local
+    `.env` and stays off the public mirror.
+- **Each command logs in for itself and keeps no token.**
+  `vault_secrets.py check` should list every variable from both maps as
+  readable.
+- **A new host gets its own `secret_id`,** issued with admin rights per
+  `vault-layout.md`. Do not copy another host's: then a lost laptop can be
+  cut off alone. Copy the private map securely (`scp`, mode 600), never via
+  `/mnt/c` or a synced folder.
+- **Revoke or rotate:** destroy the host's `secret_id` by its accessor, which
+  is printed at issue and kept in the file, then issue a new one. The
+  `secret_id` expires after one year; `exec` then exits 3 with `AppRole
+  login failed`.
+- **Writes happen only on the human's instruction**, including an agent's
+  `put`. Every overwrite stays recoverable: KV keeps the earlier versions.
+
 ## Procedures
 - Run locally: clone on WSL; `bash scripts/install.sh link` (deploys
   skills to every installed client; clients whose config dir is absent are
