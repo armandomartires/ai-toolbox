@@ -123,5 +123,9 @@ No deviation from the plan.
     restored, `git diff --stat` showed `.gitignore | 3 +++`.
 - Validation: `bash tests/validate.sh` printed `validate.sh: OK`, exit 0.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `0c20144` — *Ignore every .env variant except the template (TASK-0133)*,
+  plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `8c3a1c3..0c20144 HEAD -> master` to `origin`
+  and to `github`; `HEAD`, `origin/master` and `github/master` all read
+  `0c20144`, and `git remote -v` is token-free. Both pushes authenticated from
+  Vault through the codebase's AppRole identity
