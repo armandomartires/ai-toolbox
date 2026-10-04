@@ -148,5 +148,10 @@ measures `#96` with their admin login. No deviation from the plan.
 - Validation: `bash tests/validate.sh` printed `validate.sh: OK`. The scan
   of added lines, the new brief included, was clean.
 - Result: done here. The estate push is pending the human.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `b5294e7` — *Read the estate's vault password from Vault (TASK-0134)*, plus
+  the record-keeping commit after it. Estate side: `2a09fa0` and `b9f4ab6` in
+  SIGMA-infrastructure, local only.
+- Push: **confirmed to both remotes** — `89341f0..b5294e7 HEAD -> master` to `origin`
+  and to `github`; `HEAD`, `origin/master` and `github/master` all read
+  `b5294e7`, and `git remote -v` is token-free. Authenticated from Vault through
+  the AppRole identity. The estate push is pending the human.
