@@ -1,5 +1,25 @@
 # Current State
 
+## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
+
+**2026-10-04, on the human's routing.**
+- **B-053.** `.gitignore` now ignores every `.env` variant except
+  `.env.example`, and the gate fails if that regresses.
+- **B-052, done in the estate repository under its own conventions** (its
+  `S042.T001`, ADR 0014, committed `2a09fa0`):
+  - `tools/vault_pass.sh` reads the password from the environment, or from
+    Vault through the vault-secrets loader;
+  - there is no `.env` fallback, and the `.env` entry is gone;
+  - the Vault copy was proven first, against all 19 vaulted values;
+  - **its push waits for the human**: 15 older unpushed commits, and an
+    admin token over `http://`.
+
+**Owned up to, and handed to its owner.** `TASK-0131`'s one-time bootstrap
+rewrote Vault's LDAP config outside the estate's codified role. The live
+config works, but it is not the declared one. The estate filed it as its
+`#96`, which needs the human's admin login. `vault-layout.md` no longer
+claims those settings.
+
 ## The codebase has its own Vault identity (`TASK-0132`, `ADR-0031`)
 
 **2026-10-04, the human's decisions.** ai-toolbox authenticates to Vault as

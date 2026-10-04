@@ -48,14 +48,19 @@ A token may create children only with policies it holds itself, so granting
 
 ## Authentication
 
-- **LDAP against Active Directory, over `ldaps://`** (or `starttls`), with
-  `insecure_tls=false` and the CA certificate configured. Plain `ldap://`
-  would send every AD password Vault checks across the network in cleartext.
-- **Bind as the user** (`upndomain` set, no `binddn`/`bindpass`), so no
-  service-account password is stored. `userattr=sAMAccountName`; user and
-  group search start at the domain's base DN. Nested groups use
-  `(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))`.
-- **Token lifetime:** `token_ttl=8h`, `token_max_ttl=24h`.
+- **The LDAP auth method belongs to the estate's own configuration
+  management, not to this skill.** That covers `auth/ldap/config`, its bind
+  account, user and group search, and group-to-policy mappings. The loader
+  needs only that a user can log in at `auth/ldap/login/<user>`. **Do not
+  configure the LDAP method from a consuming repository.** On 2026-10-03 a
+  one-time bootstrap from ai-toolbox did, and drifted it from the codified
+  configuration (ai-toolbox `TASK-0134`). An earlier version of this file
+  even listed those settings as if this skill owned them.
+- **What the loader does require of it:**
+  - `ldaps://` or `starttls`, with `insecure_tls=false`. Plain `ldap://`
+    sends every AD password Vault checks across the network in cleartext.
+  - Short tokens: 8 h, 24 h at most. A stored child token can never
+    outlive its parent.
 - **Personal secrets are mapped per user** (`auth/ldap/users/<name>`), not
   per AD group, so that membership of a broad group grants nothing. The
   owner gets `workstation-read` and `secrets-writer`.

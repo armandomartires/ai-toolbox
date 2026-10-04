@@ -4,7 +4,7 @@ description: "How to change Ansible content in a live estate safely - the obliga
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # ansible-ops
@@ -150,6 +150,18 @@ to give and gate 8's verification more necessary.
   deliberately rather than an oversight to work around by removing it.
 - **A vault password never lands in a file the repository tracks**, in a
   command line recorded in shell history, or in a CI log.
+- **Where the vault password should come from.** Use a
+  `vault_password_file` *script* that does two things:
+  - takes `ANSIBLE_VAULT_PASSWORD` from the environment when it is set;
+  - otherwise fetches it from a secrets manager. With the `vault-secrets`
+    skill, that is `vault_secrets.py exec --map secrets.map
+    ANSIBLE_VAULT_PASSWORD -- …`.
+
+  Give it **no plaintext-file fallback**: a fallback keeps the copy, and it
+  hides a broken path behind that copy until the day the file is missing.
+  Every `ansible-*` command, `ansible-lint` included (`--syntax-check` loads
+  the vaulted inventory), then needs that access. Wrap a long run in
+  `exec … --` so the password is fetched once, not once per playbook.
 - **Verbose output is a disclosure surface.** Raising verbosity to diagnose
   a failure can print variable contents; do it knowingly, and do not paste
   the result anywhere durable without reading it first.
