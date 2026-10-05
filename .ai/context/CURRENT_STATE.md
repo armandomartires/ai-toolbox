@@ -29,6 +29,10 @@ One task per row:
   repository: an optional, validated `args.repoRoot`, named first in every
   prompt and passed to the gates. It is an instruction, not a sandbox, and
   has been proven on the stub runtime only.
+- **`B-037` (`TASK-0141`, `ADR-0032`).** CI's new `bindings` job runs both
+  binding suites on every push. Its first run was green: 29 node tests and
+  40 Python tests. The gate is unchanged. A red suite is now reported by
+  `ci-alert`, though not prevented.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 

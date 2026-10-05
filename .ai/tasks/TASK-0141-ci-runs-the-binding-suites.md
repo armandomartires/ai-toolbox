@@ -86,14 +86,14 @@ ledger, this brief.
 - [x] ADR-0032 is accepted and records the alternatives the human weighed.
 - [x] `validate.yml` runs both suites in a `bindings` job, on every push.
 - [x] No tracked statement says nothing runs these suites.
-- [ ] The job is observed green on GitHub for the task commit, with both
+- [x] The job is observed green on GitHub for the task commit, with both
       suites' counts read from its log.
 
 ## Mandatory validations
 
 - [x] tests/validate.sh
 - [x] scripts/sync-registry.sh (if components changed)
-- [ ] the `bindings` job's run, read from the API
+- [x] the `bindings` job's run, read from the API
 
 ## Risks and rollback
 
@@ -117,7 +117,7 @@ ledger, this brief.
 
 ## Status
 
-- Status: in_progress
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-10-05
 - Updated: 2026-10-05
@@ -144,3 +144,19 @@ ledger, this brief.
 - Push: **confirmed to both remotes** — `a8d85ff..a1a8612 master -> master` to
   `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
   read `a1a8612`, and `git remote -v` is token-free
+
+### The job's first run, observed 2026-10-05
+
+- Run `37348790286` (`push`, `a1a8612`) concluded `success`, 17:29:19Z to
+  17:30:52Z. Its job `bindings` (`111894085944`) took 89 s, and job
+  `validate` 11 s.
+- The job log, read with `GITHUB_TOKEN` through the vault-secrets loader,
+  showed:
+  - `v22.23.3`, `Python 3.12.3` and `git version 2.55.0`;
+  - for the Claude Code suite: `# tests 29`, `# pass 29`, `# fail 0`;
+  - for the OpenCode suite: `Ran 40 tests in 83.423s`, then `OK`.
+- `ci-alert` ran after it as usual and succeeded, so no alert was opened.
+- **Not observed**: a red `bindings` job opening an alert. It fails the
+  same `validate` run that `ci-alert` already watches (`ADR-0032` clause 2),
+  and showing it live would need a red `master`.
+- Commit: the observation commit, *Record TASK-0141's CI run and close it*.

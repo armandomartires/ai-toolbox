@@ -873,9 +873,9 @@ embody** — measured with the skill's own checker, not inferred. Raised
 - [x] TASK-0140 — `B-044`: the Claude Code binding takes an optional,
       validated `args.repoRoot`, named first in every prompt and passed as
       `GATE_REPO_ROOT`; stub-tested (done)
-- [ ] TASK-0141 — `B-037`: CI's `bindings` job runs both unattended-run
-      binding suites on every push (`ADR-0032`); the gate is unchanged
-      (**in progress** until the job is observed on GitHub)
+- [x] TASK-0141 — `B-037`: CI's `bindings` job runs both unattended-run
+      binding suites on every push (`ADR-0032`); the gate is unchanged.
+      First run green, 29 + 40 tests (done, `a1a8612`)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those
