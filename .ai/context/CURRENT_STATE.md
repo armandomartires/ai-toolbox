@@ -39,6 +39,11 @@ One task per row:
   open after its task closed, is still unchecked.
 - **`B-025` (`TASK-0143`)** is closed as deferred. It is re-raised as a new
   row when a second role wants the *"only this MCP server"* term.
+- **`B-039` (`TASK-0144`).** The estate's stale `ansible.cfg` claims are
+  reported as its ad-hoc `#97`, committed there as `b92e2a9` and **not
+  pushed**; the estate's push waits for the human. Re-measuring corrected
+  the row: `ansible-config validate` does reject the key, and only a
+  playbook run is silent.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 
