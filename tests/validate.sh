@@ -1702,7 +1702,7 @@ fi
 #
 # A grep, not a byte comparison, because there is no second artifact to
 # compare: the question is which mechanism the script uses. PLAN.md is
-# deliberately excluded -- it has no schema in either framework (B-042).
+# included since TASK-0146 gave it a schema (B-042).
 #
 # WHAT THIS PROVES: the scaffold reads all four templates from TEMPLATE_DIR
 # and carries no heredoc for any of them.
@@ -1710,7 +1710,7 @@ fi
 # lands where a migrated repository expects it. Only running it shows that.
 SCAFFOLD=skills/project-migration/scripts/ai-project-scaffold.sh
 if [ -r "$SCAFFOLD" ]; then
-  for kind in TASK ADR REVIEW SESSION; do
+  for kind in TASK ADR REVIEW SESSION PLAN; do
     if ! grep -q "^mkfile \.ai/templates/$kind\.md < \"\$TEMPLATE_DIR/$kind\.md\"" "$SCAFFOLD"; then
       echo "SCAFFOLD: $SCAFFOLD does not emit .ai/templates/$kind.md by reading"
       echo "SCAFFOLD: \$TEMPLATE_DIR/$kind.md — shape is owned by"
@@ -1723,7 +1723,7 @@ if [ -r "$SCAFFOLD" ]; then
       fail=1
     fi
   done
-  for kind in TASK ADR REVIEW SESSION; do
+  for kind in TASK ADR REVIEW SESSION PLAN; do
     if [ ! -r "skills/project-migration/templates/$kind.md" ]; then
       echo "SCAFFOLD: skills/project-migration/templates/$kind.md is missing —"
       echo "SCAFFOLD: run scripts/sync-templates.sh and commit the result"
@@ -1839,6 +1839,11 @@ if [ -d "$SCHEMA_DIR" ] && [ -r "$ARTIFACT_LIB" ]; then
   done
   for f in .ai/sessions/*.md; do
     [ -e "$f" ] && [ "$(basename "$f")" != "INDEX.md" ] && add_group session "$f"
+  done
+  # Plans since TASK-0146 (B-042). The schema requires only what all six
+  # share, so none is exempt and none was edited to pass.
+  for f in .ai/planning/plans/PLAN-*.md; do
+    [ -e "$f" ] && add_group plan "$f"
   done
 
   # One interpreter for all four kinds: each schema is parsed once however

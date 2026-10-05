@@ -27,7 +27,7 @@
 # do, and two of the five had silently drifted into failing their own schemas.
 # ai-toolbox's tests/validate.sh fails when ../templates/ drifts from
 # ../schemas/, and when this script grows a heredoc for one of the four kinds.
-# PLAN.md is the exception and is still a heredoc; see its comment below.
+# PLAN.md is read the same way since TASK-0146 (B-042).
 
 set -euo pipefail
 
@@ -40,7 +40,7 @@ TEMPLATE_DIR="$SKILL_DIR/templates"
 # before anything is written -- not a bare redirect error 300 lines in, after
 # half a repository has been scaffolded. The script needs only these files;
 # it does NOT need the project-workflow skill or a generator at run time.
-for _t in TASK ADR REVIEW SESSION; do
+for _t in TASK ADR REVIEW SESSION PLAN; do
   [ -r "$TEMPLATE_DIR/$_t.md" ] || {
     echo "ai-project-scaffold.sh: missing template $TEMPLATE_DIR/$_t.md" >&2
     echo "  The skill is incomplete. These are generated from ../schemas/ by" >&2
@@ -405,23 +405,7 @@ mkfile .ai/reviews/.gitkeep </dev/null
 # ---- .ai templates -----------------------------------------------------------------
 mkfile .ai/templates/TASK.md < "$TEMPLATE_DIR/TASK.md"
 
-# PLAN.md stays a heredoc, deliberately. It is the one artifact kind with
-# NO schema in either framework -- project-workflow does not declare a
-# `plan` kind and neither does this skill -- so there is nothing to render
-# it from. Writing a schema for it is B-042 and is a larger piece of work
-# with its own evidence to gather; inventing one here would make this
-# script the author of a shape rather than the enforcer of one (ADR-0008).
-mkfile .ai/templates/PLAN.md <<'EOF'
-# PLAN-XXXX — Title
-
-## Objective
-## Context consulted
-## Phases / steps
-## Tasks generated
-## Acceptance criteria
-## Risks
-## Human decisions required
-EOF
+mkfile .ai/templates/PLAN.md < "$TEMPLATE_DIR/PLAN.md"
 
 mkfile .ai/templates/SESSION.md < "$TEMPLATE_DIR/SESSION.md"
 

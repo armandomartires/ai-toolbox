@@ -43,13 +43,15 @@ skills/project-migration/schemas/task.md:.ai/templates/TASK.md
 skills/project-migration/schemas/adr.md:.ai/templates/ADR.md
 skills/project-migration/schemas/review.md:.ai/templates/REVIEW.md
 skills/project-migration/schemas/session.md:.ai/templates/SESSION.md
+skills/project-migration/schemas/plan.md:.ai/templates/PLAN.md
 skills/project-migration/schemas/task.md:skills/project-migration/templates/TASK.md
 skills/project-migration/schemas/adr.md:skills/project-migration/templates/ADR.md
 skills/project-migration/schemas/review.md:skills/project-migration/templates/REVIEW.md
 skills/project-migration/schemas/session.md:skills/project-migration/templates/SESSION.md
+skills/project-migration/schemas/plan.md:skills/project-migration/templates/PLAN.md
 "
 
-# The last four render the SAME schemas to a second destination, and that is
+# The last five render the SAME schemas to a second destination, and that is
 # deliberate rather than duplication (B-040, TASK-0119). The scaffold script
 # is copied out of this skill and run against other repositories, where
 # .ai/templates/ above does not exist and this repo's paths mean nothing; it
@@ -63,8 +65,8 @@ skills/project-migration/schemas/session.md:skills/project-migration/templates/S
 # four required sections. Every repository it migrated inherited that on day
 # one, where no gate of ours reaches.
 #
-# .ai/templates/PLAN.md has no schema in either framework, so the scaffold
-# still emits PLAN.md from a heredoc. That is B-042, not an oversight.
+# PLAN.md joined them with TASK-0146 (B-042): its schema was transcribed from
+# a count of the six plans, so it, too, is rendered rather than hand-written.
 
 for pair in $TARGETS; do
   schema="${pair%%:*}"

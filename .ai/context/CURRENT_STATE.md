@@ -46,6 +46,10 @@ One task per row:
   playbook run is silent.
 - **`B-047` (`TASK-0145`).** The gate now recounts open backlog rows and
   fails when BACKLOG.md's "N items are open" sentence disagrees.
+- **`B-042` part 1 (`TASK-0146`).** `plan` has a schema, transcribed from a
+  count of the six plans: it requires `Objective` and `Context consulted`,
+  and the rest is optional. PLAN.md is rendered, the scaffold reads it, and
+  the gate checks all six plans, unedited (`project-migration` `3.2.0`).
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 
