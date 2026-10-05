@@ -330,7 +330,10 @@ person, so without the wait a failed nightly build might be reported to no one.
   A schedule fires only from the default branch, so keep the dispatcher on the
   default branch even when `branch` is another. Scheduled runs are delayed at
   busy times, above all the start of an hour, and can be dropped under load, so
-  a day can pass without a rebuild; the header's date shows it. GitHub reports a
+  a day can pass without a rebuild; the header's date shows it. Expect hours,
+  not minutes: ai-toolbox's first five 00:23 UTC runs started 5.0 to 5.7 hours
+  late. The date is still right, since the delay only moves the run later in
+  the same UTC day. GitHub reports a
   failed scheduled run to whoever last changed its cron line. The dispatcher
   pins REST API version `2026-03-10`, under which the dispatch reply names the
   run it started; a server without that version refuses the request, and the

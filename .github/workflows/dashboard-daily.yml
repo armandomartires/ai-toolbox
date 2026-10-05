@@ -4,7 +4,7 @@
 #   bash skills/project-workflow/scripts/publish-dashboard.sh render
 # `render --check` fails when this copy and its template disagree.
 #
-# STATUS: UNVERIFIED - no scheduled run observed yet (TASK-0129)
+# STATUS: VERIFIED on scheduled run 36822723510 (a440d43, 2026-10-01): it dispatched run 36822728891, success; all five scheduled runs to 2026-10-05 succeeded, each starting 5.0-5.7 h after 00:23 UTC (TASK-0129)
 # The label moves only against an observed run, and names it.
 #
 # Rebuild the published dashboard once a day: dispatch the github-pages

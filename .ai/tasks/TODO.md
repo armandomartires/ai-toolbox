@@ -829,10 +829,11 @@ embody** — measured with the skill's own checker, not inferred. Raised
       to upload a workstation build is rejected, fetching the published page
       back is adopted, and the daily rebuild is decided as a separate
       dispatcher workflow, to be built on its own
-- [ ] TASK-0129 — Rebuild the published dashboard daily from a separate
+- [x] TASK-0129 — Rebuild the published dashboard daily from a separate
       dispatcher workflow, the opt-in `github-pages-daily` target, which
       waits for the run it starts and ends as it ends; `dashboard.yml`
-      unchanged (**in progress** until its first scheduled run is observed)
+      unchanged. Verified on five scheduled runs, 2026-10-01..05, each
+      started 5-6 hours late (done, `5d746b4`)
 - [x] TASK-0130 — ci-alert closes its issue only when no watched workflow's
       latest run on `master` is red (it closed on any green run), ignores runs
       off the default branch, and watches `dashboard-daily`. Gated offline,

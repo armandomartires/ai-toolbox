@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "5.2.0"
+  version: "5.2.1"
 ---
 
 # project-workflow

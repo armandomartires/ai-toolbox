@@ -116,7 +116,17 @@ file on the default branch. That rule concerns where the listener lives, not
 the branch of the run it hears. Until `TASK-0130`, a side-branch failure would
 have opened the issue.
 
-## A daily rebuild of the published dashboard is configured, not yet verified (`TASK-0129`, in progress)
+## The published dashboard is rebuilt daily, verified (`TASK-0129`, done 2026-10-05)
+
+**Verified on 2026-10-05.** Five scheduled runs, 2026-10-01..05, all
+succeeded. Each dispatched a `dashboard` build that also succeeded, and the
+logs pair them by run id. The page read `today` `2026-10-05`, built by that
+morning's dispatched run with no push since 2026-10-04. The label reads
+`VERIFIED`. **The 00:23 UTC slot starts 5 to 6 hours late every day.** The
+date is still right, and README and `references/dashboard.md` (skill `5.2.1`)
+now say so. The rest of this section is as written at landing.
+
+### As landed, 2026-09-30
 
 **2026-09-30, the human's decisions of the same day.** `skills/project-workflow/`
 (`5.2.0`) has an opt-in `github-pages-daily` target. `publish-dashboard.sh
@@ -126,8 +136,8 @@ configured branch, wait for that run, and end as it ends. It is a file of its
 own for the reason `ADR-0029` records. GitHub's limits on it are in
 `skills/project-workflow/references/dashboard.md`, *Publishing it*.
 
-**Its `STATUS:` is `UNVERIFIED` until a scheduled run is observed**, and
-`TASK-0129` stays `in_progress` until then. The `TASK-0128` section below says
+**Its `STATUS:` was `UNVERIFIED` until a scheduled run was observed**, and
+`TASK-0129` stayed `in_progress` until then. The `TASK-0128` section below says
 the dispatcher is not built yet; that was true when it was written.
 
 ## The published dashboard is built only by CI; a local build is a preview (`TASK-0128`, `ADR-0029`)

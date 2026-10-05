@@ -266,10 +266,10 @@ ticked in the observation commit.
 - [x] A8 A human-approved dispatch of `dashboard-daily` starts a `dashboard`
       run (`workflow_dispatch`, `master`) whose build and deploy succeed. The
       page's `generated_at` moves to that run.
-- [ ] A9 The first scheduled `dashboard-daily` run succeeds, and so does the
+- [x] A9 The first scheduled `dashboard-daily` run succeeds, and so does the
       run it dispatches.
-- [ ] A9b The page's *as of* date is that UTC day, with no push in between.
-- [ ] A10 `status.github-pages-daily` reads `VERIFIED`, naming both runs, and
+- [x] A9b The page's *as of* date is that UTC day, with no push in between.
+- [x] A10 `status.github-pages-daily` reads `VERIFIED`, naming both runs, and
       `render --check` prints `ok` ×4.
 
 ## Mandatory validations
@@ -292,7 +292,7 @@ ticked in the observation commit.
 - [x] `skills/project-migration/scripts/check-artifact.sh` on this brief
       (`--kind task`)
 - [x] The staged-diff leak scan, run after staging
-- [ ] The landed commit's runs and the manual dispatch, both read from the
+- [x] The landed commit's runs and the manual dispatch, both read from the
       API
 
 ## Risks and rollback
@@ -349,9 +349,8 @@ ticked in the observation commit.
 | `.ai/context/CURRENT_STATE.md` | A new top section, "configured, not yet verified" |
 | **Not changed** (identical to `d69bafe`) | `.github/workflows/dashboard.yml` (blob `6665a78…`, still `VERIFIED`); the GitLab fragment and stub; both existing templates; `ci-alert.yml`; `validate.yml`; `tests/validate.sh`; `.ai/decisions/`; `SPRINT-CURRENT.md`; the vendored `dashboard/`; `docs/registry.md` |
 
-**Next task starts here**: `master` carries the dispatcher; its label reads
-`UNVERIFIED` until a scheduled run is observed, and this brief stays
-`in_progress` until then.
+**Next task starts here**: `master` carries the dispatcher, and its label
+reads `VERIFIED` on the first scheduled run. Nothing of this task is left.
 
 **Deviations from the Plan**:
 
@@ -362,13 +361,22 @@ ticked in the observation commit.
    from 1.57-1.69 s to 2.08-2.16 s, about +0.5 s, for 15 cases. Five of them
    run the dispatcher's real shell, which is the price of testing behaviour
    rather than text.
+3. **A9b was observed on the fifth scheduled run, not the first.** The
+   2026-10-01 page was overwritten before anyone read it, and the build log
+   does not print the generator's date. The 2026-10-05 run was read
+   directly instead. The first run's runner clock read 2026-10-01, which is
+   the date the generator uses.
+4. **Every scheduled run started hours late.** The 00:23 UTC slot started at
+   05:23-06:02 UTC on each of the five days. The date is still that UTC day,
+   but README's "just after midnight" was wrong, so README and
+   `references/dashboard.md` now state the delay (skill `5.2.1`).
 
 ## Status
 
-- Status: in_progress   # planned|ready|in_progress|blocked|review|done|cancelled
+- Status: done   # planned|ready|in_progress|blocked|review|done|cancelled
 - Owner: agent (the decision is the human's)
 - Created: 2026-09-30
-- Updated: 2026-09-30
+- Updated: 2026-10-05
 
 ## Execution log
 
@@ -481,6 +489,46 @@ commit may touch only its two lines. The first scheduled run is still to come.
   preceding push. So a run dispatched with the workflow token starts no
   `workflow_run`, as the community report said. That is why `TASK-0130`
   watches `dashboard-daily`, whose own run mirrors the build.
-- **Still pending**:
+- **Still pending** when this section was written:
   - A9 and A9b, the first scheduled run, due 2026-10-01 at 00:23 UTC;
   - A10, the label move, made only against that run.
+
+### The scheduled runs, observed 2026-10-05
+
+Read from the API without a token, apart from the job logs, which were read
+with `GITHUB_TOKEN` through the vault-secrets loader.
+
+- **A9.** Five scheduled runs exist, one a day, all `master` and all
+  `success`:
+
+  | Dispatcher run | Started (UTC) | Head | Dispatched run | Its result |
+  |---|---|---|---|---|
+  | `36822723510` | 2026-10-01 06:02:39 | `a440d43` | `36822728891` | success |
+  | `36970411343` | 2026-10-02 05:45:59 | `a440d43` | `36970417363` | success |
+  | `37099669213` | 2026-10-03 05:23:33 | `a440d43` | `37099673460` | success |
+  | `37181456320` | 2026-10-04 05:59:18 | `15b06e7` | `37181459288` | success |
+  | `37269397325` | 2026-10-05 05:48:16 | `15b06e7` | `37269402721` | success |
+
+  - Each dispatched run is `workflow_dispatch` on `master`, triggered by
+    `github-actions[bot]`, and was created 4-6 s after its dispatcher.
+  - The pairing of the first and last rows is read from the logs, not
+    inferred from timing. Job `110241581307` printed
+    `dispatched run 36822728891`, then `run 36822728891: waiting -` and
+    `run 36822728891: completed success`. Job `111632969631` printed the same
+    for `37269402721`.
+  - The first dispatched build's guard printed `history OK: 295 commits, 127
+    task briefs, shape numbered_task, full clone`. Its runner clock read
+    2026-10-01T06:02:49Z.
+- **A9b**, on the 2026-10-05 run (deviation 3). The page at
+  `https://armandomartires.github.io/ai-toolbox/` carries
+  `"generated_at":"2026-10-05T05:48:27Z"` and `"today":"2026-10-05"`, inside
+  run `37269402721`'s 05:48:21-05:48:45Z window. The last push run before it
+  was `37164346977`, at 2026-10-04T00:14:47Z, so no push came in between.
+- **The delay** is 5.0-5.7 hours on every day (deviation 4).
+- **A10.** `status.github-pages-daily` now names run `36822723510` and its
+  dispatched run, and the five-day summary. `render` rewrote only the
+  `STATUS:` line of `.github/workflows/dashboard-daily.yml`.
+  `render --check` printed `ok` ×4.
+- Commit: the observation commit, *Record TASK-0129's scheduled runs and
+  close it*. Its hash is in the git log, which a commit cannot quote of
+  itself.
