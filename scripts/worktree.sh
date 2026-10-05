@@ -125,9 +125,25 @@ case "$cmd" in
     fi
 
     git worktree remove "$path" || exit 1
-    git branch -d "$branch" 2>/dev/null || true
     rmdir "$WT_ROOT" 2>/dev/null || true
-    echo "worktree.sh: removed $path and branch $branch"
+
+    # Not `git branch -d`: it asks whether the branch is merged into HEAD, and
+    # after the documented landing the main checkout's master is behind
+    # origin/master, so -d refused every time while this line still claimed
+    # the branch was gone (B-049, TASK-0135). The question that matters is
+    # whether the branch's tip is already on master or origin/master; if it
+    # is, -D loses nothing. Report what happened, never what was intended.
+    if ! git show-ref --verify --quiet "refs/heads/$branch"; then
+      echo "worktree.sh: removed $path (branch $branch did not exist)"
+    elif { git merge-base --is-ancestor "$branch" master 2>/dev/null ||
+           git merge-base --is-ancestor "$branch" origin/master 2>/dev/null; } &&
+         git branch -D "$branch" >/dev/null; then
+      echo "worktree.sh: removed $path and branch $branch"
+    else
+      echo "worktree.sh: removed $path, but KEPT branch $branch:" >&2
+      echo "  its tip is on neither master nor origin/master, or the delete failed." >&2
+      exit 1
+    fi
     ;;
 
   ""|-h|--help|help) usage ;;

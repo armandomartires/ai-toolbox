@@ -1,5 +1,16 @@
 # Current State
 
+## The backlog is being closed out (2026-10-05)
+
+**On the human's routing** (*"closing all backlog tasks and TASK-0129"*),
+with each decision item settled by the human at the start of the session.
+One task per row:
+
+- **`B-049` (`TASK-0135`).** `scripts/worktree.sh remove` deletes a landed
+  branch once its tip is on `master` or `origin/master`. When it keeps one,
+  it says so and exits 1, where it used to claim the deletion.
+  `tests/test-worktree.sh` is in the gate.
+
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 
 **2026-10-04, on the human's routing.**

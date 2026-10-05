@@ -1621,6 +1621,22 @@ else
 fi
 
 # --------------------------------------------------------------------------
+# scripts/worktree.sh `remove` deletes a landed branch and says what it did
+# (TASK-0135, B-049).
+#
+# WHY: it used to run `git branch -d`, which refuses after every documented
+# landing, and print "removed ... and branch ..." anyway. A script that claims
+# a success it did not achieve is this repo's most-repeated failure shape.
+# tests/test-worktree.sh runs the landing in a mktemp repository with a bare
+# origin: local git only, no network, about 0.4 s.
+# Deliberately unconditional: a deleted test fails here rather than skipping
+# quietly (ADR-0009).
+if ! WORKTREE_OUT="$(bash tests/test-worktree.sh 2>&1)"; then
+  printf '%s\n' "$WORKTREE_OUT" | grep -v '^PASS' | sed 's/^/WORKTREE: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # Planning templates are derived from the schemas that own their shape
 # (ADR-0027, TASK-0109), so they get the same staleness gate docs/registry.md
 # and decision-standard.md already carry. Rendered to a scratch tree and
