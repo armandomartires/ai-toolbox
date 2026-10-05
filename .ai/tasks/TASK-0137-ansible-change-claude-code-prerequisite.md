@@ -119,5 +119,7 @@ one failure this convention cannot catch for you.
   description did not change.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `d79f4ec` — *Name what ansible-change needs from a Claude Code session (TASK-0137)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `a4b8c40..d79f4ec master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `d79f4ec`, and `git remote -v` is token-free
