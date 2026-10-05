@@ -13,7 +13,10 @@
     read `done` or `cancelled`. Close the row in the same commit that closes
     the task. `scripts/check-backlog-closures.py` checks this in
     `tests/validate.sh`; it cannot see a row left open after its task closed
-    (B-038, TASK-0142).
+    (B-038, TASK-0142). It also fails unless BACKLOG.md's one
+    **"N items are open"** sentence matches the rows whose Status says
+    neither done nor closed, so a closing commit updates the count too
+    (B-047, TASK-0145).
 - `tasks/` — TODO.md, TASK-*.md, completed/
 - `sessions/` — SESSION-*.md, INDEX.md (short records, not transcripts)
 - `reviews/` — REVIEW-*.md

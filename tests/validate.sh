@@ -1637,9 +1637,10 @@ if ! WORKTREE_OUT="$(bash tests/test-worktree.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
-# A closed backlog row names a closer that agrees (TASK-0142, B-038). The rule
-# is .ai/README.md's *Closing a backlog row*; the script says what it cannot
-# see (a row left open after its task closed). Unconditional (ADR-0009).
+# A closed backlog row names a closer that agrees (TASK-0142, B-038), and the
+# "N items are open" sentence matches the rows (TASK-0145, B-047). The rule is
+# .ai/README.md's *Closing a backlog row*; the script says what it cannot see
+# (a row left open after its task closed). Unconditional (ADR-0009).
 if ! BACKLOG_OUT="$(python3 scripts/check-backlog-closures.py 2>&1)"; then
   printf '%s\n' "$BACKLOG_OUT"
   fail=1

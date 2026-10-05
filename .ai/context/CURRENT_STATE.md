@@ -44,6 +44,8 @@ One task per row:
   pushed**; the estate's push waits for the human. Re-measuring corrected
   the row: `ansible-config validate` does reject the key, and only a
   playbook run is silent.
+- **`B-047` (`TASK-0145`).** The gate now recounts open backlog rows and
+  fails when BACKLOG.md's "N items are open" sentence disagrees.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 

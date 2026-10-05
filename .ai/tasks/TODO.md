@@ -673,7 +673,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0145`.**
+untested. **Next free number: `TASK-0146`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
 `TASK-0109` until `TASK-0118` corrected it on 2026-09-27, to `TASK-0119`;
@@ -884,6 +884,8 @@ embody** — measured with the skill's own checker, not inferred. Raised
 - [x] TASK-0144 — `B-039`: the estate's stale `ansible.cfg` claims reported
       as its ad-hoc `#97` (`b92e2a9`, unpushed); re-measuring showed the row's
       claim (a) was wrong, and the report says so (done)
+- [x] TASK-0145 — `B-047`: the gate recounts open backlog rows and fails when
+      the "N items are open" sentence disagrees (done)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those
