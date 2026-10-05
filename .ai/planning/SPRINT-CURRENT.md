@@ -60,7 +60,8 @@ mean inventing the second case it waits for.
 3. **`B-025`** — no vocabulary term for *"may call only this MCP server"*.
    **`waiting`** since 2026-09-25 (was `ready`; the human's choice to leave it
    open). Waiting on a **second** role that wants it: one instance is a case,
-   two is a vocabulary.
+   two is a vocabulary. **Closed as deferred 2026-10-05 by `TASK-0143`**, on
+   the human's decision; the row carries the re-raise trigger.
 4. **`B-035` — CLOSED 2026-09-26 by `TASK-0106`** (`d50d220`). The human
    chose the first route: **the driver embeds the two references' text in the
    prompt**. It ships as a generated sibling file of `driver.py`, because the

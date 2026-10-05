@@ -37,6 +37,8 @@ One task per row:
   names no closer, a missing one, or a task that is not `done` or
   `cancelled`. The rule is in `.ai/README.md`. The reverse case, a row left
   open after its task closed, is still unchecked.
+- **`B-025` (`TASK-0143`)** is closed as deferred. It is re-raised as a new
+  row when a second role wants the *"only this MCP server"* term.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 
