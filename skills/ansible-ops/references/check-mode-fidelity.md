@@ -108,6 +108,11 @@ template enumerates what survives into the artifact.
 | `not-applicable` | Check mode is irrelevant for this module in this change, as a **deliberate declaration with a reason** — not as a way of avoiding the question | Proceed, with the reason recorded |
 | `unknown` | Nobody established it | **Stop.** Escalate without retrying |
 
+For an action that only loads further tasks (`include_tasks` and its
+kind), `not-applicable` is the derived answer, not a declaration to be
+argued. The rule, its list and its limits are in `derivation.md`'s notes on
+role 5.
+
 **`unknown` is not a pass.** A retry cannot turn `unknown` into a verdict,
 because the missing thing is evidence, not an attempt — the same run repeated
 produces the same absence of knowledge. This is why

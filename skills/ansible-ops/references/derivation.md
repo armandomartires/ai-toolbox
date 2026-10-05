@@ -57,6 +57,24 @@ Notes on the role set:
 - **Role 5 is per-module and per-version, not per-estate.** The same module
   at two versions can have two different answers, which is why the version
   actually installed is part of the role and not an afterthought.
+- **A task-loading action's verdict is `not-applicable`, by this rule.** Its
+  documentation cannot answer role 5. `ansible.builtin.include_tasks` at
+  ansible-core 2.21.4 documents `check_mode.support: none`, with the generic
+  *"if not supported the action will be skipped"*, and it was **not**
+  skipped: its included tasks ran under `--check` (ai-toolbox `TASK-0116`).
+  The attribute describes the action plugin, which changes no host. So for
+  an action whose only effect is to load further tasks on the controller,
+  record `not-applicable` with the reason *"loads tasks; changes no host
+  state"*. Today that is `include_tasks`, `include_role`, `import_tasks`,
+  `import_role` and `import_playbook`. Gate 1 still lists them, because the
+  inventory should show that an include happened. Three limits:
+  - **The loaded tasks are not covered.** Their modules belong in
+    `modules_touched` and get their own verdicts. If gate 1 cannot resolve
+    what an include loads by reading, those modules are `unknown`, and the
+    change stops as before.
+  - **`block` is a keyword, not an action,** so it never appears.
+  - **`meta` is not covered.** Some of its forms act on connections or
+    inventory, so it is judged by the normal rule.
 - **There is deliberately no vault or secrets role.** Secret hygiene is
   invariant guidance that holds in every estate — it lives in `SKILL.md` and
   is not a fact to be derived. Deriving a "vault role" would mean reading

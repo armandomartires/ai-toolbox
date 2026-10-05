@@ -17,6 +17,10 @@ One task per row:
   session needs beyond gate 3. Gate 4 takes the human's exact-match allow
   rule, plus output redirected to a file. Gates 6-8 take per-command rules,
   or the human runs them.
+- **`B-050` (`TASK-0138`).** `ansible-ops` role 5 derives `not-applicable`
+  for actions that only load tasks (`include_*`, `import_*`), whose
+  documentation cannot answer it. The tasks they load are still judged
+  (`1.2.0`).
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 
