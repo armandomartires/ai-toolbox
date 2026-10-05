@@ -133,5 +133,7 @@ this brief.
   `sync-templates.sh --check` and decision-standard staleness checks.
   `sync-registry.sh` left the registry unchanged.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `33e1ce2` — *Make generated banners true outside ai-toolbox (TASK-0139)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `d152b52..33e1ce2 master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `33e1ce2`, and `git remote -v` is token-free
