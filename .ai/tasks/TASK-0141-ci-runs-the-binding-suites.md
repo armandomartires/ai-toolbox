@@ -140,5 +140,7 @@ ledger, this brief.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`, and the registry
   is unchanged.
 - Result: landed; the job's first run is observed in a follow-up commit.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `a1a8612` — *Run both binding suites in CI (TASK-0141)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `a8d85ff..a1a8612 master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `a1a8612`, and `git remote -v` is token-free
