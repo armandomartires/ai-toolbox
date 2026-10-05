@@ -187,5 +187,7 @@ paragraph as the PLAN sentence this task had to change anyway.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`, now checking
   six plans. The registry is unchanged.
 - Result: done. `B-042` stays open for `TASK-0147`.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `ea1fc93` — *Give the plan kind a schema from the six plans (TASK-0146)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `0e17243..ea1fc93 master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `ea1fc93`, and `git remote -v` is token-free
