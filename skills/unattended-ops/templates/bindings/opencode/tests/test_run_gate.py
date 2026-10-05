@@ -1,6 +1,6 @@
 """Tests for run-gate.sh: the states, the watchdog, the kill scope, and
 argv without a shell. Hermetic; each test uses a throwaway directory.
-NOT run from tests/validate.sh."""
+NOT run from tests/validate.sh; in ai-toolbox, CI's `bindings` job runs it (ADR-0032)."""
 import json
 import os
 import shutil

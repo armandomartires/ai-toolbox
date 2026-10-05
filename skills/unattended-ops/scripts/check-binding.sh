@@ -96,8 +96,9 @@
 # checks skill frontmatter, MCP manifests, loop sections, agent definitions,
 # the registry and the handover contract; it never executes a skill's script,
 # and it never reads a binding or either fixture. Neither does the pre-commit
-# hook (which runs only that gate) nor CI (the same, plus the registry
-# staleness check). The mandatory gate is offline and hermetic (ADR-0007), and
+# hook (which runs only that gate) nor CI (the same, the registry staleness
+# check, and the two bindings' stub suites, which do not call this script on
+# the templates: an unfilled template is rejected by design; ADR-0032). The mandatory gate is offline and hermetic (ADR-0007), and
 # a real binding lives in a CONSUMING repository, so there is nothing here for
 # a gate to point at. The only caller is a person, or a binding's own CI,
 # pointing it at a binding. The files under fixtures/ are therefore evidence

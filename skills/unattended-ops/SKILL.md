@@ -4,7 +4,7 @@ description: "The method behind the unattended-run loop - the harness's five rul
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.3.0"
+  version: "1.3.1"
 ---
 
 # unattended-ops
@@ -183,8 +183,8 @@ not to be described as equivalent.
 | `references/long-gates.md` | Rule 3 in practice: the ten-minute call cap, the detaching entry point, batching, and the one retry |
 | `references/park-and-recover.md` | What a park must leave behind so the next task starts clean, and what a human needs to finish it |
 | `templates/binding.md` | The binding contract: one slot per thing a run cannot derive, and `unknown` is a stop |
-| `templates/bindings/opencode/` | The OpenCode binding: `driver.py`, the `run-gate.sh` entry point, `binding.md`, and hermetic tests against a stub `opencode`. Nothing in this repository runs those tests |
-| `templates/bindings/claude-code/` | The Claude Code binding: the `unattended-run.js` Workflow template, `binding.md`, and tests against a stub Workflow runtime. **Weaker by construction** than the OpenCode one — its binding says where. Nothing in this repository runs those tests |
+| `templates/bindings/opencode/` | The OpenCode binding: `driver.py`, the `run-gate.sh` entry point, `binding.md`, and hermetic tests against a stub `opencode`. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
+| `templates/bindings/claude-code/` | The Claude Code binding: the `unattended-run.js` Workflow template, `binding.md`, and tests against a stub Workflow runtime. **Weaker by construction** than the OpenCode one — its binding says where. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
 | `scripts/check-binding.sh` | Read-only checker: a binding declares every numbered step of the loop and states no uncited rule. Nothing in this repository runs it |
 | `fixtures/` | The checker observed failing for the right reason, then observed passing |
 

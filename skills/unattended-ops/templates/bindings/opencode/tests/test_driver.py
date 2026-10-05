@@ -5,7 +5,8 @@ Run from anywhere:  python3 -m unittest discover -s <this dir> -v
 Hermetic: a throwaway git repository per test, no network, no model. What
 these prove is the driver's control flow against a MODEL of OpenCode
 (stub_opencode.py). They do not prove OpenCode behaves as modelled — that is
-the pilot's (SPRINT-CURRENT.md, S10.7). NOT run from tests/validate.sh.
+the pilot's (SPRINT-CURRENT.md, S10.7). NOT run from tests/validate.sh; in
+ai-toolbox, CI's `bindings` job runs it (ADR-0032).
 """
 import json
 import os

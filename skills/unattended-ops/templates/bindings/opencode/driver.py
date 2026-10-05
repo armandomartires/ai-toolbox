@@ -19,8 +19,8 @@ their own boundaries — and it never puts a gate command string in a prompt
 (rule 2, made structural: ADR-0022, "two things the port makes better").
 
 Python >= 3.11, standard library only. NOT run from tests/validate.sh; its
-tests live beside it under tests/, and nothing in this repository runs them
-automatically.
+tests live beside it under tests/. In ai-toolbox, CI's `bindings` job runs
+them (ADR-0032); a copy elsewhere is tested by whatever its repository wires.
 """
 from __future__ import annotations
 

@@ -8,7 +8,7 @@
 // `phase`, `log` and `args`, and with `Date` / `Math.random` that throw as the
 // real runtime's do. This proves CONTROL FLOW against a MODEL of the runtime;
 // it is not a Workflow run and proves nothing about one. NOT run from
-// tests/validate.sh.
+// tests/validate.sh; in ai-toolbox, CI's `bindings` job runs it (ADR-0032).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'

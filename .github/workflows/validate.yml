@@ -30,6 +30,11 @@
 # packages over the network and reports SKIP as a distinct outcome from
 # PASS; a CI job that treated SKIP as success would report green while
 # verifying nothing. If it is ever added, it needs explicit SKIP handling.
+#
+# The `bindings` job runs the two unattended-run bindings' stub suites
+# (ADR-0032, TASK-0141). They are not in tests/validate.sh: the OpenCode suite
+# takes about three minutes, and the Claude Code one needs node, which the
+# gate may not assume. A red job fails this workflow, so ci-alert reports it.
 name: validate
 
 on:
@@ -65,3 +70,23 @@ jobs:
             git --no-pager diff docs/registry.md
             exit 1
           fi
+
+  bindings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Versions first, so a failure can be read against them. A missing
+      # interpreter fails here; it never skips (ADR-0009).
+      - name: Check prerequisites
+        run: |
+          node --version
+          python3 --version
+          git --version
+
+      - name: Claude Code binding, against a stub Workflow runtime
+        run: node --test skills/unattended-ops/templates/bindings/claude-code/tests/unattended-run.test.mjs
+
+      - name: OpenCode binding, against a stub opencode
+        run: python3 -m unittest discover -s skills/unattended-ops/templates/bindings/opencode/tests -v

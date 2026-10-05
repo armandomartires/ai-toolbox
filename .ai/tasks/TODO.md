@@ -673,7 +673,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0141`.**
+untested. **Next free number: `TASK-0142`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
 `TASK-0109` until `TASK-0118` corrected it on 2026-09-27, to `TASK-0119`;
@@ -873,6 +873,9 @@ embody** — measured with the skill's own checker, not inferred. Raised
 - [x] TASK-0140 — `B-044`: the Claude Code binding takes an optional,
       validated `args.repoRoot`, named first in every prompt and passed as
       `GATE_REPO_ROOT`; stub-tested (done)
+- [ ] TASK-0141 — `B-037`: CI's `bindings` job runs both unattended-run
+      binding suites on every push (`ADR-0032`); the gate is unchanged
+      (**in progress** until the job is observed on GitHub)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

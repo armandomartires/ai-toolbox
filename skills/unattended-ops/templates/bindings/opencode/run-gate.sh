@@ -38,8 +38,8 @@
 # A grandchild that calls setsid itself escapes the group — a stated limit,
 # not a handled case.
 #
-# NOT run from tests/validate.sh. Its tests live beside it, under tests/, and
-# nothing in this repository runs them automatically.
+# NOT run from tests/validate.sh. Its tests live beside it, under tests/. In
+# ai-toolbox, CI's `bindings` job runs them (ADR-0032).
 set -euo pipefail
 
 usage() {
