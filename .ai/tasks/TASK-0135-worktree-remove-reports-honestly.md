@@ -128,5 +128,7 @@ one failure this convention cannot catch for you.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`.
   `scripts/sync-registry.sh` left `docs/registry.md` unchanged.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `c03d88c` — *Delete a landed worktree branch and report it honestly (TASK-0135)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `ca5b2dc..c03d88c master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `c03d88c`, and `git remote -v` is token-free
