@@ -1731,6 +1731,33 @@ if [ -r "$SCAFFOLD" ]; then
 fi
 
 # --------------------------------------------------------------------------
+# A generated file that ships out of this repo says whose generator made it
+# (TASK-0139, B-051).
+#
+# WHY: these files are copied into other repositories, by the migration
+# scaffold, by project-workflow, and with the OpenCode binding. Their banners
+# used to name scripts/sync-templates.sh, a schema path and tests/validate.sh
+# as if local, so a migrated repo was told to run a script, edit a file and
+# trust a gate it does not have. The banner must read true in both places,
+# and naming the generator as ai-toolbox's is the part a check can see.
+#
+# WHAT THIS PROVES: each shipped generated file's banner names ai-toolbox's
+# generator. WHAT IT DOES NOT PROVE: that the rest of the banner is true;
+# that was reviewed in TASK-0139.
+for f in skills/project-migration/templates/*.md \
+         skills/project-workflow/templates/tasks/0000_TEMPLATE.md \
+         skills/project-workflow/templates/decisions/0000-TEMPLATE.md \
+         skills/project-workflow/templates/reviews/0000_TEMPLATE.md \
+         skills/unattended-ops/templates/bindings/opencode/decision-standard.md; do
+  [ -r "$f" ] || { echo "BANNER: $f is missing"; fail=1; continue; }
+  if ! head -1 "$f" | grep -q "^<!-- Rendered by ai-toolbox's scripts/sync-"; then
+    echo "BANNER: $f does not name ai-toolbox's generator on its first line; a"
+    echo "BANNER: copy in another repo would read its paths as local (B-051)"
+    fail=1
+  fi
+done
+
+# --------------------------------------------------------------------------
 # Task briefs match the schema that owns their shape. Delegated to the skill's
 # own checker rather than reimplemented here, so the heading list has exactly
 # one owner (ADR-0027); a copy in this file would be the second owner the

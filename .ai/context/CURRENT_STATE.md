@@ -21,6 +21,10 @@ One task per row:
   for actions that only load tasks (`include_*`, `import_*`), whose
   documentation cannot answer it. The tasks they load are still judged
   (`1.2.0`).
+- **`B-051` (`TASK-0139`).** The banners on generated files that ship to
+  other repositories now name ai-toolbox's generator, schema and gate, and
+  say a copy is not regenerated. That covers the templates and the OpenCode
+  `decision-standard.md`, and the gate checks it.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 
