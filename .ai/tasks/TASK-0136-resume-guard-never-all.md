@@ -131,5 +131,7 @@ this brief.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`.
   `sync-registry.sh` left the registry unchanged.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `3cdeba4` — *State that the resume guard never searches --all (TASK-0136)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `5d292aa..3cdeba4 master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `3cdeba4`, and `git remote -v` is token-free
