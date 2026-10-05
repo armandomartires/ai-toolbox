@@ -38,7 +38,7 @@ Main modules, responsibilities, entry points, data flows, integrations, configur
 ## .ai/planning
 
 - `ROADMAP.md` — vision, objectives by phase, milestones, dependencies, risks, phase-advance criteria, relation between phases/sprints/tasks.
-- `BACKLOG.md` — candidate work not yet executable: id, title, priority, value, dependencies, risk, status, criteria to become a task.
+- `BACKLOG.md` — candidate work not yet executable, one table row per item, ending in the criteria for it to become a task. The columns are owned by `schemas/backlog.md`, which prints one row: `scripts/new-artifact.sh --kind backlog`.
 - `SPRINT-CURRENT.md` — active sprint only: objective, time reference, included tasks, recommended order, dependencies, success criteria, risks, completed and blocked tasks, next task.
 
 ## .ai/tasks/TASK-XXXX.md

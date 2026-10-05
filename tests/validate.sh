@@ -1733,6 +1733,15 @@ if [ -r "$SCAFFOLD" ]; then
   # The closing report must not send the author back to `cp`, which
   # SKILL.md's hard rules forbid: "Generate planning artifacts; do not copy a
   # template and imitate it."
+  # The BACKLOG.md the scaffold writes is an index, so it stays a heredoc, but
+  # its header row is the backlog schema's `columns:` line, the one owner of
+  # the table's shape (B-042, TASK-0147).
+  BACKLOG_COLS="$(sed -n 's/^columns: //p' skills/project-migration/schemas/backlog.md)"
+  if [ -z "$BACKLOG_COLS" ] || ! grep -qxF "| $BACKLOG_COLS |" "$SCAFFOLD"; then
+    echo "SCAFFOLD: $SCAFFOLD's BACKLOG.md header is not the columns of"
+    echo "SCAFFOLD: skills/project-migration/schemas/backlog.md: | $BACKLOG_COLS |"
+    fail=1
+  fi
   if grep -q 'cp \.ai/templates/' "$SCAFFOLD"; then
     echo "SCAFFOLD: $SCAFFOLD tells the author to cp a template; SKILL.md's"
     echo "SCAFFOLD: hard rules require generating the artifact instead"

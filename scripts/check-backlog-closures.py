@@ -11,6 +11,11 @@ done or closed:
      exists as a file under .ai/;
   3. if the closer is a task, its "- Status:" line reads done or cancelled.
 
+The table's shape comes from skills/project-migration/schemas/backlog.md's
+`columns:` line, its one owner (B-042, TASK-0147): the header row must equal
+it, and every row must have that many cells. The schema is found beside this
+script's repository, never under a fixture root, and a missing one fails.
+
 And BACKLOG.md holds exactly one "**<N> items are open**" sentence (or
 "item is"), whose N - a word up to twenty, or digits - equals the number of
 rows whose Status says neither done nor closed (TASK-0145).
@@ -31,6 +36,8 @@ import sys
 
 root = sys.argv[1] if len(sys.argv) > 1 else "."
 backlog = os.path.join(root, ".ai/planning/BACKLOG.md")
+schema = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                      "skills/project-migration/schemas/backlog.md")
 ID = r"(TASK|ADR|REVIEW)-(\d{4})"
 WHERE = {"TASK": ".ai/tasks/TASK-{n}-*.md", "ADR": ".ai/decisions/{n}-*.md",
          "REVIEW": ".ai/reviews/REVIEW-{n}-*.md"}
@@ -43,17 +50,35 @@ except OSError as e:
 
 WORDS = ("zero one two three four five six seven eight nine ten eleven twelve "
          "thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty").split()
+try:
+    columns = [ln.split(":", 1)[1].strip() for ln in open(schema, encoding="utf-8")
+               if ln.startswith("columns:")][0].split(" | ")
+except (OSError, IndexError) as e:
+    print("BACKLOG: cannot read the columns from %s (%s)" % (schema, e or "no columns: line"))
+    sys.exit(1)
+header = "| " + " | ".join(columns) + " |"
+for need in ("ID", "Status", "Ready when"):
+    if need not in columns:
+        print("BACKLOG: the schema's columns have no %r, which this check reads" % need)
+        sys.exit(1)
+
 findings = []
 closed = 0
 open_rows = []
+heads = [ln.strip() for ln in lines if ln.startswith("| ID ")]
+if heads != [header]:
+    findings.append("the table header should be the schema's columns:\n      expected: %s\n      found:    %s"
+                    % (header, " / ".join(heads) or "no '| ID ' header row"))
 for line in lines:
     if not line.startswith("| B-"):
         continue
     cells = line.split(" | ")
-    if len(cells) != 8:
-        findings.append("%s: expected 8 cells, found %d" % (cells[0][2:], len(cells)))
+    if len(cells) != len(columns):
+        findings.append("%s: expected %d cells (the schema's columns), found %d"
+                        % (cells[0][2:], len(columns), len(cells)))
         continue
-    row, status, note = cells[0][2:].strip(), cells[6].lower(), cells[7]
+    row = cells[0][2:].strip()
+    status, note = cells[columns.index("Status")].lower(), cells[columns.index("Ready when")]
     if "done" not in status and "closed" not in status:
         open_rows.append(row)
         continue
@@ -70,7 +95,10 @@ for line in lines:
     if kind != "TASK":
         continue
     text = open(files[0], encoding="utf-8").read()
-    s = re.search(r"^- Status:\s*\**\s*([A-Za-z_]+)", text, re.M)
+    # The "- Status:" line under "## Status", not the first one anywhere: a
+    # brief may quote the phrase in its context (TASK-0147's did).
+    sect = re.search(r"^## Status\s*$(.*?)(?=^## |\Z)", text, re.M | re.S)
+    s = re.search(r"^- Status:\s*\**\s*([A-Za-z_]+)", sect.group(1) if sect else "", re.M)
     word = s.group(1).lower() if s else None
     if word not in ("done", "cancelled"):
         findings.append("%s is closed by TASK-%s, whose Status reads %s"

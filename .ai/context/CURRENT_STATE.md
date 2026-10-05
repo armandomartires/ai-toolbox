@@ -50,6 +50,13 @@ One task per row:
   count of the six plans: it requires `Objective` and `Context consulted`,
   and the rest is optional. PLAN.md is rendered, the scaffold reads it, and
   the gate checks all six plans, unedited (`project-migration` `3.2.0`).
+- **`B-042` part 2 (`TASK-0147`), closing it.** `schemas/backlog.md` prints
+  one backlog row. Its `columns:` line is the one owner of the table's shape,
+  checked against `BACKLOG.md`'s header and rows, and against the scaffold's
+  header (`3.3.0`).
+
+**The backlog is empty**: zero items are open, and the gate checks that
+count against the rows.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 
