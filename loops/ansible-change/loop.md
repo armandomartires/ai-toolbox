@@ -53,6 +53,32 @@ applied — a record produced after the fact records nothing about gates that
 were never performed. If the change is already live, that is an incident, not
 this loop.
 
+## Running it from Claude Code
+
+The gates are written to be agent-runnable, but a Claude Code session gets
+through gate 3 and no further on its own. Measured by `TASK-0116` (attempts
+1-3) on ansible-core 2.21.4; settle all three before starting:
+
+- **Gate 4 needs the human's allow rule.** The auto-mode classifier denied
+  the check-mode run, although it was read-only by construction. One
+  **exact-match** allow rule for that command, which the human adds to the
+  gitignored `.claude/settings.local.json`, let it through. The rule is the
+  human's grant for one change and one command, never a standing one.
+- **Gate 4 also needs its output redirected.** With the rule in place,
+  ansible-core refused to start: `Ansible requires blocking IO on
+  stdin/stdout/stderr. Non-blocking file handles detected`. The harness hands
+  it non-blocking handles. Run the command as `… > <log> 2>&1 < /dev/null`
+  and read the log, which is also gate 4's evidence.
+- **Gates 6-8 need the human, one way or the other.** With the human's
+  authorization written into the task file, the classifier still refused the
+  snapshot, a read-only `git status` in the estate, and writing the
+  authorization itself. It weighs the outcome, not the command. Either the
+  human grants a per-command rule for each, or the human runs those gates and
+  the agent records the evidence, which is what worked.
+
+OpenCode has not been run against this loop, so nothing here is known about
+it.
+
 ## Steps
 
 Nine gates, **cheapest and safest first**. A gate with no recorded output is

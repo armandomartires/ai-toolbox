@@ -13,6 +13,10 @@ One task per row:
 - **`B-045` (`TASK-0136`).** The unattended-run resume guard,
   `git log --grep <task id>`, must never use `--all`, because a park stash
   carries the task id. That is now stated wherever the guard is described.
+- **`B-046` (`TASK-0137`).** `loops/ansible-change/` says what a Claude Code
+  session needs beyond gate 3. Gate 4 takes the human's exact-match allow
+  rule, plus output redirected to a file. Gates 6-8 take per-command rules,
+  or the human runs them.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 
