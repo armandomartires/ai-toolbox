@@ -136,5 +136,7 @@ one failure this convention cannot catch for you.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`, and the registry
   is unchanged.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `9e23cb4` — *Gate that a closed backlog row names a closer that agrees (TASK-0142)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `d5a6038..9e23cb4 master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `9e23cb4`, and `git remote -v` is token-free
