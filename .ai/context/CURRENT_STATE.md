@@ -10,6 +10,9 @@ One task per row:
   branch once its tip is on `master` or `origin/master`. When it keeps one,
   it says so and exits 1, where it used to claim the deletion.
   `tests/test-worktree.sh` is in the gate.
+- **`B-045` (`TASK-0136`).** The unattended-run resume guard,
+  `git log --grep <task id>`, must never use `--all`, because a park stash
+  carries the task id. That is now stated wherever the guard is described.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 

@@ -267,7 +267,10 @@ leaves an honest tracker rather than a half-ticked one.
     any agent's summary. One window is irreducible — between `git commit`
     returning and the journal line reaching disk — and a binding closes it
     on resume with a `git log --grep <task id>` guard, in practice rather
-    than in theory. Say so rather than implying otherwise.
+    than in theory. Say so rather than implying otherwise. The guard searches
+    the current branch and **never uses `--all`**: a parked task's stash
+    commit carries its task id (step 11), so `--all` would read a parked task
+    as closed.
 
 13. **Run the batched long gates.** (Once, after the cycle; the same
     actors as step 7, `ADR-0025`.)

@@ -345,7 +345,8 @@ async function step10Close(task, impl, gates) {
   }
   if (after.head === before.head) throw new Park('closer made no commit')
   // Cross-checked by a second agent, since the script cannot run git. The
-  // task id in the message is loop.md step 12's `git log --grep` guard.
+  // task id in the message is loop.md step 12's `git log --grep` guard, which
+  // searches the current branch and never --all: the park stash carries it too.
   if (!got || !got.commit || after.head.indexOf(got.commit) !== 0 || after.parent !== before.head ||
       (after.porcelain || '').trim() || (after.message || '').indexOf(task.id) === -1) {
     throw new Halt(`closer's commit for ${task.id} does not verify (claimed ${got && got.commit}, HEAD ${after.head})`)

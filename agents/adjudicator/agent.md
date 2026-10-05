@@ -58,6 +58,11 @@ refuter finding that you can confirm or falsify by reading is not a matter of
 opinion, and treating it as one is how a plausible verdict gets written over
 an answerable question.
 
+If your binding lets you read git history and you look for a task's commit,
+search the current branch, `git log --grep <task id>`, **never with `--all`**.
+A parked task's stash commit carries its task id, so `--all` finds a commit for
+a task that was never closed.
+
 Where you **cannot** check — because the answer needs a command you do not
 run, or a gate nobody recorded — say so explicitly and let that shape the
 verdict. An unevidenced criterion is a `retry` on attempt 1 and a `park`

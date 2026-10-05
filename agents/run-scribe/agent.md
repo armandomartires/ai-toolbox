@@ -51,7 +51,9 @@ line saying so.
 **One window is irreducible** and you should not pretend otherwise: between
 `git commit` returning and the journal line reaching disk. A binding closes
 it **on resume**, with a `git log --grep <task id>` guard. Say so rather than
-implying the record is gapless.
+implying the record is gapless. The guard searches the current branch, never
+`--all`: a parked task's stash commit carries its task id, so `--all` reads a
+parked task as closed.
 
 ## Step 14 — re-derive the handover, then stop
 

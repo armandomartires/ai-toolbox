@@ -33,7 +33,10 @@ moved the tracker — there was no role in the run that could.
 **One window is irreducible**: between `git commit` returning and the journal
 line reaching disk. A binding closes it **on resume**, with a
 `git log --grep <task id>` guard, in practice rather than in theory. Say so
-rather than implying otherwise.
+rather than implying otherwise. **The guard never uses `--all`.** The
+park-steward's stash message carries the task id on purpose, so a human can
+find it, and `--all` searches `refs/stash` too. An `--all` guard would
+therefore read a parked task as closed: the wrong direction, silently.
 
 **Still unverified.** `ADR-0022` **F9** — *"a run interrupted at any point
 between the gate step and the close step leaves the tracker untouched"* — is

@@ -637,7 +637,8 @@ class Driver:
             # The commit exists but does not verify: the state is unknown and
             # a human is needed (loop.md, "Never treat as authorization").
             # The task id in the message is what loop.md step 12's
-            # `git log --grep <task id>` resume guard reads.
+            # `git log --grep <task id>` resume guard reads - on the current
+            # branch, never --all, since a park stash carries the id too.
             raise Halt("closer's commit for %s does not verify (claimed %r, HEAD %s)"
                        % (task["id"], claimed, after))
         files = [f for f in self.git("show", "--name-only", "--format=", "HEAD").split("\n") if f]
