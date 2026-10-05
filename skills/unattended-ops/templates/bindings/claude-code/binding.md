@@ -85,7 +85,8 @@ complete binding does not prove").
   "queue": [{"id": "TASK-0001", "kind": "default", "after": []}],
   "gatesByKind": {"default": ["unit", "lint"]},
   "longGroups": {"build": {"gates": ["build"], "paths": ["src/*"]}},
-  "agentTypes": {}
+  "agentTypes": {},
+  "repoRoot": "/absolute/path/to/the/consuming/repo"
 }
 ```
 
@@ -94,7 +95,13 @@ the gate map, read by `run-gate.sh` (`references/gate-map.md`). A name the map
 does not have comes back `MISSING` from the entry point and is reported
 `NOT-RUN`, so a drift between the two is visible rather than silent.
 `agentTypes` overrides the two agent-type names, for a consumer that emits the
-roles under other names. The script refuses before any agent runs on a
+roles under other names. `repoRoot` is optional. Leave it out and the run works
+in the session's own checkout. Set it, to an absolute path, and every role's
+prompt opens by naming that repository as the working directory, with every
+binding path relative to it, and the gate entry point gets it as
+`GATE_REPO_ROOT`. It is an instruction to each agent, not a sandbox: a role
+could still act outside it, as `worktree-only` is not enforced on this client
+(`ADR-0018`). The script refuses before any agent runs on a
 missing run id or any blank, `unknown` or `<FILL>` value
 (`templates/binding.md`).
 

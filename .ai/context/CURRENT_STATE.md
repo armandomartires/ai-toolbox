@@ -25,6 +25,10 @@ One task per row:
   other repositories now name ai-toolbox's generator, schema and gate, and
   say a copy is not regenerated. That covers the templates and the OpenCode
   `decision-standard.md`, and the gate checks it.
+- **`B-044` (`TASK-0140`).** The Claude Code binding can be pointed at a
+  repository: an optional, validated `args.repoRoot`, named first in every
+  prompt and passed to the gates. It is an instruction, not a sandbox, and
+  has been proven on the stub runtime only.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 

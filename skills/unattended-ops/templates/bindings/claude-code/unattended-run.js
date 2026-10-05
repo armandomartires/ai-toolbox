@@ -81,6 +81,15 @@ for (const k of SLOTS) if (unanswered(B[k])) problems.push('args.binding.' + k)
 if (!Array.isArray(A.queue) || !A.queue.length) problems.push('args.queue')
 if (!A.gatesByKind || typeof A.gatesByKind !== 'object') problems.push('args.gatesByKind')
 if (B.watchdog_timeout && seconds(B.watchdog_timeout) === null) problems.push('args.binding.watchdog_timeout (e.g. 90m)')
+// args.repoRoot is optional (B-044, TASK-0140). Without it the run works in
+// the session's own checkout, as before. With it, every prompt opens by naming
+// it, so the script can drive a repository the session is not in. It is
+// spliced into every prompt, so only an absolute path on one line, with no
+// backtick, is accepted.
+if (A.repoRoot !== undefined && (unanswered(A.repoRoot) ||
+    !/^(\/|[A-Za-z]:[\\/])[^\n\r`]*$/.test(String(A.repoRoot)))) {
+  problems.push('args.repoRoot (an absolute path on one line, or leave it out)')
+}
 for (const t of (Array.isArray(A.queue) ? A.queue : [])) {
   if (!t || unanswered(t.id)) { problems.push('args.queue entry without an id'); continue }
   if (A.gatesByKind && !Array.isArray(A.gatesByKind[t.kind || 'default'])) problems.push('args.gatesByKind.' + (t.kind || 'default') + ' (for ' + t.id + ')')
@@ -91,6 +100,7 @@ if (problems.length) {
 }
 
 const RUN_ID = String(A.runId)
+const REPO_ROOT = A.repoRoot === undefined ? null : String(A.repoRoot)
 const DRY_RUN = !!A.dryRun
 const sub = p => String(p).replace(/<run-id>/g, RUN_ID)
 const EVIDENCE = sub(B.evidence_file)
@@ -104,7 +114,9 @@ const LONG_GROUPS = A.longGroups || {}
 // --- Plumbing ---------------------------------------------------------------
 
 function header(role, step) {
-  return `You are the \`${role}\` role of an unattended run (loops/unattended-run/loop.md step ${step}; the unattended-ops skill owns the method and the "Division of labour" table states your job). No human is present: where you would ask, report instead — asking is parking, never guessing (ADR-0022 clause 2). Run ${RUN_ID}.\n\n`
+  // First, so it governs every command and path that follows (B-044).
+  const root = REPO_ROOT ? `Work in the repository at ${REPO_ROOT}. Make it your working directory first, and run every command there; every relative path below is relative to it.\n\n` : ''
+  return root + `You are the \`${role}\` role of an unattended run (loops/unattended-run/loop.md step ${step}; the unattended-ops skill owns the method and the "Division of labour" table states your job). No human is present: where you would ask, report instead — asking is parking, never guessing (ADR-0022 clause 2). Run ${RUN_ID}.\n\n`
 }
 
 // One role call. A thrown agent() — an unresolvable agentType, a budget
@@ -240,7 +252,7 @@ async function step6Implement(task, plan) {
 }
 
 function gateEnv() {
-  return `GATE_MAP=${JSON.stringify(B.gate_map)} GATE_REPO_ROOT=. GATE_RUN_ROOT=${JSON.stringify(EVIDENCE.replace(/\/[^/]*$/, ''))} EVIDENCE_FILE=${JSON.stringify(EVIDENCE)} GATE_TIMEOUT_SECONDS=${WATCHDOG}`
+  return `GATE_MAP=${JSON.stringify(B.gate_map)} GATE_REPO_ROOT=${REPO_ROOT ? JSON.stringify(REPO_ROOT) : '.'} GATE_RUN_ROOT=${JSON.stringify(EVIDENCE.replace(/\/[^/]*$/, ''))} EVIDENCE_FILE=${JSON.stringify(EVIDENCE)} GATE_TIMEOUT_SECONDS=${WATCHDOG}`
 }
 
 // Step 7 / 13 — the gate-runner is handed the entry point, gate NAMES and

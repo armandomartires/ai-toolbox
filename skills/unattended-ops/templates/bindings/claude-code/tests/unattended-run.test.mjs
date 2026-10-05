@@ -124,6 +124,35 @@ test('refuses before any agent runs without a run id or with an unanswered slot'
   }
 })
 
+test('refuses a repoRoot that is relative, unanswered, multi-line or carries a backtick', async () => {
+  for (const repoRoot of ['repo', 'unknown', '', '/a\nb', '/a`b', '<FILL: path>']) {
+    const r = await run(baseArgs({ repoRoot }))
+    assert.equal(r.result.refused, true, repoRoot)
+    assert.ok(r.result.problems.some(p => p.startsWith('args.repoRoot')), repoRoot)
+    assert.equal(r.s.calls.length, 0)
+  }
+})
+
+// --- Repository root (B-044) ------------------------------------------------------
+
+test('with args.repoRoot, every role is told the root first and the gate env carries it', async () => {
+  const root = '/srv/consumer repo'
+  const r = await run(baseArgs({ repoRoot: root }))
+  assert.ok(r.s.calls.length > 5)
+  for (const c of r.s.calls) {
+    assert.ok(c.prompt.startsWith(`Work in the repository at ${root}.`), c.opts.label)
+  }
+  const gate = r.calls('gate-runner')[0].prompt
+  assert.ok(gate.includes(`GATE_REPO_ROOT=${JSON.stringify(root)}`), gate)
+  assert.ok(!gate.includes('GATE_REPO_ROOT=.'))
+})
+
+test('without args.repoRoot, no prompt names a root and the gate root stays .', async () => {
+  const r = await run(baseArgs())
+  for (const c of r.s.calls) assert.ok(!c.prompt.startsWith('Work in the repository at'), c.opts.label)
+  assert.ok(r.calls('gate-runner')[0].prompt.includes('GATE_REPO_ROOT=.'))
+})
+
 // --- Happy path -----------------------------------------------------------------
 
 test('closes a task, and only the closer is asked to stage or commit', async () => {
