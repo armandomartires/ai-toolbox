@@ -33,6 +33,10 @@ One task per row:
   binding suites on every push. Its first run was green: 29 node tests and
   40 Python tests. The gate is unchanged. A red suite is now reported by
   `ci-alert`, though not prevented.
+- **`B-038` (`TASK-0142`).** The gate now fails when a closed backlog row
+  names no closer, a missing one, or a task that is not `done` or
+  `cancelled`. The rule is in `.ai/README.md`. The reverse case, a row left
+  open after its task closed, is still unchecked.
 
 ## The estate's ansible-vault password comes from Vault (`TASK-0134`, `B-052`); `.env` variants are ignored (`TASK-0133`, `B-053`)
 

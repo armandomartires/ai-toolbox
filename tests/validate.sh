@@ -1637,6 +1637,15 @@ if ! WORKTREE_OUT="$(bash tests/test-worktree.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# A closed backlog row names a closer that agrees (TASK-0142, B-038). The rule
+# is .ai/README.md's *Closing a backlog row*; the script says what it cannot
+# see (a row left open after its task closed). Unconditional (ADR-0009).
+if ! BACKLOG_OUT="$(python3 scripts/check-backlog-closures.py 2>&1)"; then
+  printf '%s\n' "$BACKLOG_OUT"
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # Planning templates are derived from the schemas that own their shape
 # (ADR-0027, TASK-0109), so they get the same staleness gate docs/registry.md
 # and decision-standard.md already carry. Rendered to a scratch tree and

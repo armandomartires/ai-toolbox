@@ -673,7 +673,7 @@ Opening the next sprint is a human decision. The outstanding queue lives in
 `worktree-only`'s unsettled Claude Code emission; `B-025` (`waiting`) and
 `B-035` (`ready`, the adjudicator's decision standard); the Claude Code
 binding's never having run against a real run; and `ADR-0022` F7/F9,
-untested. **Next free number: `TASK-0142`.**
+untested. **Next free number: `TASK-0143`.**
 
 `B-035` has since closed (2026-09-26, `TASK-0106`) and the counter above read
 `TASK-0109` until `TASK-0118` corrected it on 2026-09-27, to `TASK-0119`;
@@ -876,6 +876,9 @@ embody** — measured with the skill's own checker, not inferred. Raised
 - [x] TASK-0141 — `B-037`: CI's `bindings` job runs both unattended-run
       binding suites on every push (`ADR-0032`); the gate is unchanged.
       First run green, 29 + 40 tests (done, `a1a8612`)
+- [x] TASK-0142 — `B-038`: a closed backlog row must name a closer that exists
+      and, if a task, reads `done`/`cancelled`; rule in `.ai/README.md`,
+      checked by `scripts/check-backlog-closures.py` in the gate (done)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those
