@@ -140,5 +140,7 @@ The three binding files above, the ledger, this brief.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`, and the registry
   is unchanged.
 - Result: done. No live Workflow run was made; the suite models the runtime.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `340fa7e` — *Let the Claude Code binding be pointed at a repository (TASK-0140)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `8b32bd4..340fa7e master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `340fa7e`, and `git remote -v` is token-free
