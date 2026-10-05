@@ -141,5 +141,7 @@ The estate's `.ai/35.AD_HOC_TASKS.md`; here, the ledger and this brief.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`, including
   `check-backlog-closures.py`.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `a52f020` — *Report the estate's stale ansible.cfg claims to the estate (TASK-0144)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `8ad497e..a52f020 master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `a52f020`, and `git remote -v` is token-free
