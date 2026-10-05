@@ -104,5 +104,7 @@ one failure this convention cannot catch for you.
   recount, so the status says `closed`.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `d7a9553` — *Close B-025 as deferred on the human's decision (TASK-0143)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `0a46f14..d7a9553 master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `d7a9553`, and `git remote -v` is token-free
