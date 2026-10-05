@@ -171,5 +171,7 @@ reads the line under `## Status`, which is fixed and proven here.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`, and the registry
   is unchanged.
 - Result: done. **Zero backlog items are open.**
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `4cbad0f` — *Give the backlog entry a schema that owns its columns (TASK-0147)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `4612ac0..4cbad0f master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `4cbad0f`, and `git remote -v` is token-free
