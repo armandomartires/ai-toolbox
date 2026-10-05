@@ -132,5 +132,7 @@ one failure this convention cannot catch for you.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`, and
   `sync-registry.sh` left the registry unchanged.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `60ca9fd` — *Derive not-applicable for task-loading actions (TASK-0138)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `17f9001..60ca9fd master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `60ca9fd`, and `git remote -v` is token-free
