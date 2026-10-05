@@ -132,5 +132,7 @@ one failure this convention cannot catch for you.
     "One", and the check agreed.
 - Validation: `tests/validate.sh` printed `validate.sh: OK`.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `f722576` — *Gate the backlog's open-item count against its rows (TASK-0145)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `fccc6ad..f722576 master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `f722576`, and `git remote -v` is token-free
