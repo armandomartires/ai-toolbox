@@ -5,30 +5,25 @@
 
 # S###-checkpoint
 
-<!-- FILL: A review is a point-in-time snapshot. Write it once, at the end of a sprint
-     or a meaningful milestone, and **don't edit it retroactively** as reality
-     moves on — that is what the next checkpoint is for. -->
+<!-- FILL: A snapshot of one date. Write it once; the next checkpoint corrects it. -->
 
 **Date**: YYYY-MM-DD
 **Sprint completed**: `S###_Name`
 
 ## State of the project
 
-<!-- FILL: Concrete, verifiable facts as of this date: test count, what works, what
-     doesn't, what's known-broken-but-accepted. -->
+<!-- FILL: Facts as of this date: test count, what works, what doesn't, what is
+     broken but accepted. No plans. -->
 
 ## What changed this sprint
 
-<!-- FILL: Brief summary — link to `../30.ROADMAP.md`'s sprint table and the individual
-     `../tasks/S###.*` briefs rather than re-explaining each one. -->
+<!-- FILL: One line, then links to `../30.ROADMAP.md` and each `../tasks/S###.*` brief. -->
 
 ## Open risks / known gaps
 
-<!-- FILL: Anything discovered but not fixed. Should already be in
-     `../35.AD_HOC_TASKS.md` if it's actionable — this section is for framing
-     risk at the project level, not duplicating that list. -->
+<!-- FILL: Risks discovered but not fixed. Actionable items go in
+     `../35.AD_HOC_TASKS.md`; reference them here. -->
 
 ## Confidence assessment
 
-<!-- FILL: Honest self-assessment: what are you confident is correct, what is untested
-     in practice, what would you want a second pair of eyes on. -->
+<!-- FILL: Three short lists: confident of, untested in practice, wants a second reader. -->

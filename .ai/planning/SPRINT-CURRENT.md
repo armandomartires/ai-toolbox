@@ -2,10 +2,6 @@
 
 S10 closed 2026-09-26 on `REVIEW-0012` and is archived in `planning/sprints/`. Opening the next sprint is a human decision. Until then, work runs task by task on the human's routing. The next task id is the next number not yet used in `.ai/tasks/`.
 
-## In progress
-
-- `B-054` / `PLAN-0007`: concise artifacts (`ADR-0033`), tasks `TASK-0150`–`TASK-0154`.
-
 ## Open, not scheduled
 
 1. **`worktree-only` on Claude Code.** Measured as not enforced (`TASK-0111`). To decide: keep emission refused, redefine the term, or have the roles stop declaring it.

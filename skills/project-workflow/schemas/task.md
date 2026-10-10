@@ -3,137 +3,108 @@ kind: task
 framework: project-workflow
 id_placeholder: S###.T###_Name
 sprint_placeholder: S###_SprintName
+date_placeholder: YYYY-MM-DD
 superseded: Preconditions, Dependencies, Expected result
 allow_extra: true
 filename_pattern: tasks/{id}.md
 title_pattern: {id}
+max_lines: 80
 ---
 
+# One task, one module (ADR-0033 in ai-toolbox): identification first, then
+# the procedure, then the record. Git is the record of commits: the commit
+# subject carries the task id, so no hash is written here. The bold fields
+# are the ones the dashboard reads (references/dashboard.md).
+
 !preamble
-**Status**: not started | in progress | blocked | completed
-**Sprint**: `{sprint}` (see `../30.ROADMAP.md` for what this sprint means)
-**Commits**: `<hash>` — filled in once committed; may be more than one
+!standard
+Status is one of: not started, in progress, blocked, completed. Applies to:
+components and environment. Points is optional. Depends on: task ids, or none.
+!body
+**Status**: not started
+**Sprint**: `{sprint}`
+**Created**: {date}
+**Updated**: {date}
+**Applies to**:
+**Depends on**: none
 
 ## Goal
 !phase before
 !required true
 !terse
-goal — what this is for, and why now
+what changes, and why now
 !standard
-One or two sentences. What is this task for, and why does it matter right
-now? If it closes a gap noted in `../35.AD_HOC_TASKS.md` or answers an open
-question in `../30.ROADMAP.md`, link to it.
-!explicit
-Write 1-3 sentences. Sentence 1: what changes. Sentence 2: why now. If this
-closes an item in `../35.AD_HOC_TASKS.md` or `../30.ROADMAP.md`, link it.
-No sub-headings.
+One to three sentences: what changes, and why now. Link the item in
+`../35.AD_HOC_TASKS.md` or `../30.ROADMAP.md` it closes.
 !literal
-Replace this comment with 1-3 sentences, answering in this order:
-(1) What will change?
-(2) Why does it need to happen now rather than later?
-(3) Which item in `../35.AD_HOC_TASKS.md` or `../30.ROADMAP.md` does it
-    close? Write "none" if there is no such item.
-Do not add sub-headings. Delete this comment when you have written them.
+Write 1-3 sentences: (1) what will change, (2) why now, (3) the
+`35.AD_HOC_TASKS.md` or `30.ROADMAP.md` item it closes, or "none".
 
 ## Inputs
 !phase before
 !required true
 !terse
-every artifact consumed — one row each
+every artifact consumed, with its expected state
 !standard
-Every artifact this task consumes, so it can be started cold in a fresh
-session (`../reference/session-handover.md`). One row each — a paragraph
-lets you write "depends on the last task" and stop.
-!explicit
-One table row per artifact this task reads or depends on. A paragraph here
-lets you write "depends on the last task" and stop, which is the failure
-this section exists to prevent. Fill every column of every row.
+One row per artifact this task reads, so it can start cold. Verify each
+state before starting (`../reference/session-handover.md`).
 !literal
-Add one row to the table below for each file, document or tool this task
-reads or depends on. For each row fill all three columns:
-  Artifact       — the path, in backticks.
-  Produced by    — the task ID that made it, or the words: pre-existing
-  Expected state — the specific state assumed: a version, a size, a
-                   passing suite. Not the word "current".
-Do not replace the table with a paragraph. Delete this comment when done.
+One row per file, document or tool this task reads. Expected state is
+specific: a version, a size, a passing suite. Check it before you start.
 !body
-| Artifact | Produced by | Expected state |
-|---|---|---|
-| `path/or/doc` | `S###.T###_Name`, or "pre-existing" | the state this task assumes — a version, a size, a passing suite |
-
-**Verify the expected state; don't assume it.** A stale row here is the
-one failure this convention cannot catch for you.
+| Artifact | Expected state |
+|---|---|
+| | |
 
 ## Plan
 !phase before
 !required true
 !terse
-what you intend to do — written before starting
+numbered steps, written before starting
 !standard
-What you intend to do, written **before** starting. Bullet list is fine.
-If the plan changes materially during the work, note the deviation in
-Verification rather than silently rewriting this section.
+Numbered steps, one action each, written before starting. Record a
+deviation under Verification; do not rewrite the plan.
 !literal
-Replace this comment with a bullet list of the steps you intend to take,
-written BEFORE you start the work.
-If the plan later changes, do NOT edit this section — record what actually
-happened under Verification instead. Delete this comment when done.
+Number the steps, one action each, before you start. If the plan changes,
+leave it and record the difference under Verification.
+!body
+1.
 
 ## Verification
 !phase after
 !required true
 !terse
-the specific proof, including the fails-when-reverted check
+the proof, including the fails-when-reverted check
 !standard
-How you know it actually works — not just "tests pass," but the specific
-proof appropriate to this change. For new behaviour this must include the
-three numbered items below.
-!explicit
-Record the evidence, not the intention. Each numbered item below must be
-answered with what you actually observed, quoted, not summarised.
+What you observed, quoted. For new behaviour, all three items below.
 !literal
-Answer each of the three numbered items below with what you actually saw.
-Quote the real output; do not summarise it and do not write "passed" alone.
-Delete this comment when all three are answered.
+Answer each item with the real output. Never write "passed" alone.
 !body
-1. Full test suite result (e.g. `pytest -q` → `N passed`)
-2. **The fails-when-reverted check**: `git stash push -- <files>`, re-run
-   the specific new test, confirm it fails for the *expected* reason, then
-   `git stash pop`. Record what the failure looked like.
-3. Any manual/empirical verification (e.g. measured timing, a real
-   before/after comparison) that a test alone couldn't capture.
+1. Test suite: `command` → `result`
+2. Fails when reverted: the new test, run against the reverted change, fails for the expected reason
+3. Manual or measured check, if a test cannot show it
 
 ## Outputs / handover
 !phase after
 !required true
 !terse
-every file changed, and what the next session inherits
+end state of every changed artifact, and where the next task starts
 !standard
-Every file this task created or changed, and what the next session
-inherits. Written **after** the work, because until it is verified you are
-describing an intention rather than a state.
+Written after the work: what each changed artifact now holds. Next: one line.
 !literal
-Add one row to the table below for every file this task created or changed.
-Then replace the angle-bracketed text after "Next task starts here" with
-one sentence naming the state the next session picks up from.
-Write this section AFTER the work, never before. Delete this comment.
+After the work, one row per file created or changed. Then replace the text
+after "Next:" with the state the next task starts from.
 !body
 | Artifact | End state |
 |---|---|
-| `path/to/file.py` | what it now contains and why, plus anything deliberately *not* changed |
+| | |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. If this task
-deviated from its Plan, say so here too: the next task may have been
-scoped against the original.
+Next:
 
 ## Status notes
 !phase after
 !required false
 !standard
-Anything that changed between Plan and what actually happened. Blockers hit
-and how they were resolved. Leave empty if the task went exactly to plan.
+Only if the work differed from the plan: what differed, and any blocker.
 !literal
-If the work went exactly as written under Plan, leave this section empty
-and delete this comment. Otherwise write what differed and why, and name
-any blocker you hit and how it was resolved.
+Leave empty if the work went to plan. Otherwise: what differed, and why.

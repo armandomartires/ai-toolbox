@@ -7,20 +7,14 @@ sprint_placeholder: S###_Name
 filename_pattern: reviews/{id}-checkpoint.md
 title_pattern: {id}-checkpoint
 allow_extra: true
+max_lines: 80
 ---
 
 !preamble
 !terse
-a point-in-time snapshot — write once, never edit retroactively
+a point-in-time snapshot: write once, never edit afterwards
 !standard
-A review is a point-in-time snapshot. Write it once, at the end of a sprint
-or a meaningful milestone, and **don't edit it retroactively** as reality
-moves on — that is what the next checkpoint is for.
-!literal
-Fill the two fields below, then write the sections in order.
-A review is a snapshot of one moment. Write it once and do NOT come back
-later to correct it as things change — write the next checkpoint instead.
-Delete this comment when done.
+A snapshot of one date. Write it once; the next checkpoint corrects it.
 !body
 **Date**: {date}
 **Sprint completed**: `{sprint}`
@@ -31,61 +25,40 @@ Delete this comment when done.
 !terse
 verifiable facts as of this date
 !standard
-Concrete, verifiable facts as of this date: test count, what works, what
-doesn't, what's known-broken-but-accepted.
-!explicit
-Write only facts you can point at: the test count, the components that work,
-the ones that do not, and what is known-broken and deliberately accepted.
-No plans and no intentions — those belong in the roadmap.
+Facts as of this date: test count, what works, what doesn't, what is
+broken but accepted. No plans.
 !literal
-Replace this comment with a bullet list of facts true on the date above:
-  - how many tests there are, and how many pass
-  - what works
-  - what does not work
-  - what is broken but deliberately accepted, and why
-Write only things you can verify right now. Do not write plans.
-Delete this comment when done.
+Bullets only: test count and passes; what works; what does not; what is
+broken but accepted, and why.
 
 ## What changed this sprint
 !phase after
 !required true
 !terse
-brief summary — link the briefs, don't re-explain them
+links to the briefs, not a retelling
 !standard
-Brief summary — link to `../30.ROADMAP.md`'s sprint table and the individual
-`../tasks/S###.*` briefs rather than re-explaining each one.
+One line, then links to `../30.ROADMAP.md` and each `../tasks/S###.*` brief.
 !literal
-Replace this comment with a short summary, then links.
-Link to `../30.ROADMAP.md` and to each `../tasks/S###.*` brief from this
-sprint. Do NOT re-explain what each task did — the brief already says it,
-and a second copy here will drift from it. Delete this comment when done.
+One summary line, then one link per brief. Do not re-explain the briefs.
 
 ## Open risks / known gaps
 !phase after
 !required true
 !terse
-project-level risk framing, not a duplicate of the ad-hoc list
+project-level risk, not a copy of the ad-hoc list
 !standard
-Anything discovered but not fixed. Should already be in
-`../35.AD_HOC_TASKS.md` if it's actionable — this section is for framing
-risk at the project level, not duplicating that list.
+Risks discovered but not fixed. Actionable items go in
+`../35.AD_HOC_TASKS.md`; reference them here.
 !literal
-Replace this comment with the risks and gaps you know about but have not
-fixed. If an item is actionable it belongs in `../35.AD_HOC_TASKS.md`; put
-it there and reference it here rather than copying it. This section is for
-naming risk at the project level. Delete this comment when done.
+Bullets naming each risk. Reference ad-hoc entries; do not copy them.
 
 ## Confidence assessment
 !phase after
 !required true
 !terse
-what you are sure of, what is untested, what needs a second reader
+sure of, untested, needs a second reader
 !standard
-Honest self-assessment: what are you confident is correct, what is untested
-in practice, what would you want a second pair of eyes on.
+Three short lists: confident of, untested in practice, wants a second reader.
 !literal
-Replace this comment with three short lists:
-(1) What you are confident is correct, and why.
-(2) What has not been tested in real use.
-(3) What you would want another person to review.
-List (2) and (3) must not be empty. Delete this comment when done.
+Three short lists: confident, untested, needs review. The last two are
+never empty.

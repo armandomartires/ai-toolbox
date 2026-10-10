@@ -4,137 +4,78 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "5.2.1"
+  version: "6.0.0"
 ---
 
 # project-workflow
 
-Scaffolds `.ai/`, maintains its plan/develop/test/validate convention
-(full text: `templates/00.CONVENTIONS.md`, copied verbatim). Use for:
-scaffolding; a task brief; an ADR; an ad-hoc item; a checkpoint.
+Scaffolds `.ai/` and maintains its plan/develop/test/validate convention. The full convention is `templates/00.CONVENTIONS.md`, which is copied verbatim. Use this skill for scaffolding, a task brief, an ADR, an ad-hoc item or a checkpoint.
 
-**Not `project-migration`.** That skill retrofits a *live* repo onto a
-**different** framework (`context/`, `planning/`, `sessions/`,
-`templates/`, `TASK-####`, `ADR-NNNN-*.md`). This one owns the
-`00.CONVENTIONS.md` + `20/30/35` + `reference/` layout with
-`S###.T###` tasks and `NNNN-title.md` ADRs. Deliberately divergent —
-ADR-0013; don't "align" them. The two share the generator below and
-nothing else: a tool, not a shape.
+**This is not `project-migration`.** That skill retrofits a live repository onto a different framework: `TASK-####` briefs, `ADR-NNNN-*.md`, `context/`, `planning/`. This one owns:
+- the `00.CONVENTIONS.md` + `20/30/35` + `reference/` layout
+- `S###.T###` task ids
+- `NNNN-title.md` ADRs
 
-> **`.ai/` = why/next. `AGENTS.md`+`docs/` = what is. Git = what
-> changed.** One owner per fact — link, never copy.
+The divergence is deliberate (ADR-0013 in ai-toolbox). The two skills share only the generator.
+
+> **`.ai/` = why and what's next. `AGENTS.md` + `docs/` = what is. Git = what changed.** Each fact has one owner: link to it, never copy it.
+
+## Principles (ADR-0033 in ai-toolbox)
+
+- **One task, one module.** Identification comes first (Status, Sprint, dates, Applies to, Depends on), then the procedure, then the record.
+- **Git is the record.** A commit subject carries the task id, so a brief never holds its own hash.
+- **Budgets are gated.** A schema's `max_lines` is enforced by `check-artifact.sh`: 80 lines for a brief, an ADR or a review.
+- **Live files hold state, not history.** `20.PLAN.md` and `30.ROADMAP.md` say where things are now; git keeps how they got there.
+- **Every task ends with a short report:**
+
+  ```
+  Result:   done | blocked | partial — one line
+  Changed:  file or component — what
+  Verified: command → observed output
+  Pushed:   remote ✓ @<short hash>   (or: not pushed — why)
+  Next:     one line
+  ```
 
 ## Scaffolding
 
-1. Resolve `root`/`entrypoint` via `.ai-layout.json`
-   (`templates/reference/layout-declaration.md`); default
-   `.ai/`+`00.CONVENTIONS.md`.
-2. Don't overwrite an existing layer; ask if names mismatch.
-3. Copy `templates/` into `root` as-is; skip `00.CONVENTIONS.md` if
-   `entrypoint` differs. **Copy, never symlink.**
-4. Fill `20.PLAN.md`/`30.ROADMAP.md` with real state, not placeholders;
-   offer (don't assume) a `git log` back-fill.
-5. Pointer to `<root>/<entrypoint>` from `AGENTS.md`/`README.md`, unless
-   `entrypoint` **is** `AGENTS.md`.
+1. Resolve `root` and `entrypoint` through `.ai-layout.json` (`templates/reference/layout-declaration.md`). The default is `.ai/` + `00.CONVENTIONS.md`.
+2. Never overwrite an existing layer. Ask if the names do not match.
+3. Copy `templates/` into `root` as-is. Copy; never symlink.
+4. Fill `20.PLAN.md` and `30.ROADMAP.md` with real state. Offer a `git log` back-fill, but do not assume one is wanted.
+5. Point to `<root>/<entrypoint>` from `AGENTS.md` or `README.md`.
 
 ## Generating an artifact
 
-**Generate the skeleton; don't copy a template and imitate it.**
+Generate the skeleton; never copy a template and imitate it.
 
 ```
 scripts/new-artifact.sh --kind task|adr|review|adhoc \
-    [--framework project-migration] [--guidance LEVEL] \
-    --id S002.T004_CacheHeaders --sprint S002_Performance --out PATH
+    [--framework project-migration] [--guidance terse|standard|explicit|literal] \
+    --id S002.T004_CacheHeaders --sprint S002_Performance --date 2026-01-31 --out PATH
 ```
 
-It emits every heading in schema order with the identifiers and date
-already substituted, and guidance in `<!-- FILL: … -->` comments you
-replace. You never type a heading, choose an order, or invent an ID — so
-none of those can drift.
+- **Generate.** Headings, their order and the ids come from `schemas/`. Guidance sits in `<!-- FILL: … -->` comments, which you delete as you fill. `--guidance` changes only those comments; the filled file is the same at every level.
+- **Check.** `scripts/check-artifact.sh <file> [--kind task]` checks:
+  - required headings are present, in order
+  - no superseded heading remains
+  - no marker is left
+  - no after-the-work section is empty on a completed artifact
+  - the file is within its line budget
+- **Change a shape** by editing its schema (format: `schemas/README.md`). `templates/` is generated from the schemas by ai-toolbox's `scripts/sync-templates.sh`.
 
-`scripts/check-artifact.sh <file> [--kind task]` proves a finished
-artifact matches its schema: required headings present, in order, no
-superseded heading, no marker left behind, no after-the-work section left
-empty on something marked complete. It reads the headings *from the
-schema*, so changing a schema never means editing the checker.
+**Task brief:** `tasks/S###.T###_Name.md`. Goal, Inputs and Plan are written before the work. Verification (including the fails-when-reverted check), Outputs and Status notes are written after it. Inputs and Outputs are the handover contract (`templates/reference/session-handover.md`).
 
-**`schemas/` owns the shape** — `schemas/README.md` is the format.
-`templates/` is *generated* from it by `../../scripts/sync-templates.sh`
-and carries a do-not-edit banner; edit a schema and re-run. Before
-ADR-0027 the shape was prose in four places and this skill's own template
-contradicted this file about the task ID format.
-
-### `--guidance`
-
-Four prose densities. **The filled artifact is identical at every level** —
-guidance lives only inside comments, which is verified by generating all
-four, stripping the comments and diffing.
-
-| Level | Suggested for | Slot carries |
-|---|---|---|
-| `terse` | frontier, 500b, 300b | a noun phrase |
-| `standard` | 120b | one or two sentences of intent (default) |
-| `explicit` | 60b, 30b | numbered instruction naming each field |
-| `literal` | 12b | step-by-step, ending in "delete this comment" |
-
-**That column is a suggestion, not a resolver.** No tier name appears in
-any schema or script, and nothing maps a model to a level — model
-references have one owner and it is not here (ADR-0018 clause 7,
-ADR-0027 clause 4).
-
-## Task briefs and ADRs
-
-`tasks/S###.T###_Name.md` (scheme: `templates/reference/task-lifecycle.md`):
-Goal+Inputs+Plan before, Verification+Outputs+Status after (incl.
-fails-when-reverted). The schema marks which is which with `!phase`, so
-the rule is checkable rather than remembered. `Inputs`/`Outputs` are the
-handover contract — a task must be startable cold; see
-`templates/reference/session-handover.md`.
-
-`decisions/NNNN-title.md`: calls expensive to reverse. Link the affected
-doc; don't restate it.
+**ADR:** `decisions/NNNN-title.md`, for calls that are expensive to reverse. Link the affected doc; don't restate it.
 
 ## The dashboard
 
-`scripts/build-dashboard.sh --root .ai --out docs/dashboard.html` renders the
-governance layer as **one self-contained HTML5 file** — no CDN, no external
-font, no network, `python3` stdlib only. Twelve tabs; burn-up and burn-down,
-cumulative flow, velocity, throughput, cycle-time percentiles, a dependency
-graph, a backlog priority×value matrix, a roadmap timeline and a seeded Monte
-Carlo forecast; light and dark themes with a live token editor; an optional
-`dashboard.custom.css` beside the output for branding. Both corpus layouts are
-detected, not assumed. Full reference, including **what each metric does not
-prove**: `references/dashboard.md`.
+`scripts/build-dashboard.sh --root .ai --out docs/dashboard.html` renders the layer as one self-contained HTML file: burn-up, burn-down, flow, velocity, cycle time, dependencies, backlog, roadmap and forecast. It detects both corpus layouts.
 
-**The generator under `dashboard/` is a vendored copy — do not edit it here.**
-It is developed in the `sigma-llmwiki` repository and synced by that repo's
-`sync_dashboard_skill.py`, which writes `dashboard/VENDORED.md` with the source
-commit and a sha256 per file; its `--check` exits non-zero on drift. One
-generator, so every project that adopts this skill renders the same dashboard.
-Editing the copy re-creates the split this arrangement exists to remove — two
-generators, written a week apart, neither aware of the other.
+`references/dashboard.md` covers what each metric does not prove, and which fields and headings must keep their shape.
 
-**Publishing is optional; unpublished, the local file is the dashboard.** To
-have the destination's CI build and publish it on **GitHub Pages** and/or
-**GitLab Pages**, declare the destinations in a
-`dashboard-publish.conf` at the repository root and run
-`scripts/publish-dashboard.sh render`. It renders each CI pipeline from
-`assets/publish/`, refuses to overwrite a CI file it did not write, never edits
-an existing `.gitlab-ci.yml` (the GitLab job is an included fragment), and
-refuses a skill directory outside the repository, because a runner clones the
-repository and nothing else. `render --check` fails on drift; wire it into the
-project's gate. Each pipeline runs `publish-dashboard.sh guard`, which refuses
-to publish from a **shallow clone** — GitLab clones 20 commits by default, which
-a count-based check passes. An opt-in `github-pages-daily` target adds a
-second workflow that rebuilds the GitHub page once a day, because the page is
-dated by the day it is built. Config keys and the full procedure:
-`references/dashboard.md`, *Publishing it*.
-
-`.ai/` is prose, and prose does not add up. The one figure this repository
-maintained by hand — `BACKLOG.md`'s open-item count — went stale twice in two
-days (`B-038`). A generated view re-counts from the rows every time.
+- **Vendored.** `dashboard/` is a copy synced from `sigma-llmwiki` (`dashboard/VENDORED.md`). Never edit it here.
+- **Publishing is optional.** Declare destinations in `dashboard-publish.conf`, then run `scripts/publish-dashboard.sh render` to write GitHub Pages and/or GitLab Pages pipelines. `render --check` fails on drift. Full procedure: `references/dashboard.md`, *Publishing it*.
 
 ## Maintaining
 
-`templates/reference/skill-maintenance.md`. Content changes bump the
-version above; a change to how artifacts are produced is a major bump.
+See `templates/reference/skill-maintenance.md`. A content change bumps the version. A change to how artifacts are produced is a major bump.

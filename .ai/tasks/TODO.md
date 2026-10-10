@@ -201,6 +201,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0151 — Artifact line budgets and frozen v1 schemas
 - [x] TASK-0152 — project-migration v2: concise task and ADR schemas
 - [x] TASK-0153 — Compact the live files to state only
+- [x] TASK-0154 — project-workflow 6.0.0: concise schemas, docs and fixtures
 
 ## Post-S9 (superseded by the promotion above)
 

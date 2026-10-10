@@ -5,40 +5,25 @@
 
 # NNNN — Short, decision-shaped title
 
-**Status**: proposed | accepted | superseded by NNNN | deprecated
+<!-- FILL: Status: proposed, accepted, superseded by NNNN, or deprecated. -->
+
+**Status**: proposed
 **Date**: YYYY-MM-DD
 **Sprint / task**: `S###_Name / S###.T###_Name`
 
 ## Context
 
-<!-- FILL: What situation forced a decision? What was the actual, concrete problem —
-     not the abstract category of problem. Link to the specific commit, bug
-     report, or incident that made this real, not hypothetical. -->
+<!-- FILL: The concrete event that forced a decision: commit, incident or report, and when. -->
 
 ## Decision
 
-<!-- FILL: What was decided, stated as a single clear sentence if possible. If the
-     decision is codified in `AGENTS.md` or elsewhere, **link to it** rather than
-     restating it here — this file explains *why*, the normative doc states
-     *what*. -->
+<!-- FILL: The decision in one sentence, or numbered clauses. Link `AGENTS.md` or the
+     normative doc rather than restating it: this file says why, that one says what. -->
 
 ## Alternatives considered
 
-<!-- FILL: What else could have been done, and why it was rejected. Include the option
-     that was *not* chosen even if it seems obviously wrong in hindsight — the
-     fact that it was considered and rejected (rather than never occurring to
-     anyone) is exactly what this file exists to preserve. -->
+<!-- FILL: Each option not chosen, and why, including the ones that now look obvious. -->
 
 ## Consequences
 
-<!-- FILL: What does this decision make easier? What does it make harder or foreclose?
-     Be honest about trade-offs — a decision with no downsides usually means the
-     downsides haven't been found yet. -->
-
-## Provenance
-
-<!-- FILL: Fill in once the decision is committed. -->
-
-- Commit(s): `<hash>` — `<subject line>`
-- Related ADRs: (if any)
-- Related task(s): `tasks/S###.T###_Name.md`
+<!-- FILL: What this makes easier, and what it makes harder or rules out. -->

@@ -5,64 +5,55 @@
 
 # S###.T###_Name
 
-**Status**: not started | in progress | blocked | completed
-**Sprint**: `S###_SprintName` (see `../30.ROADMAP.md` for what this sprint means)
-**Commits**: `<hash>` — filled in once committed; may be more than one
+<!-- FILL: Status is one of: not started, in progress, blocked, completed. Applies to:
+     components and environment. Points is optional. Depends on: task ids, or none. -->
+
+**Status**: not started
+**Sprint**: `S###_SprintName`
+**Created**: YYYY-MM-DD
+**Updated**: YYYY-MM-DD
+**Applies to**:
+**Depends on**: none
 
 ## Goal
 
-<!-- FILL: One or two sentences. What is this task for, and why does it matter right
-     now? If it closes a gap noted in `../35.AD_HOC_TASKS.md` or answers an open
-     question in `../30.ROADMAP.md`, link to it. -->
+<!-- FILL: One to three sentences: what changes, and why now. Link the item in
+     `../35.AD_HOC_TASKS.md` or `../30.ROADMAP.md` it closes. -->
 
 ## Inputs
 
-<!-- FILL: Every artifact this task consumes, so it can be started cold in a fresh
-     session (`../reference/session-handover.md`). One row each — a paragraph
-     lets you write "depends on the last task" and stop. -->
+<!-- FILL: One row per artifact this task reads, so it can start cold. Verify each
+     state before starting (`../reference/session-handover.md`). -->
 
-| Artifact | Produced by | Expected state |
-|---|---|---|
-| `path/or/doc` | `S###.T###_Name`, or "pre-existing" | the state this task assumes — a version, a size, a passing suite |
-
-**Verify the expected state; don't assume it.** A stale row here is the
-one failure this convention cannot catch for you.
+| Artifact | Expected state |
+|---|---|
+| | |
 
 ## Plan
 
-<!-- FILL: What you intend to do, written **before** starting. Bullet list is fine.
-     If the plan changes materially during the work, note the deviation in
-     Verification rather than silently rewriting this section. -->
+<!-- FILL: Numbered steps, one action each, written before starting. Record a
+     deviation under Verification; do not rewrite the plan. -->
+
+1.
 
 ## Verification
 
-<!-- FILL: How you know it actually works — not just "tests pass," but the specific
-     proof appropriate to this change. For new behaviour this must include the
-     three numbered items below. -->
+<!-- FILL: What you observed, quoted. For new behaviour, all three items below. -->
 
-1. Full test suite result (e.g. `pytest -q` → `N passed`)
-2. **The fails-when-reverted check**: `git stash push -- <files>`, re-run
-   the specific new test, confirm it fails for the *expected* reason, then
-   `git stash pop`. Record what the failure looked like.
-3. Any manual/empirical verification (e.g. measured timing, a real
-   before/after comparison) that a test alone couldn't capture.
+1. Test suite: `command` → `result`
+2. Fails when reverted: the new test, run against the reverted change, fails for the expected reason
+3. Manual or measured check, if a test cannot show it
 
 ## Outputs / handover
 
-<!-- FILL: Every file this task created or changed, and what the next session
-     inherits. Written **after** the work, because until it is verified you are
-     describing an intention rather than a state. -->
+<!-- FILL: Written after the work: what each changed artifact now holds. Next: one line. -->
 
 | Artifact | End state |
 |---|---|
-| `path/to/file.py` | what it now contains and why, plus anything deliberately *not* changed |
+| | |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. If this task
-deviated from its Plan, say so here too: the next task may have been
-scoped against the original.
+Next:
 
 ## Status notes
 
-<!-- FILL: Anything that changed between Plan and what actually happened. Blockers hit
-     and how they were resolved. Leave empty if the task went exactly to plan. -->
+<!-- FILL: Only if the work differed from the plan: what differed, and any blocker. -->

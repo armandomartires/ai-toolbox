@@ -47,9 +47,9 @@ Make the `.ai/` artifacts, both skills' schemas, and the task reports smaller an
 
 ## Acceptance criteria
 
-- [ ] `tests/validate.sh` passes after every task.
-- [ ] A dashboard payload built after phase 5 matches the 2026-10-10 baseline for every pre-existing task, backlog row, phase and sprint: state, sprint, and closed date.
-- [ ] `CURRENT_STATE.md` is at most 200 lines, and each new brief is at most 90.
+- [x] `tests/validate.sh` passes after every task.
+- [x] A dashboard payload built after phase 5 matches the 2026-10-10 baseline for every pre-existing task, backlog row, phase and sprint: state, sprint, and closed date.
+- [x] `CURRENT_STATE.md` is at most 200 lines, and each new brief is at most 90.
 
 ## Risks
 

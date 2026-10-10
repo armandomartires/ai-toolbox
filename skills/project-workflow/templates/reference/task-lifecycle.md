@@ -1,9 +1,8 @@
-# Reference: task ID scheme and lifecycle
+# Reference: task ids and lifecycle
 
-Linked from `00.CONVENTIONS.md` — read this when about to create or
-promote a task, not every session.
+Read this when creating or promoting a task.
 
-## Task IDs
+## Task ids
 
 ```
 S002.T004_ShortName.md
@@ -11,37 +10,18 @@ S002.T004_ShortName.md
 sprint task   short PascalCase or hyphenated name
 ```
 
-- **`S###`** — sprint/phase, zero-padded 3 digits, sequential, never
-  reused
-- **`T###`** — task, zero-padded 3 digits, sequential **within** the
-  sprint, resets to `001` at the start of each new sprint
-- **Name** — short, descriptive, no spaces
+- **`S###`** is the sprint, numbered sequentially and never reused.
+- **`T###`** is the task, numbered sequentially within its sprint and reset to `001` at each new sprint.
+- Sprint names live in `30.ROADMAP.md`, not in each brief.
 
-Sprint **names** (e.g. "Foundations", "Safety Hardening") live in
-`30.ROADMAP.md`'s sprint table, not baked into every task filename twice —
-`S000_Foundations` in the filename already carries the name once; don't
-also repeat it in file content headers if `30.ROADMAP.md` already says
-what `S000` means.
+Generate a brief with `scripts/new-artifact.sh --kind task`; never copy one.
 
-## Promoting an ad-hoc item to a real task
+## Status
 
-`35.AD_HOC_TASKS.md` holds things noticed during other work that are
-real, verified, and out of scope for whatever was being done at the
-time — not a bug tracker for hypothetical problems. When one of these
-gets picked up for real:
+The status is one of `not started`, `in progress`, `blocked`, `completed`. A project's own template may add states, and its header is then authoritative.
 
-1. Create `tasks/S###.T###_Name.md` for it, following the ID scheme
-   above.
-2. Remove the entry from `35.AD_HOC_TASKS.md`'s "Open" section (or move
-   it to a "Resolved" section with a one-line pointer to the new task
-   brief).
-3. Do not leave the same fact in both files once the task brief exists —
-   the task brief becomes the one owner.
+## Promoting an ad-hoc item
 
-## Status vocabulary
-
-A task brief's `**Status**:` field uses one of: `not started`,
-`in progress`, `blocked`, `completed`. If a project's own task template
-declares additional states (e.g. a `ready` gate for dispatching to a
-narrower-scoped agent), that template's own header is authoritative —
-this reference file states the baseline, not every project's extension.
+1. Create the task brief.
+2. Move the entry from `35.AD_HOC_TASKS.md` "Open" to "Resolved", with a one-line link to the brief.
+3. Leave the facts in one place only: the brief.

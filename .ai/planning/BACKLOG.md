@@ -55,6 +55,6 @@
 | B-051 | The templates `ai-project-scaffold.sh` emits carry a banner naming three paths the migrated repository does not have | low | medium | none | low | **done** | **Closed 2026-10-05 by `TASK-0139`**: with one banner that reads true in both places, as the human chose. |
 | B-052 | The estate's Ansible Vault password still lives in a plain `.env` | medium | high | `TASK-0131` | low | **done** | **Closed 2026-10-04 by `TASK-0134`**: the estate's `tools/vault_pass.sh` now takes the password from the environment or Vault through the loader, with no `.env` fallback, and the `.env` entry is gone. |
 | B-053 | `.gitignore` ignores `.env` but not `.env.*` | low | high | none | low | **done** | **Closed 2026-10-04 by `TASK-0133`**: `.env.*` and `!.env.example` added, and `tests/validate.sh` now fails if `.env`, `.env.local` or `.env.production` stop being ignored or `.env.example` starts being ignored (observed failing with the old `.gitignore`). |
-| B-054 | `.ai/` artifacts, schemas and task reports are too verbose to read or keep current | medium | high | none | low | in progress | `PLAN-0007` (`ADR-0033`); closes with `TASK-0154` |
+| B-054 | `.ai/` artifacts, schemas and task reports are too verbose to read or keep current | medium | high | none | low | **done** | **Closed 2026-10-10 by `TASK-0154`**: `PLAN-0007` delivered `ADR-0033` across both planning skills and the live files. |
 
-**One item is open**, counted from the Status column. A closed row's "Ready when" names its closer (rule: `.ai/README.md`); the full history of each row is in git (ADR-0033).
+**Zero items are open**, counted from the Status column. A closed row's "Ready when" names its closer (rule: `.ai/README.md`); the full history of each row is in git (ADR-0033).

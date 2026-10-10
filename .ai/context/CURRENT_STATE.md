@@ -5,15 +5,15 @@ State only (ADR-0033): edit this file, don't append to it. The history is in git
 ## Where the project is
 
 - **Roadmap:** Phases 1–10 are complete, and S10 closed 2026-09-26 (`REVIEW-0012`). No sprint is open. Work runs task by task on the human's routing (`TASK-0106` onward).
-- **In progress:** `B-054` / `PLAN-0007`, concise artifacts (`ADR-0033`). Done so far: `TASK-0150`–`0153`. Next: `TASK-0154`, the project-workflow skill.
-- **Backlog:** one open row (`B-054`). The gate recounts it against the "N items are open" sentence.
+- **Last delivered:** `PLAN-0007`, concise artifacts (`ADR-0033`, `TASK-0150`–`0154`, `B-054` closed). Briefs from `TASK-0153` are v2.
+- **Backlog:** zero open rows. The gate recounts them against the "N items are open" sentence.
 - **Remotes:** `origin` is the intranet GitLab (primary), and `github` is the public mirror (`ADR-0028`). Everything committed is world-readable.
 
 ## Components
 
 | Kind | Items |
 |---|---|
-| Skills | `project-migration` 4.0.0, `project-workflow` 5.2.1, `ansible-ops` 1.2.0, `design-flow` 1.0.0, `unattended-ops` 1.3.2, `vault-secrets` 1.1.1 |
+| Skills | `project-migration` 4.0.0, `project-workflow` 6.0.0, `ansible-ops` 1.2.0, `design-flow` 1.0.0, `unattended-ops` 1.3.2, `vault-secrets` 1.1.1 |
 | MCP servers | `ansible` (external, pinned, destructive tools human-authorized), `gates` (authored, Python), `graphify` (external) |
 | Loops | `project-build`, `design-brief`, `ansible-change`, `release-check`, `unattended-run` |
 | Agents | 15 roles, emitted per client (`ADR-0018`); `prompts/` is empty by choice |
@@ -78,8 +78,8 @@ These are not to be re-litigated without a new ADR:
 
 ## Recent changes
 
+- `TASK-0154`, 2026-10-10: `project-workflow` 6.0.0, with concise schemas, `SKILL.md`, references and fixtures.
 - `TASK-0153`, 2026-10-10: live files compacted to state only, and line budgets gated.
 - `TASK-0152`, 2026-10-10: project-migration v2 task and ADR schemas (`4.0.0`).
 - `TASK-0151`, 2026-10-10: `max_lines` in the artifact engine; frozen v1 schemas.
 - `TASK-0150`, 2026-10-10: git is the record; one commit per task; task report.
-- `TASK-0149`, 2026-10-10: `vault_secrets.py exec` waits for its command on Windows.
