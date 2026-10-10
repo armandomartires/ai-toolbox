@@ -150,5 +150,11 @@ one failure this convention cannot catch for you.
 - Validation: `tests/validate.sh` printed `validate.sh: OK` under WSL, and the
   commit's hook ran it there too.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `682595d` — *Make vault_secrets.py exec wait for its command on Windows (TASK-0149)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `962e8a8..682595d master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `682595d`, and `git remote -v` is token-free. The range carries
+  `TASK-0148`'s task commit `9ce320c` too. The push was itself the live
+  proof: the human's `vgit … && vgit …` from Git Bash with Store `python3`,
+  the same command that crashed before this fix, pushed `origin` and then
+  `github`.
