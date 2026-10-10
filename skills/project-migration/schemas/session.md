@@ -8,10 +8,7 @@ title_pattern: {id} — {title}
 allow_extra: true
 ---
 
-# Transcribed verbatim from .ai/templates/SESSION.md. A session record is a
-# flat field list with no headings of its own, so the whole artifact is one
-# preamble block -- the same shape an ad-hoc entry takes in
-# skills/project-workflow/schemas/adhoc.md.
+# A session record is one preamble block of fields, no headings.
 
 !preamble
 !terse
@@ -38,7 +35,7 @@ memory in a later session.
   Commit/push              — the commit hash, and whether the push succeeded.
   Next action              — the one thing the next session should do first.
 Answer every field. If a field genuinely does not apply, write "none" --
-leaving it blank means nobody decided. Delete this comment when done.
+leaving it blank means nobody decided.
 !body
 - Date:
 - Agent/model:

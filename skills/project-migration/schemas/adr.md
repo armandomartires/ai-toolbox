@@ -7,103 +7,61 @@ date_placeholder: YYYY-MM-DD
 filename_pattern: decisions/{id}-{name}.md
 title_pattern: {id} — {title}
 allow_extra: true
+max_lines: 80
 ---
 
-# Transcribed from a census of the 27 ADRs in .ai/decisions/ taken
-# 2026-09-26, NOT from .ai/templates/ADR.md -- that file is 71 bytes of bare
-# headings while real ADRs reach 37 KB, the largest template/reality gap in
-# the repo and one of the three findings that motivated ADR-0027.
-#
-# Status, Context, Decision and Consequences appear in all 27 and are
-# required. Alternatives appears in 11, under TWO spellings -- "considered"
-# (7) and "rejected" (4). The canonical form is declared below and is
-# optional; the variant is NOT listed as superseded, because picking a winner
-# would flag four accepted ADRs over a synonym. A future task may settle it.
-#
-# allow_extra: true -- real ADRs add "Falsifiable claims", "Clarification"
-# and "What ratification unblocks", and those are load-bearing.
+# v2 (ADR-0033). Identification first, as bold fields that dashboards read.
+# The v1 shape (a `## Status` section) is frozen in ai-toolbox's
+# tests/legacy-schemas/adr-v1.md.
 
-## Status
-!phase before
-!required true
-!terse
-proposed / accepted / rejected / superseded, with a date
+!preamble
 !standard
-One of: proposed, accepted, rejected, superseded by ADR-XXXX, deprecated —
-with the date it reached that state.
-!literal
-Replace this comment with one line: the status word, then the date.
-The status must be one of: proposed, accepted, rejected,
-superseded by ADR-XXXX, deprecated. Use no other word.
-Then, if a task drove this decision, add a line naming it.
-Delete this comment when done.
+Status: proposed, accepted, rejected, superseded by ADR-XXXX or deprecated.
+Task: the task or plan that drove this decision.
+!body
+**Status**: proposed
+**Date**: {date}
+**Task**:
 
 ## Context
 !phase before
 !required true
 !terse
-the concrete situation that forced a decision
+the concrete event that forced a decision
 !standard
-What situation forced a decision? The actual, concrete problem — not the
-abstract category of problem. Name the commit, task, or observation that
-made it real.
-!explicit
-Name the concrete event that forced this decision: the commit, task, review
-finding or observation, with its date. A context describing a category of
-problem rather than an instance of one is the failure this guards against.
+The concrete event that forced a decision: task, commit or observation, and when.
 !literal
-Replace this comment with 2-6 sentences answering, in order:
-(1) What actually happened? Name the task, commit or observation, and when.
-(2) Why did it need a decision rather than just a fix?
-Describe what occurred, not the general class of problem it belongs to.
-Delete this comment when done.
+Two to five sentences: what happened (task, commit or observation, with
+the date), and why it needs a decision rather than a fix.
 
 ## Decision
 !phase before
 !required true
 !terse
-what was decided, in one sentence
+the decision, in numbered clauses
 !standard
-What was decided. State it as a single sentence where possible, then number
-the clauses if it has parts. If a normative document states the rule, link
-that document rather than restating it here.
+The decision in one sentence, or numbered clauses that can be cited.
+Link a normative document rather than restating it.
 !literal
-Replace this comment with the decision.
-State it in one sentence if you can. If it has several parts, number them
-1., 2., 3. so they can be cited individually later.
-If the rule is already written in `AGENTS.md` or another normative document,
-link to that document instead of copying its words. Delete this comment.
+State the decision in one sentence, or as numbered clauses 1., 2., 3.
 
 ## Alternatives considered
 !phase before
 !required false
 !terse
-what else was possible, and why each was rejected
+each rejected option, and why
 !standard
-What else could have been done, and why each was rejected. Include options
-that look obviously wrong in hindsight — recording that they were considered
-and rejected, rather than never thought of, is what this preserves.
+Each option not chosen, and why. Delete the section if there were none.
 !literal
-List each option that was NOT chosen. For each one write:
-  - the option, in a few words
-  - why it was rejected
-Include options that look obviously wrong now. That they were considered
-and rejected, rather than never thought of, is the point. Delete this
-comment when done, or delete the whole section if there were no
-alternatives worth recording.
+One bullet per rejected option: the option, then why it was rejected.
 
 ## Consequences
 !phase before
 !required true
 !terse
-what this makes easier, and what it forecloses
+what gets easier, and what gets harder
 !standard
-What this makes easier, and what it makes harder or rules out. Be honest
-about trade-offs — a decision with no downsides usually means the downsides
-haven't been found yet.
+What this makes easier, and what it makes harder or rules out.
 !literal
-Replace this comment with two bullet lists:
-(1) What this decision makes easier.
-(2) What it makes harder, or rules out entirely.
-The second list must not be empty. A decision with no downsides means the
-downsides have not been found yet. Delete this comment when done.
+Two short lists: what gets easier, then what gets harder. The second list
+is never empty.

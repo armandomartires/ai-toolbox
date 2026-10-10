@@ -5,31 +5,26 @@
 
 # ADR-XXXX — Title
 
-## Status
+<!-- FILL: Status: proposed, accepted, rejected, superseded by ADR-XXXX or deprecated.
+     Task: the task or plan that drove this decision. -->
 
-<!-- FILL: One of: proposed, accepted, rejected, superseded by ADR-XXXX, deprecated —
-     with the date it reached that state. -->
+**Status**: proposed
+**Date**: YYYY-MM-DD
+**Task**:
 
 ## Context
 
-<!-- FILL: What situation forced a decision? The actual, concrete problem — not the
-     abstract category of problem. Name the commit, task, or observation that
-     made it real. -->
+<!-- FILL: The concrete event that forced a decision: task, commit or observation, and when. -->
 
 ## Decision
 
-<!-- FILL: What was decided. State it as a single sentence where possible, then number
-     the clauses if it has parts. If a normative document states the rule, link
-     that document rather than restating it here. -->
+<!-- FILL: The decision in one sentence, or numbered clauses that can be cited.
+     Link a normative document rather than restating it. -->
 
 ## Alternatives considered
 
-<!-- FILL: What else could have been done, and why each was rejected. Include options
-     that look obviously wrong in hindsight — recording that they were considered
-     and rejected, rather than never thought of, is what this preserves. -->
+<!-- FILL: Each option not chosen, and why. Delete the section if there were none. -->
 
 ## Consequences
 
-<!-- FILL: What this makes easier, and what it makes harder or rules out. Be honest
-     about trade-offs — a decision with no downsides usually means the downsides
-     haven't been found yet. -->
+<!-- FILL: What this makes easier, and what it makes harder or rules out. -->

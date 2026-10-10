@@ -1,5 +1,9 @@
 # Current State
 
+## project-migration v2 schemas (`TASK-0152`, 2026-10-10)
+
+The task schema puts Status first and is capped at 90 lines. ADRs open with `**Status**`/`**Date**` and are capped at 80 lines. `project-migration` is `4.0.0`.
+
 ## Artifact budgets and frozen v1 schemas (`TASK-0151`, 2026-10-10)
 
 The engine enforces a schema's `max_lines`. Briefs below `TASK-0153` and ADRs below `ADR-0034` are checked against `tests/legacy-schemas/`.

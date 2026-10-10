@@ -9,25 +9,8 @@ title_pattern: {id} — {title}
 allow_extra: true
 ---
 
-# Transcribed from a count of the six plans in .ai/planning/plans/ taken
-# 2026-10-05 (B-042, TASK-0146), NOT designed. Until then the only statement
-# of this shape was a heredoc in ai-project-scaffold.sh.
-#
-# Objective and Context consulted appear in all six and are required.
-# Everything else is optional, because at least one accepted plan lacks it:
-#   Findings that shape this plan  3 of 6 (always after Context)
-#   Phases / steps                 3 of 6 by this name; "Phases" (2) and
-#                                  "The shape of the work" (1) are the same
-#                                  section under other names
-#   Tasks generated                5 of 6
-#   Acceptance criteria            3 of 6 exact; 2 more as
-#                                  "Acceptance criteria (plan level)"
-#   Risks, Human decisions req.    5 of 6
-# Variants are NOT listed as superseded: picking a winner would flag accepted
-# plans over a synonym, as the ADR schema reasons about its Alternatives.
-#
-# allow_extra: true -- real plans add "Resolved ambiguities", "Scope", "Out
-# of scope" and "Known unknowns", and those are load-bearing.
+# Shape transcribed from six real plans (B-042, TASK-0146); only the two
+# sections all six share are required.
 
 ## Objective
 !phase before
@@ -41,7 +24,7 @@ Name the request, review or finding that made it necessary.
 Replace this comment with 2-5 sentences answering, in order:
 (1) What will be true when this plan is finished?
 (2) Who asked for it, or which finding made it necessary, and when?
-Do not list steps here; they go under Phases / steps. Delete this comment.
+Do not list steps here; they go under Phases / steps.
 
 ## Context consulted
 !phase before
@@ -55,7 +38,7 @@ session, not recalled.
 !literal
 Replace this comment with a list. One line per source you actually read
 before writing this plan: its path or URL, then what it told you that this
-plan depends on. Do not list anything you did not open. Delete this comment.
+plan depends on. Do not list anything you did not open.
 
 ## Findings that shape this plan
 !phase before
@@ -68,7 +51,7 @@ finding stated as observed, with its evidence.
 !literal
 Replace this comment with numbered findings, F1, F2, ... Each one says what
 you observed, where, and how it changes the plan. A finding you did not
-observe yourself does not go here. Delete this comment when done.
+observe yourself does not go here.
 
 ## Phases / steps
 !phase before
@@ -81,7 +64,7 @@ before the next phase starts.
 !literal
 Replace this comment with one level-3 subsection per phase, in order, titled
 "Phase N — Name (TASK-XXXX)". Under each, say what it delivers and what must
-be true before the next phase starts. Delete this comment when done.
+be true before the next phase starts.
 
 ## Tasks generated
 !phase before
@@ -93,7 +76,7 @@ The task briefs this plan produces, one per line, each with the phase it
 belongs to.
 !literal
 Replace this comment with one line per task: its id, its title, and the
-phase it belongs to. Delete this comment when done.
+phase it belongs to.
 
 ## Acceptance criteria
 !phase before
@@ -106,7 +89,6 @@ tasks' own criteria.
 !literal
 Replace this comment with a checklist, one "- [ ]" line per criterion. Each
 must be something a person can check by reading a file or running a command.
-Delete this comment when done.
 
 ## Risks
 !phase before
@@ -117,7 +99,7 @@ what could go wrong, and what is done about each
 What could go wrong, how likely it is, and what the plan does about each.
 !literal
 Replace this comment with one bullet per risk: what could happen, then what
-this plan does to prevent or detect it. Delete this comment when done.
+this plan does to prevent or detect it.
 
 ## Human decisions required
 !phase before

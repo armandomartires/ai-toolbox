@@ -4,7 +4,7 @@ description: "Harmonize an existing repository with the .ai agent-governance fra
 license: MIT
 metadata:
   author: armando.martires
-  version: 3.3.0
+  version: 4.0.0
 ---
 
 # Project migration to the .ai governance framework
@@ -20,7 +20,9 @@ Retrofit a live repository so a human, a planning model, and a weaker executor m
 - Relocate existing files with `git mv`, never copy-then-delete, so `git log --follow` survives.
 - Never delete the old structure until the new one is validated and free of broken references.
 - Never invent requirements, commands, or environments. Leave `<!-- FILL -->` markers rather than guessing, and ask the user when ambiguity is material.
-- Generate planning artifacts; do not copy a template and imitate it. `schemas/{task,adr,review,session,plan}.md` own the shape of each one, and `schemas/backlog.md` the shape of one `BACKLOG.md` row, and `scripts/new-artifact.sh --kind task` in this skill emits the skeleton (`--guidance literal` for a smaller model; the filled artifact is identical at every level). `scripts/check-artifact.sh` proves a finished one conforms. Both run with this skill installed alone: they and `scripts/artifact_lib.py` are byte-identical copies of `project-workflow`'s engine, owned there and drift-gated in ai-toolbox, so never edit them here (B-036). The scaffold script still owns the *layout*; the schemas own the *shape* (ADR-0027). **`scripts/ai-project-scaffold.sh` emits the five schema-backed templates by reading `templates/{TASK,ADR,REVIEW,SESSION,PLAN}.md`, shipped with this skill** — it does not carry its own copies, and needs no generator at run time. Those shipped templates are rendered from `schemas/` where this skill is maintained (ai-toolbox's `scripts/sync-templates.sh`, drift-gated there by `tests/validate.sh`). **In the repository you migrate, `.ai/templates/*.md` are a point-in-time copy**: correct against the schemas on the day they were scaffolded, with no regenerator and no drift gate, so they will not follow a later schema change. Their banner says so: it names *ai-toolbox's* generator, schema and gate, and states that a copy elsewhere is not regenerated or checked (B-051) — do not let the user read it as a safeguard in their repository. To check a copy against the installed skill, scaffold into a scratch directory and compare — exit 0 means current: `T=$(mktemp -d); bash <skill dir>/scripts/ai-project-scaffold.sh "$T/fresh" --no-git && diff -r "$T/fresh/.ai/templates" .ai/templates`. `schemas/plan.md` was transcribed from a count of six real plans and requires only `Objective` and `Context consulted`, the two they all share (`B-042`).
+- Generate planning artifacts; never copy a template and imitate it. `schemas/{task,adr,review,session,plan}.md` own each artifact's shape, and `schemas/backlog.md` owns one `BACKLOG.md` row. `scripts/new-artifact.sh --kind task` emits a skeleton (`--guidance literal` suits a smaller model), and `scripts/check-artifact.sh` checks the finished one, including its `max_lines` budget. Both, and `scripts/artifact_lib.py`, are byte-identical copies of `project-workflow`'s engine: never edit them here (B-036). The scaffold script owns the *layout* and the schemas own the *shape* (ADR-0027).
+- The scaffold emits `.ai/templates/*.md` from this skill's `templates/`. In the migrated repository they are a point-in-time copy with no regenerator and no drift gate (B-051). To compare them with the installed skill: `T=$(mktemp -d); bash <skill dir>/scripts/ai-project-scaffold.sh "$T/fresh" --no-git && diff -r "$T/fresh/.ai/templates" .ai/templates`.
+- Keep artifacts small (ADR-0033). A brief is one module: Status first, then the procedure, then the record. Live files hold state, not history. Git is the record, so no brief carries its own hash. Budgets and contents: `references/governance-spec.md`.
 - Never commit secrets, tokens, or `.env` files; run a secrets scan before the first push.
 - Never force-push. If a push fails, diagnose and report — do not declare the task done.
 
@@ -52,11 +54,18 @@ Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis*
 
 ## Phase 4 — Validate and finalize
 
-Run the project's real test/lint/build suite; start a fresh agent session from `AGENTS.md` + `CURRENT_STATE.md` and confirm it can state the objective and next action; grep for references to moved files; scan for secrets; then merge and push and report the commit hash. From here every task follows the definition of done in `references/governance-spec.md`.
+Run the project's real test/lint/build suite. Then start a fresh agent session from `AGENTS.md` and `CURRENT_STATE.md` and confirm it can state the objective and the next action. Grep for references to moved files, scan for secrets, then merge and push. Finish with the task report in `references/governance-spec.md`. From here on, every task follows that file's definition of done.
 
 ## Seeing the layer
 
-Once a migrated repo has real task briefs, `skills/project-workflow/scripts/build-dashboard.sh --root .ai --out docs/dashboard.html` renders them as one self-contained HTML file — burn-up, burn-down, cumulative flow, velocity, cycle time, a roadmap timeline and a throughput forecast, light and dark, CSS-customizable. **It reads this framework's shape natively** (`TASK-####`, `## Status`, `planning/`, `BACKLOG.md`, `tasks/TODO.md` for sprint membership) and needs no schema, no generator and nothing installed beyond `python3`. Reference, including what each metric does *not* prove: `skills/project-workflow/references/dashboard.md`. Same cross-skill arrangement as the artifact generator above, and the same caveat: it lives in the sibling skill, so a consumer who installed only this one does not have it (`B-036` in `ai-toolbox`). Do not copy it here. It is a **view, not a gate** — it renders what the artifacts say and audits nothing — and it fails loudly on a freshly scaffolded repo, because a `.ai/` with no task brief has nothing to chart.
+`skills/project-workflow/scripts/build-dashboard.sh --root .ai --out docs/dashboard.html` renders the briefs as one self-contained HTML dashboard. It reads this framework natively:
+- `TASK-####` briefs and their `## Status` fields
+- `## Objective`, `## Acceptance criteria`, `## Mandatory validations`, `## Likely files`
+- `tasks/TODO.md` sprint headings
+- `BACKLOG.md`'s table
+- `TASK-####` in commit subjects
+
+Keep those names when you edit a schema. The dashboard lives in the sibling skill, and the reference is `skills/project-workflow/references/dashboard.md`. It is a view, not a gate.
 
 ## Adapting the framework
 

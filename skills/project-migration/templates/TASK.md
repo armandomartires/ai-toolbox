@@ -5,113 +5,80 @@
 
 # TASK-XXXX — Title
 
+## Status
+
+<!-- FILL: Status is one of planned, ready, in_progress, blocked, review, done,
+     cancelled. Keep Updated current. Applies to: components and environment.
+     Source: the B-###, PLAN, REVIEW or request this discharges. -->
+
+- Status: planned
+- Owner: agent
+- Created:
+- Updated:
+- Applies to:
+- Source:
+
 ## Objective
 
-<!-- FILL: What this task is for, and why it matters now. Name the plan item, backlog
-     entry or review finding it discharges. -->
-
-## Minimal context
-
-<!-- FILL: Narrative: provenance, why this task's shape is what it is, what a prior
-     claim got wrong. Prose, sub-headings and tables all fine. NOT an artifact
-     list — that is Inputs, below. -->
+<!-- FILL: One to three sentences: what this task changes and why now. -->
 
 ## Inputs
 
-<!-- FILL: Every artifact this task consumes, so it can be started cold in a fresh
-     session. Merges the old Preconditions + Dependencies. -->
+<!-- FILL: One row per artifact this task reads. Verify each state before starting. -->
 
-| Artifact | Produced by | Expected state |
-|----------|-------------|----------------|
-|          | TASK-XXXX, or "pre-existing" | version / size / passing suite |
-
-**Verify the expected state; don't assume it.** A stale row here is the
-one failure this convention cannot catch for you.
+| Artifact | Expected state |
+|----------|----------------|
+|          |                |
 
 ## Scope
 
-<!-- FILL: What this task covers, and what it deliberately does not. Both halves below
-     must be filled — an empty "Not included" is how scope creeps. -->
+<!-- FILL: What is in, and what is deliberately out. Never leave Out empty. -->
 
-### Included
-
-<!-- FILL: What this task will do. -->
-
-### Not included
-
-<!-- FILL: What it deliberately will not do, and why. Never leave this empty. -->
+- In:
+- Out:
 
 ## Likely files
 
-<!-- FILL: A forecast, written BEFORE the work — what you expect to touch. What you
-     actually changed belongs in Outputs / handover, not here. If the two
-     disagree at the end, that is a finding worth recording. -->
+<!-- FILL: The files you expect to touch, written before the work. -->
 
 ## Execution plan
 
-<!-- FILL: The ordered steps you intend to take, written before starting. -->
+<!-- FILL: Numbered, imperative, one action per step. -->
 
 1.
 
 ## Acceptance criteria
 
-<!-- FILL: The conditions that make this task done. Each must be checkable by someone
-     who was not present — a criterion nobody can falsify is not a criterion. -->
+<!-- FILL: Observable checks someone absent could verify. -->
 
 - [ ]
 
 ## Mandatory validations
 
-<!-- FILL: The commands that must pass before this task is done. Add any beyond the
-     two standing ones below. -->
+<!-- FILL: The commands that must pass. Tick only what you ran. -->
 
 - [ ] tests/validate.sh
-- [ ] scripts/sync-registry.sh (if components changed)
 
 ## Risks and rollback
 
-<!-- FILL: What could go wrong, and how the change is undone if it does. Name the
-     rollback explicitly — "revert the commit" is a real answer, a missing
-     section is not. -->
+<!-- FILL: At most three risks, then one Rollback line. -->
+
+- Rollback: git revert the task commit
 
 ## Outputs / handover
 
-<!-- FILL: What the next session inherits. Written AFTER the work — until it is
-     verified you are describing an intention, not a state. -->
+<!-- FILL: Written after the work: what each changed artifact now holds. Next: one line. -->
 
 | Artifact | End state |
 |----------|-----------|
-|          | what it now contains, plus anything deliberately *not* changed |
+|          |           |
 
-**Next task starts here**: one line naming the state the next task picks
-up from — not a prediction of what that task will be. Record any
-deviation from the Plan here too: the next task may have been scoped
-against the original.
-
-## Status
-
-<!-- FILL: Keep `Updated` current. The vocabulary below is closed. -->
-
-- Status: planned   # planned|ready|in_progress|blocked|review|done|cancelled
-- Owner: agent/human
-- Created:
-- Updated:
+Next:
 
 ## Execution log
 
-<!-- FILL: What actually happened, one block per attempt. Append a new `### Attempt N`
-     rather than editing an earlier one — a rewritten log is not a log. -->
+<!-- FILL: One line per attempt, then the evidence. Git holds the commit (ADR-0033). -->
 
-### Attempt 1
-
-<!-- FILL: One block per attempt. Record the commands you ran and what they printed,
-     not a summary of how it went. -->
-
-- Date:
-- Agent:
-- Actions:
-- Observations:
-- Validation:
-- Result:
-- Commit:
-- Push:
+- YYYY-MM-DD · agent/model · result in one line
+  - Evidence: `command` → `output`
+  - Deviation: none

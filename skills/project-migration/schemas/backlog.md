@@ -12,20 +12,8 @@ columns: ID | Title | Priority | Value | Dependencies | Risk | Status | Ready wh
 allow_extra: true
 ---
 
-# An entry, not a file: one row of BACKLOG.md's table, which is an index
-# holding many of them and is not regenerated (the same reason
-# 35.AD_HOC_TASKS.md is not). The generator prints the row for pasting.
-#
-# Transcribed from a count of the 53 rows on 2026-10-05 (B-042, TASK-0147),
-# not designed. Every row had exactly these 8 cells, under this header.
-# `columns:` is the ONE owner of that list: ai-toolbox's
-# scripts/check-backlog-closures.py checks BACKLOG.md's header and each row's
-# cell count against it, and tests/validate.sh checks the scaffold's header.
-#
-# Observed but NOT enforced, because no rule states them yet (ADR-0008):
-# Priority, Value and Risk were low/medium/high in all 159 cells; Status is a
-# bold word, **ready** or **waiting** while open; a closed row follows
-# .ai/README.md's *Closing a backlog row*.
+# One row of BACKLOG.md's table. `columns:` is the one owner of the header,
+# checked by scripts/check-backlog-closures.py (B-042, TASK-0147).
 
 !preamble
 !terse
@@ -47,4 +35,3 @@ line, below the last row. Then replace, keeping every " | " separator:
   last cell    — when and by which task it was raised, what you observed,
                  and what would make it ready to become a task.
 Then update the "N items are open" sentence below the table.
-Do not paste this comment.

@@ -21,7 +21,7 @@
 # THIS SCRIPT OWNS THE LAYOUT, NOT THE SHAPE (ADR-0027, B-040, TASK-0119).
 # Which directories and files exist is decided here. What a TASK / ADR /
 # REVIEW / SESSION artifact looks like is owned by
-# ../schemas/{task,adr,review,session}.md, rendered into ../templates/*.md by
+# ../schemas/{task,adr,review,session,plan}.md, rendered into ../templates/*.md by
 # ai-toolbox's scripts/sync-templates.sh, and emitted below by reading those
 # files. Do not re-inline them as heredocs: that is what this script used to
 # do, and two of the five had silently drifted into failing their own schemas.
@@ -195,15 +195,20 @@ cat >> AGENTS.md <<'EOF'
   changes, recent commits.
 - One task = one commit. Never include unrelated changes in a commit.
 - Never delete or overwrite human changes without explicit authorization.
-- At task end: run validations, review the diff, commit with a clear message,
-  push to the remote, record commit hash and push result in the task log.
+- At task end: run validations, review the diff, commit with a subject that
+  names the task (`<Imperative summary> (TASK-NNNN)`), push, and confirm
+  the remote holds the same hash. Git is the record: the brief does not
+  carry its own hash, and no follow-up commit adds it.
+- End every task with a short report: Result, Changed, Verified, Pushed,
+  Next — one line each.
 - Never force-push without explicit authorization. If the push fails,
   diagnose and document; do not declare the task complete.
 - Simple checks (status, diff analysis, test runs) may be delegated to a
   subagent; the main agent still verifies results.
 
 ## Documentation rules
-- Update `.ai/context/CURRENT_STATE.md` after any significant change.
+- Update `.ai/context/CURRENT_STATE.md` after any significant change: edit
+  the state it describes; do not append a narrative (history is in git).
 - Decisions with lasting impact get an ADR in `.ai/decisions/`; not every
   small change.
 - Plans must be concrete enough for another agent to implement without a
@@ -212,9 +217,9 @@ cat >> AGENTS.md <<'EOF'
 ## Definition of done
 A task is complete only when: implementation finished; acceptance criteria
 satisfied; relevant tests pass; known failures documented; documentation
-updated; no secrets included; diff reviewed; task marked `done`; local
-commit exists; commit pushed and hash recorded in the task log; next
-action clear.
+updated; no secrets included; diff reviewed; task marked `done`; the
+commit subject names the task; the push is confirmed in the task report;
+next action clear.
 
 ## Ambiguity policy
 If requirements are significantly ambiguous or risky, stop and ask the

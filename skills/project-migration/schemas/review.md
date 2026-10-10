@@ -8,16 +8,7 @@ title_pattern: {id} — {title}
 allow_extra: true
 ---
 
-# Transcribed from a census of the 12 reviews in .ai/reviews/ taken
-# 2026-09-26, NOT from .ai/templates/REVIEW.md. That template is a flat
-# bullet list; every real review uses H2 sections. Reality wins, per
-# ADR-0027 -- a template that does not describe the artifact is the defect,
-# not the artifacts that ignored it.
-#
-# Counts: Findings 12, Validation results 12, Verdict 11, Follow-up tasks 11,
-# Diff summary 7. The first two are universal and required; Verdict and
-# Follow-up tasks are required because a review without a verdict has not
-# reviewed anything. Diff summary is optional at 7 of 12.
+# Shape transcribed from the 12 reviews of 2026-09-26 (ADR-0027).
 
 !preamble
 !standard
@@ -29,7 +20,6 @@ Replace the two fields below. "Task(s) reviewed" takes one or more task IDs.
 "Reviewer" takes the agent or person who did the review.
 A review is a snapshot of one moment. Write it once and do NOT come back
 later to correct it as things change — write the next review instead.
-Delete this comment when done.
 !body
 - Task(s) reviewed:
 - Reviewer:
@@ -46,7 +36,7 @@ this section if you did not read a diff.
 Replace this comment with what the diff contains: which files changed, and
 what kind of change each one is.
 If you did not read a diff, delete this whole section rather than writing
-that you did not. Delete this comment when done.
+that you did not.
 
 ## Findings
 !phase after
@@ -68,7 +58,7 @@ Replace this comment with one numbered entry per finding. For each:
   - which file and line
   - how someone else could confirm it
 If you found nothing, write the sentence "No findings." An empty section
-looks the same as an unfinished review. Delete this comment when done.
+looks the same as an unfinished review.
 
 ## Validation results
 !phase after
@@ -82,7 +72,7 @@ it — "passed" is a claim, the output is the evidence.
 For each command you ran, write the command and then what it printed.
 Paste the real output. Do not write "passed" or "all good" on its own:
 that is a claim, and the output is what makes it checkable.
-If a command was not run, say so. Delete this comment when done.
+If a command was not run, say so.
 
 ## Verdict
 !phase after
@@ -95,7 +85,7 @@ One of: approve, request changes. With one sentence saying why.
 Replace this comment with one of exactly these two words:
   approve
   request changes
-Then one sentence saying why. Use no other verdict word. Delete this comment.
+Then one sentence saying why. Use no other verdict word.
 
 ## Follow-up tasks
 !phase after
@@ -109,4 +99,4 @@ leave it blank — blank and "none" mean different things.
 List anything this review hands on: new task IDs, `B-###` backlog entries,
 or the single word "none".
 Never leave this blank. Blank means nobody decided; "none" means somebody
-decided there was nothing. Delete this comment when done.
+decided there was nothing.
