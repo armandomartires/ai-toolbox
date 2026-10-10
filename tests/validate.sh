@@ -1646,6 +1646,27 @@ if ! BACKLOG_OUT="$(python3 scripts/check-backlog-closures.py 2>&1)"; then
   fail=1
 fi
 
+# Live files hold state, not history (ADR-0033): each has a line budget, and
+# no BACKLOG.md line may exceed 600 characters. Raise a budget only by
+# amending ADR-0033, never to fit what is already there.
+for spec in .ai/context/CURRENT_STATE.md:200 .ai/planning/SPRINT-CURRENT.md:80 \
+            .ai/tasks/TODO.md:400; do
+  f="${spec%:*}" max="${spec##*:}"
+  [ -f "$f" ] || continue
+  n="$(wc -l < "$f" | tr -d ' ')"
+  if [ "$n" -gt "$max" ]; then
+    echo "LIVE: $f is $n lines, over its budget of $max (ADR-0033)"
+    fail=1
+  fi
+done
+if [ -f .ai/planning/BACKLOG.md ]; then
+  long="$(awk 'length($0) > 600 { print FILENAME ":" NR ": " length($0) " chars" }' .ai/planning/BACKLOG.md)"
+  if [ -n "$long" ]; then
+    printf 'LIVE: BACKLOG.md line over 600 characters (ADR-0033): %s\n' "$long"
+    fail=1
+  fi
+fi
+
 # --------------------------------------------------------------------------
 # Planning templates are derived from the schemas that own their shape
 # (ADR-0027, TASK-0109), so they get the same staleness gate docs/registry.md
