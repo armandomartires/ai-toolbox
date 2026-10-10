@@ -892,6 +892,9 @@ embody** — measured with the skill's own checker, not inferred. Raised
 - [x] TASK-0147 — `B-042` part 2, closing it: `schemas/backlog.md`, whose
       `columns:` is the one owner of the backlog table's shape, checked in
       `BACKLOG.md` and in the scaffold (done)
+- [x] TASK-0148 — The runbook's *Intranet TLS on a Windows host*: Git on
+      Schannel, curl's revocation check set to best-effort, measured on one
+      domain-joined host. On the human's request (done)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

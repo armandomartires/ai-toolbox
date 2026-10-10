@@ -73,6 +73,44 @@ never use the stored read-only token. No host needs changing afterwards.
 What the Vault side must provide is in
 `skills/vault-secrets/references/vault-layout.md`.
 
+### Intranet TLS on a Windows host
+
+Measured 2026-10-10 on one domain-joined Windows 11 host (`TASK-0148`). Every
+intranet endpoint checked chains to a single internal root CA: `origin` on
+HTTPS, and the domain controller on HTTPS and LDAPS. **The domain had already
+installed that root in `Cert:\LocalMachine\Root`, so nothing needed
+installing.** The failures came from two clients that either ignore that
+store or reject what is in it:
+
+- **Git for Windows** ships `http.sslBackend=openssl` in its system
+  gitconfig, so it checks certificates against its own bundle. The error is
+  `self-signed certificate in certificate chain (19)`. Fix it once per user:
+
+  ```bash
+  git config --global http.sslBackend schannel
+  ```
+
+  Git then uses the Windows store, for both `origin` and the `github` mirror.
+- **curl**, both `curl.exe` and Git Bash's (both Schannel builds), fails with
+  `CRYPT_E_NO_REVOCATION_CHECK`. The internal certificates carry no CRL
+  Distribution Point, so a strict revocation check cannot complete. Fix it by
+  adding the line `ssl-revoke-best-effort` to `~/.curlrc`. curl still checks
+  revocation whenever a certificate names a CRL. **The lasting fix is
+  server-side**: certificates issued with a CRL Distribution Point. Then the
+  line can go.
+
+Already fine, with nothing to do: Python's standard library, which loads the
+Windows store; Node 24; and the WSL distributions. Each distribution had the
+root in its own anchor directory: `/usr/local/share/ca-certificates/` on
+Ubuntu, `/etc/pki/ca-trust/source/anchors/` on AlmaLinux. **Not checked:**
+Vault, since `VAULT_ADDR` was unset on that host. Step 1's `curl --cacert`
+check above still applies.
+
+Check: `git ls-remote origin master` prints a hash, and
+`curl -sSL -o /dev/null -w '%{http_code}\n' "$GITLAB_URL"` prints `200`.
+Keep the `-L`: `$GITLAB_URL` is `http://` and redirects, and without `-L` curl
+stops at the 302 and never tests TLS.
+
 ## An application identity for this codebase (AppRole)
 
 This codebase also has its own Vault identity (ADR-0031). It can read,

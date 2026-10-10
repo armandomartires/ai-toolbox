@@ -1,5 +1,21 @@
 # Current State
 
+## Intranet TLS on a Windows host is documented (`TASK-0148`, 2026-10-10)
+
+Measured on a domain-joined Windows 11 host. The internal root CA was already
+in the Windows store. What failed was Git, whose bundled OpenSSL backend
+ignores that store, and curl, whose Schannel revocation check cannot complete
+because the internal certificates have no CRL Distribution Point. The runbook
+section under *Secrets on a new host* has both fixes and a check.
+
+**Found and not yet acted on**: GitLab redirects `http://` to `https://`.
+*Authenticating a push* and `ADR-0028` still say the instance is
+"`http://` only". The cleartext risk they describe is real, and measured:
+a traced `ls-remote` with a dummy `http.extraheader` sent that header on the
+plain `http://` request, before the server's 301. So every `vgit` push sends
+the token in cleartext once. Pointing `origin` at `https://` would avoid
+that. It is a decision for the human, offered and not taken.
+
 ## The backlog is being closed out (2026-10-05)
 
 **On the human's routing** (*"closing all backlog tasks and TASK-0129"*),
