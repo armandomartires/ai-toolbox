@@ -154,5 +154,11 @@ to be stale and is not yet corrected.
   `git diff` grepped for the intranet domain, the CA's name and fingerprint
   found nothing.
 - Result: done.
-- Commit: recorded in the follow-up record commit
-- Push: recorded in the follow-up record commit
+- Commit: `9ce320c` — *Document intranet TLS on a Windows host in the runbook (TASK-0148)*, plus the record-keeping commit after it
+- Push: **confirmed to both remotes** — `962e8a8..682595d master -> master` to
+  `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
+  read `682595d`, and `git remote -v` is token-free. The range carries
+  `TASK-0149`'s task commit `682595d` too. That task fixed the `exec` defect
+  that kept this commit from being pushed first. The human ran the push from
+  Git Bash, because Claude Code's safety check blocked the `vgit` command in
+  this session.
