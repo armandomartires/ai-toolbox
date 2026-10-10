@@ -1,5 +1,14 @@
 # Current State
 
+## `vault_secrets.py exec` works on Windows (`TASK-0149`, 2026-10-10)
+
+On Windows, `os.execvpe` starts the command and returns at once. So `exec`
+reported status 0 before a push had finished, and an MSYS child such as
+`vgit`'s `env` crashed with a segmentation fault. On Windows, `exec` now runs
+the command, waits, and exits with its status; POSIX still execs. T26-T27
+cover it, and T27 drives the Windows path from the Linux gate.
+`vault-secrets` is `1.1.1`.
+
 ## Intranet TLS on a Windows host is documented (`TASK-0148`, 2026-10-10)
 
 Measured on a domain-joined Windows 11 host. The internal root CA was already

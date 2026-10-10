@@ -50,6 +50,7 @@ import re
 import socket
 import ssl
 import stat
+import subprocess
 import sys
 import tempfile
 import urllib.error
@@ -397,7 +398,19 @@ def cmd_exec(args, command):
             # dies before the child starts.
             if minted:
                 revoke(vault, token)
+    run_command(command, env)
+
+
+def run_command(command, env, spawn=os.name == "nt"):
+    """Become COMMAND, or on Windows run it and exit with its status.
+
+    Windows has no exec: os.execvpe there starts the command and exits at
+    once, so the caller sees status 0 before the command has finished, and
+    an MSYS program started that way can crash (TASK-0149).
+    """
     try:
+        if spawn:
+            sys.exit(subprocess.run(command, env=env).returncode)
         os.execvpe(command[0], command, env)
     except FileNotFoundError:
         die("command not found: %s" % command[0], 127)

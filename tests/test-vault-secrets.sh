@@ -23,11 +23,18 @@
 # matters most there is T17 -- a token minted for one command is revoked BEFORE
 # the child starts, so no live token outlives the fetch.
 #
+# TASK-0149 adds T26-T27: exec ends with the command's own exit status. On
+# Windows os.execvpe returns status 0 before the command finishes, so exec
+# runs the command and waits there instead. T27 drives that path directly,
+# because the gate runs on Linux.
+#
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 exec python3 - "${1:-skills/vault-secrets/scripts/vault_secrets.py}" <<'TEST'
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import re
@@ -407,6 +414,12 @@ try:
           p.returncode == 0 and "PRIVATE_PASSWORD: readable" in p.stdout and "revoked after this check" in p.stdout
           and any(x[1] == "auth/token/revoke-self" and x[2] == APP for x in taken()), (p.stdout + p.stderr).strip())
 
+    # T26 - exec ends with the command's own exit status, not its own 0.
+    # The variable is exported, so no Vault state from earlier cases matters.
+    p = run(["exec", "--map", MAP, "GITHUB_TOKEN", "--", sys.executable, "-c", "import sys; sys.exit(7)"],
+            env={"GITHUB_TOKEN": "exported-t26"})
+    check("T26 exec exits with the command's status", p.returncode == 7, "exit %s" % p.returncode)
+
     # T15 - nothing secret in any output, across every run above.
     blob = "\n".join(outputs)
     leaked = [name for name, s in (("password", PASSWORD), ("LDAP token", PARENT), ("child token", CHILD),
@@ -422,6 +435,25 @@ try:
     spec = importlib.util.spec_from_file_location("vault_secrets", SCRIPT)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+
+    # T27 - the Windows path: run the command, wait for it, exit with its status.
+    def spawned(command):
+        if os.path.exists(PROBE):
+            os.remove(PROBE)
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):  # die()'s message
+                mod.run_command(command, dict(os.environ), spawn=True)
+        except SystemExit as e:
+            return e.code
+        return None
+    code = spawned([sys.executable, "-c", "import json,sys,time; time.sleep(0.5); "
+                    "json.dump({}, open(sys.argv[1], 'w')); sys.exit(7)", PROBE])
+    check("T27 on Windows, exec waits for the command and exits with its status",
+          code == 7 and probe() == {}, "exit %s" % code)
+    # An absolute path: a bare name searched along a WSL PATH can raise EACCES.
+    code = spawned([os.path.join(WORK, "no-such-command-t27")])
+    check("T27 on Windows, a missing command exits 127", code == 127, "exit %s" % code)
+
     if not os.path.exists("secrets.map"):
         check("T16 secrets.map exists at the repo root", False)
     else:

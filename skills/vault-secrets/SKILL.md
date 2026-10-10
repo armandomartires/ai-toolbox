@@ -4,7 +4,7 @@ description: "Supply secrets to a command from HashiCorp Vault instead of shell-
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # vault-secrets
@@ -49,7 +49,7 @@ Run from the repository root, which holds `secrets.map`; or pass `--map FILE`.
 | Command | What it does |
 |---------|--------------|
 | `login` | LDAP login (password prompt). Stores a **child token limited to `workstation-read`** in `~/.vault-token` (mode 600). The LDAP token itself, which may carry admin, is never stored. `VAULT_AUTH_METHOD=token` stores a pasted token instead, as given, but never a root token. `approle` verifies the credential file and stores nothing. |
-| `exec VAR… -- CMD…` | Fetches the named variables and execs `CMD` with them set. A variable already exported wins, and Vault is not consulted for it. |
+| `exec VAR… -- CMD…` | Fetches the named variables and execs `CMD` with them set. A variable already exported wins, and Vault is not consulted for it. On Windows, which has no `exec`, it runs `CMD`, waits for it, and exits with its status. |
 | `check` | Vault reachable with the certificate verified; the token's policies and remaining time; for each mapped variable: readable, MISSING, or shadowed by an export. Exits 1 if anything is missing. |
 | `put VAR` | Writes one value, read from stdin or a hidden prompt, using a **fresh login held in memory**, never the stored read-only token; with `approle`, no prompt at all. Merges into the secret with check-and-set. |
 | `logout` | Revokes the stored token and deletes the file. |
