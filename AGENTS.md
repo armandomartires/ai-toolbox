@@ -140,38 +140,29 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   instead. CI and the
   published dashboard run on the mirror (`.github/workflows/`), since
   GitLab has no runner yet.
-- At task end: validate, review diff, commit, record the commit hash in
-  the task log. Push **to every configured remote** — `origin`, then
-  `github` — and record each push result; with no remote, record that
-  instead of treating it as a missing step. `origin` is authenticated with
+- At task end: validate, review diff, commit, then push **to every
+  configured remote** — `origin`, then `github` — and confirm `git
+  rev-parse HEAD` equals `ls-remote` on each; with no remote, say so.
+  `origin` is authenticated with
   `GITLAB_PUSH_TOKEN`, a repository-only project token, **never
   `GITLAB_TOKEN`**: the instance is `http://` only, so the credential
   crosses the network in cleartext (ADR-0028). The mirror uses
   `GITHUB_TOKEN`. Never put a token in the remote URL or any tracked file;
   `git remote -v` must stay token-free. Commands: runbook, *Authenticating
   a push*.
-- **Recording the hash takes two commits**, because a commit cannot contain
-  its own hash. (1) The **task commit** — subject `<Imperative summary>
-  (TASK-NNNN)` — carries the work and a task log ending
-  `- Commit: recorded in the follow-up record commit` and
-  `- Push: recorded in the follow-up record commit`. Push it to both
-  remotes and confirm `git rev-parse HEAD` equals `ls-remote` on each.
-  (2) The **record commit** — subject `Record TASK-NNNN's landed commit and
-  both pushes`, touching only that task file — replaces the two lines with:
+- **Git is the record** (ADR-0033). A task lands as one commit, subject
+  `<Imperative summary> (TASK-NNNN)`; `git log --grep TASK-NNNN` finds it.
+  The brief does not carry its own hash or push range, and no follow-up
+  commit adds them. Report the push in the task report (below).
+- **Task report** — the chat output at task end, nothing longer:
 
   ```
-  - Commit: `<short hash>` — *<task commit subject>*, plus the record-keeping commit after it
-  - Push: **confirmed to both remotes** — `<old>..<new> master -> master` to
-    `origin` and to `github`; `HEAD`, `origin/master` and `github/master` all
-    read `<short hash>`, and `git remote -v` is token-free
+  Result:   done | blocked | partial — one line
+  Changed:  file or component — what, one line each
+  Verified: command → observed output
+  Pushed:   origin ✓ github ✓ @<short hash>   (or: not pushed — why)
+  Next:     one line
   ```
-
-  Then push the record commit too. It is recorded only by coming after the
-  task commit, never in a third commit. If the push range also carries an
-  earlier task's record commit, name it (*"the range carries TASK-NNNN's
-  record commit `abc1234` too"*). Unattended runs, which push nothing, use
-  the landing placeholders in the runbook's *Landing an unattended run's
-  branch* instead. Examples: `TASK-0117`, `TASK-0120`, `TASK-0127`.
 - CI (`.github/workflows/validate.yml`) re-runs `validate.sh` and the
   registry-staleness check on every push. It is a second opinion, not the
   gate: the hook prevents a bad commit, CI only reports one already made.
@@ -184,7 +175,8 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   subagent; the main agent still verifies results.
 
 ## Documentation rules
-- Update `.ai/context/CURRENT_STATE.md` after any significant change.
+- Update `.ai/context/CURRENT_STATE.md` after any significant change — edit
+  the state it describes; do not append a narrative (history is in git).
 - New components: copy from the nearest `_template/`, then run
   `scripts/sync-registry.sh` and commit the regenerated registry.
 - Decisions with lasting impact get an ADR in `.ai/decisions/`.
@@ -193,7 +185,8 @@ Details: `docs/development/`, runbook: `docs/operations/`.
 A task is complete only when acceptance criteria are satisfied,
 validations pass (`tests/validate.sh` at minimum), docs and registry are
 updated, no secrets are included, the diff is reviewed, the task is
-marked `done` with commit hash and confirmed push recorded.
+marked `done`, its commit subject names it, and the push to every remote
+is confirmed in the task report.
 
 ## Ambiguity policy
 If requirements are significantly ambiguous or risky, stop and ask the

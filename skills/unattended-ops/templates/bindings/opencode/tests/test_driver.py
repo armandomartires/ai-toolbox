@@ -76,7 +76,7 @@ def filled_binding(overrides=None):
 
 # The two log lines the driver hands the closer (B-031, TASK-0099), as the
 # closer must write them for run id r1.
-LOG_LINES = ("- Commit: pending \u2014 recorded at landing (run r1)",
+LOG_LINES = ("- Commit: in git \u2014 the subject carries the task id (run r1)",
              "- Push: not taken \u2014 the run pushes nothing")
 
 

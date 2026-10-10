@@ -669,10 +669,11 @@ class Driver:
     def log_lines(self):
         """The closer's Commit and Push entries, fixed (B-031, TASK-0099).
 
-        The hash is landing's: a commit cannot hold its own, and a rebase at
-        landing changes it anyway (TASK-0092: d80d843 landed as 57dbd49).
+        No hash: a commit cannot hold its own, a rebase at landing changes it
+        anyway (TASK-0092: d80d843 landed as 57dbd49), and git is the record
+        (ADR-0033).
         """
-        return ["Commit: pending \u2014 recorded at landing (run %s)" % self.b.run_id,
+        return ["Commit: in git \u2014 the subject carries the task id (run %s)" % self.b.run_id,
                 "Push: not taken \u2014 the run pushes nothing"]
 
     def step11_park(self, task, reason):

@@ -80,7 +80,7 @@ message shape the binding declares.
 Write them **exactly as the driver gives them** — its `log_lines` — and
 nothing else about your commit or about pushing. You cannot write the true
 hash: a commit cannot contain its own, and the human's rebase at landing
-changes it anyway. The hash is recorded at landing. In the S10.7 pilot a
+changes it anyway. Git is the record (`ADR-0033`). In the S10.7 pilot a
 closer wrote *"recorded by the closer role in a follow-up commit"* and made
 no such commit (`TASK-0092` finding 17); the driver now reads what you wrote
 after you commit, and **halts the run** on any other `Commit:` or `Push:`

@@ -4,7 +4,7 @@ description: "The method behind the unattended-run loop - the harness's five rul
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.3.1"
+  version: "1.3.2"
 ---
 
 # unattended-ops

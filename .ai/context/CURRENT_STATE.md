@@ -1,5 +1,9 @@
 # Current State
 
+## Git is the record (`TASK-0150`, 2026-10-10)
+
+`ADR-0033` and `PLAN-0007` (`B-054`). Each task now lands as one commit, with no record commit after it, and ends with a five-line task report. `CURRENT_STATE.md` gets compacted to state only in `TASK-0153`.
+
 ## `vault_secrets.py exec` works on Windows (`TASK-0149`, 2026-10-10)
 
 On Windows, `os.execvpe` starts the command and returns at once. So `exec`
