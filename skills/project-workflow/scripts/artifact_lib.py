@@ -1,27 +1,13 @@
 #!/usr/bin/env python3
 """Schema parser, renderer and checker for planning artifacts (ADR-0027).
 
-ONE OWNER. The schema file owns an artifact's shape; this module owns how a
-schema is read. new-artifact.sh renders through it and check-artifact.sh
-checks through it, so neither holds its own copy of what a schema means --
-the rule check-binding.sh already follows by reading loop.md's step numbers
-out of the loop rather than restating them.
+The schema file owns an artifact's shape; this module owns how a schema is
+read. new-artifact.sh renders through it, check-artifact.sh checks through it.
+--guidance changes only the prose inside <!-- FILL: ... --> comments, so the
+rendered body is identical at every level. Standard library only.
 
-Nothing here resolves a model tier. --guidance selects prose density inside
-<!-- FILL: ... --> comments and nothing else; the rendered body is identical
-at every level, which is what makes "same output at any model size" a
-checkable claim. See ADR-0027 clause 4 and ADR-0018 clause 7.
-
-python3 stdlib only, deliberately: a checker that needs `pip install` is a
-checker that does not run.
-
-OWNER AND COPY (B-036, TASK-0117). The owner is
-skills/project-workflow/scripts/artifact_lib.py. A byte-identical copy sits at
-skills/project-migration/scripts/artifact_lib.py so that skill can generate
-and check its own artifacts when installed without this one. The copy is not
-a second owner: ai-toolbox's scripts/sync-artifact-engine.sh writes it and
-tests/validate.sh fails when it differs. Edit the owner, re-run, commit both.
-This paragraph is in both files because the copy is verbatim.
+Owner: skills/project-workflow/scripts/artifact_lib.py. project-migration
+holds a byte-identical copy written by scripts/sync-artifact-engine.sh (B-036).
 """
 import os
 import re
@@ -31,23 +17,10 @@ LEVELS = ["terse", "standard", "explicit", "literal"]
 HEADING = re.compile(r"^#{2,6} \S")
 FENCE = re.compile(r"^\s*(```|~~~)")
 PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
-# A surviving generator marker. Deliberately an illegal value, the rule
-# skills/unattended-ops/templates/binding.md and
-# skills/ansible-ops/templates/change-record.md both attach to a placeholder:
-# a template pointed at its own checker must fail.
-#
-# Matches the generator's full marker, not a bare "FILL:". Observed firing on
-# fixtures/incomplete-task.md's own blockquote, which NAMES the marker while
-# explaining the defect -- the fires-on-correct-text failure mode that gets a
-# check deleted rather than fixed. Prose may discuss the marker; only the
-# emitted comment form is the defect.
+# A surviving generator marker: the emitted comment form, not prose that
+# names it (fixtures/incomplete-task.md discusses it).
 LEFTOVER = re.compile(r"<!--\s*FILL:")
-# A marker inside an inline code span is being SHOWN, not left behind -- the
-# same "quoted claims are discussion" exemption tests/validate.sh's wiring
-# scanner needs, and for the same reason. Observed on TASK-0109, which has to
-# name the pattern in order to record why it was narrowed. An exemption like
-# this is the ceiling of judging intent from text, and is why the check is
-# worth having rather than deleted for firing on correct prose.
+# A marker inside an inline code span is being shown, not left behind.
 SHOWN = re.compile(r"`[^`]*<!--\s*FILL:[^`]*`")
 
 
@@ -279,6 +252,13 @@ def check(artifact_path, schema_path):
                 "line %d: unfilled generator marker still present: %s"
                 % (n, line.strip()[:70]))
             break
+
+    budget = fm.get("max_lines", "")
+    if budget:
+        used = len(trim(lines))
+        if used > int(budget):
+            problems.append("over budget: %d lines > max_lines %s (ADR-0033)"
+                            % (used, budget))
 
     blob = "\n".join(lines).lower()
     if re.search(r"status.{0,40}\b(completed|done)\b", blob):

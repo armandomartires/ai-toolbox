@@ -900,6 +900,7 @@ embody** — measured with the skill's own checker, not inferred. Raised
       crashed MSYS children. T26-T27, red-proven; `vault-secrets` `1.1.1`
       (done)
 - [x] TASK-0150 — `ADR-0033`, `PLAN-0007`: git is the record; one commit per task (done)
+- [x] TASK-0151 — `max_lines` in the artifact engine; briefs < 153 and ADRs < 34 checked against frozen v1 schemas (done)
 
 **`B-042` got no brief, deliberately** — the `plan` kind has six real
 instances and no schema anywhere, and writing one means first reading those

@@ -1,5 +1,9 @@
 # Current State
 
+## Artifact budgets and frozen v1 schemas (`TASK-0151`, 2026-10-10)
+
+The engine enforces a schema's `max_lines`. Briefs below `TASK-0153` and ADRs below `ADR-0034` are checked against `tests/legacy-schemas/`.
+
 ## Git is the record (`TASK-0150`, 2026-10-10)
 
 `ADR-0033` and `PLAN-0007` (`B-054`). Each task now lands as one commit, with no record commit after it, and ends with a five-line task report. `CURRENT_STATE.md` gets compacted to state only in `TASK-0153`.

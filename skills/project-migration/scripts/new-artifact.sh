@@ -1,30 +1,7 @@
 #!/usr/bin/env bash
-# Emit a planning artifact's skeleton from the schema that owns its shape.
-#
-# WHY THIS EXISTS (ADR-0027, TASK-0109). Both governance frameworks used to
-# produce artifacts by copy-a-template-and-fill. A template is a document to
-# imitate, and every "is this line instruction or structure?" judgment is an
-# independent chance to drift. Measured on 2026-09-26: 105 task files in
-# .ai/tasks/ with ~14 competing heading sets, `## Inputs` in 86 of them, 23
-# carrying a `## Preconditions` superseded long ago, and heading order
-# ungoverned. Separately, project-workflow's own template contradicted its own
-# SKILL.md about the task ID format. Nothing caught either, because shape was
-# stated in prose in four places per framework.
-#
-# A skeleton is not imitated, it is filled. The author never types a heading,
-# never chooses an order, never invents an identifier — so none of those can
-# drift, at any model size.
-#
-# WHAT THIS PROVES: that the emitted file carries every heading the schema
-# declares, in the schema's order, with identifiers and dates substituted.
-# WHAT IT DOES NOT PROVE: anything about the prose someone writes into the
-# slots. Shape is not content. A schema-conformant brief can still have a
-# `## Goal` that says nothing, and no amount of extending this script will
-# detect that — see check-artifact.sh's matching paragraph.
-#
-# WIRING: `scripts/sync-templates.sh` runs this script to regenerate every
-# tracked template file. Nothing else in this repository invokes it; it is
-# meant to be run by a person or an agent creating one artifact.
+# Emit a planning artifact's skeleton from the schema that owns its shape
+# (ADR-0027). The author fills slots; headings, order and ids come from the
+# schema, so they cannot drift. Proves shape only, never content.
 #
 # Usage:
 #   new-artifact.sh --kind task [--framework project-workflow]
@@ -34,18 +11,14 @@
 #   new-artifact.sh --schema PATH ...        # explicit schema, overrides --kind
 #   new-artifact.sh --filename --kind task --id ...   # print target path only
 #
-# OWNER AND COPY (B-036, TASK-0117). The owner is
-# skills/project-workflow/scripts/new-artifact.sh. A byte-identical copy sits in
-# skills/project-migration/scripts/, beside a copy of artifact_lib.py, so that
-# skill works installed alone; with no --framework each copy reads its own
-# skill's schemas. ai-toolbox's scripts/sync-artifact-engine.sh writes the
-# copies and tests/validate.sh fails when they differ. Edit the owner only.
+# Owner: skills/project-workflow/scripts/; project-migration holds a
+# byte-identical copy written by scripts/sync-artifact-engine.sh (B-036).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 # The skill this copy of the script lives in, read from its own directory
 # name rather than written in, because the same file ships in two skills
-# (see OWNER AND COPY above). --framework naming that skill means "mine".
+# (see Owner above). --framework naming that skill means "mine".
 SELF="$(basename "$(dirname "$HERE")")"
 
 SCHEMA=""
@@ -70,7 +43,7 @@ while [ $# -gt 0 ]; do
     --filename)  FILENAME_ONLY=1; shift ;;
     --id|--name|--title|--sprint|--task|--date)
                  SUBS+=("${1#--}=${2:?$1 needs a value}"); shift 2 ;;
-    -h|--help)   sed -n '2,42p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)   sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)           die "unknown argument: $1" ;;
   esac
 done

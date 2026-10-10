@@ -1777,86 +1777,93 @@ for f in skills/project-migration/templates/*.md \
 done
 
 # --------------------------------------------------------------------------
-# Task briefs match the schema that owns their shape. Delegated to the skill's
-# own checker rather than reimplemented here, so the heading list has exactly
-# one owner (ADR-0027); a copy in this file would be the second owner the
-# schema exists to remove.
+# max_lines is enforced (ADR-0033): at the budget passes, one over fails.
+# A red proof run every time, so a check that silently stops firing is caught.
+if [ -r skills/project-workflow/scripts/artifact_lib.py ]; then
+  if ! BUDGET_OUT="$(python3 - <<'PY' 2>&1
+import os, sys, tempfile
+sys.path.insert(0, "skills/project-workflow/scripts")
+import artifact_lib as lib
+d = tempfile.mkdtemp()
+schema, art = os.path.join(d, "s.md"), os.path.join(d, "a.md")
+open(schema, "w").write("---\nkind: t\nmax_lines: 3\n---\n## A\n!required false\n!standard\nx\n")
+open(art, "w").write("# T\n\n## A\n")
+assert lib.check(art, schema) == [], "at budget should pass"
+open(art, "w").write("# T\n\n## A\nmore\n")
+assert any("over budget" in p for p in lib.check(art, schema)), "over budget should fail"
+PY
+)"; then
+    echo "BUDGET: max_lines is not enforced: $BUDGET_OUT"
+    fail=1
+  fi
+fi
+
+# Briefs, ADRs, reviews, sessions and plans match the schema that owns their
+# shape, through the skill's own checker (ADR-0027) -- never a copy here.
 #
-# THE BOUNDARY IS REQUIRED, and for the same reason FIRST_CONTRACT_TASK = 20
-# above carries one: the 105 briefs written before the schema existed are
-# records of what happened, not instances of it. 23 of them carry a
-# `## Preconditions` heading superseded by ADR-0012, and rewriting them to
-# satisfy a rule invented afterwards would fabricate compliance. Raising this
-# number is how a future convention change is absorbed; lowering it is how
-# history gets falsified.
-#
-# WHAT THIS PROVES: that briefs from TASK-0109 onward carry the schema's
-# required headings, in its order, with no generator markers left behind.
-# WHAT IT DOES NOT PROVE: that a word of any of them is true.
-# Boundary applies to TASK BRIEFS ONLY. ADRs, reviews and sessions carry no
-# boundary because none is needed: at the time this gate was added every one
-# of 27 ADRs, 30 sessions and 12 reviews already matched its schema, so there
-# is no pre-convention population to exempt (TASK-0110, measured 2026-09-27).
+# Boundaries: briefs below FIRST_GENERATED_TASK predate any schema and are
+# exempt; rewriting them would fabricate compliance (TASK-0110). Briefs and
+# ADRs below FIRST_V2_TASK / FIRST_V2_ADR are checked against the frozen v1
+# shapes in tests/legacy-schemas/ (ADR-0033); newer ones against the current
+# schema. Raise a boundary to absorb a change; never lower one.
+# Proves structure only, never that a word is true.
 FIRST_GENERATED_TASK=24
+FIRST_V2_TASK=153
+FIRST_V2_ADR=34
 SCHEMA_DIR=skills/project-migration/schemas
+LEGACY_DIR=tests/legacy-schemas
 ARTIFACT_LIB=skills/project-workflow/scripts/artifact_lib.py
 if [ -d "$SCHEMA_DIR" ] && [ -r "$ARTIFACT_LIB" ]; then
   groups=""
-  add_group() {  # $1 = kind, $2 = artifact path
-    [ -r "$SCHEMA_DIR/$1.md" ] || return 0
-    groups="$groups$SCHEMA_DIR/$1.md	$2
+  add_group() {  # $1 = schema path, $2 = artifact path
+    [ -r "$1" ] || return 0
+    groups="$groups$1	$2
 "
   }
+  num_of() { basename "$1" | sed -n 's/^[A-Z-]*0*\([0-9]\{1,\}\).*/\1/p'; }
 
-  # Briefs below the boundary are exempt, for the reason FIRST_CONTRACT_TASK
-  # states above: they are records of what happened, not instances of a schema
-  # invented afterwards, and rewriting them would fabricate compliance.
-  # Raising this number absorbs a future convention change. LOWERING it
-  # falsifies history -- TASK-0110 lowered it to 24 only after repairing every
-  # brief it newly covered, and deliberately stopped at the 23 ADR-0012 exempts.
   for brief in .ai/tasks/TASK-*.md; do
     [ -e "$brief" ] || continue
-    num="$(basename "$brief" | sed -n 's/^TASK-0*\([0-9]\{1,\}\).*/\1/p')"
+    num="$(num_of "$brief")"
     [ -n "$num" ] || continue
     [ "$num" -ge "$FIRST_GENERATED_TASK" ] || continue
-    add_group task "$brief"
+    if [ "$num" -lt "$FIRST_V2_TASK" ]; then
+      add_group "$LEGACY_DIR/task-v1.md" "$brief"
+    else
+      add_group "$SCHEMA_DIR/task.md" "$brief"
+    fi
   done
 
-  # INDEX.md is an index over these directories, not an instance of any
-  # schema -- the same distinction that keeps 20.PLAN.md out of the
-  # generator's targets.
   for f in .ai/decisions/*.md; do
-    [ -e "$f" ] && [ "$(basename "$f")" != "INDEX.md" ] && add_group adr "$f"
+    [ -e "$f" ] && [ "$(basename "$f")" != "INDEX.md" ] || continue
+    num="$(num_of "$f")"
+    if [ -n "$num" ] && [ "$num" -lt "$FIRST_V2_ADR" ]; then
+      add_group "$LEGACY_DIR/adr-v1.md" "$f"
+    else
+      add_group "$SCHEMA_DIR/adr.md" "$f"
+    fi
   done
-  # REVIEW-0012 is exempt BY NAME, and the name is the honest form here: a
-  # numeric boundary would claim "reviews before N predate the schema" when
-  # eleven of the twelve match it exactly, in byte-identical section order.
-  # REVIEW-0012 alone uses `## Closing`/`## Follow-ups` and orders them
-  # differently. Making it pass needs its sections relocated, and a review is
-  # a point-in-time snapshot that is written once and not edited retroactively
-  # -- the rule the review schemas state, so honouring the schema here means
-  # NOT rewriting the artifact to satisfy it. Human-authorized 2026-09-27
-  # (TASK-0110). If a second review ever needs this, it is drift, not an
-  # outlier, and the answer is to fix the review.
+
+  # REVIEW-0012 is exempt by name: it alone orders its sections differently,
+  # and a review is never rewritten after the fact (TASK-0110, human-authorized).
   for f in .ai/reviews/*.md; do
     [ -e "$f" ] || continue
     case "$(basename "$f")" in
       INDEX.md) continue ;;
       REVIEW-0012-*) continue ;;
     esac
-    add_group review "$f"
+    add_group "$SCHEMA_DIR/review.md" "$f"
   done
   for f in .ai/sessions/*.md; do
-    [ -e "$f" ] && [ "$(basename "$f")" != "INDEX.md" ] && add_group session "$f"
+    [ -e "$f" ] && [ "$(basename "$f")" != "INDEX.md" ] && add_group "$SCHEMA_DIR/session.md" "$f"
   done
   # Plans since TASK-0146 (B-042). The schema requires only what all six
   # share, so none is exempt and none was edited to pass.
   for f in .ai/planning/plans/PLAN-*.md; do
-    [ -e "$f" ] && add_group plan "$f"
+    [ -e "$f" ] && add_group "$SCHEMA_DIR/plan.md" "$f"
   done
 
-  # One interpreter for all four kinds: each schema is parsed once however
-  # many artifacts cite it.
+  # One interpreter for every kind; each schema is parsed once.
   if [ -n "$groups" ]; then
     ARTIFACT_GROUPS="$groups" python3 "$ARTIFACT_LIB" check-groups || fail=1
   fi
