@@ -211,6 +211,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0161 — `vendor-skill.sh`: per-project skill copies with a manifest
 - [x] TASK-0163 — Push to `origin` over `https://` with a per-command rewrite
 - [x] TASK-0165 — Keep the gate's throwaway `git init` out of the real repository
+- [x] TASK-0166 — Re-point `origin` to `https://`; amend ADR-0028
 
 ## Post-S9 (superseded by the promotion above)
 

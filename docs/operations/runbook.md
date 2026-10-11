@@ -114,8 +114,9 @@ check above still applies.
 
 Check: `git ls-remote origin master` prints a hash, and
 `curl -sSL -o /dev/null -w '%{http_code}\n' "$GITLAB_URL"` prints `200`.
-Keep the `-L`: `$GITLAB_URL` is `http://` and redirects, and without `-L` curl
-stops at the 302 and never tests TLS.
+Keep the `-L`: GitLab redirects, from an `http://` `$GITLAB_URL` to `https://`
+and from the root to the sign-in page, and without `-L` curl stops at the
+redirect, which for `http://` means TLS is never tested.
 
 ## An application identity for this codebase (AppRole)
 
@@ -173,7 +174,7 @@ A project scaffolded by `project-workflow` chooses where its secrets live
    - **`github`:** `gh` must be installed and logged in, or `GH_TOKEN` exported, with access to the repository's secrets.
    - **`gitlab`:** export `GITLAB_URL` and a `GITLAB_TOKEN` with `api` scope and Maintainer on that project, or let `put` prompt for it.
      - Prefer a project access token for that project alone over a personal one.
-     - The intranet instance is `http://` only, so `put` needs `--allow-http` there, and that token crosses the network in cleartext (ADR-0028).
+     - The intranet instance serves `https://` (`TASK-0166`), so set `GITLAB_URL` to `https://` and `put` needs no flag. An `http://` value needs `--allow-http`, and then the token crosses the network in cleartext (ADR-0028).
 6. **Check:** `vault_secrets.py check`.
 
 **Migrating an existing repository** (`project-migration`, Phase 3b) adds one step between 5 and 6:
@@ -598,9 +599,10 @@ vgit() {  # vgit <TOKEN_VAR> <basic-auth-user> <git args...>
       exec git "$@"' vgit "$@"
 }
 
-# vgit for origin, over https://. origin's URL is http://; the rewrite lasts
-# for this one command and leaves the remote as configured. The host comes
-# from that URL, so it never has to be written in a tracked file.
+# vgit for origin, always over https://. origin is https:// since TASK-0166,
+# and then this is plain vgit. A clone still on http:// gets a rewrite for the
+# one command; its remote stays as configured. The host comes from the URL, so
+# it never has to be written in a tracked file.
 vgit_origin() {  # vgit_origin <git args...>
   local url host
   url=$(git remote get-url origin) || return
@@ -620,7 +622,7 @@ vgit_origin push origin master
 vgit GITHUB_TOKEN <github-username> push github master
 ```
 
-**Why `origin` needs the rewrite** (`TASK-0163`, observed 2026-10-11). GitLab
+**Why an `http://` origin needs the rewrite** (`TASK-0163`, observed 2026-10-11). GitLab
 answers `http://` with a 301 to `https://`, and current libcurl does not resend
 a custom `Authorization` header (`http.extraheader`) when a redirect changes
 scheme or port. Without the rewrite, git gets a 401 after the redirect and asks
@@ -629,8 +631,10 @@ over ten minutes inside `git-remote-http`, and with `GIT_TERMINAL_PROMPT=0` it
 fails at once with `could not read Username for 'https://…': terminal prompts
 disabled`. The token was valid throughout. The rewrite also keeps the token off
 the network in cleartext, since the first request is already `https://`
-(`TASK-0148`). If `origin` is ever re-pointed to `https://`, which is the
-human's decision, `vgit_origin` takes its second branch and needs no change.
+(`TASK-0148`). On the human's decision, this clone's `origin` was re-pointed
+to `https://` on 2026-10-11 (`TASK-0166`), so here `vgit_origin` takes its
+second branch. Re-point other clones too (below), since `.git/config` is not
+tracked.
 
 For a project access token the basic-auth username is ignored, but it must
 not be empty. Both tokens live in Vault (`secrets.map`), no longer in the
@@ -651,6 +655,16 @@ git fetch origin && git branch -u origin/master master
 
 Without this such a clone keeps pushing to the mirror only. Nothing fails
 loudly, since the mirror accepts it, and that is the risk.
+
+**Re-pointing a clone whose `origin` is still `http://`** (any clone made
+before 2026-10-11, or from an `http://` `$GITLAB_URL`). The host is read from
+the remote itself:
+
+```bash
+url=$(git remote get-url origin)
+case $url in http://*) git remote set-url origin "https://${url#http://}" ;; esac
+vgit_origin ls-remote origin master    # prints master's hash
+```
 
 `AUTHORIZATION: bearer $GITHUB_TOKEN` fails against
 `github.com/<owner>/<repo>.git` with `remote: invalid credentials`, even

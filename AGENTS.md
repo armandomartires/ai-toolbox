@@ -158,10 +158,10 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   rev-parse HEAD` equals `ls-remote` on each; with no remote, say so.
   `origin` is authenticated with
   `GITLAB_PUSH_TOKEN`, a repository-only project token, **never
-  `GITLAB_TOKEN`** (ADR-0028). `origin`'s URL is `http://`, which would
-  send the credential in cleartext and loses it on GitLab's redirect to
-  `https://`, so the push rewrites it to `https://` per command
-  (`vgit_origin`, TASK-0163). The mirror uses
+  `GITLAB_TOKEN`** (ADR-0028). `origin` is `https://` (TASK-0166). A clone
+  still on `http://` would send the credential in cleartext and lose it on
+  GitLab's redirect, so `vgit_origin` rewrites it to `https://` per command
+  (TASK-0163). The mirror uses
   `GITHUB_TOKEN`. Never put a token in the remote URL or any tracked file;
   `git remote -v` must stay token-free. Commands: runbook, *Authenticating
   a push*.

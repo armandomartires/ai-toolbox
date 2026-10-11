@@ -8,6 +8,11 @@ next to `GITLAB_TOKEN`, not in a separate file. The text below records the file
 as first decided and is left as written; see the last **Consequences** bullet.
 **Amended again 2026-10-03 by `ADR-0030`:** the token lives in Vault, no
 longer in the shell profile.
+**Amended 2026-10-11 on the human's decision (`TASK-0166`):** the instance now
+serves `https://` and redirects `http://` there, so the Context's "`http://`
+only" no longer holds. `origin` is re-pointed to `https://`, and the push token
+no longer crosses the network in cleartext. The decision itself stands:
+`origin` stays the primary, and git still sends only the narrow project token.
 
 Task: `TASK-0126`. Extends `ADR-0007` (a remote is recommended) and `ADR-0009`
 (configuration comes from the environment); supersedes neither. `ADR-0009`'s
