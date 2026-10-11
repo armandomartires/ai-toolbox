@@ -20,6 +20,8 @@ name belongs in this file.** Those live only in Vault's own configuration.
 - One path prefix per consuming project. For ai-toolbox that is
   `kv/ai-toolbox/<name>`, with the value in the field `token`; its
   `secrets.map` lists them.
+- **A project declared since ADR-0034 gets its own KV v2 mount** instead of a
+  prefix here. See *A project's own mount* below.
 
 ## Policies
 
@@ -91,6 +93,44 @@ path "kv/metadata/ai-toolbox/*" { capabilities = ["read", "list"] }
 - **The private map** of variables moved out of a local `.env` sits beside
   the credential, also mode 600, and also outside every repository: its
   names describe internal systems.
+
+## A project's own mount (ADR-0034)
+
+A project whose `secrets.conf` says `backend = vault` gets these from
+`vault_secrets.py provision`, which a Vault admin runs:
+
+- **A KV v2 mount `<project>/`.** An existing mount of another type is refused, never converted.
+- **Three policies**, rendered from `assets/policies/{read,write,app}.hcl` with the mount name substituted:
+  - `<project>-read`: read and list, for the estate to map to LDAP readers;
+  - `<project>-write`: create, read and update, for human writers;
+  - `<project>-app`: the same grant, for the AppRole.
+
+  None can delete or destroy. An existing policy with a different body is refused, not overwritten.
+- **An AppRole `<project>`** with `token_policies = ["<project>-app"]` and ADR-0031's limits (10m, at most 30m; `secret_id_ttl = 8760h`). Its `secret_id`s are issued per host by hand, as for ai-toolbox above.
+
+`provision` reads everything before it writes anything, so a refusal leaves
+Vault as it was. A second run writes nothing. It never deletes, never edits
+`workstation-read` or `secrets-writer`, and never enables an auth method.
+
+**Who may read the mount is the estate's call.** It maps `<project>-read` and
+`<project>-write` to users or groups in its LDAP configuration. `login` then
+hands `<project>-read` down to the stored child token, if the user's login
+carries it.
+
+The admin's token needs one policy, `secrets-provisioner`. A Vault admin
+creates it once:
+
+```hcl
+# policy secrets-provisioner -- on the admin's LDAP login only, never a stored token
+path "sys/mounts/*"        { capabilities = ["create", "read", "update"] }
+path "sys/policies/acl/*"  { capabilities = ["create", "read", "update"] }
+path "sys/auth"            { capabilities = ["read", "sudo"] }
+path "auth/approle/role/*" { capabilities = ["create", "read", "update"] }
+```
+
+Writing policies is close to admin: a holder could grant itself anything. The
+tool's refusals guard against accidents, not against the holder. That is why
+the policy goes on a person's fresh login and never into a file.
 
 ## Root credential
 

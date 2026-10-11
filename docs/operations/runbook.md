@@ -142,6 +142,30 @@ export VAULT_SECRETS_MAPS=secrets.map:$HOME/.config/vault/ai-toolbox.map
 - **Writes happen only on the human's instruction**, including an agent's
   `put`. Every overwrite stays recoverable: KV keeps the earlier versions.
 
+## New project secrets
+
+A project scaffolded by `project-workflow` chooses where its secrets live
+(ADR-0034). Run these from that project's root, with this repo's
+`skills/vault-secrets/scripts/vault_secrets.py` (installed by
+`scripts/install.sh`):
+
+1. **Declare:** `vault_secrets.py init --backend local|vault|gitlab|github --project <name>`.
+   - Add `--gitlab-project group/name` or `--github-repo owner/name` for those backends.
+   - Commit `secrets.conf`, `.gitignore`, `.env.example` and, for `vault`, `secrets.map`.
+2. **Vault only: provision (a Vault admin).**
+   - Run `vault_secrets.py provision --dry-run` first, to see what will be created.
+   - Then run `provision` itself, with the admin's LDAP login or `VAULT_TOKEN` holding `secrets-provisioner` (`vault-layout.md`, *A project's own mount*).
+   - A second run must print only `unchanged:` lines.
+3. **Vault only: grant readers.**
+   - Ask the estate to map `<name>-read`, and `<name>-write` for writers, in its LDAP configuration.
+   - Then each user runs `vault_secrets.py login` again.
+4. **Vault only: give a host the AppRole, if it needs one.**
+   - Issue a `secret_id` for that host with admin rights: `POST auth/approle/role/<name>/secret-id`.
+   - Read the `role_id` from `auth/approle/role/<name>/role-id`.
+   - Store both as `~/.config/vault/<name>.approle`, mode 600, exactly as for ai-toolbox above.
+5. **Write the values:** name each variable in `.env.example` (and, for `vault`, map it in `secrets.map`), then run `vault_secrets.py put VAR`.
+6. **Check:** `vault_secrets.py check`.
+
 ## Procedures
 - Run locally: clone on WSL; `bash scripts/install.sh link` (deploys
   skills to every installed client; clients whose config dir is absent are

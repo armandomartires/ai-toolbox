@@ -25,6 +25,9 @@ Subcommands:
                          (AppRole, LDAP or VAULT_TOKEN) -- never the stored token.
                          local backend: into .env, mode 600
   logout                 revoke the stored token and delete the file
+  provision [--dry-run]  vault backend: create the project's own KV v2 mount,
+                         its read/write/app policies and its AppRole, with an
+                         admin token held in memory; never deletes or rewrites
 
 Configuration, from the environment:
   VAULT_ADDR         https://<host>:<port> -- required. http:// is refused
@@ -523,6 +526,126 @@ def check_local():
     sys.exit(0 if ok else EXIT_FAIL)
 
 
+# -- provisioning a project's own mount (ADR-0034) --------------------------
+
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# ADR-0031's limits: tokens live 10m (at most 30m), a secret_id one year.
+ROLE_LIMITS = {"token_ttl": 600, "token_max_ttl": 1800, "secret_id_ttl": 31536000}
+
+
+def asset(name):
+    return os.path.join(SKILL_DIR, "assets", name)
+
+
+def policy_texts(mount):
+    texts = {}
+    for suffix, path in (("read", asset("policies/read.hcl")), ("write", asset("policies/write.hcl")),
+                         ("app", asset("policies/app.hcl"))):
+        with open(path, encoding="utf-8") as fh:
+            texts["%s-%s" % (mount, suffix)] = fh.read().replace("@@MOUNT@@", mount)
+    return texts
+
+
+def vault_project(cmd):
+    conf = load_conf()
+    if not conf or conf["backend"] != "vault":
+        die("%s needs a %s declaring backend = vault (run init)" % (cmd, CONF_FILE), EXIT_USAGE)
+    return conf["project"]
+
+
+def admin_get(vault, token, path, absent=(404,)):
+    """GET with the admin token: the data, or None when the object is absent."""
+    try:
+        r = vault.call("GET", path, token)
+    except VaultError as e:
+        if e.status in absent:
+            return None
+        die("cannot read %s (%s): the token needs the secrets-provisioner policy "
+            "-- see references/vault-layout.md" % (path, e))
+    return r.get("data", r)
+
+
+def plan_provision(vault, token, mount, policies):
+    """(writes, kept). Everything is read before anything is written, so a
+    refusal leaves Vault exactly as it was."""
+    writes, kept, role = [], [], dict(ROLE_LIMITS, token_policies=["%s-app" % mount])
+    found = admin_get(vault, token, "sys/mounts/%s" % mount, absent=(400, 404))
+    if found is None:
+        writes.append(("POST", "sys/mounts/%s" % mount, {"type": "kv", "options": {"version": "2"},
+                       "description": "%s secrets (ADR-0034)" % mount}, "mount %s/ (KV v2)" % mount))
+    elif found.get("type") != "kv" or str((found.get("options") or {}).get("version")) != "2":
+        die("mount %s/ exists and is not KV v2 (type %s): refusing to touch it" % (mount, found.get("type")))
+    else:
+        kept.append("mount %s/ (KV v2)" % mount)
+    for name, text in policies.items():
+        found = admin_get(vault, token, "sys/policies/acl/%s" % name)
+        if found is None:
+            writes.append(("PUT", "sys/policies/acl/%s" % name, {"policy": text}, "policy %s" % name))
+        elif (found.get("policy") or "").strip() != text.strip():
+            die("policy %s exists with a different body: refusing to overwrite it" % name)
+        else:
+            kept.append("policy %s" % name)
+    if "approle/" not in (admin_get(vault, token, "sys/auth") or {}):
+        die("the approle auth method is not enabled: a Vault admin enables it; provision never does")
+    found = admin_get(vault, token, "auth/approle/role/%s" % mount)
+    if found is None:
+        writes.append(("POST", "auth/approle/role/%s" % mount, role, "AppRole %s" % mount))
+    elif any(found.get(k) != v for k, v in role.items()):
+        die("AppRole %s exists with different settings: refusing to change it" % mount)
+    else:
+        kept.append("AppRole %s" % mount)
+    return writes, kept
+
+
+def admin_token(vault):
+    """(token, minted): VAULT_TOKEN, a fresh LDAP login, or a pasted token --
+    held in memory only. An application identity never provisions."""
+    if os.environ.get("VAULT_TOKEN"):
+        return os.environ["VAULT_TOKEN"], False
+    if method() == "approle":
+        die("an AppRole identity cannot provision: log in as the Vault admin (ldap or token)")
+    if method() == "ldap":
+        return ldap_login(vault), True
+    token = getpass.getpass("Vault admin token (held in memory, never stored): ").strip()
+    if not token:
+        die("empty token")
+    return token, False
+
+
+def cmd_provision(args):
+    mount = vault_project("provision")
+    policies = policy_texts(mount)
+    if args.dry_run:
+        print("dry run: nothing read, nothing written")
+        print("would ensure mount %s/ (KV v2)" % mount)
+        for name, text in policies.items():
+            print("would ensure policy %s:\n%s" % (name, "".join("  " + l for l in text.splitlines(True))))
+        print("would ensure AppRole %s: token_policies [%s-app], ttl 10m, max 30m, secret_id_ttl 8760h"
+              % (mount, mount))
+    else:
+        vault = Vault()
+        token, minted = admin_token(vault)
+        try:
+            if "root" in (lookup(vault, token).get("policies") or []):
+                die("refusing a root token: use one with the secrets-provisioner policy "
+                    "(references/vault-layout.md)")
+            writes, kept = plan_provision(vault, token, mount, policies)
+            for what in kept:
+                print("unchanged: %s" % what)
+            for verb, path, body, what in writes:
+                try:
+                    vault.call(verb, path, token, body)
+                except VaultError as e:
+                    die("creating %s failed: %s" % (what, e))
+                print("created: %s" % what)
+        finally:
+            if minted:
+                revoke(vault, token)
+    print("ldap: who may read %s/ is the estate's call -- it maps %s-read (and %s-write) to "
+          "groups; provision never configures LDAP" % (mount, mount, mount))
+    print("approle: one secret_id per host is a human step -- runbook, *New project secrets*")
+
+
 def read_value(var):
     if sys.stdin.isatty():
         value = getpass.getpass("Value for %s (hidden): " % var)
@@ -612,10 +735,19 @@ def cmd_login(args):
     else:
         parent = ldap_login(vault)
         # The LDAP token carries every policy mapped to the user -- possibly
-        # admin. Only a child limited to READ_POLICY is ever written to disk.
+        # admin. Only a child limited to READ_POLICY (and, for a project with
+        # its own mount, that mount's read policy) is ever written to disk.
+        wanted, conf = [READ_POLICY], load_conf()
+        if conf and conf["backend"] == "vault":
+            extra = "%s-read" % conf["project"]
+            if extra in (lookup(vault, parent).get("policies") or []):
+                wanted.append(extra)
+            else:
+                print("warning: your login does not carry %s, so the stored token cannot read %s/ "
+                      "-- the estate maps it" % (extra, conf["project"]), file=sys.stderr)
         try:
             child = vault.call("POST", "auth/token/create", parent, {
-                "policies": [READ_POLICY],
+                "policies": wanted,
                 "ttl": CHILD_TTL,
                 "display_name": "workstation",
                 "meta": {"host": socket.gethostname()},
@@ -677,6 +809,11 @@ def run_command(command, env, spawn=os.name == "nt"):
 
 def cmd_check(args):
     entries = load_maps(args.maps)
+    conf = load_conf()
+    if conf and conf["backend"] == "vault":
+        for name, entry in entries.items():
+            if entry[0] != conf["project"]:
+                print("%s: on mount %s, outside this project's own %s/" % (name, entry[0], conf["project"]))
     vault = Vault()
     try:
         vault.call("GET", "sys/health")
@@ -792,6 +929,8 @@ def main(argv):
     p.add_argument("--map", action="append", metavar="FILE")
     p.add_argument("var", metavar="VAR")
     sub.add_parser("logout")
+    p = sub.add_parser("provision")
+    p.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
     args.maps = map_paths(args) if hasattr(args, "map") else []
     if args.cmd != "exec" and command:
@@ -820,7 +959,7 @@ def main(argv):
         cmd_exec(args, command)
     else:
         {"init": cmd_init, "login": cmd_login, "check": cmd_check, "put": cmd_put,
-         "logout": cmd_logout}[args.cmd](args)
+         "logout": cmd_logout, "provision": cmd_provision}[args.cmd](args)
 
 
 if __name__ == "__main__":

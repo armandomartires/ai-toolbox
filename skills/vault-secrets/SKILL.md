@@ -4,7 +4,7 @@ description: "Supply secrets to a command from where the project keeps them - Ha
 license: MIT
 metadata:
   author: armando.martires
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # vault-secrets
@@ -54,7 +54,7 @@ Ask the human; never pick for them. Then run
 | Backend | Values live in | Readable on a host | Who writes them |
 |---------|----------------|--------------------|-----------------|
 | `local` | a git-ignored `.env`, mode 600 | yes, that host only | `put VAR` |
-| `vault` | the project's own KV v2 mount `<name>/` | yes, via `exec` | `put VAR`, once a Vault admin has created the mount and its policies |
+| `vault` | the project's own KV v2 mount `<name>/` | yes, via `exec` | `put VAR`, once a Vault admin has run `provision` |
 | `gitlab` | GitLab CI/CD variables, masked and protected (`--gitlab-project`) | no: CI only | the project's CI/CD settings page |
 | `github` | GitHub Actions secrets (`--github-repo`) | no: write-only | the repository's Actions secrets page |
 
@@ -70,11 +70,12 @@ Run from the repository root, which holds `secrets.conf` and `secrets.map`; or p
 | Command | What it does |
 |---------|--------------|
 | `init` | Declares the backend; see *Choosing a backend*. An agent may run it once the human has chosen. |
-| `login` | LDAP login (password prompt). Stores a **child token limited to `workstation-read`** in `~/.vault-token` (mode 600). The LDAP token itself, which may carry admin, is never stored. `VAULT_AUTH_METHOD=token` stores a pasted token instead, as given, but never a root token. `approle` verifies the credential file and stores nothing. |
+| `login` | LDAP login (password prompt). Stores a **child token limited to `workstation-read`** (plus `<project>-read` in a vault project, when the login carries it) in `~/.vault-token` (mode 600). The LDAP token itself, which may carry admin, is never stored. `VAULT_AUTH_METHOD=token` stores a pasted token instead, as given, but never a root token. `approle` verifies the credential file and stores nothing. |
 | `exec VAR… -- CMD…` | Fetches the named variables (from Vault, or from `.env` with `local`) and execs `CMD` with them set. A variable already exported wins, and the store is not consulted for it. On Windows, which has no `exec`, it runs `CMD`, waits for it, and exits with its status. |
 | `check` | Vault reachable with the certificate verified; the token's policies and remaining time; for each mapped variable: readable, MISSING, or shadowed by an export. With `local`: `.env` is git-ignored and mode 600, and each `.env.example` name is set. Exits 1 if anything is missing. |
 | `put VAR` | Writes one value, read from stdin or a hidden prompt, using a **fresh login held in memory**, never the stored read-only token; with `approle`, no prompt at all. Merges into the secret with check-and-set. With `local`, replaces the line in `.env` (mode 600), and refuses while `.env` is not git-ignored. |
 | `logout` | Revokes the stored token and deletes the file. |
+| `provision [--dry-run]` | **vault backend, a Vault admin's step.** Creates the project's own KV v2 mount `<project>/`, the policies `<project>-read`, `-write` and `-app`, and the AppRole `<project>`. It takes the admin token from `VAULT_TOKEN`, a fresh LDAP login or a prompt, holds it in memory, and refuses a root token or an AppRole identity. It reads everything first and refuses, before any write, anything that exists in another shape. It never deletes, never edits another policy, and never enables an auth method. `--dry-run` contacts nothing and prints the plan, so an agent may run it. |
 
 Exit status: 0 ok, 1 failure, 2 usage, 3 not logged in or token rejected.
 
@@ -143,4 +144,8 @@ under *Secrets on a new host*.
 
 - `references/vault-layout.md`: what the Vault side must provide (mount,
   paths, policies, auth), so it can be rebuilt without the session that first
-  built it.
+  built it. Its *A project's own mount* section holds the one policy a Vault admin creates once for `provision`.
+
+## Assets
+
+- `assets/policies/{read,write,app}.hcl`: the three per-project policies `provision` writes, with `@@MOUNT@@` replaced by the project name.

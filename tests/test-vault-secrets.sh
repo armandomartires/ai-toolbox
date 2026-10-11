@@ -32,6 +32,11 @@
 # local .env backend, and exec refusing a CI backend. They run `git init` in
 # throwaway directories (local git only), so the ignore checks are git's own.
 #
+# TASK-0156 adds T36-T43: provision against a stub that also serves sys/mounts,
+# sys/policies/acl, sys/auth and the AppRole role endpoints. The cases that
+# matter most: a second run writes nothing (T38), every refusal happens before
+# the first write (T39), and no request ever asks Vault to delete (T42).
+#
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -69,11 +74,14 @@ NEW_VALUE = "VAL-new-github-77e"
 PUSH_VALUE, GITHUB_VALUE = "VAL-gitlab-push-9a1", "VAL-github-4c2"
 ROLE_ID, SECRET_ID, APP = "role-id-5a7c", "sid-Secret-91fe", "hvs.APPROLE-token-0005"
 PRIVATE_VALUE, APP_VALUE = "VAL-private-3d8", "VAL-written-by-approle-6b0"
+ADMIN, CHILD_PROJ = "hvs.ADMIN-provisioner-0006", "hvs.CHILD-project-0007"
 TOKENS = {
-    PARENT: ["admin", "default", "secrets-writer", "workstation-read"],
+    PARENT: ["admin", "default", "secrets-writer", "workstation-read", "demo-vault-read"],
     CHILD: ["default", "workstation-read"],
+    CHILD_PROJ: ["default", "workstation-read", "demo-vault-read"],
     ROOT: ["root"],
     APP: ["ai-toolbox-app", "default"],
+    ADMIN: ["default", "secrets-provisioner"],
 }
 state = {
     "requests": [],
@@ -82,6 +90,13 @@ state = {
         "ai-toolbox/github": ({"token": GITHUB_VALUE, "note": "keep-me"}, 3),
         "ai-toolbox/private": ({"password": PRIVATE_VALUE}, 1),
     },
+    # Vault's own configuration, for provision (TASK-0156).
+    "mounts": {"kv": {"type": "kv", "options": {"version": "2"}},
+               "legacy": {"type": "kv", "options": {"version": "1"}}},
+    "policies": {"clash-read": 'path "clash/data/*" { capabilities = ["read", "list"] }\n'},
+    "auth": {"approle/": {"type": "approle"}, "ldap/": {"type": "ldap"}},
+    "roles": {},
+    "methods": [],  # every request's method, never cleared (T42)
 }
 
 
@@ -103,6 +118,7 @@ class Stub(BaseHTTPRequestHandler):
         token = self.headers.get("X-Vault-Token")
         path = self.path[len("/v1/"):]
         state["requests"].append((method, path, token, body, time.time()))
+        state["methods"].append(method)
         deny = {"errors": ["permission denied"]}
         if path == "sys/health":
             return self.reply(200, {"initialized": True, "sealed": False})
@@ -123,12 +139,37 @@ class Stub(BaseHTTPRequestHandler):
         if path == "auth/token/create" and method == "POST":
             if token != PARENT:
                 return self.reply(403, deny)
-            if body.get("policies") != ["workstation-read"]:
-                return self.reply(400, {"errors": ["unexpected policies"]})
-            return self.reply(200, {"auth": {"client_token": CHILD, "policies": TOKENS[CHILD],
+            # A non-root parent can only hand down policies it holds itself.
+            wanted = body.get("policies") or []
+            if "workstation-read" not in wanted or not set(wanted) <= set(TOKENS[PARENT]):
+                return self.reply(400, {"errors": ["child policies must be a subset of the parent's"]})
+            child = CHILD_PROJ if "demo-vault-read" in wanted else CHILD
+            return self.reply(200, {"auth": {"client_token": child, "policies": TOKENS[child],
                                              "lease_duration": 28800}})
         if path == "auth/token/revoke-self":
             return self.reply(204)
+        sysm = re.fullmatch(r"sys/mounts/([^/]+)|sys/policies/acl/([^/]+)|sys/auth|auth/approle/role/([^/]+)", path)
+        if sysm:
+            if token != ADMIN:
+                return self.reply(403, deny)
+            mount, policy, role = sysm.groups()
+            if path == "sys/auth":
+                return self.reply(200, {"data": state["auth"]})
+            table, key = ((state["mounts"], mount) if mount else
+                          (state["policies"], policy) if policy else (state["roles"], role))
+            if method == "GET":
+                if key not in table:
+                    # Vault answers 400 for an unknown mount, 404 for the rest.
+                    return self.reply(400 if mount else 404, {"errors": []})
+                if policy:
+                    return self.reply(200, {"data": {"name": key, "policy": table[key]}})
+                return self.reply(200, {"data": table[key]})
+            if method in ("POST", "PUT"):
+                if mount and key in table:
+                    return self.reply(400, {"errors": ["path is already in use"]})
+                table[key] = body["policy"] if policy else body
+                return self.reply(204)
+            return self.reply(405, {"errors": ["unsupported"]})
         m = re.fullmatch(r"kv/data/(.+)", path)
         if m:
             if token not in TOKENS:
@@ -153,6 +194,12 @@ class Stub(BaseHTTPRequestHandler):
 
     def do_POST(self):
         self.route("POST")
+
+    def do_PUT(self):
+        self.route("PUT")
+
+    def do_DELETE(self):  # recorded, so T42 can prove nothing ever asks for one
+        self.route("DELETE")
 
 
 server = ThreadingHTTPServer(("127.0.0.1", 0), Stub)
@@ -546,6 +593,85 @@ try:
         check("T35 exec refuses the %s backend: its values live in CI" % backend,
               p.returncode == 2 and "not readable here" in p.stderr and probe() is None, p.stderr.strip())
 
+    # T36-T43 - provision a project's own mount, policies and AppRole, and a
+    # login that hands that mount's read policy down (ADR-0034, TASK-0156).
+    def writes_in(r):
+        return [x for x in r if x[0] in ("POST", "PUT", "DELETE") and x[1] != "auth/token/revoke-self"]
+    admin = {"VAULT_TOKEN": ADMIN}
+    taken()
+    p = run(["provision", "--dry-run"], cwd=V, env={"VAULT_ADDR": None})
+    check("T36 provision --dry-run needs no Vault and makes no request",
+          p.returncode == 0 and not taken() and "would ensure mount demo-vault/ (KV v2)" in p.stdout
+          and 'path "demo-vault/data/*"' in p.stdout, (p.stdout + p.stderr).strip())
+
+    p = run(["provision"], cwd=V, env=admin)
+    w = writes_in(taken())
+    check("T37 provision exits 0", p.returncode == 0, (p.stdout + p.stderr).strip())
+    check("T37 provision creates a KV v2 mount named after the project",
+          state["mounts"].get("demo-vault") == {"type": "kv", "options": {"version": "2"},
+                                               "description": "demo-vault secrets (ADR-0034)"})
+    check("T37 provision writes the three policies, each confined to the mount",
+          sorted(k for k in state["policies"] if k.startswith("demo-vault-")) ==
+          ["demo-vault-app", "demo-vault-read", "demo-vault-write"]
+          and all('"demo-vault/data/*"' in state["policies"][k] and "@@" not in state["policies"][k]
+                  and '"delete"' not in state["policies"][k]
+                  for k in ("demo-vault-app", "demo-vault-read", "demo-vault-write")))
+    check("T37 the AppRole carries only the app policy, with ADR-0031's limits",
+          state["roles"].get("demo-vault") == {"token_policies": ["demo-vault-app"], "token_ttl": 600,
+                                              "token_max_ttl": 1800, "secret_id_ttl": 31536000})
+    check("T37 provision writes five objects with the admin token", len(w) == 5 and all(x[2] == ADMIN for x in w),
+          "%d writes" % len(w))
+
+    p = run(["provision"], cwd=V, env=admin)
+    w = writes_in(taken())
+    check("T38 a second provision writes nothing and says unchanged",
+          p.returncode == 0 and not w and p.stdout.count("unchanged:") == 5, (p.stdout + p.stderr).strip())
+
+    for name, drop_approle, why in (("legacy", False, "not KV v2"), ("clash", False, "different body"),
+                                    ("noauth", True, "approle auth method is not enabled")):
+        d = project("p-prov-" + name)
+        run(["init", "--backend", "vault", "--project", name], cwd=d)
+        saved = state["auth"].pop("approle/") if drop_approle else None
+        taken()
+        p = run(["provision"], cwd=d, env=admin)
+        if saved:
+            state["auth"]["approle/"] = saved
+        check("T39 provision refuses (%s) before writing anything" % why,
+              p.returncode == 1 and why in p.stderr and not writes_in(taken()), p.stderr.strip())
+    p = run(["provision"], cwd=V, env={"VAULT_TOKEN": CHILD})
+    check("T39 a token without the provisioner policy is told what it needs",
+          p.returncode == 1 and "secrets-provisioner" in p.stderr and not writes_in(taken()), p.stderr.strip())
+
+    taken()
+    p = run(["provision"], cwd=V, env={"VAULT_TOKEN": ROOT})
+    r = taken()
+    check("T40 provision refuses a root token before touching Vault's configuration",
+          p.returncode == 1 and "root" in p.stderr and not any(x[1].startswith("sys/") for x in r), p.stderr.strip())
+    p = run(["provision"], cwd=V, env=approle)
+    check("T40 an AppRole identity cannot provision", p.returncode == 1 and "cannot provision" in p.stderr
+          and not writes_in(taken()), p.stderr.strip())
+
+    p = run(["provision"], cwd=P, env=admin)
+    check("T41 provision on a non-vault backend exits 2", p.returncode == 2, p.stderr.strip())
+
+    clear_tok(); taken()
+    p = run(["login"], stdin=PASSWORD + "\n", cwd=V)
+    creates = [x for x in taken() if x[1] == "auth/token/create"]
+    check("T43 login in a vault project hands its mount's read policy down",
+          p.returncode == 0 and tok() == CHILD_PROJ and len(creates) == 1
+          and creates[0][3]["policies"] == ["workstation-read", "demo-vault-read"], p.stderr.strip())
+    O = project("p-vault-other")
+    run(["init", "--backend", "vault", "--project", "other-proj"], cwd=O)
+    clear_tok(); taken()
+    p = run(["login"], stdin=PASSWORD + "\n", cwd=O)
+    creates = [x for x in taken() if x[1] == "auth/token/create"]
+    check("T43 a policy the login lacks is not requested, and the human is told",
+          p.returncode == 0 and tok() == CHILD and "does not carry other-proj-read" in p.stderr
+          and bool(creates) and creates[0][3]["policies"] == ["workstation-read"], p.stderr.strip())
+
+    # T42 - nothing this script did, in any case above, asked Vault to delete.
+    check("T42 no DELETE request was ever sent", "DELETE" not in state["methods"])
+
     # T15 - nothing secret in any output, across every run above.
     blob = "\n".join(outputs)
     leaked = [name for name, s in (("password", PASSWORD), ("LDAP token", PARENT), ("child token", CHILD),
@@ -554,7 +680,8 @@ try:
                                    ("role_id", ROLE_ID), ("secret_id", SECRET_ID), ("AppRole token", APP),
                                    ("private value", PRIVATE_VALUE), ("approle-written value", APP_VALUE),
                                    ("local value", LOCAL_VALUE), ("replaced local value", LOCAL_VALUE2),
-                                   ("other local value", OTHER_VALUE))
+                                   ("other local value", OTHER_VALUE), ("admin token", ADMIN),
+                                   ("project child token", CHILD_PROJ))
               if s in blob]
     check("T15 no password, token or value in any output (%d runs)" % len(outputs), not leaked, ", ".join(leaked))
 
