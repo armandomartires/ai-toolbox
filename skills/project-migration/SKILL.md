@@ -4,7 +4,7 @@ description: "Harmonize an existing repository with the .ai agent-governance fra
 license: MIT
 metadata:
   author: armando.martires
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Project migration to the .ai governance framework
@@ -24,15 +24,25 @@ Retrofit a live repository so a human, a planning model, and a weaker executor m
 - The scaffold emits `.ai/templates/*.md` from this skill's `templates/`. In the migrated repository they are a point-in-time copy with no regenerator and no drift gate (B-051). To compare them with the installed skill: `T=$(mktemp -d); bash <skill dir>/scripts/ai-project-scaffold.sh "$T/fresh" --no-git && diff -r "$T/fresh/.ai/templates" .ai/templates`.
 - Keep artifacts small (ADR-0033). A brief is one module: Status first, then the procedure, then the record. Live files hold state, not history. Git is the record, so no brief carries its own hash. Budgets and contents: `references/governance-spec.md`.
 - Never commit secrets, tokens, or `.env` files; run a secrets scan before the first push.
+- Secrets move only if the user chooses it (Phase 1, step 5). Never open, print or quote a value; name variables only.
 - Never force-push. If a push fails, diagnose and report — do not declare the task done.
 
 ## Phase 1 — Inventory and mapping (read-only)
 
 1. Inspect repo structure, `git status`, branch, remotes, uncommitted changes, and recent commits.
 2. Locate existing instruction and planning artifacts: `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `.ai/`, `.ai/workflow/`, `CONVENTIONS`/`PLAN`/`ROADMAP`/`AD_HOC_TASKS` files, README, docs, CI config, test and build commands, and secrets exposure.
+   - For secrets, list **where they live today, by variable name only**: `.env*` files, shell profiles that a README tells people to edit, CI variables, and values a scan finds in tracked files.
+   - Never open or quote a value.
 3. Build the mapping table — one row per existing artifact: `| Current path | Responsibility | Proposed destination | Action (move/merge/keep/archive) |`.
 4. Flag duplicated, contradictory, and obsolete information, and which content becomes `AGENTS.md` rules, history, tasks, or ADRs.
-5. Present the proposal using the response format below and stop for approval.
+5. Ask whether to migrate secrets as part of this migration. If yes, ask which backend:
+   - **local**: a git-ignored `.env`;
+   - **vault**: HashiCorp Vault, in the project's own KV mount;
+   - **gitlab**: GitLab CI variables;
+   - **github**: GitHub Actions secrets.
+
+   Never assume either answer. Put the choice under *Risks and pending decisions*.
+6. Present the proposal using the response format below and stop for approval.
 
 Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis**, **Current → proposed mapping**, **Proposed structure**, **Migration plan**, **Risks and pending decisions**, **Next step**.
 
@@ -51,6 +61,26 @@ Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis*
 - Merge old roadmaps and task files into `.ai/planning/` and `.ai/tasks/`, or archive them — never leave two competing sources of truth.
 - Prune scaffold directories that do not apply (e.g. `docs/deployment/` for a library). A smaller final structure is correct; bureaucracy without value is not.
 - Adopt task discipline forward only: the first `TASK-0001.md` is the first new work after migration, not a rewrite of past work.
+
+## Phase 3b — Secrets (only if the user chose to migrate them)
+
+This phase uses the `vault-secrets` skill's `scripts/vault_secrets.py`. Each step below is its own commit.
+
+1. **Declare:** `vault_secrets.py init --backend <choice> --project <name>`, plus `--gitlab-project` or `--github-repo` for those backends.
+   - It writes `secrets.conf` and the `.env` ignores, and creates `.env.example`; for `vault` it also creates `secrets.map`.
+   - It never overwrites a file.
+2. **Name the variables:** list every variable from the inventory in `.env.example`. For `vault`, also map each one in `secrets.map`.
+   - A Vault admin runs `provision` to create the project's mount; it is never the agent's step.
+3. **Move the values:** `vault_secrets.py import --from <old env file> --dry-run` lists which names would move and which are skipped. An agent may run it.
+   - The real `import` writes values, so the human runs it.
+   - A value that lives only in a shell profile or a CI settings page is written with `put VAR`, by the human.
+4. **Confirm:** `vault_secrets.py check` must pass.
+5. **Repoint the docs:** instructions that say to export a variable from a shell profile now say to run the command through `vault_secrets.py exec VAR -- <command>`. That applies to the `local` and `vault` backends. With `gitlab` or `github`, the values belong to CI.
+6. **Clean up:**
+   - The old file stays until the human deletes it.
+   - A secret that was ever committed is **rotated**, not just moved: moving it leaves it in history.
+
+If the user declined, record "secrets not migrated" in `CURRENT_STATE.md`, so the next session does not ask again.
 
 ## Phase 4 — Validate and finalize
 

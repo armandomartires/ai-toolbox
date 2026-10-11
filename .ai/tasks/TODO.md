@@ -205,6 +205,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0155 — Declare a project's secrets backend: secrets.conf, init, the local backend
 - [x] TASK-0156 — Provision a Vault project's own KV mount, policies and AppRole
 - [x] TASK-0157 — Set and check GitLab CI variables and GitHub Actions secrets
+- [x] TASK-0158 — Let project-migration migrate secrets, and import an old env file
 
 ## Post-S9 (superseded by the promotion above)
 

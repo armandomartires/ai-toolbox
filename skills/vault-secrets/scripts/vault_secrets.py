@@ -26,6 +26,9 @@ Subcommands:
                          local backend: into .env, mode 600. gitlab: a masked,
                          protected CI/CD variable; github: an Actions secret
                          (through gh, the value on its stdin)
+  import --from FILE [VAR...]
+                         move values from an existing env file into the
+                         declared backend; --dry-run lists names only
   logout                 revoke the stored token and delete the file
   provision [--dry-run]  vault backend: create the project's own KV v2 mount,
                          its read/write/app policies and its AppRole, with an
@@ -433,15 +436,15 @@ def example_names():
     return list(dict.fromkeys(EXAMPLE_NAME.findall("\n".join(lines))))
 
 
-def load_dotenv():
+def load_dotenv(path=ENV_FILE):
     values = {}
-    for n, line in enumerate(read_lines(ENV_FILE) or [], 1):
+    for n, line in enumerate(read_lines(path) or [], 1):
         text = line.strip()
         if not text or text.startswith("#"):
             continue
         m = ENV_LINE.match(text)
         if not m:
-            die("%s:%d: expected VAR=value" % (ENV_FILE, n))  # never echoed: it may be a value
+            die("%s:%d: expected VAR=value" % (path, n))  # never echoed: it may be a value
         value = m["value"]
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
             value = value[1:-1]
@@ -480,11 +483,11 @@ def exec_local(args, command):
     run_command(command, env)
 
 
-def put_local(var):
+def put_local(var, value=None):
     known_local([var])
     if git_ignored(ENV_FILE) is False:
         die("refusing to write: %s is not git-ignored -- run `vault_secrets.py init`" % ENV_FILE)
-    value = read_value(var)
+    value = read_value(var) if value is None else value
     if "\n" in value or "\r" in value:
         die("a %s value is one line: nothing written" % ENV_FILE)
     if value != value.strip() or value[0] in "\"'":
@@ -552,9 +555,9 @@ def gh(args, value=None):
         die("the GitHub CLI (gh) is not installed: https://cli.github.com")
 
 
-def put_github(conf, var):
+def put_github(conf, var, value=None):
     known_local([var])
-    value = read_value(var)
+    value = read_value(var) if value is None else value
     p = gh(["secret", "set", var, "--repo", conf["github_repo"]], value)
     if p.returncode != 0:
         die("gh secret set %s failed (exit %d): %s" % (var, p.returncode,
@@ -621,10 +624,10 @@ def gitlab_failed(what, status, body, value=None):
     die("%s failed: HTTP %d %s%s" % (what, status, msg, hint))
 
 
-def put_gitlab(conf, var, allow_http):
+def put_gitlab(conf, var, allow_http, value=None, lab=None):
     known_local([var])
-    lab = GitLab(conf, allow_http)
-    value = read_value(var)
+    lab = lab or GitLab(conf, allow_http)
+    value = read_value(var) if value is None else value
     body = {"key": var, "value": value, "masked": True, "protected": True, "raw": True}
     status, found = lab.call("GET", "/" + var)
     if status == 200:
@@ -984,17 +987,7 @@ def cmd_put(args):
     if args.var not in entries:
         die("not in %s: %s" % (", ".join(args.maps), args.var), EXIT_USAGE)
     vault = Vault()
-    # A write never uses the stored read-only token: it takes VAULT_TOKEN or a
-    # fresh login, held in memory only and revoked once the write is done.
-    minted = False
-    if os.environ.get("VAULT_TOKEN"):
-        token = os.environ["VAULT_TOKEN"]
-    elif method() == "approle":
-        token, minted = approle_login(vault), True
-    elif method() == "ldap":
-        token, minted = ldap_login(vault), True
-    else:
-        token = getpass.getpass("Vault token with write access: ").strip()
+    token, minted = writer_token(vault)
     try:
         write_value(vault, token, entries, args.var)
     finally:
@@ -1002,9 +995,21 @@ def cmd_put(args):
             revoke(vault, token)
 
 
-def write_value(vault, token, entries, var):
+def writer_token(vault):
+    """A write never uses the stored read-only token: it takes VAULT_TOKEN or a
+    fresh login, held in memory only; a minted one is revoked by the caller."""
+    if os.environ.get("VAULT_TOKEN"):
+        return os.environ["VAULT_TOKEN"], False
+    if method() == "approle":
+        return approle_login(vault), True
+    if method() == "ldap":
+        return ldap_login(vault), True
+    return getpass.getpass("Vault token with write access: ").strip(), False
+
+
+def write_value(vault, token, entries, var, value=None):
     mount, path, field = entries[var]
-    value = read_value(var)
+    value = read_value(var) if value is None else value
     try:
         found = read_secret(vault, token, mount, path)
     except VaultError as e:
@@ -1018,6 +1023,65 @@ def write_value(vault, token, entries, var):
         die("write to %s failed: %s" % (where(entries[var]), e))
     print("wrote %s to %s (version %s)" % (var, where(entries[var]),
                                            (r.get("data") or {}).get("version", "?")))
+
+
+def cmd_import(args):
+    """Move values from an existing env file into the declared backend. Each
+    value passes from the file to the store inside this process; none is printed."""
+    conf = load_conf()
+    backend = (conf or {}).get("backend", "vault")
+    if backend != "vault" and args.map:
+        die("--map is for the vault backend; %s declares %s" % (CONF_FILE, backend), EXIT_USAGE)
+    if backend != "gitlab" and args.allow_http:
+        die("--allow-http is for the gitlab backend only", EXIT_USAGE)
+    if read_lines(args.source) is None:
+        die("source not found: %s" % args.source, EXIT_USAGE)
+    if backend == "local" and os.path.abspath(args.source) == os.path.abspath(ENV_FILE):
+        die("%s is already where the local backend keeps values: nothing to import" % ENV_FILE, EXIT_USAGE)
+    source, declared = load_dotenv(args.source), example_names()
+    entries = load_maps(args.maps) if backend == "vault" else None
+    plan, skipped = [], []
+    for name in args.vars or list(source):
+        if name not in declared:
+            skipped.append("%s: not in %s" % (name, ENV_EXAMPLE))
+        elif not source.get(name):
+            skipped.append("%s: empty or absent in %s" % (name, args.source))
+        elif entries is not None and name not in entries:
+            skipped.append("%s: not in %s" % (name, ", ".join(args.maps)))
+        else:
+            plan.append(name)
+    for line in skipped:
+        print("skipped %s" % line)
+    if args.vars and skipped:
+        die("not every named variable can be imported: nothing written", EXIT_USAGE)
+    if not plan:
+        die("nothing to import from %s" % args.source)
+    if args.dry_run:
+        dest = {"local": ENV_FILE, "gitlab": "GitLab", "github": "GitHub"}.get(backend)
+        for name in plan:
+            print("would import %s to %s" % (name, dest or where(entries[name])))
+        return
+    if backend == "local":
+        for name in plan:
+            put_local(name, source[name])
+    elif backend == "github":
+        for name in plan:
+            put_github(conf, name, source[name])
+    elif backend == "gitlab":
+        lab = GitLab(conf, args.allow_http)
+        for name in plan:
+            put_gitlab(conf, name, args.allow_http, source[name], lab)
+    else:
+        vault = Vault()
+        token, minted = writer_token(vault)
+        try:
+            for name in plan:
+                write_value(vault, token, entries, name, source[name])
+        finally:
+            if minted:
+                revoke(vault, token)
+    print("imported %d variable(s). %s still holds every value: delete it yourself once "
+          "`check` passes (a re-run is safe)" % (len(plan), args.source))
 
 
 def cmd_logout(args):
@@ -1059,6 +1123,12 @@ def main(argv):
     p.add_argument("--map", action="append", metavar="FILE")
     p.add_argument("--allow-http", action="store_true", help="gitlab backend: accept a cleartext http:// GitLab")
     p.add_argument("var", metavar="VAR")
+    p = sub.add_parser("import")
+    p.add_argument("--from", dest="source", required=True, metavar="FILE")
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--map", action="append", metavar="FILE")
+    p.add_argument("--allow-http", action="store_true", help="gitlab backend: accept a cleartext http:// GitLab")
+    p.add_argument("vars", nargs="*", metavar="VAR")
     sub.add_parser("logout")
     p = sub.add_parser("provision")
     p.add_argument("--dry-run", action="store_true")
@@ -1096,7 +1166,7 @@ def main(argv):
         cmd_exec(args, command)
     else:
         {"init": cmd_init, "login": cmd_login, "check": cmd_check, "put": cmd_put,
-         "logout": cmd_logout, "provision": cmd_provision}[args.cmd](args)
+         "logout": cmd_logout, "provision": cmd_provision, "import": cmd_import}[args.cmd](args)
 
 
 if __name__ == "__main__":

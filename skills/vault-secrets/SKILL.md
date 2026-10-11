@@ -4,7 +4,7 @@ description: "Supply secrets to a command from where the project keeps them - Ha
 license: MIT
 metadata:
   author: armando.martires
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # vault-secrets
@@ -75,6 +75,7 @@ Run from the repository root, which holds `secrets.conf` and `secrets.map`; or p
 | `exec VAR… -- CMD…` | Fetches the named variables (from Vault, or from `.env` with `local`) and execs `CMD` with them set. A variable already exported wins, and the store is not consulted for it. On Windows, which has no `exec`, it runs `CMD`, waits for it, and exits with its status. |
 | `check` | Vault reachable with the certificate verified; the token's policies and remaining time; for each mapped variable: readable, MISSING, or shadowed by an export. With `local`: `.env` is git-ignored and mode 600, and each `.env.example` name is set. With `gitlab` or `github`: the names present in the platform, **names only**, against `.env.example`. Exits 1 if anything is missing. |
 | `put VAR` | Writes one value, read from stdin or a hidden prompt, using a **fresh login held in memory**, never the stored read-only token; with `approle`, no prompt at all. Merges into the secret with check-and-set. With `local`, replaces the line in `.env` (mode 600), and refuses while `.env` is not git-ignored. With `github`, runs `gh secret set` with the value **on stdin, never in argv**. With `gitlab`, creates or updates a masked, protected CI/CD variable through the API, using `GITLAB_URL` and `GITLAB_TOKEN` (api scope; prompted for if unset). An `http://` GitLab is refused unless the human passes `--allow-http`, because the token and the value would cross the network in cleartext. |
+| `import --from FILE [VAR…]` | Moves values from an existing env file, such as a migrated repository's old `.env`, into the declared backend. It writes the named variables, or every one the file sets. A variable missing from `.env.example`, empty in the file, or (for `vault`) unmapped is skipped by name. Naming one that cannot be imported writes nothing. Values go straight from the file to the store, nothing is printed, and the source file is left in place. It writes values, so it is the human's step; `--dry-run` contacts nothing and lists names only, so an agent may run it. |
 | `logout` | Revokes the stored token and deletes the file. |
 | `provision [--dry-run]` | **vault backend, a Vault admin's step.** Creates the project's own KV v2 mount `<project>/`, the policies `<project>-read`, `-write` and `-app`, and the AppRole `<project>`. It takes the admin token from `VAULT_TOKEN`, a fresh LDAP login or a prompt, holds it in memory, and refuses a root token or an AppRole identity. It reads everything first and refuses, before any write, anything that exists in another shape. It never deletes, never edits another policy, and never enables an auth method. `--dry-run` contacts nothing and prints the plan, so an agent may run it. |
 

@@ -170,6 +170,11 @@ A project scaffolded by `project-workflow` chooses where its secrets live
      - The intranet instance is `http://` only, so `put` needs `--allow-http` there, and that token crosses the network in cleartext (ADR-0028).
 6. **Check:** `vault_secrets.py check`.
 
+**Migrating an existing repository** (`project-migration`, Phase 3b) adds one step between 5 and 6:
+- `vault_secrets.py import --from <old env file> --dry-run` shows which names would move.
+- `import --from <old env file>` moves the values without anyone retyping them.
+- The old file stays until you delete it, and a secret that was ever committed must be rotated.
+
 ## Procedures
 - Run locally: clone on WSL; `bash scripts/install.sh link` (deploys
   skills to every installed client; clients whose config dir is absent are

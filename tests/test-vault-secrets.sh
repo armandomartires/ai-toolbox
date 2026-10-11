@@ -41,6 +41,9 @@
 # against a loopback GitLab stub and a `gh` shim on PATH. The case that matters
 # most: a GitHub value reaches gh on stdin, never in argv where ps shows it.
 #
+# TASK-0158 adds T50-T55: import, which moves a migrated repository's existing
+# env file into its declared backend on every backend, printing names only.
+#
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -174,11 +177,11 @@ class Stub(BaseHTTPRequestHandler):
                 table[key] = body["policy"] if policy else body
                 return self.reply(204)
             return self.reply(405, {"errors": ["unsupported"]})
-        m = re.fullmatch(r"kv/data/(.+)", path)
+        m = re.fullmatch(r"(kv|demo-vault)/data/(.+)", path)
         if m:
             if token not in TOKENS:
                 return self.reply(403, deny)
-            key = m.group(1)
+            key = m.group(2) if m.group(1) == "kv" else "%s:%s" % m.groups()
             if method == "GET":
                 if key not in state["store"]:
                     return self.reply(404, {"errors": []})
@@ -522,6 +525,11 @@ try:
                 with open(os.path.join(d, fname), "w", encoding="utf-8") as fh:
                     fh.write(text)
         return d
+    def load_env_value(d, var):
+        for line in (read(d, ".env") or "").splitlines():
+            if line.startswith(var + "="):
+                return line.split("=", 1)[1]
+        return None
     def read(d, fname):
         try:
             with open(os.path.join(d, fname), encoding="utf-8") as fh:
@@ -788,6 +796,64 @@ try:
           and "DEMO_TOKEN: set in GitLab" in p.stdout and "MISSING_TOKEN: MISSING" in p.stdout
           and "VAL-gl-old-0e1" not in p.stdout + p.stderr, (p.stdout + p.stderr).strip())
 
+    # T50-T55 - import moves values from an existing env file into the declared
+    # backend, for a migrated repository (TASK-0158). Nothing is printed but names.
+    MIG1, MIG2, STRAY = "VAL-migrated-a71", "VAL-migrated-b82", "VAL-stray-c93"
+    IMP_LOCAL, IMP_GH, IMP_GL1, IMP_GL2 = "VAL-imp-local-d04", "VAL-imp-gh-e15", "VAL-imp-gl-f26", "VAL-imp-gl-0a7"
+    def write_in(d, fname, text, mode="w"):
+        with open(os.path.join(d, fname), mode, encoding="utf-8") as fh:
+            fh.write(text)
+    write_in(V, ".env.example", "MIG_TOKEN=\nMIG_OTHER=\nUNMAPPED_TOKEN=\n", "a")
+    write_in(V, "secrets.map", "MIG_TOKEN=demo-vault/mig#token\nMIG_OTHER=demo-vault/mig#other\n", "a")
+    write_in(V, "old.env", "MIG_TOKEN=%s\nexport MIG_OTHER='%s'\nSTRAY_TOKEN=%s\nUNMAPPED_TOKEN=x\n"
+             % (MIG1, MIG2, STRAY))
+
+    taken()
+    p = run(["import", "--from", "old.env", "--dry-run"], cwd=V, env={"VAULT_ADDR": None})
+    check("T50 import --dry-run lists names and destinations, contacts nothing",
+          p.returncode == 0 and not taken() and "would import MIG_TOKEN to demo-vault/mig#token" in p.stdout
+          and "skipped STRAY_TOKEN: not in .env.example" in p.stdout and "skipped UNMAPPED_TOKEN" in p.stdout,
+          (p.stdout + p.stderr).strip())
+
+    p = run(["import", "--from", "old.env"], cwd=V, env={"VAULT_TOKEN": PARENT})
+    w = [x for x in taken() if x[0] == "POST" and x[1] == "demo-vault/data/mig"]
+    check("T51 vault import writes each mapped value into the project's mount",
+          p.returncode == 0 and state["store"].get("demo-vault:mig", ({}, 0))[0] == {"token": MIG1, "other": MIG2}
+          and len(w) == 2, (p.stdout + p.stderr).strip())
+    check("T51 import leaves the source file in place and says so",
+          os.path.exists(os.path.join(V, "old.env")) and "still holds every value" in p.stdout)
+
+    p = run(["import", "--from", "old.env", "MIG_TOKEN", "STRAY_TOKEN"], cwd=V, env={"VAULT_TOKEN": PARENT})
+    check("T52 naming a variable that cannot be imported exits 2 and writes nothing",
+          p.returncode == 2 and not [x for x in taken() if x[0] == "POST" and "/data/" in x[1]], p.stderr.strip())
+
+    write_in(P, "old.env", "DEMO_TOKEN=%s\n" % IMP_LOCAL)
+    p = run(["import", "--from", "old.env", "DEMO_TOKEN"], cwd=P)
+    check("T53 local import writes the value to .env", p.returncode == 0
+          and load_env_value(P, "DEMO_TOKEN") == IMP_LOCAL, p.stderr.strip())
+    p = run(["import", "--from", ".env"], cwd=P)
+    check("T53 importing .env into the local backend exits 2", p.returncode == 2, p.stderr.strip())
+
+    write_in(G, "old.env", "DEMO_TOKEN=%s\n" % IMP_GH)
+    if os.path.exists(GH_LOG):
+        os.remove(GH_LOG)
+    p = run(["import", "--from", "old.env", "DEMO_TOKEN"], env=shim, cwd=G)
+    try:
+        with open(GH_LOG, encoding="utf-8") as fh:
+            ghcall = json.load(fh)
+    except FileNotFoundError:
+        ghcall = {}
+    check("T54 github import hands each value to gh on stdin",
+          p.returncode == 0 and ghcall.get("stdin") == IMP_GH and IMP_GH not in json.dumps(ghcall.get("argv")),
+          p.stderr.strip())
+
+    write_in(L, "old.env", "DEMO_TOKEN=%s\nMISSING_TOKEN=%s\n" % (IMP_GL1, IMP_GL2))
+    p = run(["import", "--from", "old.env"], stdin=GL_TOKEN + "\n", env={"GITLAB_URL": gl}, cwd=L)
+    check("T55 gitlab import sets every declared variable, asking for the token once",
+          p.returncode == 0 and gitlab["vars"]["DEMO_TOKEN"]["value"] == IMP_GL1
+          and gitlab["vars"].get("MISSING_TOKEN", {}).get("value") == IMP_GL2
+          and gitlab["vars"]["MISSING_TOKEN"].get("masked") is True, (p.stdout + p.stderr).strip())
+
     # T42 - nothing this script did, in any case above, asked Vault to delete.
     check("T42 no DELETE request was ever sent", "DELETE" not in state["methods"])
 
@@ -802,7 +868,10 @@ try:
                                    ("other local value", OTHER_VALUE), ("admin token", ADMIN),
                                    ("project child token", CHILD_PROJ), ("github secret value", GH_VALUE),
                                    ("gitlab value", GL_VALUE), ("second gitlab value", GL_VALUE2),
-                                   ("gitlab token", GL_TOKEN), ("gitlab row value", "VAL-gl-old-0e1"))
+                                   ("gitlab token", GL_TOKEN), ("gitlab row value", "VAL-gl-old-0e1"),
+                                   ("migrated value", MIG1), ("second migrated value", MIG2), ("stray value", STRAY),
+                                   ("imported local value", IMP_LOCAL), ("imported github value", IMP_GH),
+                                   ("imported gitlab value", IMP_GL1), ("second imported gitlab value", IMP_GL2))
               if s in blob]
     check("T15 no password, token or value in any output (%d runs)" % len(outputs), not leaked, ", ".join(leaked))
 
