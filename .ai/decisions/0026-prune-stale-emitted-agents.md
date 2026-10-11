@@ -3,6 +3,8 @@
 ## Status
 Accepted — 2026-09-24. **The decision is the human's**, chosen from stated
 options (`TASK-0091`); this ADR records it and the narrow form it takes.
+**Amended 2026-10-11** on the human's choice (`TASK-0164`): see the last
+**Consequences** bullet.
 
 ## Context
 `scripts/install.sh` recorded, as a deliberate absence: *"Nothing prunes a
@@ -33,3 +35,12 @@ role, and prints `agent pruned: …`. Nothing else in the directory is touched.
 - Proven by `tests/test-emit-prune.sh` (hermetic, not wired into
   `tests/validate.sh`), including a revert that loosened the guard and
   deleted a symlink and a foreign-named file.
+- **Amendment, 2026-10-11 — deselected roles, and OpenCode.** A role left out
+  of `install.sh`'s selection (`--only`, `install.selection`) is pruned too,
+  under the same guard, so deselecting a component removes it from the client
+  (the human's choice; skill links to this checkout are unlinked by the same
+  rule). `TASK-0164` also found that the guard had **never matched an OpenCode
+  file**: OpenCode emissions carry no `name:`. A file without `name:` now
+  counts as ours only if it is exactly what the emitter writes for that role
+  today; one that differs is left and reported. Proven by
+  `tests/test-install.sh`, which runs in the gate.

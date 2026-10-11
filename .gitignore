@@ -51,3 +51,5 @@ node_modules/
 /docs/dashboard-data.json
 # What .github/workflows/dashboard.yml builds and publishes.
 /_site/
+# Per-machine choice of components for scripts/install.sh (TASK-0164).
+/install.selection

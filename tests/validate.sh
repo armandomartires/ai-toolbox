@@ -1670,6 +1670,20 @@ if ! PRIVATE_TEST_OUT="$(bash tests/test-private-names.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# scripts/install.sh deploys only what is selected, and deselection removes
+# only what install regenerates (TASK-0164, ADR-0026 as amended).
+#
+# WHY: an installer that deletes from a user's client directories needs a
+# proof that it never takes a copy, a link elsewhere or a foreign file.
+# tests/test-install.sh runs the real install.sh and emit-agents.py against a
+# fake repository and a fake HOME under mktemp; nothing outside it is touched.
+# Unconditional (ADR-0009).
+if ! INSTALL_OUT="$(bash tests/test-install.sh 2>&1)"; then
+  printf '%s\n' "$INSTALL_OUT" | grep -v '^PASS' | sed 's/^/INSTALL: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # A closed backlog row names a closer that agrees (TASK-0142, B-038), and the
 # "N items are open" sentence matches the rows (TASK-0145, B-047). The rule is
 # .ai/README.md's *Closing a backlog row*; the script says what it cannot see

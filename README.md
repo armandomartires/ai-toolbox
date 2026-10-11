@@ -40,6 +40,10 @@ bash scripts/install.sh link   # deploy skills + activate the commit hook
 bash tests/validate.sh         # the mandatory gate
 ```
 
+To deploy only the components you use, list their names, one per line, in a
+gitignored `install.selection` at the repo root, or pass
+`--only name,name` for one run. `scripts/install.sh --help` has the details.
+
 See `docs/operations/runbook.md` for the full variable table.
 
 Read `AGENTS.md` before doing any work in this repository.

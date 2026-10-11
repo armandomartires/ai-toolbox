@@ -3,8 +3,21 @@
 # registration commands.
 #
 # Usage: install.sh [link|copy] [--client claude-code|opencode|lm-studio-bionic|all]
-#                   [--bionic-project DIR]
-#        install.sh --status
+#                   [--bionic-project DIR] [--only NAME[,NAME...]]
+#        install.sh --status [--only NAME[,NAME...]]
+#
+# Selection (TASK-0164). By default every component is deployed. To deploy
+# only some, name them, from skills/, agents/ and mcp-servers/ alike:
+#   --only a,b          for this run (repeatable), overriding the file;
+#   install.selection   at the repo root, gitignored, one name per line, `#`
+#                       comments -- read by every run, --status included.
+# Names are checked before anything is written: an unknown name, or a
+# selection naming nothing, exits 2. A component that is NOT selected leaves
+# the client: its skill link to this checkout is removed, and its emitted
+# agent file is pruned (ADR-0026, amended). Both come back by re-running with
+# it selected. A copy, a link elsewhere and a file this repo did not write
+# are never removed; a left copy is reported. MCP commands are printed only
+# for selected servers.
 #
 # link (default) symlinks skills into each client's skills dir, per
 # ADR-0002's symlink-first preference; copy is the fallback for checkouts
@@ -37,10 +50,13 @@ MODE="link"
 WANT_CLIENT="all"
 BIONIC_PROJECT=""
 STATUS=0
+ONLY="" ONLY_SET=0
 while [ $# -gt 0 ]; do
   case "$1" in
     link|copy) MODE="$1" ;;
     --status)  STATUS=1 ;;
+    --only)    shift; ONLY="${ONLY:+$ONLY,}${1:-}"; ONLY_SET=1 ;;
+    --only=*)  ONLY="${ONLY:+$ONLY,}${1#*=}"; ONLY_SET=1 ;;
     --client)  shift; WANT_CLIENT="${1:-all}" ;;
     --client=*) WANT_CLIENT="${1#*=}" ;;
     --bionic-project) shift; BIONIC_PROJECT="${1:-}" ;;
@@ -59,6 +75,79 @@ done
 
 WINDOWS_LINKS=0
 case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) WINDOWS_LINKS=1 ;; esac
+
+# --- Selection (TASK-0164) ---------------------------------------------------
+# One namespace across the three deployable kinds, built from the same skips
+# the deploy loops use. Space-delimited strings, not associative arrays, so
+# this stays bash 3 compatible.
+SKILL_NAMES=" " ROLE_NAMES=" " SERVER_NAMES=" "
+for d in skills/*; do
+  n=$(basename "$d"); case "$n" in _template*) continue ;; esac
+  [ -f "$d/SKILL.md" ] && SKILL_NAMES="$SKILL_NAMES$n "
+done
+for d in agents/*; do
+  n=$(basename "$d"); case "$n" in _template*) continue ;; esac
+  [ -f "$d/agent.md" ] && ROLE_NAMES="$ROLE_NAMES$n "
+done
+for d in mcp-servers/*; do
+  n=$(basename "$d"); case "$n" in _template*) continue ;; esac
+  { [ -f "$d/pyproject.toml" ] || [ -f "$d/server.json" ]; } && SERVER_NAMES="$SERVER_NAMES$n "
+done
+for n in $SKILL_NAMES $ROLE_NAMES $SERVER_NAMES; do
+  k=0
+  for list in "$SKILL_NAMES" "$ROLE_NAMES" "$SERVER_NAMES"; do
+    [[ "$list" == *" $n "* ]] && k=$((k + 1))
+  done
+  if [ "$k" -gt 1 ]; then
+    echo "component name '$n' exists in more than one of skills/, agents/, mcp-servers/;" >&2
+    echo "  a selection could not say which. Rename one." >&2
+    exit 2
+  fi
+done
+
+SELECTION_FILE="install.selection"
+SEL_SOURCE="all" SEL=" "
+add_sel() { [[ "$SEL" == *" $1 "* ]] || SEL="$SEL$1 "; }
+if [ "$ONLY_SET" -eq 1 ]; then
+  SEL_SOURCE="--only"
+  for n in ${ONLY//,/ }; do add_sel "$n"; done
+elif [ -f "$SELECTION_FILE" ]; then
+  SEL_SOURCE="$SELECTION_FILE"
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%%#*}"; line="${line//$'\r'/}"
+    for n in $line; do add_sel "$n"; done
+  done < "$SELECTION_FILE"
+fi
+if [ "$SEL_SOURCE" != "all" ]; then
+  if [ "$SEL" = " " ]; then
+    echo "$SEL_SOURCE selects no components. Name at least one, or delete" >&2
+    echo "  $SELECTION_FILE to deploy everything." >&2
+    exit 2
+  fi
+  unknown=""
+  for n in $SEL; do
+    [[ "$SKILL_NAMES$ROLE_NAMES$SERVER_NAMES" == *" $n "* ]] || unknown="$unknown $n"
+  done
+  if [ -n "$unknown" ]; then
+    echo "unknown component(s) in $SEL_SOURCE:$unknown -- nothing was installed." >&2
+    echo "  skills:     $SKILL_NAMES" >&2
+    echo "  agents:     $ROLE_NAMES" >&2
+    echo "  mcp-servers:$SERVER_NAMES" >&2
+    exit 2
+  fi
+  count=0; for n in $SEL; do count=$((count + 1)); done
+  total=0; for n in $SKILL_NAMES $ROLE_NAMES $SERVER_NAMES; do total=$((total + 1)); done
+  echo "selection: $count of $total components, from $SEL_SOURCE"
+fi
+is_selected() { [ "$SEL_SOURCE" = "all" ] || [[ "$SEL" == *" $1 "* ]]; }
+
+# The roles emit-agents.py is told to emit: absent means all.
+EMIT_ONLY=()
+if [ "$SEL_SOURCE" != "all" ]; then
+  roles=""
+  for n in $ROLE_NAMES; do is_selected "$n" && roles="${roles:+$roles,}$n"; done
+  EMIT_ONLY=("--only=$roles")
+fi
 
 # Remove a link - a symlink or a junction - and never what it points at.
 # NEVER `rm -rf` a link path: on a junction some tools recurse into the
@@ -103,6 +192,17 @@ deploy_skills() {
     case "$name" in _template*) continue ;; esac
     [ -f "$d/SKILL.md" ] || continue
     dest="$target/$name"
+    if ! is_selected "$name"; then
+      # Only a link to THIS checkout's skill is ours to remove; it comes back
+      # by re-running with the skill selected. A copy may hold local edits.
+      if [ -L "$dest" ] && [ "$(cd "$dest" 2>/dev/null && pwd -P)" = "$(cd "$d" && pwd -P)" ]; then
+        unlink_dir "$dest"
+        echo "skill unlinked: $name -> $label (not selected)"
+      elif [ -e "$dest" ] && [ ! -L "$dest" ]; then
+        echo "  NOTICE: $name is not selected, but $dest is a copy; left in place"
+      fi
+      continue
+    fi
     # A pre-existing real directory must be removed before linking:
     # `ln -sfn` against a real directory silently creates the link *inside*
     # it, leaving the stale skill in place and reporting success.
@@ -181,7 +281,11 @@ if [ "$STATUS" -eq 1 ]; then
         state="absent" have=""
       fi
       flag=""
-      [ "$have" = "$want" ] || flag="  STALE"
+      if ! is_selected "$name"; then
+        state="$state (not selected)"
+      elif [ "$have" != "$want" ]; then
+        flag="  STALE"
+      fi
       printf '%-12s %-18s %-8s (repo %s) %s%s\n' \
         "$client" "$name" "${have:--}" "$want" "$state" "$flag"
     done
@@ -268,7 +372,7 @@ while IFS='|' read -r client target parent agents_target; do
   # not be softened to a warning.
   if [ -d agents ]; then
     mkdir -p "$agents_target"
-    python3 scripts/emit-agents.py "$client" "$agents_target" || {
+    python3 scripts/emit-agents.py "$client" "$agents_target" ${EMIT_ONLY[@]+"${EMIT_ONLY[@]}"} || {
       echo "agent emission failed for $client" >&2
       exit 1
     }
@@ -331,12 +435,16 @@ if [ "$deployed_any" -eq 0 ]; then
   exit 2
 fi
 
+any_server=0
+for n in $SERVER_NAMES; do is_selected "$n" && any_server=1; done
+[ "$any_server" -eq 1 ] || exit 0
 echo
 echo "Register MCP servers (adjust commands per client):"
 for d in mcp-servers/*/; do
   d="${d%/}"
   name=$(basename "$d")
   case "$name" in _template*) continue ;; esac
+  is_selected "$name" || continue
   if [ -f "$d/pyproject.toml" ]; then
     # cwd-independent, so the printed line is also what a client config needs
     # (TASK-0088; the same form tests/smoke-mcp.sh launches).

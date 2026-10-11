@@ -61,6 +61,9 @@ services, secrets.
 - Install/deploy skills: `scripts/install.sh [link|copy]`; `--status` shows
   each client's skills as linked or a stale copy. `link` is a junction on
   Windows, so a `git pull` here updates every project on the machine.
+  Deploy only some components with `--only a,b` or a gitignored
+  `install.selection` (one name per line); a deselected one leaves the
+  client: links unlinked, emitted agents pruned, copies reported (TASK-0164).
 - Regenerate index: `scripts/sync-registry.sh`
 - Validate: `tests/validate.sh` — the mandatory gate. Fast, offline,
   hermetic; keep it that way.

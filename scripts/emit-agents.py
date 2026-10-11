@@ -455,7 +455,7 @@ def emit_claude_code(role, fm, body):
 EMITTERS = {"opencode": emit_opencode, "claude-code": emit_claude_code}
 
 
-def emitted_by_us(path, role):
+def emitted_by_us(path, role, client=None, fm=None, body=None):
     """True only for a file this emitter would have written for `role`.
 
     ADR-0026, the human's decision of 2026-09-24: a role that stops declaring
@@ -466,49 +466,84 @@ def emitted_by_us(path, role):
     stated: a REFUSED role's existing file is left in place, and a role
     DELETED from agents/ is never pruned, because its name is no longer
     known here.
+
+    An OpenCode emission has no `name:` (OpenCode names an agent by its
+    file), so the frontmatter test alone never matched one: ADR-0026's prune
+    silently did nothing on OpenCode until TASK-0164 found it. A file without
+    `name:` is ours only if it is exactly what this emitter writes for the
+    role today; a role edited since is left, and the caller says so.
     """
     if os.path.islink(path) or not os.path.isfile(path):
         return False
     try:
         with open(path, encoding="utf-8") as fh:
-            lines = fh.read(4096).split("\n")
+            text = fh.read(1 << 20)
     except (OSError, UnicodeDecodeError):
         return False
+    lines = text.split("\n")
     if not lines or lines[0].strip() != "---":
         return False
     for line in lines[1:]:
         if line.strip() == "---":
-            return False
+            break
         if line.startswith("name:"):
             return line.split(":", 1)[1].strip().strip("\"'") == role
-    return False
+    if client is None or fm is None:
+        return False
+    try:
+        return text == EMITTERS[client](role, fm, body)
+    except Exception:  # a refusal, or anything else: not provably ours
+        return False
+
+
+def known_roles():
+    """Every role in agents/, with the same skip as the registry generator."""
+    if not os.path.isdir("agents"):
+        return []
+    return [r for r in sorted(os.listdir("agents"))
+            if not r.startswith("_template")
+            and os.path.isfile(os.path.join("agents", r, "agent.md"))]
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("usage: emit-agents.py <client> <agents-target-dir>",
-              file=sys.stderr)
+    # --only ROLE,... (TASK-0164): emit only these roles. An empty list means
+    # none. Absent means every role, as before.
+    args, only = sys.argv[1:], None
+    if len(args) == 3 and args[2].startswith("--only="):
+        only = {r for r in args[2][len("--only="):].split(",") if r}
+        args = args[:2]
+    if len(args) != 2:
+        print("usage: emit-agents.py <client> <agents-target-dir> "
+              "[--only=ROLE,...]", file=sys.stderr)
         return 2
-    client, target = sys.argv[1], sys.argv[2]
+    client, target = args
     if client not in CLIENT_KEYS:
         print("unknown client: %s" % client, file=sys.stderr)
         return 2
 
-    if not os.path.isdir("agents"):
-        return 0
+    roles = known_roles()
+    if only is not None and only - set(roles):
+        print("unknown role(s) in --only: %s" % ", ".join(sorted(only - set(roles))),
+              file=sys.stderr)
+        return 2
     rc = 0
-    for role in sorted(os.listdir("agents")):
-        d = os.path.join("agents", role)
-        # Same skip as the registry generator and the skills loop.
-        if role.startswith("_template") or not os.path.isdir(d):
-            continue
-        src = os.path.join(d, "agent.md")
-        if not os.path.isfile(src):
-            continue
+    for role in roles:
+        src = os.path.join("agents", role, "agent.md")
+        stale = os.path.join(target, "%s.md" % role)
         fm, body = parse(src)
+        # A deselected role leaves the client, under the same guard as a role
+        # that stopped declaring it (ADR-0026, amended by TASK-0164).
+        if only is not None and role not in only:
+            if emitted_by_us(stale, role, client, fm, body):
+                os.remove(stale)
+                print("  agent pruned: %s -> %s (%s; not selected, ADR-0026)"
+                      % (role, client, stale))
+            elif os.path.lexists(stale):
+                print("  agent left: %s -> %s (%s is not provably this repo's "
+                      "emission; remove it by hand if it is)" % (role, client, stale))
+            continue
         if client not in fm.get("clients", []):
-            stale = os.path.join(target, "%s.md" % role)
-            if emitted_by_us(stale, role):
+            if emitted_by_us(stale, role, client, fm, body):
                 os.remove(stale)
                 print("  agent pruned: %s -> %s (%s; the role no longer "
                       "declares this client, ADR-0026)" % (role, client, stale))
