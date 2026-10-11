@@ -47,6 +47,15 @@
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# A pre-commit hook exports GIT_DIR and GIT_INDEX_FILE. From a linked worktree,
+# T28-T35's throwaway `git init` then re-initialised the REAL repository and set
+# `core.bare = true` in its shared config, which stopped every checkout
+# (TASK-0165; check-publish.sh learned the same in TASK-0127). Clear the
+# variables that locate a repository before any git call, the suite's own or
+# vault_secrets.py's.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX \
+      GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE \
+      GIT_CEILING_DIRECTORIES GIT_DISCOVERY_ACROSS_FILESYSTEM
 exec python3 - "${1:-skills/vault-secrets/scripts/vault_secrets.py}" <<'TEST'
 import contextlib
 import importlib.util

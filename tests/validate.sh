@@ -1603,6 +1603,27 @@ if ! VAULT_SECRETS_OUT="$(bash tests/test-vault-secrets.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# A suite that creates a repository clears GIT_DIR first (TASK-0165).
+#
+# WHY: a pre-commit hook exports GIT_DIR and GIT_INDEX_FILE, and from a linked
+# worktree GIT_DIR is that worktree's admin directory. A throwaway init there
+# re-initialises the real repository with `core.bare = true` in the shared
+# config, and every checkout and worktree stops. check-publish.sh did it in
+# TASK-0127; test-vault-secrets.sh did it again on 2026-10-11.
+#
+# WHAT THIS PROVES: each suite under tests/ and each skill check-*.sh whose text
+# runs an init also unsets GIT_DIR or lists GIT_LOCATORS.
+# WHAT IT DOES NOT PROVE: that the unset comes before the init, or anything
+# about a script that writes to git without an init.
+for f in tests/*.sh skills/*/scripts/check-*.sh; do
+  [ "$f" = tests/validate.sh ] && continue
+  if grep -qE 'git init|"git", "init"' "$f" && ! grep -qE 'unset GIT_DIR|GIT_LOCATORS' "$f"; then
+    echo "GIT-LOCATORS: $f runs git init without clearing GIT_DIR (TASK-0165)"
+    fail=1
+  fi
+done
+
+# --------------------------------------------------------------------------
 # Local secret files stay out of git (TASK-0133, B-053).
 #
 # WHY: the mirror is public (ADR-0028), so a committed `.env.local` is a
