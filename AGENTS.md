@@ -21,7 +21,8 @@ services, secrets.
   naming only the variables it needs. An agent never reads, prints or copies
   a value or `~/.vault-token`. A missing or rejected secret is a stop: logging
   in and writing values are human steps. CI variables are only for secrets a
-  CI job itself consumes.
+  CI job itself consumes — or for a project whose `secrets.conf` declares
+  `gitlab` or `github` as its backend (ADR-0034).
 
 ## Technology stack
 - Skills: Agent Skills spec (SKILL.md, YAML frontmatter `name`,

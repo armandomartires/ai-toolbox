@@ -4,7 +4,7 @@
 # Drives skills/vault-secrets/scripts/vault_secrets.py as a subprocess against
 # a stub Vault served from this process on 127.0.0.1, with a throwaway HOME and
 # no controlling terminal (so a password prompt can never block the gate). No
-# network beyond loopback, no real Vault, no git. tests/validate.sh runs it.
+# network beyond loopback, no real Vault, no remote. tests/validate.sh runs it.
 #
 # THE CASES THAT MATTER MOST: login stores the read-only CHILD token and never
 # the LDAP token, which may carry admin (T1); exec exports only the variables
@@ -27,6 +27,10 @@
 # Windows os.execvpe returns status 0 before the command finishes, so exec
 # runs the command and waits there instead. T27 drives that path directly,
 # because the gate runs on Linux.
+#
+# TASK-0155 adds T28-T35: a project's declared backend (ADR-0034) -- init, the
+# local .env backend, and exec refusing a CI backend. They run `git init` in
+# throwaway directories (local git only), so the ignore checks are git's own.
 #
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
@@ -177,14 +181,14 @@ BASE_ENV.update({"HOME": HOME, "VAULT_USER": "tester",
                  "VAULT_ADDR": "http://127.0.0.1:%d" % server.server_address[1]})
 
 
-def run(args, stdin="", env=None):
+def run(args, stdin="", env=None, cwd=None):
     if os.path.exists(PROBE):  # one case's leftover must not satisfy the next
         os.remove(PROBE)
     e = dict(BASE_ENV)
     e.update(env or {})
     e = {k: v for k, v in e.items() if v is not None}
     p = subprocess.run([sys.executable, SCRIPT] + args, input=stdin, capture_output=True, text=True,
-                       env=e, cwd=WORK, timeout=30, start_new_session=True)
+                       env=e, cwd=cwd or WORK, timeout=30, start_new_session=True)
     outputs.append(p.stdout + p.stderr)
     return p
 
@@ -420,13 +424,137 @@ try:
             env={"GITHUB_TOKEN": "exported-t26"})
     check("T26 exec exits with the command's status", p.returncode == 7, "exit %s" % p.returncode)
 
+    # T28-T35 - a declared backend (ADR-0034, TASK-0155): init, the local .env
+    # backend, and exec refusing a CI backend. Each project is its own git repo,
+    # so the ignore checks run against git's real resolution.
+    def project(name, conf=None, example=None, gitignore=None):
+        d = os.path.join(WORK, name)
+        os.mkdir(d)
+        subprocess.run(["git", "init", "-q", d], check=True, capture_output=True)
+        for fname, text in ((CONF, conf), (".env.example", example), (".gitignore", gitignore)):
+            if text is not None:
+                with open(os.path.join(d, fname), "w", encoding="utf-8") as fh:
+                    fh.write(text)
+        return d
+    def read(d, fname):
+        try:
+            with open(os.path.join(d, fname), encoding="utf-8") as fh:
+                return fh.read()
+        except FileNotFoundError:
+            return None
+    def ignored(d, fname):
+        return subprocess.run(["git", "-C", d, "check-ignore", "-q", "--no-index", fname]).returncode == 0
+    CONF = "secrets.conf"
+
+    P = project("p-local")
+    p = run(["init", "--backend", "local", "--project", "demo-app"], cwd=P)
+    check("T28 init local exits 0", p.returncode == 0, p.stderr.strip())
+    check("T28 init writes secrets.conf with backend and project",
+          "backend = local\n" in (read(P, CONF) or "") and "project = demo-app\n" in (read(P, CONF) or ""))
+    check("T28 init makes .env ignored and keeps .env.example addable",
+          ignored(P, ".env") and ignored(P, ".env.local") and not ignored(P, ".env.example"))
+    check("T28 init creates .env.example and no secrets.map for local",
+          read(P, ".env.example") is not None and read(P, "secrets.map") is None)
+    before = [read(P, f) for f in (CONF, ".gitignore", ".env.example")]
+    p = run(["init", "--backend", "local", "--project", "demo-app"], cwd=P)
+    check("T28 a second identical init changes nothing",
+          p.returncode == 0 and "nothing to change" in p.stdout
+          and [read(P, f) for f in (CONF, ".gitignore", ".env.example")] == before, p.stdout.strip())
+    p = run(["init", "--backend", "vault", "--project", "demo-app"], cwd=P)
+    check("T28 init refuses to redeclare a different backend, and leaves the file",
+          p.returncode == 1 and "already declares" in p.stderr and read(P, CONF) == before[0], p.stderr.strip())
+
+    for i, (args, why) in enumerate(((["--backend", "vault", "--project", "kv"], "reserved"),
+                                     (["--backend", "local", "--project", "Demo_App"], "must match"),
+                                     (["--backend", "gitlab", "--project", "demo"], "needs gitlab_project"),
+                                     (["--backend", "local", "--project", "demo", "--github-repo", "o/demo"],
+                                      "belongs to backend github"))):
+        d = project("p-refused-%d" % i)
+        p = run(["init"] + args, cwd=d)
+        check("T29 init refuses (%s) and writes nothing" % why,
+              p.returncode == 1 and why in p.stderr and sorted(os.listdir(d)) == [".git"], p.stderr.strip())
+
+    V = project("p-vault", gitignore="!.env.example\n")
+    p = run(["init", "--backend", "vault", "--project", "demo-vault"], cwd=V)
+    check("T29 init vault starts a secrets.map on the project's own mount",
+          p.returncode == 0 and "# EXAMPLE_TOKEN=demo-vault/example#token" in (read(V, "secrets.map") or ""),
+          p.stderr.strip())
+    check("T29 an earlier lone !.env.example cannot leave the template ignored",
+          ignored(V, ".env") and not ignored(V, ".env.example"))
+
+    B = project("p-badconf", conf="backend = local\nproject = demo\nflavour = mint\n")
+    p = run(["check"], cwd=B)
+    check("T30 an unknown secrets.conf key fails with its line number",
+          p.returncode == 1 and "secrets.conf:3" in p.stderr, p.stderr.strip())
+
+    LOCAL_VALUE, LOCAL_VALUE2, OTHER_VALUE = "VAL-local-1f3", "VAL-local-replaced-8d2", "VAL-other-5c9"
+    with open(os.path.join(P, ".env.example"), "a", encoding="utf-8") as fh:
+        fh.write("DEMO_TOKEN=\nOTHER_TOKEN=\n")
+    p = run(["put", "DEMO_TOKEN"], stdin=LOCAL_VALUE + "\n", cwd=P)
+    envfile = os.path.join(P, ".env")
+    check("T31 local put writes .env", p.returncode == 0 and "DEMO_TOKEN=%s\n" % LOCAL_VALUE == read(P, ".env"),
+          p.stderr.strip())
+    check("T31 .env is mode 600", os.path.exists(envfile) and stat.S_IMODE(os.stat(envfile).st_mode) == 0o600)
+    p = run(["put", "DEMO_TOKEN"], stdin=LOCAL_VALUE2 + "\n", cwd=P)
+    check("T31 a second put replaces the line, never duplicates it",
+          p.returncode == 0 and read(P, ".env") == "DEMO_TOKEN=%s\n" % LOCAL_VALUE2)
+    p = run(["put", "NOT_DECLARED"], stdin="x\n", cwd=P)
+    check("T31 put of a variable .env.example does not name exits 2", p.returncode == 2, p.stderr.strip())
+    p = run(["put", "--map", MAP, "DEMO_TOKEN"], stdin="x\n", cwd=P)
+    check("T31 --map with the local backend exits 2", p.returncode == 2, p.stderr.strip())
+
+    Q = project("p-unignored", conf="backend = local\nproject = demo\n", example="DEMO_TOKEN=\n")
+    p = run(["put", "DEMO_TOKEN"], stdin=LOCAL_VALUE + "\n", cwd=Q)
+    check("T32 local put refuses while .env is not git-ignored, writes nothing",
+          p.returncode == 1 and "not git-ignored" in p.stderr and read(Q, ".env") is None, p.stderr.strip())
+
+    p = run(["exec", "DEMO_TOKEN"] + probe_cmd("DEMO_TOKEN", "OTHER_TOKEN"), cwd=P)
+    seen = probe() or {}
+    check("T33 local exec exports only the named variable from .env",
+          p.returncode == 0 and seen.get("DEMO_TOKEN") == LOCAL_VALUE2 and seen.get("OTHER_TOKEN") is None,
+          p.stderr.strip())
+    p = run(["exec", "DEMO_TOKEN"] + probe_cmd("DEMO_TOKEN"), env={"DEMO_TOKEN": "from-the-environment"}, cwd=P)
+    check("T33 an exported variable wins over .env", (probe() or {}).get("DEMO_TOKEN") == "from-the-environment")
+    p = run(["exec", "OTHER_TOKEN"] + probe_cmd("OTHER_TOKEN"), cwd=P)
+    check("T33 a variable missing from .env exits 1, names it, runs nothing",
+          p.returncode == 1 and "OTHER_TOKEN" in p.stderr and probe() is None, p.stderr.strip())
+    spaced = "  padded value  "
+    run(["put", "OTHER_TOKEN"], stdin=spaced + "\n", cwd=P)
+    run(["exec", "OTHER_TOKEN"] + probe_cmd("OTHER_TOKEN"), cwd=P)
+    check("T33 a value with outer spaces round-trips through .env", (probe() or {}).get("OTHER_TOKEN") == spaced)
+
+    run(["put", "OTHER_TOKEN"], stdin=OTHER_VALUE + "\n", cwd=P)
+    p = run(["check"], cwd=P)
+    check("T34 local check exits 0 and reports by name",
+          p.returncode == 0 and ".env: git-ignored" in p.stdout and "DEMO_TOKEN: set in .env" in p.stdout,
+          (p.stdout + p.stderr).strip())
+    if os.path.exists(envfile):
+        os.chmod(envfile, 0o644)
+    p = run(["check"], cwd=P)
+    check("T34 local check fails on a .env others can read", p.returncode == 1 and "mode 644" in p.stdout)
+    if os.path.exists(envfile):
+        os.chmod(envfile, 0o600)
+    with open(os.path.join(P, ".env.example"), "a", encoding="utf-8") as fh:
+        fh.write("THIRD_TOKEN=\n")
+    p = run(["check"], cwd=P)
+    check("T34 local check says MISSING and exits 1", p.returncode == 1 and "THIRD_TOKEN: MISSING" in p.stdout)
+
+    for backend, extra in (("github", ["--github-repo", "owner/demo"]), ("gitlab", ["--gitlab-project", "grp/demo"])):
+        d = project("p-" + backend)
+        run(["init", "--backend", backend, "--project", "demo"] + extra, cwd=d)
+        p = run(["exec", "DEMO_TOKEN"] + probe_cmd("DEMO_TOKEN"), cwd=d)
+        check("T35 exec refuses the %s backend: its values live in CI" % backend,
+              p.returncode == 2 and "not readable here" in p.stderr and probe() is None, p.stderr.strip())
+
     # T15 - nothing secret in any output, across every run above.
     blob = "\n".join(outputs)
     leaked = [name for name, s in (("password", PASSWORD), ("LDAP token", PARENT), ("child token", CHILD),
                                    ("root token", ROOT), ("stale token", STALE), ("new value", NEW_VALUE),
                                    ("push value", PUSH_VALUE), ("github value", GITHUB_VALUE),
                                    ("role_id", ROLE_ID), ("secret_id", SECRET_ID), ("AppRole token", APP),
-                                   ("private value", PRIVATE_VALUE), ("approle-written value", APP_VALUE))
+                                   ("private value", PRIVATE_VALUE), ("approle-written value", APP_VALUE),
+                                   ("local value", LOCAL_VALUE), ("replaced local value", LOCAL_VALUE2),
+                                   ("other local value", OTHER_VALUE))
               if s in blob]
     check("T15 no password, token or value in any output (%d runs)" % len(outputs), not leaked, ", ".join(leaked))
 

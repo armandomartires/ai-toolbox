@@ -1,10 +1,10 @@
 ---
 name: vault-secrets
-description: "Supply secrets to a command from HashiCorp Vault instead of shell-profile exports - a tracked map names which environment variable comes from which KV v2 secret, and a loader exports only the named ones into one child process. USE FOR: running a command that needs a token or password (a git push, an API call, an MCP server, ansible-vault), setting a project up on a new host, writing or rotating a secret, deciding where a new secret should live. DO NOT USE FOR: secrets a CI job itself consumes - those stay in the CI platform's own store; reading, printing or copying a secret value for any reason; or administering Vault itself (policies, auth methods, unsealing)."
+description: "Supply secrets to a command from where the project keeps them - HashiCorp Vault (a tracked map names which environment variable comes from which KV v2 secret), a git-ignored .env, or GitLab/GitHub CI variables - and declare that choice per project in secrets.conf. The loader exports only the named variables into one child process. USE FOR: choosing and declaring a new project's secrets backend (init), running a command that needs a token or password (a git push, an API call, an MCP server, ansible-vault), setting a project up on a new host, writing or rotating a secret, deciding where a new secret should live. DO NOT USE FOR: reading, printing or copying a secret value for any reason; or administering Vault beyond creating a project's own mount, policies and AppRole (auth methods, unsealing, other projects' policies)."
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.1.1"
+  version: "2.0.0"
 ---
 
 # vault-secrets
@@ -15,6 +15,10 @@ Vault owns it, and `scripts/vault_secrets.py` fetches it **into one child
 process** at the moment that process needs it. It never goes into a shell, a
 profile or a file. The decision and its reasons are in the adopting
 repository's ADR (ai-toolbox: `ADR-0030`).
+
+A new project chooses where its values live and declares it in a tracked
+`secrets.conf` (ai-toolbox: `ADR-0034`). With no `secrets.conf`, everything
+below works as it always has: Vault, driven by the map.
 
 ## Rules for an agent
 
@@ -42,16 +46,34 @@ repository's ADR (ai-toolbox: `ADR-0030`).
    codebase's identity. The loader refuses it once group or others can read
    it.
 
+## Choosing a backend
+
+Ask the human; never pick for them. Then run
+`vault_secrets.py init --backend <b> --project <name>`.
+
+| Backend | Values live in | Readable on a host | Who writes them |
+|---------|----------------|--------------------|-----------------|
+| `local` | a git-ignored `.env`, mode 600 | yes, that host only | `put VAR` |
+| `vault` | the project's own KV v2 mount `<name>/` | yes, via `exec` | `put VAR`, once a Vault admin has created the mount and its policies |
+| `gitlab` | GitLab CI/CD variables, masked and protected (`--gitlab-project`) | no: CI only | the project's CI/CD settings page |
+| `github` | GitHub Actions secrets (`--github-repo`) | no: write-only | the repository's Actions secrets page |
+
+- `init` writes `secrets.conf`, adds the `.env` ignores to `.gitignore`, and creates `.env.example` (and, for `vault`, `secrets.map`). It never overwrites: a second identical run changes nothing, and a different backend is refused. Change one by editing `secrets.conf` by hand.
+- `.env.example` is the list of names under every backend.
+- With `gitlab` or `github`, `exec` refuses: the values belong to CI. A local run exports the variable itself.
+- The project name becomes the Vault mount, so `sys`, `auth`, `identity`, `cubbyhole`, `kv` and `secret` are refused.
+
 ## Commands
 
-Run from the repository root, which holds `secrets.map`; or pass `--map FILE`.
+Run from the repository root, which holds `secrets.conf` and `secrets.map`; or pass `--map FILE` (vault only).
 
 | Command | What it does |
 |---------|--------------|
+| `init` | Declares the backend; see *Choosing a backend*. An agent may run it once the human has chosen. |
 | `login` | LDAP login (password prompt). Stores a **child token limited to `workstation-read`** in `~/.vault-token` (mode 600). The LDAP token itself, which may carry admin, is never stored. `VAULT_AUTH_METHOD=token` stores a pasted token instead, as given, but never a root token. `approle` verifies the credential file and stores nothing. |
-| `exec VAR… -- CMD…` | Fetches the named variables and execs `CMD` with them set. A variable already exported wins, and Vault is not consulted for it. On Windows, which has no `exec`, it runs `CMD`, waits for it, and exits with its status. |
-| `check` | Vault reachable with the certificate verified; the token's policies and remaining time; for each mapped variable: readable, MISSING, or shadowed by an export. Exits 1 if anything is missing. |
-| `put VAR` | Writes one value, read from stdin or a hidden prompt, using a **fresh login held in memory**, never the stored read-only token; with `approle`, no prompt at all. Merges into the secret with check-and-set. |
+| `exec VAR… -- CMD…` | Fetches the named variables (from Vault, or from `.env` with `local`) and execs `CMD` with them set. A variable already exported wins, and the store is not consulted for it. On Windows, which has no `exec`, it runs `CMD`, waits for it, and exits with its status. |
+| `check` | Vault reachable with the certificate verified; the token's policies and remaining time; for each mapped variable: readable, MISSING, or shadowed by an export. With `local`: `.env` is git-ignored and mode 600, and each `.env.example` name is set. Exits 1 if anything is missing. |
+| `put VAR` | Writes one value, read from stdin or a hidden prompt, using a **fresh login held in memory**, never the stored read-only token; with `approle`, no prompt at all. Merges into the secret with check-and-set. With `local`, replaces the line in `.env` (mode 600), and refuses while `.env` is not git-ignored. |
 | `logout` | Revokes the stored token and deletes the file. |
 
 Exit status: 0 ok, 1 failure, 2 usage, 3 not logged in or token rejected.

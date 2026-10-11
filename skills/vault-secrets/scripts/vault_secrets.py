@@ -7,7 +7,14 @@ secret -- names and paths only, never values:
 
     GITHUB_TOKEN=kv/ai-toolbox/github#token
 
+A project may instead declare where its values live in a tracked secrets.conf
+(ADR-0034): backend = local | vault | gitlab | github. With no secrets.conf,
+the map-driven Vault behaviour above applies unchanged.
+
 Subcommands:
+  init --backend B --project P
+                         write secrets.conf and the files that backend needs;
+                         a second identical run changes nothing
   login                  LDAP: store a read-only child token in ~/.vault-token
                          (mode 600). approle: verify the credential, store nothing
   exec VAR... -- CMD...  fetch the named variables, then exec CMD with them
@@ -15,7 +22,8 @@ Subcommands:
   check                  report, by name only, what is readable and what an
                          exported variable shadows
   put VAR                write one value, read from stdin, with a fresh login
-                         (AppRole, LDAP or VAULT_TOKEN) -- never the stored token
+                         (AppRole, LDAP or VAULT_TOKEN) -- never the stored token.
+                         local backend: into .env, mode 600
   logout                 revoke the stored token and delete the file
 
 Configuration, from the environment:
@@ -65,6 +73,19 @@ MAP_LINE = re.compile(
     r"#(?P<field>[A-Za-z0-9_.-]+)$"
 )
 EXIT_FAIL, EXIT_USAGE, EXIT_LOGIN = 1, 2, 3
+
+CONF_FILE, ENV_FILE, ENV_EXAMPLE, MAP_FILE = "secrets.conf", ".env", ".env.example", "secrets.map"
+BACKENDS = ("local", "vault", "gitlab", "github")
+# key -> the backend it belongs to (None: every backend).
+CONF_KEYS = {"backend": None, "project": None, "gitlab_project": "gitlab", "github_repo": "github"}
+PROJECT_NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
+REPO_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+$")
+# A project's name becomes its Vault mount: never one Vault or the shared store owns.
+RESERVED_MOUNTS = {"sys", "auth", "identity", "cubbyhole", "kv", "secret"}
+ENV_LINE = re.compile(r"^(?:export\s+)?(?P<var>[A-Z_][A-Z0-9_]*)=(?P<value>.*)$")
+EXAMPLE_NAME = re.compile(r"(?m)^([A-Z_][A-Z0-9_]*)=")
+# Appended together, in this order: `!.env.example` must come after `.env.*`.
+GITIGNORE_LINES = (".env", ".env.*", "!.env.example")
 
 
 def die(msg, code=EXIT_FAIL):
@@ -274,6 +295,244 @@ def fetch(vault, token, entries, names):
     return values
 
 
+# -- the declared backend (ADR-0034) ---------------------------------------
+
+def load_conf(path=CONF_FILE):
+    """The declared backend, or None when the project declares none."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except FileNotFoundError:
+        return None
+    conf = {}
+    for n, line in enumerate(lines, 1):
+        text = line.strip()
+        if not text or text.startswith("#"):
+            continue
+        key, sep, value = text.partition("=")
+        key, value = key.strip(), value.strip()
+        if not sep or key not in CONF_KEYS:
+            die("%s:%d: expected one of %s = <value>" % (path, n, ", ".join(CONF_KEYS)))
+        if key in conf:
+            die("%s:%d: %s is set twice" % (path, n, key))
+        conf[key] = value
+    return validate_conf(conf, path)
+
+
+def validate_conf(conf, source):
+    backend = conf.get("backend")
+    if backend not in BACKENDS:
+        die("%s: backend must be one of %s" % (source, ", ".join(BACKENDS)))
+    project = conf.get("project") or ""
+    if not PROJECT_NAME.match(project):
+        die("%s: project must match [a-z0-9][a-z0-9-]{0,62}" % source)
+    if project in RESERVED_MOUNTS:
+        die("%s: project %r is a reserved Vault mount name" % (source, project))
+    for key, owner in CONF_KEYS.items():
+        if owner is None:
+            continue
+        if owner == backend and not conf.get(key):
+            die("%s: backend %s needs %s" % (source, backend, key))
+        if owner != backend and conf.get(key):
+            die("%s: %s belongs to backend %s, not %s" % (source, key, owner, backend))
+        if conf.get(key) and not REPO_PATH.match(conf[key]):
+            die("%s: %s must look like group/name" % (source, key))
+    return conf
+
+
+def render_conf(conf):
+    lines = ["# Where this project's secret values live (ADR-0034 in ai-toolbox).",
+             "# Names only, never a value. Written by vault_secrets.py init; to change",
+             "# backend, edit it by hand and run init again.",
+             ""]
+    lines += ["%s = %s" % (k, conf[k]) for k in CONF_KEYS if conf.get(k)]
+    return "\n".join(lines) + "\n"
+
+
+def write_text(path, text, mode=None):
+    """Replace PATH atomically; with MODE, the file never exists with a looser one."""
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(path)), prefix=".%s." % os.path.basename(path))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+        os.chmod(tmp, mode if mode is not None else 0o644)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
+def read_lines(path):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return fh.read().splitlines()
+    except FileNotFoundError:
+        return None
+
+
+def ensure_gitignore():
+    """Append the .env ignores if any is missing. True if .gitignore changed."""
+    lines = read_lines(".gitignore")
+    present = {l.strip() for l in lines or []}
+    if all(l in present for l in GITIGNORE_LINES):
+        return False
+    # All three, in order, even if one exists: a lone earlier `!.env.example`
+    # followed by an appended `.env.*` would ignore the template.
+    block = ["# Local secret values are never committed (vault_secrets.py init)"] + list(GITIGNORE_LINES)
+    text = "\n".join((lines or []) + ([""] if lines else []) + block) + "\n"
+    write_text(".gitignore", text)
+    return True
+
+
+def cmd_init(args):
+    conf = {"backend": args.backend, "project": args.project,
+            "gitlab_project": args.gitlab_project, "github_repo": args.github_repo}
+    conf = validate_conf({k: v for k, v in conf.items() if v}, "init")
+    existing, changed = load_conf(), []
+    if existing is None:
+        write_text(CONF_FILE, render_conf(conf))
+        changed.append(CONF_FILE)
+    elif existing != conf:
+        die("%s already declares backend=%s project=%s: edit it by hand to change it"
+            % (CONF_FILE, existing["backend"], existing["project"]))
+    if ensure_gitignore():
+        changed.append(".gitignore")
+    if read_lines(ENV_EXAMPLE) is None:
+        write_text(ENV_EXAMPLE, "# Every variable this project reads: names and placeholders, never a value.\n"
+                                "# EXAMPLE_TOKEN=\n")
+        changed.append(ENV_EXAMPLE)
+    if conf["backend"] == "vault" and read_lines(MAP_FILE) is None:
+        write_text(MAP_FILE, "# Which variable comes from which secret in this project's own KV v2\n"
+                             "# mount: names and paths only, never a value. Every variable here also\n"
+                             "# appears in .env.example.\n"
+                             "# EXAMPLE_TOKEN=%s/example#token\n" % conf["project"])
+        changed.append(MAP_FILE)
+    print("init: %s" % (", ".join(changed) + " written" if changed else "nothing to change"))
+    print("next: " + {
+        "local": "name each variable in .env.example, then `put VAR` writes it to .env (mode 600)",
+        "vault": "a Vault admin runs `provision`; then map each variable in secrets.map and `put` it",
+        "gitlab": "name each variable in .env.example, then `put VAR` sets it as a GitLab CI variable",
+        "github": "name each variable in .env.example, then `put VAR` sets it as a GitHub Actions secret",
+    }[conf["backend"]])
+
+
+# -- the local backend: a git-ignored .env --------------------------------
+
+def example_names():
+    lines = read_lines(ENV_EXAMPLE)
+    if lines is None:
+        die("%s not found: run `vault_secrets.py init`" % ENV_EXAMPLE)
+    return list(dict.fromkeys(EXAMPLE_NAME.findall("\n".join(lines))))
+
+
+def load_dotenv():
+    values = {}
+    for n, line in enumerate(read_lines(ENV_FILE) or [], 1):
+        text = line.strip()
+        if not text or text.startswith("#"):
+            continue
+        m = ENV_LINE.match(text)
+        if not m:
+            die("%s:%d: expected VAR=value" % (ENV_FILE, n))  # never echoed: it may be a value
+        value = m["value"]
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        values[m["var"]] = value
+    return values
+
+
+def git_ignored(path):
+    """True or False, or None outside a git work tree (or without git)."""
+    try:
+        rc = subprocess.run(["git", "check-ignore", "-q", "--no-index", path],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+    except FileNotFoundError:
+        return None
+    return {0: True, 1: False}.get(rc)
+
+
+def known_local(names):
+    unknown = [n for n in names if n not in example_names()]
+    if unknown:
+        die("not in %s: %s" % (ENV_EXAMPLE, ", ".join(unknown)), EXIT_USAGE)
+
+
+def exec_local(args, command):
+    names = example_names() if args.all else args.vars
+    if not names:
+        die("name the variables the command needs (or pass --all)", EXIT_USAGE)
+    known_local(names)
+    values, env = load_dotenv(), dict(os.environ)
+    for name in names:
+        if os.environ.get(name):
+            continue
+        if not values.get(name):
+            die("%s: not set in %s -- write it with `put %s`" % (name, ENV_FILE, name))
+        env[name] = values[name]
+    run_command(command, env)
+
+
+def put_local(var):
+    known_local([var])
+    if git_ignored(ENV_FILE) is False:
+        die("refusing to write: %s is not git-ignored -- run `vault_secrets.py init`" % ENV_FILE)
+    value = read_value(var)
+    if "\n" in value or "\r" in value:
+        die("a %s value is one line: nothing written" % ENV_FILE)
+    if value != value.strip() or value[0] in "\"'":
+        value = "'%s'" % value  # the reader strips exactly one outer pair
+    out, replaced = [], False
+    for line in read_lines(ENV_FILE) or []:
+        m = ENV_LINE.match(line.strip())
+        if m and m["var"] == var:
+            if not replaced:
+                out.append("%s=%s" % (var, value))
+            replaced = True
+            continue
+        out.append(line)
+    if not replaced:
+        out.append("%s=%s" % (var, value))
+    write_text(ENV_FILE, "\n".join(out) + "\n", mode=0o600)
+    print("wrote %s to %s (mode 600)" % (var, ENV_FILE))
+
+
+def check_local():
+    ok, ignored = True, git_ignored(ENV_FILE)
+    if ignored is None:
+        print("%s: not in a git work tree, ignore rule not checked" % ENV_FILE)
+    elif ignored:
+        print("%s: git-ignored" % ENV_FILE)
+    else:
+        print("%s: NOT git-ignored -- run `vault_secrets.py init`" % ENV_FILE)
+        ok = False
+    if os.name != "nt" and os.path.exists(ENV_FILE):
+        mode = stat.S_IMODE(os.stat(ENV_FILE).st_mode)
+        if mode & 0o077:
+            print("%s: readable by group or others (mode %03o) -- chmod 600 it" % (ENV_FILE, mode))
+            ok = False
+    values = load_dotenv()
+    for name in example_names():
+        if os.environ.get(name):
+            print("%s: set in the environment, shadows %s" % (name, ENV_FILE))
+        elif values.get(name):
+            print("%s: set in %s" % (name, ENV_FILE))
+        else:
+            print("%s: MISSING -- write it with `put %s`" % (name, name))
+            ok = False
+    sys.exit(0 if ok else EXIT_FAIL)
+
+
+def read_value(var):
+    if sys.stdin.isatty():
+        value = getpass.getpass("Value for %s (hidden): " % var)
+    else:
+        value = sys.stdin.read().rstrip("\r\n")
+    if not value:
+        die("empty value: nothing written")
+    return value
+
+
 # -- authentication --------------------------------------------------------
 
 def method():
@@ -479,12 +738,7 @@ def cmd_put(args):
 
 def write_value(vault, token, entries, var):
     mount, path, field = entries[var]
-    if sys.stdin.isatty():
-        value = getpass.getpass("Value for %s (hidden): " % var)
-    else:
-        value = sys.stdin.read().rstrip("\r\n")
-    if not value:
-        die("empty value: nothing written")
+    value = read_value(var)
     try:
         found = read_secret(vault, token, mount, path)
     except VaultError as e:
@@ -522,6 +776,11 @@ def main(argv):
     ap = argparse.ArgumentParser(prog="vault_secrets.py", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("init")
+    p.add_argument("--backend", required=True, choices=BACKENDS)
+    p.add_argument("--project", required=True)
+    p.add_argument("--gitlab-project", metavar="GROUP/NAME")
+    p.add_argument("--github-repo", metavar="OWNER/NAME")
     sub.add_parser("login")
     p = sub.add_parser("exec")
     p.add_argument("--map", action="append", metavar="FILE")
@@ -537,10 +796,31 @@ def main(argv):
     args.maps = map_paths(args) if hasattr(args, "map") else []
     if args.cmd != "exec" and command:
         die("`--` is only for exec", EXIT_USAGE)
-    if args.cmd == "exec":
+    backend = (load_conf() or {}).get("backend", "vault") if args.cmd in ("exec", "check", "put") else None
+    if backend not in (None, "vault") and args.map:
+        die("--map is for the vault backend; %s declares %s" % (CONF_FILE, backend), EXIT_USAGE)
+    if backend == "local":
+        if args.cmd == "exec":
+            if not command:
+                die("nothing to run: exec [VAR ...|--all] -- CMD [ARG ...]", EXIT_USAGE)
+            exec_local(args, command)
+        elif args.cmd == "check":
+            check_local()
+        else:
+            put_local(args.var)
+    elif backend in ("gitlab", "github"):
+        if args.cmd == "exec":
+            # GitHub secrets cannot be read back at all; GitLab's would need a
+            # GitLab token over the network for every command. CI owns them.
+            die("backend %s: values live in CI and are not readable here -- a local run "
+                "exports the variable itself (it wins over any store)" % backend, EXIT_USAGE)
+        die("backend %s: %s is not implemented yet -- use the platform's settings page"
+            % (backend, args.cmd), EXIT_USAGE)
+    elif args.cmd == "exec":
         cmd_exec(args, command)
     else:
-        {"login": cmd_login, "check": cmd_check, "put": cmd_put, "logout": cmd_logout}[args.cmd](args)
+        {"init": cmd_init, "login": cmd_login, "check": cmd_check, "put": cmd_put,
+         "logout": cmd_logout}[args.cmd](args)
 
 
 if __name__ == "__main__":

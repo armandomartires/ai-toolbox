@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "6.0.0"
+  version: "6.1.0"
 ---
 
 # project-workflow
@@ -43,6 +43,7 @@ The divergence is deliberate (ADR-0013 in ai-toolbox). The two skills share only
 3. Copy `templates/` into `root` as-is. Copy; never symlink.
 4. Fill `20.PLAN.md` and `30.ROADMAP.md` with real state. Offer a `git log` back-fill, but do not assume one is wanted.
 5. Point to `<root>/<entrypoint>` from `AGENTS.md` or `README.md`.
+6. Ask how the project handles secrets: **local** `.env`, **HashiCorp Vault** (its own KV mount), **GitLab** CI variables, or **GitHub** Actions secrets. Never choose for the human. With the `vault-secrets` skill installed, run its `scripts/vault_secrets.py init --backend <choice> --project <name>`; without it, write `secrets.conf` by hand (`templates/reference/environments-and-secrets.md`). Creating a Vault mount is a Vault admin's step, never the agent's.
 
 ## Generating an artifact
 
