@@ -1705,6 +1705,16 @@ if ! INSTALL_OUT="$(bash tests/test-install.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# repo-inventory reports every risk it claims to, and reads without writing
+# (TASK-0167). Fixture repositories under mktemp, local git only; the check
+# compares every file under its roots before and after a run. Unconditional
+# (ADR-0009).
+if ! INVENTORY_OUT="$(bash skills/repo-inventory/scripts/check-repo-inventory.sh 2>&1)"; then
+  printf '%s\n' "$INVENTORY_OUT" | grep -v '^PASS' | sed 's/^/REPO-INVENTORY: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # A closed backlog row names a closer that agrees (TASK-0142, B-038), and the
 # "N items are open" sentence matches the rows (TASK-0145, B-047). The rule is
 # .ai/README.md's *Closing a backlog row*; the script says what it cannot see
