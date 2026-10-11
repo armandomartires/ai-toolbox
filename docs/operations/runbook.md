@@ -288,7 +288,7 @@ git push github HEAD:master       # then the public mirror
 ```
 
 `origin` is private, so the fetch and the push each need the credential
-from *Authenticating a push* below (`vgit GITLAB_PUSH_TOKEN git-push …`); the
+from *Authenticating a push* below (`vgit_origin …`); the
 commands are written bare here for readability.
 
 **This preserves `AGENTS.md`'s "one task = one commit" rule.** `master` still
@@ -585,25 +585,52 @@ this once, in the shell profile or the session, from the repo root:
 ```bash
 # Run git with one remote's credential, fetched from Vault. The token reaches
 # git only through its environment (GIT_CONFIG_*, git >= 2.31) -- never argv,
-# where `ps` would show it, and never the calling shell.
+# where `ps` would show it, and never the calling shell. GIT_TERMINAL_PROMPT=0
+# makes a rejected credential fail at once instead of waiting on a username
+# prompt that nobody can answer.
 vgit() {  # vgit <TOKEN_VAR> <basic-auth-user> <git args...>
   local var=$1 user=$2; shift 2
   python3 skills/vault-secrets/scripts/vault_secrets.py exec "$var" -- \
-    env VGIT_VAR="$var" VGIT_USER="$user" bash -c '
+    env VGIT_VAR="$var" VGIT_USER="$user" GIT_TERMINAL_PROMPT=0 bash -c '
       export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraheader
       GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf "%s:%s" "$VGIT_USER" "${!VGIT_VAR}" | base64 -w0)"
       export GIT_CONFIG_VALUE_0
       exec git "$@"' vgit "$@"
 }
 
-# origin — the project access token, never GITLAB_TOKEN. The instance is
-# http:// only, so this header crosses the network in cleartext; that is why
-# the token it carries is repository-only, one project, and expiring.
-vgit GITLAB_PUSH_TOKEN git-push push origin master
+# vgit for origin, over https://. origin's URL is http://; the rewrite lasts
+# for this one command and leaves the remote as configured. The host comes
+# from that URL, so it never has to be written in a tracked file.
+vgit_origin() {  # vgit_origin <git args...>
+  local url host
+  url=$(git remote get-url origin) || return
+  case $url in
+    http://*)
+      host=${url#http://}; host=${host%%/*}
+      vgit GITLAB_PUSH_TOKEN git-push \
+        -c "url.https://$host/.insteadOf=http://$host/" "$@" ;;
+    *) vgit GITLAB_PUSH_TOKEN git-push "$@" ;;
+  esac
+}
+
+# origin — the project access token, never GITLAB_TOKEN
+vgit_origin push origin master
 
 # github — the public mirror
 vgit GITHUB_TOKEN <github-username> push github master
 ```
+
+**Why `origin` needs the rewrite** (`TASK-0163`, observed 2026-10-11). GitLab
+answers `http://` with a 301 to `https://`, and current libcurl does not resend
+a custom `Authorization` header (`http.extraheader`) when a redirect changes
+scheme or port. Without the rewrite, git gets a 401 after the redirect and asks
+for a username: `vgit GITLAB_PUSH_TOKEN git-push push origin master` hung for
+over ten minutes inside `git-remote-http`, and with `GIT_TERMINAL_PROMPT=0` it
+fails at once with `could not read Username for 'https://…': terminal prompts
+disabled`. The token was valid throughout. The rewrite also keeps the token off
+the network in cleartext, since the first request is already `https://`
+(`TASK-0148`). If `origin` is ever re-pointed to `https://`, which is the
+human's decision, `vgit_origin` takes its second branch and needs no change.
 
 For a project access token the basic-auth username is ignored, but it must
 not be empty. Both tokens live in Vault (`secrets.map`), no longer in the
@@ -638,7 +665,7 @@ code (`reference/git-workflow.md`; AGENTS.md's Git rules):
 
 ```
 git rev-parse HEAD
-vgit GITLAB_PUSH_TOKEN git-push ls-remote origin master
+vgit_origin ls-remote origin master
 git ls-remote github master
 ```
 

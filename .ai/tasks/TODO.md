@@ -209,6 +209,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0159 — Rebuild the dashboard at plan approval and on push; ask about Pages
 - [x] TASK-0160 — `install.sh link` really links on Windows; `--status` reports
 - [x] TASK-0161 — `vendor-skill.sh`: per-project skill copies with a manifest
+- [x] TASK-0163 — Push to `origin` over `https://` with a per-command rewrite
 - [x] TASK-0165 — Keep the gate's throwaway `git init` out of the real repository
 
 ## Post-S9 (superseded by the promotion above)
