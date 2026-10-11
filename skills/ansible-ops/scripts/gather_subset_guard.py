@@ -77,7 +77,7 @@ CONFIGURATION -- BY ENVIRONMENT VARIABLE, NOT BY `.ansible-lint`
 WHY AN INVENTORY IS READ AT ALL
     Because a play may name a bare HOST that reaches its hazard class only by
     group membership. The estate that motivated this rule does exactly that
-    (`hosts: sigsrvpve1`), so a rule matching `hosts:` against group names
+    (`hosts: pve-node-1`), so a rule matching `hosts:` against group names
     would have said nothing about the one playbook it was written for. Found
     by TASK-0052 (defect D1) before this rule was implemented.
 

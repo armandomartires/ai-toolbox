@@ -93,7 +93,7 @@ four places rather than worked around.
 silence is satisfied equally by a correct guard and by one that classifies
 nothing (`TASK-0052` D2). So the guard was run against the **real** estate:
 silent on both actual playbooks, then — with `gather_facts` flipped to `true`
-**in a `/tmp` copy only** — it fired naming **`sigsrvpve1`**, resolved through
+**in a `/tmp` copy only** — it fired naming **`pve-node-1`**, resolved through
 the real nested inventory. That is what makes the silence discriminating rather
 than inert. `SIGMA-infrastructure` was never written to.
 

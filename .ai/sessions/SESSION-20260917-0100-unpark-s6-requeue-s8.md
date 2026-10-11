@@ -66,7 +66,7 @@ the brief names (lesson 7):
 
 - **D1** — the guard identified "PVE-class" hosts by **group name**
   (`pve_cluster`/`pve_voting`). The estate's only PVE-targeting playbook
-  uses `hosts: sigsrvpve1`, a **bare hostname**
+  uses `hosts: pve-node-1`, a **bare hostname**
   (`capture_pve_baseline.yml:21`). Group-name matching would classify it as
   not-PVE and say nothing. Detection needs host→group resolution through the
   inventory's nested `children:`.

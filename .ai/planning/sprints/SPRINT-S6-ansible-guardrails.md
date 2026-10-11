@@ -84,7 +84,7 @@
 > with a negative control that reproduces the silent-no-op trap). **The
 > decisive evidence is outside the fixture set**: the real playbook, flipped to
 > `gather_facts: true` in a `/tmp` copy, produced `MISSING EXCLUSION` naming
-> `sigsrvpve1` resolved through the real nested inventory — which is what makes
+> `pve-node-1` resolved through the real nested inventory — which is what makes
 > its silence on the unmodified file discriminating rather than inert. **The checkpoint is NOT `REVIEW-0009`** — that number is reserved
 > by S8's file; S6's takes the next free one.
 >
@@ -137,7 +137,7 @@
 > - **D1 — the guard's target matching does not match the real playbook.**
 >   `TASK-0031` scopes "PVE-class" detection around group names
 >   (`pve_cluster`/`pve_voting`). But `capture_pve_baseline.yml:21` reads
->   `hosts: sigsrvpve1` — a **bare hostname**. Group-name matching would
+>   `hosts: pve-node-1` — a **bare hostname**. Group-name matching would
 >   never classify the one playbook in the estate that targets a PVE node.
 >   Detection must resolve host→group membership from
 >   `inventory/production.yml`.
@@ -254,7 +254,7 @@ that matter most:
 | ADR-0016 | TASK-0028 | **accepted 2026-09-22** (**retitled**) | Hooks as a component category — ~~expected "no"~~ **declined, but because the clients disagree on the tool's *name*, not because interception fails; it works in both** |
 | TASK-0029 | ADR-0015 | **done** | `skills/ansible-ops/` — **delivered by S7's pilot (`TASK-0046`), 2026-09-15**, produced *through* S7's loops. Row corrected 2026-09-16 by `TASK-0052`: it read `planned` while the task file read `done` |
 | TASK-0030 | TASK-0029 | **done** | `loops/ansible-change/` — same, delivered by `TASK-0046`. Both ran under an **Option 2 waiver** (built from `PLAN-0003`'s F1–F7 evidence, ADR-0015 unratified), recorded in both task files |
-| TASK-0031 | ADR-0016, TASK-0027 | **done** | The `gather_subset` guard + **7** fixture proofs (raised from 5 by `TASK-0052`). **Delivered 2026-09-16; closes B-011.** A custom `ansible-lint` rule, **10/10** in `tests/gather-subset-guard.sh` including a negative control reproducing the `enable_list` silent-no-op trap. Fixture 6 **observed failing**, plus the *real* playbook flipped in a `/tmp` copy firing on `sigsrvpve1` resolved through the real inventory. Three defects found and fixed en route — including that **`TASK-0027`'s "declarative wiring" recommendation was wrong** |
+| TASK-0031 | ADR-0016, TASK-0027 | **done** | The `gather_subset` guard + **7** fixture proofs (raised from 5 by `TASK-0052`). **Delivered 2026-09-16; closes B-011.** A custom `ansible-lint` rule, **10/10** in `tests/gather-subset-guard.sh` including a negative control reproducing the `enable_list` silent-no-op trap. Fixture 6 **observed failing**, plus the *real* playbook flipped in a `/tmp` copy firing on `pve-node-1` resolved through the real inventory. Three defects found and fixed en route — including that **`TASK-0027`'s "declarative wiring" recommendation was wrong** |
 | TASK-0032 | TASK-0029 | **done** | Record the target-repo findings; state what was left alone. **Done 2026-09-16.** F1–F4 recorded in `CURRENT_STATE.md` — **not** with the skill, because `ADR-0015` forbids estate facts in a symlink-deployed component, which is where this brief suggested putting them. **Two citations had drifted** (`ci.yml`'s "no GitHub remote" is now *half* false), and **the "42 unpushed commits" repeated in three files is 42 only against a local-path `origin` — it is 8 against both real remotes** |
 
 Order matters, and for the same reason it did in S5: ground truth before

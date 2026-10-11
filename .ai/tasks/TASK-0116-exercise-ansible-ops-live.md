@@ -95,7 +95,7 @@ connect to hosts at gate 4, so the hazard review at gate 1 governs them.
   Rollback: `git checkout -- state/baseline/latest.json` and delete the new
   file. Stop if the pre-run cluster health check is not PASS. After gate 8,
   leave the result uncommitted in the estate for me to commit or roll back.
-- Hosts / `--limit`: `--limit sigsrvpve1`; `forks` unchanged at 2
+- Hosts / `--limit`: `--limit pve-node-1`; `forks` unchanged at 2
 - Authorized by: Armando Martires
 - Date: 2026-09-30
 
@@ -233,13 +233,13 @@ and nothing else.
 | `.ai/context/CURRENT_STATE.md` | A dated section per attempt |
 | `/tmp/opencode/ansible-ops-pilot/change-record.md` | Scratch record, **closed**: all nine fields filled; `check-change-record.sh` → `RECORD OK`, exit 0. Scratch because the skill leaves the record's location to the estate, and this estate has no convention for one yet |
 | `.claude/settings.local.json` | **Gitignored, machine-local.** One exact-match allow rule for the gate-4 command, granted by the human 2026-09-30. Not a repo change; recorded because gate 4's evidence depends on it |
-| Authorization section | **Filled by the human in the file**, 2026-09-30: change, `--limit sigsrvpve1`, rollback, stop condition, signature. The four original `*(unfilled)*` placeholder lines were removed afterwards, at the human's request |
+| Authorization section | **Filled by the human in the file**, 2026-09-30: change, `--limit pve-node-1`, rollback, stop condition, signature. The four original `*(unfilled)*` placeholder lines were removed afterwards, at the human's request |
 
 **Deviations.**
 
 1. **Gate 4 was blocked by the agent harness, not by the estate.** The Claude
    Code auto-mode classifier denied `ansible-playbook`. The command was
-   read-only by construction: `--check --diff --limit sigsrvpve1`, a play with
+   read-only by construction: `--check --diff --limit pve-node-1`, a play with
    `gather_facts: false` invoking `*_info` modules against a PVEAuditor-scoped
    token. **Not routed around**, on the harness's own instruction and because
    working around a safety denial is the behaviour this whole skill exists to
@@ -312,20 +312,20 @@ with gates 6–8 run by the human.
 
      ```
      node  nodes quorate votes   ring  coro_rss pmxcfs cfgver
-     sigsrvpve1 … 6  Yes  6/6  1.22c3  … mounted 20   (and 2,3,7,4,6 identical)
+     pve-node-1 … 6  Yes  6/6  1.22c3  … mounted 20   (and 2,3,7,4,6 identical)
      PASS  all nodes share one Ring ID: 1.22c3
      OVERALL: PASS - quorum, ring, pmxcfs and all services healthy
      ```
-  4. **Gate 1 — derive.** Target `sigsrvpve1` is hazard-class (a PVE node in
+  4. **Gate 1 — derive.** Target `pve-node-1` is hazard-class (a PVE node in
      `pve_voting`). The play sets `gather_facts: false`, so no implicit
      `ansible.builtin.setup` runs and `ansible_mounts` is never collected —
-     that is the exclusion applied. Bound: `--limit sigsrvpve1`. Ten modules
+     that is the exclusion applied. Bound: `--limit pve-node-1`. Ten modules
      derived by reading the play and its role.
   5. **Gate 2 — lint.** `Passed: 0 failure(s), 0 warning(s) in 13 files …
      Profile 'production' was required, and it passed.` exit 0. Recorded as
      `lint_run: yes`; the outcome is deliberately not part of the field.
   6. **Gate 3 — syntax/parse.** `ansible-playbook --syntax-check … --limit
-     sigsrvpve1` → `playbook: playbooks/capture_pve_baseline.yml`, exit 0.
+     pve-node-1` → `playbook: playbooks/capture_pve_baseline.yml`, exit 0.
   7. **Gate 4 — blocked.** `Permission for this action was denied by the
      Claude Code auto mode classifier.` Stopped rather than work around it.
   8. Verified the estate untouched; wrote the partial record and ran its
@@ -360,7 +360,7 @@ with gates 6–8 run by the human.
 - Validation:
   - `tools/pve_verify_cluster.py` → `OVERALL: PASS`, exit 0
   - `ansible-lint playbooks/capture_pve_baseline.yml` → exit 0
-  - `ansible-playbook --syntax-check … --limit sigsrvpve1` → exit 0
+  - `ansible-playbook --syntax-check … --limit pve-node-1` → exit 0
   - `check-change-record.sh` → exit 1, five named missing fields (expected)
   - Estate: `HEAD` `2a6be9a` and porcelain empty before and after; all six
     `state/baseline/*.json` checksums identical
@@ -389,7 +389,7 @@ with gates 6–8 run by the human.
 
      ```
      node  nodes quorate votes   ring  coro_rss pmxcfs cfgver
-     sigsrvpve1   6  Yes  6/6  1.22d4  1045MB mounted 20
+     pve-node-1   6  Yes  6/6  1.22d4  1045MB mounted 20
      (pve2 170MB, pve3 170MB, pve7 186MB, pve4 186MB, pve6 186MB — otherwise identical)
      PASS  all nodes share one Ring ID: 1.22d4
      OVERALL: PASS - quorum, ring, pmxcfs and all services healthy
@@ -401,11 +401,11 @@ with gates 6–8 run by the human.
      same command with `> <scratch>/gate4.log 2>&1 < /dev/null` appended —
      still one exact string, now with blocking handles.
   5. **Gate 4 — performed.** `ansible-playbook --check --diff --limit
-     sigsrvpve1 playbooks/capture_pve_baseline.yml`, exit 0:
+     pve-node-1 playbooks/capture_pve_baseline.yml`, exit 0:
 
      ```
      PLAY RECAP
-     sigsrvpve1 : ok=18 changed=2 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
+     pve-node-1 : ok=18 changed=2 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
      ```
 
      Every task ran `-> localhost` against the API. The two `changed` are the
@@ -463,7 +463,7 @@ with gates 6–8 run by the human.
     Gates 6 and 9, and nothing else; the ten fidelity entries were accepted.
   - **The cluster moved between attempts and still passes.** Ring `1.22c3` →
     `1.22d4` means at least one membership event since 2026-09-28; quorum is
-    6-of-6 either side. `sigsrvpve1`'s corosync RSS is **1045 MB** against
+    6-of-6 either side. `pve-node-1`'s corosync RSS is **1045 MB** against
     ~180 MB on its five peers; the tool does not flag it and nothing here
     depends on it. Recorded as an observation, not raised — it is the estate's
     to judge, and this task edits nothing there.
@@ -512,11 +512,11 @@ with gates 6–8 run by the human.
      Empty porcelain. The snapshot is the HEAD blob of the one tracked target;
      the rollback path was verified to **exist** (`git cat-file -e`, blob equal
      to the working copy), not assumed.
-  5. **Gate 7** (human), `ansible-playbook --limit sigsrvpve1
+  5. **Gate 7** (human), `ansible-playbook --limit pve-node-1
      playbooks/capture_pve_baseline.yml`, no `--check`:
 
      ```
-     sigsrvpve1 : ok=18 changed=2 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
+     pve-node-1 : ok=18 changed=2 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
      ```
 
      Same `ok`/`changed` counts gate 4 predicted.

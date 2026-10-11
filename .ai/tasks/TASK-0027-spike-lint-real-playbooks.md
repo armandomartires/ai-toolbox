@@ -80,7 +80,7 @@ The second bullet's asymmetry is the interesting part and should decide it.
 
 | Artifact | Produced by | Expected state |
 |----------|-------------|----------------|
-| `/home/armando.martires/SIGMA-infrastructure/playbooks/capture_pve_baseline.yml` | pre-existing (that repo, S001.T003) | 116 lines; `hosts: sigsrvpve1`; `gather_facts: false`; `*_info` modules only |
+| `/home/armando.martires/SIGMA-infrastructure/playbooks/capture_pve_baseline.yml` | pre-existing (that repo, S001.T003) | 116 lines; `hosts: pve-node-1`; `gather_facts: false`; `*_info` modules only |
 | `…/playbooks/report_pve_baseline_drift.yml` | pre-existing | `hosts: localhost`; `gather_facts: false` |
 | `…/.ansible-lint` | pre-existing (S004.T007) | `profile: production`; excludes `.cache/`, `tools/`, `state/`; **not** `playbooks/`; header claims no playbooks exist |
 | `…/ansible.cfg` | pre-existing (S004.T007) | `inventory = inventory/production.yml`; `forks = 2`; `vault_password_file = tools/vault_pass.sh`; the capitalised `ansible_mounts` warning at `:21-48` |
@@ -381,7 +381,7 @@ it fires** — without that proof the route is strictly worse than
   **7. Both playbooks are `gather_facts: false`** — re-confirmed
   (`capture_pve_baseline.yml:22`, `report_pve_baseline_drift.yml:30`), so
   they are TASK-0031's negative fixtures. **But see D1/D2 in `TASK-0052`:**
-  `capture_pve_baseline.yml:21` targets `hosts: sigsrvpve1`, a bare hostname,
+  `capture_pve_baseline.yml:21` targets `hosts: pve-node-1`, a bare hostname,
   so these two files alone cannot prove the guard classifies anything.
 
   **8. Baseline for future drift detection:** `ansible-lint 26.8.0 using

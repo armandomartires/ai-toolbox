@@ -5,7 +5,7 @@
 #
 # A PVE-class host addressed by BARE HOSTNAME, gathering facts, with no
 # exclusion. This is the shape the real estate actually uses
-# (`hosts: sigsrvpve1`), and it is the ONLY fixture that fails when the guard
+# (`hosts: pve-node-1`), and it is the ONLY fixture that fails when the guard
 # resolves group names but not host membership.
 #
 # If this fixture passes silently, the guard is broken in the dangerous

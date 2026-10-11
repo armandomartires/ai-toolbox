@@ -1647,6 +1647,29 @@ if ! WORKTREE_OUT="$(bash tests/test-worktree.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# No tracked file names a private host (TASK-0162).
+#
+# WHY: the mirror is public (ADR-0028), and AGENTS.md's "the intranet hostname
+# never goes in a tracked file" went unchecked until eleven files broke it.
+# The names come from the origin URL and <git-common-dir>/info/private-patterns,
+# both untracked, so this repository never holds the list it enforces.
+#
+# WHAT THIS PROVES: no tracked file contains a configured pattern; the suite
+# proves the derivation and that the output never prints a pattern.
+# WHAT IT DOES NOT PROVE: anything about history or commit messages, or about
+# a host nobody listed. On CI, where origin is github.com and no patterns file
+# exists, the check prints "nothing private configured" -- a no-op said aloud.
+# Both unconditional: a deleted script fails here (ADR-0009).
+if ! PRIVATE_OUT="$(bash scripts/check-private-names.sh 2>&1)"; then
+  printf '%s\n' "$PRIVATE_OUT"
+  fail=1
+fi
+if ! PRIVATE_TEST_OUT="$(bash tests/test-private-names.sh 2>&1)"; then
+  printf '%s\n' "$PRIVATE_TEST_OUT" | grep -v '^PASS' | sed 's/^/PRIVATE-NAMES: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # A closed backlog row names a closer that agrees (TASK-0142, B-038), and the
 # "N items are open" sentence matches the rows (TASK-0145, B-047). The rule is
 # .ai/README.md's *Closing a backlog row*; the script says what it cannot see

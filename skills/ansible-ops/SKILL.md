@@ -4,7 +4,7 @@ description: "How to change Ansible content in a live estate safely - the obliga
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # ansible-ops

@@ -142,7 +142,12 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   not belt-and-braces, it is the only thing between this repo and a
   published credential — and for the same reason **the intranet hostname
   never goes in a tracked file**; name `$GITLAB_URL` (or `$VAULT_ADDR`)
-  instead. CI and the
+  instead. The same holds for every internal host name (a placeholder
+  such as `pve-node-1` instead). `tests/validate.sh` enforces it through
+  `scripts/check-private-names.sh`, which derives names from `origin`
+  and reads more from the untracked `.git/info/private-patterns`
+  (TASK-0162; runbook, *Secrets on a new host*). Git history before
+  TASK-0162 still holds some names. CI and the
   published dashboard run on the mirror (`.github/workflows/`), since
   GitLab has no runner yet.
 - At task end: validate, review diff, commit, then push **to every

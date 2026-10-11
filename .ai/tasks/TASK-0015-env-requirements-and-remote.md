@@ -25,7 +25,7 @@ new contributor up front, and nothing verifies the documentation lists it.
 Verified state before starting (read-only API probe, no writes):
 - `GITHUB_TOKEN` authenticates as user `armandomartires`.
 - `armandomartires/ai-toolbox` returns 404 — the remote repo does not exist.
-- `GITLAB_URL` points at an internal host (`sigsrvgit1.intra.*`).
+- `GITLAB_URL` points at an internal host (name withheld: the `github` mirror is public).
 - Neither URL embeds credentials; a repo-wide grep found no internal
   hostnames and no credential patterns (`ghp_`, `github_pat_`, `glpat-`,
   `AKIA`, PEM headers) anywhere in tracked content.

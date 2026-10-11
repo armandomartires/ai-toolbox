@@ -57,18 +57,18 @@ would have produced the unfailable check this repo has now authored twice
 real playbook.** `TASK-0031` scopes detection of "PVE-class" hosts around
 group names (`pve_cluster`/`pve_voting`, made configurable). But
 `SIGMA-infrastructure/playbooks/capture_pve_baseline.yml:21` reads
-`hosts: sigsrvpve1` — a **bare hostname**. Matching a play's `hosts:` value
+`hosts: pve-node-1` — a **bare hostname**. Matching a play's `hosts:` value
 against group names would never classify the one playbook in the estate
 that actually targets a PVE node. Correct detection requires resolving
 host→group membership from `inventory/production.yml`
-(`pve_cluster` → `pve_voting` → `sigsrvpve1`), which the brief never
+(`pve_cluster` → `pve_voting` → `pve-node-1`), which the brief never
 mentions.
 
 **D2 — fixture 5 cannot distinguish a working guard from a broken one.**
 This is the most consequential of the four. `TASK-0031` makes "the two real
 playbooks → guard **silent**" an acceptance criterion. Both playbooks are
 `gather_facts: false` (verified), so a correct guard is indeed silent. **But
-a guard suffering D1 — one that never recognises `sigsrvpve1` as PVE-class
+a guard suffering D1 — one that never recognises `pve-node-1` as PVE-class
 at all — is silent on them too.** The fixture passes either way, which is
 precisely the shape of a check that cannot fail. It needs a **sixth
 fixture** the brief does not have: a PVE host addressed by **bare hostname**

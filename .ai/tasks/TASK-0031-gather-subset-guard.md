@@ -82,7 +82,7 @@ task written to avoid it.
 - **D1 — target matching was designed against the wrong thing.** The Scope
   below originally identified "PVE-class" by **group name**
   (`pve_cluster`/`pve_voting`, made configurable). But the only playbook in
-  the estate that targets a PVE node uses `hosts: sigsrvpve1` — a **bare
+  the estate that targets a PVE node uses `hosts: pve-node-1` — a **bare
   hostname**. Group-name matching classifies it as *not* PVE-class and says
   nothing. Detection must resolve **host→group membership** from
   `inventory/production.yml`, which this brief never mentioned.
@@ -116,8 +116,8 @@ failure mode, and the reason it is recorded in `SPRINT-CURRENT.md` too.
 | `ADR-0016` | this sprint | **accepted**; category-or-not decided. Expected "no category", so this ships as a portable script plus documented wiring |
 | TASK-0027 | this sprint | **done**; recommends `ansible-lint` custom rule vs `pre-commit`, and reports whether `-r <dir> -R` loads a custom rule at all |
 | SIGMA `ansible.cfg:21-48` | pre-existing, read-only | The hazard, the failed fixes, and the "unenforced" admission. **Read, never modified** |
-| SIGMA `playbooks/*.yml` | pre-existing, read-only | Two playbooks, **both `gather_facts: false`** — verified 2026-09-16. `capture_pve_baseline.yml:21` targets **`hosts: sigsrvpve1`, a bare hostname** (D1); `:23` carries a `module_defaults:` block scoped to `group/community.proxmox.proxmox` with **no `ansible.builtin.setup` entry** (D3); `report_pve_baseline_drift.yml:28` targets `localhost` |
-| SIGMA `inventory/production.yml` | pre-existing, read-only | Group structure: `pve_cluster` → `pve_voting` → `sigsrvpve1/2/3/7`, plus a second child holding `sigsrvpve4/6`; also `domain_controllers`, `network_devices`. **This file is now load-bearing for the guard** — resolving `sigsrvpve1` to PVE-class requires it (D1) |
+| SIGMA `playbooks/*.yml` | pre-existing, read-only | Two playbooks, **both `gather_facts: false`** — verified 2026-09-16. `capture_pve_baseline.yml:21` targets **`hosts: pve-node-1`, a bare hostname** (D1); `:23` carries a `module_defaults:` block scoped to `group/community.proxmox.proxmox` with **no `ansible.builtin.setup` entry** (D3); `report_pve_baseline_drift.yml:28` targets `localhost` |
+| SIGMA `inventory/production.yml` | pre-existing, read-only | Group structure: `pve_cluster` → `pve_voting` → `pve-node-1/2/3/7`, plus a second child holding `pve-node-4/6`; also `domain_controllers`, `network_devices`. **This file is now load-bearing for the guard** — resolving `pve-node-1` to PVE-class requires it (D1) |
 | `tests/validate.sh` | TASK-0023 | **732 lines and ~1150 ms as of 2026-09-16** — the "474 lines, ~0.37 s" in this row was true when written and has decayed twice over. Still offline and hermetic; **no longer sub-second**, per `REVIEW-0008` finding 1. Do not add to it without measuring on `/mnt/c`, never on `/tmp` |
 | `ansible-lint` 26.8.0 | pre-existing | **Corrected 2026-09-16 (D4): there is no venv in `SIGMA-infrastructure`.** The binary is `/home/armando.martires/.venvs/sigma-ansible/bin/ansible-lint` and is **not on `PATH`** — use the absolute path. Version confirmed by running it: `ansible-lint 26.8.0 using ansible-core 2.20.8`. Rules-dir support is **TASK-0027's job to verify**, not established here |
 
@@ -173,7 +173,7 @@ the exact accepted forms, and there are two (play keyword and
      as a regression check against false positives, and is **not** evidence
      the guard works.
   6. **(D2 — the case that makes fixture 5 meaningful.)** A play targeting
-     a PVE node by **bare hostname** (`hosts: sigsrvpve1`, resolved through
+     a PVE node by **bare hostname** (`hosts: pve-node-1`, resolved through
      the inventory) with `gather_facts: true` and no exclusion → guard
      **fails**. This is the estate's real shape. If 6 passes silently the
      guard is broken **and fixtures 1–5 would all still be green.**
@@ -340,7 +340,7 @@ the exact accepted forms, and there are two (play keyword and
    config is rejected.
 4. **The decisive evidence is outside the fixture set**: the real playbook, in
    a copy, flipped to `gather_facts: true`, producing `MISSING EXCLUSION`
-   naming `sigsrvpve1` resolved through the real inventory. Fixture 5's silence
+   naming `pve-node-1` resolved through the real inventory. Fixture 5's silence
    only means something because of that run.
 5. **This brief has no `## Mandatory validations` section**, unlike its
    siblings; `validate.sh` does not require one, so its absence is invisible to
@@ -425,12 +425,12 @@ reason to restore the broken matcher.**
 
   ```
   gather-subset-mounts: MISSING EXCLUSION: this play gathers facts against
-  hazard-class target 'sigsrvpve1' without excluding `mounts`.
+  hazard-class target 'pve-node-1' without excluding `mounts`.
   playbooks/capture_pve_baseline.yml:20:3
   ```
 
   It resolved the **real** bare hostname through the **real** nested inventory
-  (`pve_cluster` → `pve_voting` → `sigsrvpve1`). **That is what makes the
+  (`pve_cluster` → `pve_voting` → `pve-node-1`). **That is what makes the
   silence on the unmodified playbook meaningful rather than inert** — the
   precise gap `TASK-0052` D1/D2 identified. `SIGMA-infrastructure` itself was
   never written to; verified after (`git status` empty, `HEAD` `d4e2dd1`,

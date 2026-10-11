@@ -64,6 +64,12 @@ Once per host, and the host then needs no exported token at all (ADR-0030):
    Every variable in `secrets.map` must read `readable from …`. One that
    reads `shadows Vault` is still exported somewhere, typically the shell
    profile: remove that export.
+5. **List the private host names** the gate must keep out of tracked files
+   in `.git/info/private-patterns`: one fixed string per line,
+   case-insensitive, `#` for comments. A prefix covers a family (one line for
+   every PVE node). git never tracks the file, so each clone needs it; every
+   worktree of a clone shares it. The `origin` host needs no line, because
+   `scripts/check-private-names.sh` derives it (TASK-0162).
 
 **Writing or rotating a secret** is a human step. Run
 `python3 skills/vault-secrets/scripts/vault_secrets.py put <VAR>`, then paste
