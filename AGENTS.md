@@ -58,7 +58,9 @@ services, secrets.
   ansible MCP server. `.env.example` documents names and meanings only,
   never values; `validate.sh` enforces that every `required` variable in
   any `server.json` appears there.
-- Install/deploy skills: `scripts/install.sh [link|copy]`
+- Install/deploy skills: `scripts/install.sh [link|copy]`; `--status` shows
+  each client's skills as linked or a stale copy. `link` is a junction on
+  Windows, so a `git pull` here updates every project on the machine.
 - Regenerate index: `scripts/sync-registry.sh`
 - Validate: `tests/validate.sh` — the mandatory gate. Fast, offline,
   hermetic; keep it that way.

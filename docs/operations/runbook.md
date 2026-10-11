@@ -182,6 +182,9 @@ A project scaffolded by `project-workflow` chooses where its secrets live
 - Deploy to one client: `bash scripts/install.sh link --client opencode`
   (or `claude-code`). `copy` instead of `link` for checkouts without
   symlink support (ADR-0002).
+- Check what is installed: `bash scripts/install.sh --status`. One line per
+  client and skill: `linked` to this checkout, or `COPY` with its version
+  against the repo's, and `STALE` when they differ. A report, not a gate.
 - Validate: `bash tests/validate.sh`.
 - Regenerate index after component changes: `bash scripts/sync-registry.sh`.
 - Smoke-test MCP servers: `bash tests/smoke-mcp.sh` (all) or
@@ -340,6 +343,16 @@ visible to Windows tools. Both work; pick per session.
 | Claude Code | `~/.claude/skills/` | yes |
 | OpenCode | `~/.config/opencode/skills/` | yes |
 | Bionic (LM Studio) | `~/.lmstudio/skills/` global · `<project>/.agents/skills/` project | no — global installs are approval-gated (ADR-0020) |
+
+**Link, so every project stays current.** A linked skill is this checkout's
+directory, so every project on the machine reads whatever `master` the
+checkout has: `git pull` is the update, and nothing is re-installed. On
+Windows (Git Bash) `link` makes a directory junction, since Git Bash's
+`ln -s` silently copies; a junction needs neither admin rights nor Developer
+Mode (TASK-0160). Each link is verified after it is made. Keep the main
+checkout on `master`: a branch checked out there is what every project sees.
+Agents are emitted copies (ADR-0018), so re-run `install.sh` after an agent
+changes.
 
 `install.sh` replaces a client-side skill only when this repo owns a skill
 of that name, and announces replacing any pre-existing real directory.

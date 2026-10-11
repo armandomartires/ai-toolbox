@@ -4,11 +4,22 @@
 #
 # Usage: install.sh [link|copy] [--client claude-code|opencode|lm-studio-bionic|all]
 #                   [--bionic-project DIR]
+#        install.sh --status
 #
 # link (default) symlinks skills into each client's skills dir, per
 # ADR-0002's symlink-first preference; copy is the fallback for checkouts
 # where symlinks are unavailable. The mode applies to SKILLS ONLY: agents
 # are generated per client (ADR-0018), so they have no link or copy mode.
+#
+# On Windows (Git Bash, MSYS, Cygwin) link makes a directory JUNCTION, not
+# `ln -s`: without MSYS=winsymlinks set, Git Bash's `ln -s` silently COPIES,
+# so "link" left copies that every later commit made stale (TASK-0160 found
+# 5.2.1 installed against 6.2.0). A junction needs no admin rights and no
+# Developer Mode. Every link is verified after it is made.
+#
+# --status prints, per client and skill, whether the install is a link to
+# this checkout or a copy, and its version against the repo's. A report,
+# not a gate: nothing in validate.sh or CI calls it (ADR-0009).
 #
 # Overwrite policy (TASK-0006): a client target is replaced only when this
 # repo owns a skill of that name, and replacing a pre-existing non-symlink
@@ -25,9 +36,11 @@ cd "$(dirname "$0")/.."
 MODE="link"
 WANT_CLIENT="all"
 BIONIC_PROJECT=""
+STATUS=0
 while [ $# -gt 0 ]; do
   case "$1" in
     link|copy) MODE="$1" ;;
+    --status)  STATUS=1 ;;
     --client)  shift; WANT_CLIENT="${1:-all}" ;;
     --client=*) WANT_CLIENT="${1#*=}" ;;
     --bionic-project) shift; BIONIC_PROJECT="${1:-}" ;;
@@ -43,6 +56,36 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+WINDOWS_LINKS=0
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) WINDOWS_LINKS=1 ;; esac
+
+# Remove a link - a symlink or a junction - and never what it points at.
+# NEVER `rm -rf` a link path: on a junction some tools recurse into the
+# target, and the target is this repository's skill.
+unlink_dir() {
+  if [ "$WINDOWS_LINKS" -eq 1 ]; then
+    MSYS_NO_PATHCONV=1 cmd /c rmdir "$(cygpath -w "$1")" >/dev/null
+  else
+    rm -f "$1"
+  fi
+}
+
+# Link $2 to $1, then prove it: a "link" that is really a copy is how the
+# installed skills went stale unnoticed (TASK-0160).
+make_link() {
+  local src="$1" dest="$2"
+  [ -L "$dest" ] && unlink_dir "$dest"
+  if [ "$WINDOWS_LINKS" -eq 1 ]; then
+    MSYS_NO_PATHCONV=1 cmd /c mklink /J "$(cygpath -w "$dest")" "$(cygpath -w "$src")" >/dev/null
+  else
+    ln -s "$src" "$dest"
+  fi
+  if [ ! -L "$dest" ] || [ "$(cd "$dest" && pwd -P)" != "$(cd "$src" && pwd -P)" ]; then
+    echo "ERROR: $dest is not a link to $src. Refusing to report it deployed." >&2
+    exit 1
+  fi
+}
 
 # Deploy every non-template skill into $1, in mode $2, reporting as $3.
 #
@@ -63,16 +106,22 @@ deploy_skills() {
     # A pre-existing real directory must be removed before linking:
     # `ln -sfn` against a real directory silently creates the link *inside*
     # it, leaving the stale skill in place and reporting success.
-    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    if [ -L "$dest" ]; then
+      unlink_dir "$dest"
+    elif [ -e "$dest" ]; then
       echo "  NOTICE: replacing pre-existing directory $dest (repo owns skill '$name')"
       rm -rf "$dest"
     fi
     case "$mode" in
-      link) ln -sfn "$(pwd)/$d" "$dest" ;;
-      copy) rm -rf "$dest"; cp -r "$d" "$dest" ;;
+      link) make_link "$(pwd)/$d" "$dest" ;;
+      copy) cp -r "$d" "$dest" ;;
     esac
     echo "skill deployed: $name -> $label ($mode)"
   done
+}
+
+skill_version() { # the frontmatter version of a SKILL.md, quotes stripped
+  awk '/^[[:space:]]*version:/ { v = $2; gsub(/["\047\r]/, "", v); print v; exit }' "$1"
 }
 
 # Clients this script can deploy skills to. tests/validate.sh reads these
@@ -108,6 +157,39 @@ opencode|${HOME}/.config/opencode/skills|${HOME}/.config/opencode|${HOME}/.confi
 # handled after the loop below, and the global half stays manual because it
 # is approval-gated. The full reasoning is at that block, not here, so there
 # is one owner of it. See configs/lm-studio-bionic/README.md.
+
+if [ "$STATUS" -eq 1 ]; then
+  while IFS='|' read -r client target parent _; do
+    [ -n "$client" ] || continue
+    if [ ! -d "$parent" ]; then
+      echo "$client: not installed ($parent absent)"
+      continue
+    fi
+    for d in skills/*; do
+      name=$(basename "$d")
+      case "$name" in _template*) continue ;; esac
+      [ -f "$d/SKILL.md" ] || continue
+      dest="$target/$name" want=$(skill_version "$d/SKILL.md")
+      if [ -L "$dest" ] && [ "$(cd "$dest" 2>/dev/null && pwd -P)" = "$(cd "$d" && pwd -P)" ]; then
+        state="linked" have="$want"
+      elif [ -L "$dest" ]; then
+        state="linked elsewhere: $(readlink "$dest")"
+        have=$(skill_version "$dest/SKILL.md" 2>/dev/null || true)
+      elif [ -f "$dest/SKILL.md" ]; then
+        state="COPY" have=$(skill_version "$dest/SKILL.md")
+      else
+        state="absent" have=""
+      fi
+      flag=""
+      [ "$have" = "$want" ] || flag="  STALE"
+      printf '%-12s %-18s %-8s (repo %s) %s%s\n' \
+        "$client" "$name" "${have:--}" "$want" "$state" "$flag"
+    done
+  done <<EOF
+$CLIENTS
+EOF
+  exit 0
+fi
 
 # Activate the tracked pre-commit hook (ADR-0007). Hooks live in
 # .githooks/ rather than .git/hooks/ so they are version-controlled and
@@ -170,6 +252,8 @@ while IFS='|' read -r client target parent agents_target; do
   # ADR-0009: "a gate that cannot pass on a clean checkout stops being run,
   # and a gate that is not run is worse than no gate, because it is still
   # trusted." The control is that this is cheap and idempotent — re-run it.
+  # Skills need no such control when linked: a link cannot drift. Agents are
+  # still copies. `--status` reports both cases and is no gate (TASK-0160).
   #
   # Pruning is narrow, and it is a decision, not a convenience (ADR-0026,
   # the human's, 2026-09-24): when a role in agents/ stops declaring a

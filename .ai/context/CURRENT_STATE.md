@@ -68,6 +68,7 @@ These are not to be re-litigated without a new ADR:
 
 - Developed in WSL on a `/mnt/c` checkout. `core.filemode=false`, so set modes with `git update-index --chmod=+x`.
 - The gate is green under WSL. Under Git Bash, `test-worktree.sh` and a `check-publish.sh` case fail (`TASK-0148`).
+- Skills are installed as junctions to this checkout (`TASK-0160`), so a `git pull` updates every project on the machine; check with `install.sh --status`.
 - On Windows, `vault_secrets.py exec` waits for its child (`TASK-0149`). Intranet TLS for Git and curl is set up per the runbook's *Secrets on a new host*.
 - Ansible: `ansible-core` 2.21.4, and `ansible-lint` reports 53 rules with 0 failures (`TASK-0115`).
 
@@ -81,8 +82,8 @@ These are not to be re-litigated without a new ADR:
 
 ## Recent changes
 
+- `TASK-0160`, 2026-10-11: `install.sh link` makes verified junctions on Windows (it had silently copied); `install.sh --status`.
 - `TASK-0159`, 2026-10-11: dashboard rebuild points; `publish-dashboard.sh decision` and `targets = none` (`ADR-0035`).
 - `TASK-0158`, 2026-10-11: `project-migration` 4.1.0 offers to migrate secrets; `vault_secrets.py import` moves an old env file into the declared backend.
 - `TASK-0157`, 2026-10-11: `put` and `check` for the `gitlab` and `github` backends; values on stdin, names-only checks (`ADR-0034`).
 - `TASK-0156`, 2026-10-11: `vault_secrets.py provision`, for a project's own KV v2 mount, its three policies and AppRole (`ADR-0034`).
-- `TASK-0155`, 2026-10-11: `secrets.conf`, `vault_secrets.py init` and the local `.env` backend; `project-workflow` asks at scaffolding (`ADR-0034`).

@@ -207,6 +207,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0157 — Set and check GitLab CI variables and GitHub Actions secrets
 - [x] TASK-0158 — Let project-migration migrate secrets, and import an old env file
 - [x] TASK-0159 — Rebuild the dashboard at plan approval and on push; ask about Pages
+- [x] TASK-0160 — `install.sh link` really links on Windows; `--status` reports
 
 ## Post-S9 (superseded by the promotion above)
 
