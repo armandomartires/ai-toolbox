@@ -8,6 +8,7 @@ Read this before committing or pushing.
 - **One task, one commit.** Subject: `<Imperative summary> (S###.T###)`. Review `git diff --staged` first. Never commit a secret (`reference/environments-and-secrets.md`).
 - **Git is the record.** The commit subject names the task, and `git log --grep S###.T###` finds it. The brief does not carry its own hash, and no follow-up commit adds one.
 - **A failed push means the task is not done.** Confirm the remote head equals local `HEAD`; an exit code alone is not confirmation. If there is no remote, say so; that is not a failure.
+- **After a confirmed push, rebuild the dashboard** (`build-dashboard.sh`). If `publish-dashboard.sh decision` exits 1, ask the publishing question before that push (the skill's *Scaffolding*, step 7).
 - **Never force-push or rewrite shared history** without explicit authorization in the task file.
 
 ## Task report

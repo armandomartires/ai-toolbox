@@ -5,7 +5,7 @@ State only (ADR-0033): edit this file, don't append to it. The history is in git
 ## Where the project is
 
 - **Roadmap:** Phases 1–10 are complete, and S10 closed 2026-09-26 (`REVIEW-0012`). No sprint is open. Work runs task by task on the human's routing (`TASK-0106` onward).
-- **Last delivered:** a per-project secrets backend (`ADR-0034`, `TASK-0155`–`0158`): `local`, `vault` (own KV v2 mount via `provision`), `gitlab`, `github`. `project-workflow` asks at scaffolding; `project-migration` asks whether to migrate secrets, and `import` moves them. Before it: `PLAN-0007`, concise artifacts (`ADR-0033`, `TASK-0150`–`0154`); briefs from `TASK-0153` are v2.
+- **Last delivered:** dashboard rebuild points and the publishing question (`ADR-0035`, `TASK-0159`): the agent rebuilds when an approved plan's files are written and after a confirmed push; `publish-dashboard.sh decision` asks once per project with a remote, and a no is `targets = none`. Before it: a per-project secrets backend (`ADR-0034`, `TASK-0155`–`0158`): `local`, `vault` (own KV v2 mount via `provision`), `gitlab`, `github`. `project-workflow` asks at scaffolding; `project-migration` asks whether to migrate secrets, and `import` moves them. Before it: `PLAN-0007`, concise artifacts (`ADR-0033`, `TASK-0150`–`0154`); briefs from `TASK-0153` are v2.
 - **Backlog:** zero open rows. The gate recounts them against the "N items are open" sentence.
 - **Remotes:** `origin` is the intranet GitLab (primary), and `github` is the public mirror (`ADR-0028`). Everything committed is world-readable.
 
@@ -13,7 +13,7 @@ State only (ADR-0033): edit this file, don't append to it. The history is in git
 
 | Kind | Items |
 |---|---|
-| Skills | `project-migration` 4.1.0, `project-workflow` 6.1.0, `ansible-ops` 1.2.0, `design-flow` 1.0.0, `unattended-ops` 1.3.2, `vault-secrets` 2.3.0 |
+| Skills | `project-migration` 4.2.0, `project-workflow` 6.2.0, `ansible-ops` 1.2.0, `design-flow` 1.0.0, `unattended-ops` 1.3.2, `vault-secrets` 2.3.0 |
 | MCP servers | `ansible` (external, pinned, destructive tools human-authorized), `gates` (authored, Python), `graphify` (external) |
 | Loops | `project-build`, `design-brief`, `ansible-change`, `release-check`, `unattended-run` |
 | Agents | 15 roles, emitted per client (`ADR-0018`); `prompts/` is empty by choice |
@@ -62,6 +62,7 @@ These are not to be re-litigated without a new ADR:
 - `ADR-0030`: Vault owns secrets.
 - `ADR-0033`: concise artifacts, and git is the record.
 - `ADR-0034`: each project declares its secrets backend; a Vault project gets its own mount.
+- `ADR-0035`: the dashboard is rebuilt by agent steps, not hooks; publishing is asked once and a no is recorded.
 
 ## Environment
 
@@ -80,8 +81,8 @@ These are not to be re-litigated without a new ADR:
 
 ## Recent changes
 
+- `TASK-0159`, 2026-10-11: dashboard rebuild points; `publish-dashboard.sh decision` and `targets = none` (`ADR-0035`).
 - `TASK-0158`, 2026-10-11: `project-migration` 4.1.0 offers to migrate secrets; `vault_secrets.py import` moves an old env file into the declared backend.
 - `TASK-0157`, 2026-10-11: `put` and `check` for the `gitlab` and `github` backends; values on stdin, names-only checks (`ADR-0034`).
 - `TASK-0156`, 2026-10-11: `vault_secrets.py provision`, for a project's own KV v2 mount, its three policies and AppRole (`ADR-0034`).
 - `TASK-0155`, 2026-10-11: `secrets.conf`, `vault_secrets.py init` and the local `.env` backend; `project-workflow` asks at scaffolding (`ADR-0034`).
-- `TASK-0154`, 2026-10-10: `project-workflow` 6.0.0, with concise schemas, `SKILL.md`, references and fixtures.

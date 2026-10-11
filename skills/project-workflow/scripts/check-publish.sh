@@ -240,6 +240,37 @@ expect 2 "the daily target without github-pages is refused" "needs github-pages 
 conf_set "$R" targets github-pages
 expect 1 "a dispatcher left by a dropped daily target is reported" "$GD was generated for github-pages-daily" -- "$PUB" render --check --repo "$R"
 
+# --- targets = none (TASK-0159) ---------------------------------------------
+# A "no" to the publishing question is written down, so it is not asked again.
+R="$(mkrepo declined)"
+printf '# asked 2026-10-11, declined\ntargets = none\n' > "$R/dashboard-publish.conf"
+expect 0 "targets = none renders nothing and says so" "publishing declined" -- "$PUB" render --repo "$R"
+expect 1 "targets = none wrote no pipeline" -- test -e "$R/$GH" -o -e "$R/$GL" -o -e "$R/.gitlab-ci.yml"
+conf_set "$R" targets "none github-pages"
+expect 2 "none mixed with a real target is refused" "must be the only target" -- "$PUB" render --repo "$R"
+printf 'targets = none\nstatus.github-pages = UNVERIFIED - test\n' > "$R/dashboard-publish.conf"
+expect 2 "none with a status line is refused" "nothing to configure" -- "$PUB" render --repo "$R"
+R="$(mkrepo yes-then-no)"
+"$PUB" render --repo "$R" >/dev/null 2>&1
+printf 'targets = none\n' > "$R/dashboard-publish.conf"
+expect 1 "switching to none reports the pipeline left deploying" "$GH was generated for github-pages" -- "$PUB" render --check --repo "$R"
+
+# --- decision ---------------------------------------------------------------
+R="$(mkrepo decision)"
+rm "$R/dashboard-publish.conf"
+expect 0 "decision: no remote, nothing to ask" "no remote" -- "$PUB" decision --repo "$R"
+g "$R" remote add github "https://github.com/example/project.git"
+expect 1 "decision: a GitHub remote and no conf is pending" "PENDING" -- "$PUB" decision --repo "$R"
+expect 1 "decision: github.com is named github" "remote   github github.com github" -- "$PUB" decision --repo "$R"
+g "$R" remote add origin "git@git.example.internal:group/project.git"
+expect 1 "decision: a self-hosted host is unknown, not guessed" "remote   origin git.example.internal unknown" -- "$PUB" decision --repo "$R"
+g "$R" remote add lab "https://ci-user:s3cr3t-t0ken@gitlab.example.org:8443/group/project.git"
+expect 1 "decision: a host naming gitlab is gitlab" "remote   lab gitlab.example.org gitlab" -- "$PUB" decision --repo "$R"
+"$PUB" decision --repo "$R" > "$TMP/decision.out" 2>&1
+expect 1 "decision: never prints a token from a remote URL" -- grep -q -e s3cr3t -e ci-user "$TMP/decision.out"
+printf 'targets = none\n' > "$R/dashboard-publish.conf"
+expect 0 "decision: targets = none is answered" "answered declined" -- "$PUB" decision --repo "$R"
+
 # --- guard -------------------------------------------------------------------
 model() { # path commits tasks shape [drop-key]
   python3 - "$@" <<'PY'

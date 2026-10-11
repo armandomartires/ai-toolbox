@@ -95,6 +95,15 @@ An inline style from the editor beats the file, so use `!important` in the file 
 
 The light and dark themes are each designed separately, not one inverted from the other. The chosen theme is persisted in `localStorage` and in the URL hash, because `file://` pages often cannot use `localStorage`.
 
+## When to rebuild
+
+The local file is rebuilt by the agent as a step, never by a git hook (ai-toolbox `ADR-0029`, `ADR-0035`):
+
+1. **A plan is approved and written.** Once the human approves a plan and every workflow file it touches is written (`20.PLAN.md`, `30.ROADMAP.md`, the briefs, ADRs, `35.AD_HOC_TASKS.md`; in the `project-migration` layout the `PLAN-####`, `TODO.md` and `TASK-####` briefs), rebuild, so the page shows the plan just agreed.
+2. **A push is confirmed.** After the push to every remote is confirmed, rebuild. A project that publishes does not need the local file for the page: its pipeline triggers on that push and rebuilds the page from a full clone. Name the pipeline in the task report.
+
+The output is gitignored and never committed: it reads the git log, so a committed copy is stale the moment it lands.
+
 ## Publishing it
 
 The local file is the dashboard until you publish it. Only the destination's own pipeline builds the published page, from a full clone of the pushed branch. Never upload a workstation build: it reflects the working tree, not what was pushed (ai-toolbox `ADR-0029`).
@@ -104,6 +113,19 @@ The local file is the dashboard until you publish it. Only the destination's own
 | `github-pages` | `.github/workflows/dashboard.yml` | Deploys with `actions/deploy-pages`. Needs admin on the token, or Pages enabled once in Settings. |
 | `github-pages-daily` | `.github/workflows/dashboard-daily.yml` | Dispatches `github-pages` daily and waits for it. Requires `github-pages`. See below. |
 | `gitlab-pages` | `.gitlab/ci/dashboard-pages.yml` | The `pages` job publishes `public/`. Needs Pages enabled and a runner, with git, bash and python3 if it uses a shell executor. |
+
+**The publishing question.** Every project with a remote is asked once whether to publish, and the answer is written down, so it is not asked again. `publish-dashboard.sh decision` reports the state:
+
+```
+remote   github github.com github
+remote   origin git.example.internal unknown
+PENDING  no dashboard-publish.conf: ask whether to publish ...
+```
+
+- The forge is guessed from the host: `github.com` is `github`, a host containing `gitlab` is `gitlab`, anything else is `unknown`. A self-hosted GitLab is usually `unknown`, so ask; never guess. Only hosts are printed, never a URL, because a URL can carry a token.
+- Exit 1 means a remote exists and there is no conf: ask. It is asked when the layer is scaffolded or migrated, and at the first task-end push of a project that predates the question.
+- **No:** write `targets = none`, alone, under a comment that dates the answer. `render` then writes nothing, and `render --check` still reports any pipeline an earlier "yes" left deploying.
+- **Yes:** follow the steps below.
 
 1. **Declare** the targets in `dashboard-publish.conf` at the repository root:
    ```

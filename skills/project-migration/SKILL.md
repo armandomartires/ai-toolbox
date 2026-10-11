@@ -4,7 +4,7 @@ description: "Harmonize an existing repository with the .ai agent-governance fra
 license: MIT
 metadata:
   author: armando.martires
-  version: 4.1.0
+  version: 4.2.0
 ---
 
 # Project migration to the .ai governance framework
@@ -42,7 +42,8 @@ Retrofit a live repository so a human, a planning model, and a weaker executor m
    - **github**: GitHub Actions secrets.
 
    Never assume either answer. Put the choice under *Risks and pending decisions*.
-6. Present the proposal using the response format below and stop for approval.
+6. With a remote, run `skills/project-workflow/scripts/publish-dashboard.sh decision`. On exit 1, ask whether to publish the dashboard to **GitHub Pages**, **GitLab Pages**, both or neither, and which forge each `unknown` host is. Never assume the answer; put it under *Risks and pending decisions*.
+7. Present the proposal using the response format below and stop for approval.
 
 Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis**, **Current → proposed mapping**, **Proposed structure**, **Migration plan**, **Risks and pending decisions**, **Next step**.
 
@@ -54,6 +55,7 @@ Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis*
 4. Create `CLAUDE.md` as a symlink (`ln -s AGENTS.md CLAUDE.md`), confirm git recorded mode `120000`, and on Windows/WSL where symlinks are unreliable use a documented alternative plus an ADR. Two divergent sources of truth are the failure to avoid.
 5. Backfill only `CURRENT_STATE.md`, `PROJECT_MAP.md`, and `ROADMAP.md`, as a snapshot of today. Do not reconstruct history.
 6. Commit the scaffold as one commit; each later migration step gets its own.
+7. Record the Phase-1 publishing answer in `dashboard-publish.conf`, in its own commit. **No:** `targets = none` under a dated comment. **Yes:** the targets, then `publish-dashboard.sh render` (`skills/project-workflow/references/dashboard.md`, *Publishing it*).
 
 ## Phase 3 — Move content selectively
 
@@ -96,6 +98,10 @@ Run the project's real test/lint/build suite. Then start a fresh agent session f
 - `TASK-####` in commit subjects
 
 Keep those names when you edit a schema. The dashboard lives in the sibling skill, and the reference is `skills/project-workflow/references/dashboard.md`. It is a view, not a gate.
+
+Rebuild it as a step, never from a hook:
+- when a `PLAN-####` is approved **and** its `TODO.md` entries and `TASK-####` briefs are written;
+- after the push to every remote is confirmed. Before that push, if `publish-dashboard.sh decision` exits 1, ask the Phase-1 publishing question once.
 
 ## Adapting the framework
 

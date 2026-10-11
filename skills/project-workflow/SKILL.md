@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "6.1.0"
+  version: "6.2.0"
 ---
 
 # project-workflow
@@ -44,6 +44,7 @@ The divergence is deliberate (ADR-0013 in ai-toolbox). The two skills share only
 4. Fill `20.PLAN.md` and `30.ROADMAP.md` with real state. Offer a `git log` back-fill, but do not assume one is wanted.
 5. Point to `<root>/<entrypoint>` from `AGENTS.md` or `README.md`.
 6. Ask how the project handles secrets: **local** `.env`, **HashiCorp Vault** (its own KV mount), **GitLab** CI variables, or **GitHub** Actions secrets. Never choose for the human. With the `vault-secrets` skill installed, run its `scripts/vault_secrets.py init --backend <choice> --project <name>`; without it, write `secrets.conf` by hand (`templates/reference/environments-and-secrets.md`). Creating a Vault mount is a Vault admin's step, never the agent's.
+7. With a remote, run `scripts/publish-dashboard.sh decision`. On exit 1, ask whether to publish the dashboard to **GitHub Pages**, **GitLab Pages**, both or neither, and which forge each `unknown` host is. Never choose for the human. **Yes:** write `dashboard-publish.conf` (every `status.` line `UNVERIFIED - never run`), `render`, commit. **No:** write `targets = none` with a dated comment, so it is not asked again.
 
 ## Generating an artifact
 
@@ -75,6 +76,9 @@ scripts/new-artifact.sh --kind task|adr|review|adhoc \
 `references/dashboard.md` covers what each metric does not prove, and which fields and headings must keep their shape.
 
 - **Vendored.** `dashboard/` is a copy synced from `sigma-llmwiki` (`dashboard/VENDORED.md`). Never edit it here.
+- **Rebuild it** (a step, not a hook; the output stays gitignored):
+  - when a plan is approved **and** every file it touches is written: `20.PLAN.md`, `30.ROADMAP.md`, briefs, ADRs, `35.AD_HOC_TASKS.md`;
+  - after the push to every remote is confirmed. Before that push, if `publish-dashboard.sh decision` exits 1, ask (Scaffolding, step 7). A published page is rebuilt by its own CI on that push; never upload the local file.
 - **Publishing is optional.** Declare destinations in `dashboard-publish.conf`, then run `scripts/publish-dashboard.sh render` to write GitHub Pages and/or GitLab Pages pipelines. `render --check` fails on drift. Full procedure: `references/dashboard.md`, *Publishing it*.
 
 ## Maintaining

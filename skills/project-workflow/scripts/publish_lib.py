@@ -76,6 +76,10 @@ TARGETS = {
 
 REQUIRED = ("targets", "skill_dir", "branch")
 OPTIONAL = ("root", "expect_shape")
+# `targets = none` records that the human was asked and declined (TASK-0159).
+# A missing conf means nobody has asked yet, which `decision` reports, so a
+# "no" has to be written down or it is asked again at every push.
+DECLINED = "none"
 SHAPES = ("numbered_task", "sprint_brief")
 # A value interpolated into YAML and a shell command line. Deliberately narrow:
 # anything wider is an injection surface for no benefit.
@@ -131,6 +135,20 @@ def load_conf(repo):
         if key in conf:
             raise Refusal("%s:%d: %r is set twice" % (CONF, n, key))
         conf[key] = value
+
+    named = conf.get("targets", "").split()
+    if DECLINED in named and named != [DECLINED]:
+        raise Refusal("%s: `none` means publishing was declined, so it must "
+                      "be the only target" % CONF)
+    if named == [DECLINED]:
+        extra = sorted(k for k in conf if k != "targets")
+        if extra:
+            raise Refusal("%s: targets = none publishes nothing, so %s has "
+                          "nothing to configure - remove it"
+                          % (CONF, ", ".join(extra)))
+        conf["targets"] = []
+        conf["declined"] = True
+        return conf
 
     missing = [k for k in REQUIRED if not conf.get(k)]
     if missing:
@@ -256,8 +274,11 @@ def gitlab_stub(conf):
 
 def render(repo, check, adopt):
     conf = load_conf(repo)
-    check_skill_dir(repo, conf)
     stale = []
+    if conf.get("declined"):
+        print("ok       publishing declined (targets = none)")
+    else:
+        check_skill_dir(repo, conf)
 
     for target in sorted(TARGETS):
         rel = TARGETS[target]["out"]
@@ -372,9 +393,61 @@ def guard(model_path, expect_shape, repo):
     return 0
 
 
+def forge_of(host):
+    """A guess from the hostname. A self-hosted GitLab rarely says so in its
+    name (ai-toolbox's own does not), so anything unrecognised is `unknown`
+    and the human is asked rather than told."""
+    host = host.lower()
+    if host == "github.com" or host.endswith(".github.com"):
+        return "github"
+    if "gitlab" in host:
+        return "gitlab"
+    return "unknown"
+
+
+def remote_host(url):
+    """The host part of a remote URL, and nothing else: a URL may carry a
+    token as userinfo, and this output goes into chat."""
+    m = re.match(r"^[A-Za-z][A-Za-z0-9+.\-]*://([^/]*)", url)
+    if m:
+        authority = m.group(1).rsplit("@", 1)[-1]
+        return re.sub(r":\d*$", "", authority)
+    m = re.match(r"^(?:[^@/]+@)?([^:/]+):", url)  # scp-like: git@host:path
+    if m:
+        return m.group(1)
+    return "(local)"
+
+
+def decision(repo):
+    out = git(repo, "remote")
+    if out is None:
+        raise Refusal("cannot list the remotes of %s - is it a git repository?"
+                      % repo)
+    names = out.split()
+    for name in names:
+        url = git(repo, "remote", "get-url", name) or ""
+        host = remote_host(url)
+        forge = forge_of(host) if host != "(local)" else "none"
+        print("remote   %s %s %s" % (name, host, forge))
+    if os.path.isfile(os.path.join(repo, CONF)):
+        conf = load_conf(repo)
+        if conf.get("declined"):
+            print("answered declined (targets = none)")
+        else:
+            print("answered %s" % " ".join(conf["targets"]))
+        return 0
+    if not names:
+        print("answered no remote, nothing to ask")
+        return 0
+    print("PENDING  no %s: ask whether to publish the dashboard to GitHub "
+          "Pages, GitLab Pages, both or neither, and which forge each "
+          "`unknown` host is. Record a no as `targets = none`." % CONF)
+    return 1
+
+
 def main(argv):
-    if not argv or argv[0] not in ("render", "guard"):
-        say("expected a subcommand: render | guard (see --help)")
+    if not argv or argv[0] not in ("render", "guard", "decision"):
+        say("expected a subcommand: render | guard | decision (see --help)")
         return 2
     cmd, rest = argv[0], argv[1:]
     repo = None
@@ -410,6 +483,8 @@ def main(argv):
         repo = git(os.getcwd(), "rev-parse", "--show-toplevel") or os.getcwd()
     repo = os.path.abspath(repo)
     try:
+        if cmd == "decision":
+            return decision(repo)
         if cmd == "render":
             if check and adopt:
                 raise Refusal("--check and --adopt together make no sense")

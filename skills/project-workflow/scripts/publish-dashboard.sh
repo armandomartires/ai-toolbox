@@ -17,6 +17,7 @@
 # Usage:
 #   publish-dashboard.sh render [--check] [--adopt] [--repo DIR]
 #   publish-dashboard.sh guard --model PATH [--expect-shape SHAPE] [--repo DIR]
+#   publish-dashboard.sh decision [--repo DIR]
 #
 #   render   write each configured target's CI file:
 #              github-pages -> .github/workflows/dashboard.yml
@@ -33,11 +34,16 @@
 #   guard    run inside a pipeline, after build-dashboard.sh --json: exit 1 if
 #            the clone is shallow, the history has <= 1 commit, no task parsed,
 #            git was unavailable, or the corpus shape is not SHAPE.
+#   decision list each remote as `name host forge` (github | gitlab |
+#            unknown - a self-hosted GitLab is usually unknown) and say whether
+#            the human has been asked about publishing: exit 1 when a remote
+#            exists and there is no conf yet. Prints hosts, never URLs.
 #   --repo   repository root. Default: the enclosing git work tree, else CWD.
 #
 # dashboard-publish.conf (`key = value`; a `#` comment must start its own line,
 # so the notes on the right are for reading, not for the file):
-#   targets        = github-pages gitlab-pages     # one or more targets above
+#   targets        = github-pages gitlab-pages     # one or more targets above,
+#                                                  # or `none` alone: asked, declined
 #   skill_dir      = skills/project-workflow       # inside the repo: a runner
 #                                                  # clones the repo, nothing else
 #   branch         = master                        # the branch that publishes
@@ -47,13 +53,14 @@
 #   status.github-pages-daily = UNVERIFIED - never run
 #   status.gitlab-pages = UNVERIFIED - never run
 #
-# Exit codes: 0 ok, 1 stale (render --check) or guard failed, 2 refused.
+# Exit codes: 0 ok, 1 stale (render --check), guard failed or decision
+# pending, 2 refused.
 # Requires python3, standard library only.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-usage() { sed -n '2,51p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,57p' "$0" | sed 's/^# \{0,1\}//'; }
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
   "")        usage >&2; exit 2 ;;

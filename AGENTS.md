@@ -74,9 +74,11 @@ services, secrets.
   audits nothing, so it is deliberately not part of `tests/validate.sh` and not
   run by any hook. The output is **gitignored** — it reads the git log, so a
   committed copy is stale the moment it lands. Regenerate it; never commit it.
+  Regenerate it as an agent step, not a hook (ADR-0035): once an approved
+  plan's files are all written, and after the push to every remote is confirmed.
   **The published page is the current `master` dashboard** — CI rebuilds it
-  from a full clone (URL and when: `README.md`). Build locally only to preview
-  state you have not pushed, and never upload a local build: it reads the
+  from a full clone (URL and when: `README.md`). The local build is a preview,
+  and you never upload it: it reads the
   working tree and checked-out `HEAD`, not what was pushed (ADR-0029).
   Component check: `skills/project-workflow/scripts/check-dashboard.sh`. What
   each metric does *not* prove: `skills/project-workflow/references/dashboard.md`.
