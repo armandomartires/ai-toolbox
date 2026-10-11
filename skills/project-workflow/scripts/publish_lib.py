@@ -205,8 +205,10 @@ def check_skill_dir(repo, conf):
             "skill_dir=%r resolves outside the repository (%s). A CI runner "
             "clones the repository and nothing else, so a skill installed in "
             "~/.claude/skills or linked in from elsewhere does not exist "
-            "there. Copy skills/project-workflow into the repository and point "
-            "skill_dir at the copy." % (rel, real_skill))
+            "there. Vendor the skill into the repository with "
+            "`scripts/vendor-skill.sh --into <repo> --dest <path> --write`, "
+            "run from the source checkout, and point skill_dir at the copy."
+            % (rel, real_skill))
     need = ("scripts/build-dashboard.sh", "scripts/publish-dashboard.sh")
     for sub in need:
         if not os.path.isfile(os.path.join(full, sub)):

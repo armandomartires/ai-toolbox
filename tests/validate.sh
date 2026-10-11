@@ -1542,6 +1542,16 @@ if [ -e skills/project-workflow/scripts/check-publish.sh ]; then
     fail=1
   fi
 fi
+# check-vendor.sh proves vendor-skill.sh's write, refusal, staleness and
+# edit-detection rules in throwaway repositories (TASK-0161). Same reason.
+# WHAT IT DOES NOT PROVE: that any project's vendored copy is current; only
+# `vendor-skill.sh --into <repo> --check`, run by hand, can say that.
+if [ -e skills/project-workflow/scripts/check-vendor.sh ]; then
+  if ! VENDOR_OUT="$(bash skills/project-workflow/scripts/check-vendor.sh 2>&1)"; then
+    printf '%s\n' "$VENDOR_OUT" | grep -v '^PASS' | sed 's/^/VENDOR: /'
+    fail=1
+  fi
+fi
 
 # --------------------------------------------------------------------------
 # ci-alert's issue rule, proven offline (TASK-0130).

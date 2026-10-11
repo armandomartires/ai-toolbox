@@ -127,6 +127,16 @@ PENDING  no dashboard-publish.conf: ask whether to publish ...
 - **No:** write `targets = none`, alone, under a comment that dates the answer. `render` then writes nothing, and `render --check` still reports any pipeline an earlier "yes" left deploying.
 - **Yes:** follow the steps below.
 
+**Vendor the skill first.** A runner clones the repository and nothing else, so the pipeline runs a copy of this skill tracked inside it, at `skill_dir`. Make and update that copy only with `vendor-skill.sh`, run from the source checkout. It copies the skill as committed and writes `VENDORED.md` beside it, which records the commit, the version and a sha256 for every file (ai-toolbox `ADR-0036`):
+
+```
+bash <source>/skills/project-workflow/scripts/vendor-skill.sh --into <repo> --dest tools/project-workflow --write
+bash <source>/skills/project-workflow/scripts/vendor-skill.sh --into <repo> --check   # behind or edited? exit 1
+bash tools/project-workflow/scripts/vendor-skill.sh --verify                          # in the project's gate
+```
+
+Once `skill_dir` is in the conf, `--dest` can be dropped. Never edit the copy: `--verify` fails on any edited, missing or added file, and `--write` refuses to overwrite a local edit unless you pass `--adopt`.
+
 1. **Declare** the targets in `dashboard-publish.conf` at the repository root:
    ```
    targets   = github-pages github-pages-daily gitlab-pages

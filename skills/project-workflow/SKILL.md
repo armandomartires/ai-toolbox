@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ directory - a consistent 
 license: MIT
 metadata:
   author: armando.martires
-  version: "6.2.0"
+  version: "6.3.0"
 ---
 
 # project-workflow
@@ -79,7 +79,7 @@ scripts/new-artifact.sh --kind task|adr|review|adhoc \
 - **Rebuild it** (a step, not a hook; the output stays gitignored):
   - when a plan is approved **and** every file it touches is written: `20.PLAN.md`, `30.ROADMAP.md`, briefs, ADRs, `35.AD_HOC_TASKS.md`;
   - after the push to every remote is confirmed. Before that push, if `publish-dashboard.sh decision` exits 1, ask (Scaffolding, step 7). A published page is rebuilt by its own CI on that push; never upload the local file.
-- **Publishing is optional.** Declare destinations in `dashboard-publish.conf`, then run `scripts/publish-dashboard.sh render` to write GitHub Pages and/or GitLab Pages pipelines. `render --check` fails on drift. Full procedure: `references/dashboard.md`, *Publishing it*.
+- **Publishing is optional.** Declare destinations in `dashboard-publish.conf`, then run `scripts/publish-dashboard.sh render` to write GitHub Pages and/or GitLab Pages pipelines. `render --check` fails on drift. The pipeline runs a copy of this skill inside the project: make and update it only with `scripts/vendor-skill.sh --into <repo> --write`, check it with `--check`, and gate it with `--verify`. Full procedure: `references/dashboard.md`, *Publishing it*.
 
 ## Maintaining
 
