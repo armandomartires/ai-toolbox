@@ -164,6 +164,10 @@ A project scaffolded by `project-workflow` chooses where its secrets live
    - Read the `role_id` from `auth/approle/role/<name>/role-id`.
    - Store both as `~/.config/vault/<name>.approle`, mode 600, exactly as for ai-toolbox above.
 5. **Write the values:** name each variable in `.env.example` (and, for `vault`, map it in `secrets.map`), then run `vault_secrets.py put VAR`.
+   - **`github`:** `gh` must be installed and logged in, or `GH_TOKEN` exported, with access to the repository's secrets.
+   - **`gitlab`:** export `GITLAB_URL` and a `GITLAB_TOKEN` with `api` scope and Maintainer on that project, or let `put` prompt for it.
+     - Prefer a project access token for that project alone over a personal one.
+     - The intranet instance is `http://` only, so `put` needs `--allow-http` there, and that token crosses the network in cleartext (ADR-0028).
 6. **Check:** `vault_secrets.py check`.
 
 ## Procedures

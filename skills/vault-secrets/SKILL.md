@@ -4,7 +4,7 @@ description: "Supply secrets to a command from where the project keeps them - Ha
 license: MIT
 metadata:
   author: armando.martires
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # vault-secrets
@@ -37,7 +37,8 @@ below works as it always has: Vault, driven by the map.
    or a remote URL.** A secret reaches a command only through the environment
    that `exec` builds.
 5. **Never weaken the transport.** `http://` to a non-loopback Vault is
-   refused on purpose, and there is no override to look for.
+   refused on purpose, and there is no override to look for. A GitLab's
+   `--allow-http` is the human's to pass, never an agent's.
 6. **Write only on the human's instruction.** With an application identity
    (`VAULT_AUTH_METHOD=approle`), `put` needs no password, so nothing but
    this rule stands between an agent and an overwrite. Versions are kept and
@@ -55,8 +56,8 @@ Ask the human; never pick for them. Then run
 |---------|----------------|--------------------|-----------------|
 | `local` | a git-ignored `.env`, mode 600 | yes, that host only | `put VAR` |
 | `vault` | the project's own KV v2 mount `<name>/` | yes, via `exec` | `put VAR`, once a Vault admin has run `provision` |
-| `gitlab` | GitLab CI/CD variables, masked and protected (`--gitlab-project`) | no: CI only | the project's CI/CD settings page |
-| `github` | GitHub Actions secrets (`--github-repo`) | no: write-only | the repository's Actions secrets page |
+| `gitlab` | GitLab CI/CD variables, masked and protected (`--gitlab-project`) | no: CI only | `put VAR` (GitLab API) |
+| `github` | GitHub Actions secrets (`--github-repo`) | no: write-only | `put VAR` (through `gh`) |
 
 - `init` writes `secrets.conf`, adds the `.env` ignores to `.gitignore`, and creates `.env.example` (and, for `vault`, `secrets.map`). It never overwrites: a second identical run changes nothing, and a different backend is refused. Change one by editing `secrets.conf` by hand.
 - `.env.example` is the list of names under every backend.
@@ -72,8 +73,8 @@ Run from the repository root, which holds `secrets.conf` and `secrets.map`; or p
 | `init` | Declares the backend; see *Choosing a backend*. An agent may run it once the human has chosen. |
 | `login` | LDAP login (password prompt). Stores a **child token limited to `workstation-read`** (plus `<project>-read` in a vault project, when the login carries it) in `~/.vault-token` (mode 600). The LDAP token itself, which may carry admin, is never stored. `VAULT_AUTH_METHOD=token` stores a pasted token instead, as given, but never a root token. `approle` verifies the credential file and stores nothing. |
 | `exec VAR… -- CMD…` | Fetches the named variables (from Vault, or from `.env` with `local`) and execs `CMD` with them set. A variable already exported wins, and the store is not consulted for it. On Windows, which has no `exec`, it runs `CMD`, waits for it, and exits with its status. |
-| `check` | Vault reachable with the certificate verified; the token's policies and remaining time; for each mapped variable: readable, MISSING, or shadowed by an export. With `local`: `.env` is git-ignored and mode 600, and each `.env.example` name is set. Exits 1 if anything is missing. |
-| `put VAR` | Writes one value, read from stdin or a hidden prompt, using a **fresh login held in memory**, never the stored read-only token; with `approle`, no prompt at all. Merges into the secret with check-and-set. With `local`, replaces the line in `.env` (mode 600), and refuses while `.env` is not git-ignored. |
+| `check` | Vault reachable with the certificate verified; the token's policies and remaining time; for each mapped variable: readable, MISSING, or shadowed by an export. With `local`: `.env` is git-ignored and mode 600, and each `.env.example` name is set. With `gitlab` or `github`: the names present in the platform, **names only**, against `.env.example`. Exits 1 if anything is missing. |
+| `put VAR` | Writes one value, read from stdin or a hidden prompt, using a **fresh login held in memory**, never the stored read-only token; with `approle`, no prompt at all. Merges into the secret with check-and-set. With `local`, replaces the line in `.env` (mode 600), and refuses while `.env` is not git-ignored. With `github`, runs `gh secret set` with the value **on stdin, never in argv**. With `gitlab`, creates or updates a masked, protected CI/CD variable through the API, using `GITLAB_URL` and `GITLAB_TOKEN` (api scope; prompted for if unset). An `http://` GitLab is refused unless the human passes `--allow-http`, because the token and the value would cross the network in cleartext. |
 | `logout` | Revokes the stored token and deletes the file. |
 | `provision [--dry-run]` | **vault backend, a Vault admin's step.** Creates the project's own KV v2 mount `<project>/`, the policies `<project>-read`, `-write` and `-app`, and the AppRole `<project>`. It takes the admin token from `VAULT_TOKEN`, a fresh LDAP login or a prompt, holds it in memory, and refuses a root token or an AppRole identity. It reads everything first and refuses, before any write, anything that exists in another shape. It never deletes, never edits another policy, and never enables an auth method. `--dry-run` contacts nothing and prints the plan, so an agent may run it. |
 

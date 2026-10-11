@@ -37,6 +37,10 @@
 # matter most: a second run writes nothing (T38), every refusal happens before
 # the first write (T39), and no request ever asks Vault to delete (T42).
 #
+# TASK-0157 adds T44-T49: put and check on the gitlab and github backends,
+# against a loopback GitLab stub and a `gh` shim on PATH. The case that matters
+# most: a GitHub value reaches gh on stdin, never in argv where ps shows it.
+#
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -204,6 +208,41 @@ class Stub(BaseHTTPRequestHandler):
 
 server = ThreadingHTTPServer(("127.0.0.1", 0), Stub)
 threading.Thread(target=server.serve_forever, daemon=True).start()
+
+# GitLab's project variables API, for the gitlab backend (TASK-0157).
+GL_TOKEN = "glpat-GITLAB-api-0008"
+gitlab = {"requests": [], "vars": {"ALREADY_TOKEN": {"key": "ALREADY_TOKEN", "value": "VAL-gl-old-0e1"}}}
+
+
+class GitLabStub(Stub):
+    def route(self, method):
+        n = int(self.headers.get("Content-Length") or 0)
+        body = json.loads(self.rfile.read(n)) if n else None
+        path, _, query = self.path.partition("?")
+        gitlab["requests"].append((method, path, self.headers.get("PRIVATE-TOKEN"), body))
+        if self.headers.get("PRIVATE-TOKEN") != GL_TOKEN:
+            return self.reply(401, {"message": "401 Unauthorized"})
+        m = re.fullmatch(r"/api/v4/projects/grp%2Fdemo/variables(?:/([A-Z_0-9]+))?", path)
+        if not m:
+            return self.reply(404, {"message": "404 Project Not Found"})
+        key, table = m.group(1), gitlab["vars"]
+        if method == "GET" and key is None:
+            return self.reply(200, list(table.values()))
+        if method == "GET":
+            return self.reply(200, table[key]) if key in table else self.reply(404, {"message": "404 Variable Not Found"})
+        if method == "POST" and key is None:
+            if body["key"] in table:
+                return self.reply(400, {"message": {"key": ["has already been taken"]}})
+            table[body["key"]] = body
+            return self.reply(201, body)
+        if method == "PUT" and key in table:
+            table[key] = dict(body)
+            return self.reply(200, body)
+        return self.reply(405, {"message": "unsupported"})
+
+
+glserver = ThreadingHTTPServer(("127.0.0.1", 0), GitLabStub)
+threading.Thread(target=glserver.serve_forever, daemon=True).start()
 WORK = tempfile.mkdtemp(prefix="vault-secrets-test.")
 HOME = os.path.join(WORK, "home")
 os.mkdir(HOME)
@@ -669,6 +708,86 @@ try:
           p.returncode == 0 and tok() == CHILD and "does not carry other-proj-read" in p.stderr
           and bool(creates) and creates[0][3]["policies"] == ["workstation-read"], p.stderr.strip())
 
+    # T44-T49 - put and check on the CI backends (ADR-0034, TASK-0157): GitHub
+    # through a `gh` shim that records its argv and stdin, GitLab against the
+    # loopback stub above.
+    GH_VALUE, GL_VALUE, GL_VALUE2 = "VAL-github-secret-2b7", "VAL-gitlab-var-4e0", "VAL-gitlab-var2-9f6"
+    shim_dir = os.path.join(WORK, "shim")
+    os.mkdir(shim_dir)
+    GH_LOG = os.path.join(WORK, "gh.json")
+    with open(os.path.join(shim_dir, "gh"), "w", encoding="utf-8") as fh:
+        fh.write("#!%s\nimport json, sys\n"
+                 "args = sys.argv[1:]\n"
+                 "if args[:2] == ['secret', 'list']:\n"
+                 "    print(json.dumps([{'name': 'DEMO_TOKEN'}]))\n"
+                 "else:\n"
+                 "    json.dump({'argv': args, 'stdin': sys.stdin.read()}, open(%r, 'w'))\n"
+                 % (sys.executable, GH_LOG))
+    os.chmod(os.path.join(shim_dir, "gh"), 0o755)
+    shim = {"PATH": shim_dir + os.pathsep + os.environ.get("PATH", "")}
+    G, L = os.path.join(WORK, "p-github"), os.path.join(WORK, "p-gitlab")
+    for d in (G, L):
+        with open(os.path.join(d, ".env.example"), "a", encoding="utf-8") as fh:
+            fh.write("DEMO_TOKEN=\n")
+
+    p = run(["put", "DEMO_TOKEN"], stdin=GH_VALUE + "\n", env=shim, cwd=G)
+    try:
+        with open(GH_LOG, encoding="utf-8") as fh:
+            ghcall = json.load(fh)
+    except FileNotFoundError:
+        ghcall = {}
+    check("T44 github put runs gh secret set on the declared repo", p.returncode == 0
+          and ghcall.get("argv") == ["secret", "set", "DEMO_TOKEN", "--repo", "owner/demo"], p.stderr.strip())
+    check("T44 the value reaches gh on stdin and never in its argv",
+          ghcall.get("stdin") == GH_VALUE and GH_VALUE not in json.dumps(ghcall.get("argv")))
+    p = run(["put", "NOT_DECLARED"], stdin="x\n", env=shim, cwd=G)
+    check("T44 github put of an undeclared variable exits 2", p.returncode == 2, p.stderr.strip())
+
+    with open(os.path.join(G, ".env.example"), "a", encoding="utf-8") as fh:
+        fh.write("MISSING_TOKEN=\n")
+    p = run(["check"], env=shim, cwd=G)
+    check("T45 github check lists names only and says MISSING", p.returncode == 1
+          and "DEMO_TOKEN: set in GitHub" in p.stdout and "MISSING_TOKEN: MISSING" in p.stdout,
+          (p.stdout + p.stderr).strip())
+
+    gl = "http://127.0.0.1:%d" % glserver.server_address[1]
+    gitlab["requests"].clear()
+    p = run(["put", "DEMO_TOKEN"], stdin=GL_VALUE + "\n",
+            env={"GITLAB_URL": "http://gitlab.example.invalid", "GITLAB_TOKEN": GL_TOKEN}, cwd=L)
+    check("T46 gitlab put refuses a non-loopback http:// without --allow-http, before any request",
+          p.returncode == 1 and "cleartext" in p.stderr and "--allow-http" in p.stderr and not gitlab["requests"],
+          p.stderr.strip())
+    p = run(["put", "--allow-http", "DEMO_TOKEN"], stdin="x\n", env=shim, cwd=G)
+    check("T46 --allow-http on another backend exits 2", p.returncode == 2, p.stderr.strip())
+
+    glenv = {"GITLAB_URL": gl, "GITLAB_TOKEN": GL_TOKEN}
+    p = run(["put", "DEMO_TOKEN"], stdin=GL_VALUE + "\n", env=glenv, cwd=L)
+    check("T47 gitlab put creates a masked, protected variable",
+          p.returncode == 0 and "created" in p.stdout and gitlab["vars"].get("DEMO_TOKEN", {}).get("value") == GL_VALUE
+          and gitlab["vars"]["DEMO_TOKEN"].get("masked") is True and gitlab["vars"]["DEMO_TOKEN"].get("protected") is True,
+          p.stderr.strip())
+    gitlab["requests"].clear()
+    p = run(["put", "DEMO_TOKEN"], stdin=GL_VALUE2 + "\n", env=glenv, cwd=L)
+    verbs = [r[0] for r in gitlab["requests"]]
+    check("T47 a second gitlab put updates in place (GET, then PUT), never a second create",
+          p.returncode == 0 and "updated" in p.stdout and verbs == ["GET", "PUT"]
+          and gitlab["vars"]["DEMO_TOKEN"]["value"] == GL_VALUE2, "%s %s" % (verbs, p.stderr.strip()))
+    p = run(["put", "DEMO_TOKEN"], stdin=GL_TOKEN + "\n" + GL_VALUE + "\n", env={"GITLAB_URL": gl}, cwd=L)
+    check("T47 with no GITLAB_TOKEN exported, put prompts for it and holds it in memory",
+          p.returncode == 0 and gitlab["vars"]["DEMO_TOKEN"]["value"] == GL_VALUE, p.stderr.strip())
+
+    p = run(["put", "DEMO_TOKEN"], stdin=GL_VALUE2 + "\n", env={"GITLAB_URL": gl, "GITLAB_TOKEN": "glpat-wrong"}, cwd=L)
+    check("T48 a rejected GitLab token exits 1 and says what the token needs",
+          p.returncode == 1 and "401" in p.stderr and "api scope" in p.stderr
+          and gitlab["vars"]["DEMO_TOKEN"]["value"] == GL_VALUE, p.stderr.strip())
+
+    with open(os.path.join(L, ".env.example"), "a", encoding="utf-8") as fh:
+        fh.write("MISSING_TOKEN=\n")
+    p = run(["check"], env=glenv, cwd=L)
+    check("T49 gitlab check lists names only and says MISSING", p.returncode == 1
+          and "DEMO_TOKEN: set in GitLab" in p.stdout and "MISSING_TOKEN: MISSING" in p.stdout
+          and "VAL-gl-old-0e1" not in p.stdout + p.stderr, (p.stdout + p.stderr).strip())
+
     # T42 - nothing this script did, in any case above, asked Vault to delete.
     check("T42 no DELETE request was ever sent", "DELETE" not in state["methods"])
 
@@ -681,7 +800,9 @@ try:
                                    ("private value", PRIVATE_VALUE), ("approle-written value", APP_VALUE),
                                    ("local value", LOCAL_VALUE), ("replaced local value", LOCAL_VALUE2),
                                    ("other local value", OTHER_VALUE), ("admin token", ADMIN),
-                                   ("project child token", CHILD_PROJ))
+                                   ("project child token", CHILD_PROJ), ("github secret value", GH_VALUE),
+                                   ("gitlab value", GL_VALUE), ("second gitlab value", GL_VALUE2),
+                                   ("gitlab token", GL_TOKEN), ("gitlab row value", "VAL-gl-old-0e1"))
               if s in blob]
     check("T15 no password, token or value in any output (%d runs)" % len(outputs), not leaked, ", ".join(leaked))
 
@@ -724,6 +845,7 @@ try:
               ", ".join(undocumented))
 finally:
     server.shutdown()
+    glserver.shutdown()
     shutil.rmtree(WORK, ignore_errors=True)
 
 failed = 0

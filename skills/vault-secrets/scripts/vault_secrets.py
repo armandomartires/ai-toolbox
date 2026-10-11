@@ -23,7 +23,9 @@ Subcommands:
                          exported variable shadows
   put VAR                write one value, read from stdin, with a fresh login
                          (AppRole, LDAP or VAULT_TOKEN) -- never the stored token.
-                         local backend: into .env, mode 600
+                         local backend: into .env, mode 600. gitlab: a masked,
+                         protected CI/CD variable; github: an Actions secret
+                         (through gh, the value on its stdin)
   logout                 revoke the stored token and delete the file
   provision [--dry-run]  vault backend: create the project's own KV v2 mount,
                          its read/write/app policies and its AppRole, with an
@@ -44,6 +46,8 @@ Configuration, from the environment:
   VAULT_SECRETS_MAPS colon-separated map files, used when no --map is given
                      (default: secrets.map). --map may be repeated; a variable
                      mapped twice is an error.
+  GITLAB_URL         gitlab backend: the instance. http:// needs --allow-http.
+  GITLAB_TOKEN       gitlab backend: a token with api scope (else a prompt).
 
 A variable already set in the environment wins: Vault is not consulted for it.
 
@@ -526,6 +530,131 @@ def check_local():
     sys.exit(0 if ok else EXIT_FAIL)
 
 
+# -- the CI backends: GitLab CI/CD variables, GitHub Actions secrets ---------
+
+def ci_names(found, store):
+    """Report each .env.example name as present in STORE or MISSING; exit."""
+    ok = True
+    for name in example_names():
+        if name in found:
+            print("%s: set in %s" % (name, store))
+        else:
+            print("%s: MISSING -- write it with `put %s`" % (name, name))
+            ok = False
+    sys.exit(0 if ok else EXIT_FAIL)
+
+
+def gh(args, value=None):
+    """Run the GitHub CLI; a value goes on its stdin, never in its argv."""
+    try:
+        return subprocess.run(["gh"] + args, input=value, capture_output=True, text=True)
+    except FileNotFoundError:
+        die("the GitHub CLI (gh) is not installed: https://cli.github.com")
+
+
+def put_github(conf, var):
+    known_local([var])
+    value = read_value(var)
+    p = gh(["secret", "set", var, "--repo", conf["github_repo"]], value)
+    if p.returncode != 0:
+        die("gh secret set %s failed (exit %d): %s" % (var, p.returncode,
+                                                      p.stderr.replace(value, "<value>").strip()))
+    print("set %s as a GitHub Actions secret on %s" % (var, conf["github_repo"]))
+
+
+def check_github(conf):
+    p = gh(["secret", "list", "--repo", conf["github_repo"], "--json", "name"])
+    if p.returncode != 0:
+        die("gh secret list failed (exit %d): %s" % (p.returncode, p.stderr.strip()))
+    try:
+        found = {s["name"] for s in json.loads(p.stdout or "[]")}
+    except (ValueError, KeyError, TypeError):
+        die("gh secret list returned something other than JSON names")
+    print("github: %s, %d secret(s), names only" % (conf["github_repo"], len(found)))
+    ci_names(found, "GitHub")
+
+
+class GitLab:
+    def __init__(self, conf, allow_http):
+        url = os.environ.get("GITLAB_URL", "").strip().rstrip("/")
+        if not url:
+            die("GITLAB_URL is not set (the GitLab instance; never in a tracked file)")
+        parts = urllib.parse.urlsplit(url)
+        if parts.scheme not in ("http", "https"):
+            die("GITLAB_URL must start with https://")
+        if parts.scheme == "http" and not is_loopback(parts.hostname):
+            if not allow_http:
+                die("refusing http:// GitLab: the token (and a value, for put) would cross the "
+                    "network in cleartext. Pass --allow-http to accept that (ADR-0028, ADR-0034).")
+            print("warning: http:// -- the GitLab token crosses the network in cleartext", file=sys.stderr)
+        self.base = "%s/api/v4/projects/%s/variables" % (url, urllib.parse.quote(conf["gitlab_project"], safe=""))
+        self.project = conf["gitlab_project"]
+        self.token = os.environ.get("GITLAB_TOKEN") or getpass.getpass(
+            "GitLab token with api scope on %s (held in memory): " % self.project).strip()
+        if not self.token:
+            die("empty token")
+        self.ctx = ssl.create_default_context()
+
+    def call(self, verb, suffix="", body=None):
+        """(status, parsed body). A refused request's message is returned, not raised."""
+        req = urllib.request.Request(self.base + suffix, method=verb, headers={
+            "PRIVATE-TOKEN": self.token, "Content-Type": "application/json"},
+            data=None if body is None else json.dumps(body).encode())
+        try:
+            with urllib.request.urlopen(req, context=self.ctx, timeout=15) as r:
+                raw = r.read()
+                return r.status, (json.loads(raw) if raw else None)
+        except urllib.error.HTTPError as e:
+            try:
+                return e.code, json.loads(e.read() or b"null")
+            except ValueError:
+                return e.code, None
+        except urllib.error.URLError as e:
+            die("cannot reach GitLab: %s" % e.reason)
+
+
+def gitlab_failed(what, status, body, value=None):
+    msg = json.dumps((body or {}).get("message", body) if isinstance(body, dict) else body)
+    if value:
+        msg = msg.replace(value, "<value>")
+    hint = " -- the token needs api scope and Maintainer on the project" if status in (401, 403) else ""
+    die("%s failed: HTTP %d %s%s" % (what, status, msg, hint))
+
+
+def put_gitlab(conf, var, allow_http):
+    known_local([var])
+    lab = GitLab(conf, allow_http)
+    value = read_value(var)
+    body = {"key": var, "value": value, "masked": True, "protected": True, "raw": True}
+    status, found = lab.call("GET", "/" + var)
+    if status == 200:
+        status, reply = lab.call("PUT", "/" + var, body)
+        verb = "updated"
+    elif status == 404:
+        status, reply = lab.call("POST", "", body)
+        verb = "created"
+    else:
+        gitlab_failed("reading %s" % var, status, found)
+    if status not in (200, 201):
+        gitlab_failed("writing %s" % var, status, reply, value)
+    print("%s %s as a masked, protected GitLab CI/CD variable on %s" % (verb, var, lab.project))
+
+
+def check_gitlab(conf, allow_http):
+    lab, found, page = GitLab(conf, allow_http), set(), 1
+    while True:
+        status, rows = lab.call("GET", "?per_page=100&page=%d" % page)
+        if status != 200:
+            gitlab_failed("listing variables", status, rows)
+        # The rows carry values; only the keys are ever kept.
+        found |= {r["key"] for r in rows or []}
+        if len(rows or []) < 100:
+            break
+        page += 1
+    print("gitlab: %s, %d variable(s), names only" % (lab.project, len(found)))
+    ci_names(found, "GitLab")
+
+
 # -- provisioning a project's own mount (ADR-0034) --------------------------
 
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -925,8 +1054,10 @@ def main(argv):
     p.add_argument("vars", nargs="*", metavar="VAR")
     p = sub.add_parser("check")
     p.add_argument("--map", action="append", metavar="FILE")
+    p.add_argument("--allow-http", action="store_true", help="gitlab backend: accept a cleartext http:// GitLab")
     p = sub.add_parser("put")
     p.add_argument("--map", action="append", metavar="FILE")
+    p.add_argument("--allow-http", action="store_true", help="gitlab backend: accept a cleartext http:// GitLab")
     p.add_argument("var", metavar="VAR")
     sub.add_parser("logout")
     p = sub.add_parser("provision")
@@ -938,6 +1069,8 @@ def main(argv):
     backend = (load_conf() or {}).get("backend", "vault") if args.cmd in ("exec", "check", "put") else None
     if backend not in (None, "vault") and args.map:
         die("--map is for the vault backend; %s declares %s" % (CONF_FILE, backend), EXIT_USAGE)
+    if backend != "gitlab" and getattr(args, "allow_http", False):
+        die("--allow-http is for the gitlab backend only", EXIT_USAGE)
     if backend == "local":
         if args.cmd == "exec":
             if not command:
@@ -953,8 +1086,12 @@ def main(argv):
             # GitLab token over the network for every command. CI owns them.
             die("backend %s: values live in CI and are not readable here -- a local run "
                 "exports the variable itself (it wins over any store)" % backend, EXIT_USAGE)
-        die("backend %s: %s is not implemented yet -- use the platform's settings page"
-            % (backend, args.cmd), EXIT_USAGE)
+        conf = load_conf()
+        if backend == "github":
+            put_github(conf, args.var) if args.cmd == "put" else check_github(conf)
+        else:
+            put_gitlab(conf, args.var, args.allow_http) if args.cmd == "put" \
+                else check_gitlab(conf, args.allow_http)
     elif args.cmd == "exec":
         cmd_exec(args, command)
     else:
