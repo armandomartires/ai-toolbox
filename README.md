@@ -24,7 +24,10 @@ agent loops, prompts, agent roles, and client configurations.
   — regenerated from `.ai/` and republished on every push to `master`
   (`.github/workflows/dashboard.yml`), and rebuilt once a day by
   `.github/workflows/dashboard-daily.yml`, scheduled for 00:23 UTC — GitHub
-  has started it 5 to 6 hours late — so its date moves without a push. A
+  has started it 5 to 6 hours late — so its date moves without a push. The
+  same page is also published to GitLab Pages on `origin` (private; the URL
+  is under the project's Deploy → Pages), on every push to `master` and by a
+  pipeline schedule at 00:47 UTC (`.gitlab/ci/dashboard-pages.yml`). A
   view of the governance layer, not an audit of it
 
 ## Getting started

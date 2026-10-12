@@ -4,7 +4,7 @@
 #   bash skills/project-workflow/scripts/publish-dashboard.sh render
 # `render --check` fails when this copy and its template disagree.
 #
-# STATUS: UNVERIFIED - CI lint valid; pipeline 10 (36ac929) created its pages job, which stays pending: no runner is online (TASK-0127)
+# STATUS: VERIFIED on scheduled pipeline 165 (b150660, 2026-10-12): job 278 success on instance runner 3, guard reported 356 commits and a full clone; pipeline 166 likewise, Pages deployment created (TASK-0168)
 # The label moves only against an observed run, and names it.
 #
 # Regenerate the delivery dashboard and publish it to GitLab Pages. This
