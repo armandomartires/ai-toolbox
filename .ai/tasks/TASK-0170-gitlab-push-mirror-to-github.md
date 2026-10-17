@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: blocked   # on the human: step 7 (per-host maps), then 8
 - Owner: the human (the mirror in GitLab), then agent (repo changes)
 - Created: 2026-10-17
 - Updated: 2026-10-17
@@ -46,15 +46,15 @@ settings. Agents then push `origin` only, and `retire github-token` can run.
 
 ## Acceptance criteria
 
-- [ ] A push to `origin` alone reaches `github`: both `ls-remote` hashes equal `HEAD`.
-- [ ] No tracked file names `GITHUB_PUSH_TOKEN`, and no per-host map maps it.
-- [ ] AGENTS.md and the runbook tell an agent to push `origin` only.
-- [ ] GitHub Actions still run on the mirrored push (`validate.yml` for that commit).
+- [x] A push to `origin` alone reaches `github`: both `ls-remote` hashes equal `HEAD`.
+- [ ] No tracked file names `GITHUB_PUSH_TOKEN` (done, briefs aside), and no per-host map maps it (step 7, human).
+- [x] AGENTS.md and the runbook tell an agent to push `origin` only.
+- [x] GitHub Actions still run on the mirrored push (`validate.yml` for that commit).
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] `scripts/check-private-names.sh`: the GitLab host stays out of every tracked file
+- [x] tests/validate.sh
+- [x] `scripts/check-private-names.sh`: the GitLab host stays out of every tracked file
 
 ## Risks and rollback
 
@@ -66,12 +66,16 @@ settings. Agents then push `origin` only, and `retire github-token` can run.
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| AGENTS.md, runbook | Push `origin` only; confirm `github` by `ls-remote`, polling; mirror failures are read in GitLab and reported |
+| `.env.example`, `secrets.map`, T16, ADR-0028, CURRENT_STATE | No `GITHUB_PUSH_TOKEN`; ADR amended 2026-10-17 |
 
-Next:
+Next: human — delete `GITHUB_PUSH_TOKEN` from each per-host map, then `TASK-0169` step 8 (`retire github-token`).
 
 ## Execution log
 
 - 2026-10-17 · claude/opus-5.5 · brief written at the human's request; the human sets up the mirror meanwhile
   - Evidence: `vgit GITHUB_PUSH_TOKEN … push github master` → `could not read Username`; the same token on `GET /user` → `401`
   - Deviation: none
+- 2026-10-17 · claude/opus-5.5 · steps 1-6 done; 7-8 are the human's
+  - Evidence: `vgit_origin push origin master` alone → `git ls-remote github` = `4180e00` = `HEAD`; Actions on `4180e00`: validate, dashboard, ci-alert ×2 → success; `tests/validate.sh` → OK
+  - Deviation: a procedure change, so no test fails on revert; the evidence is the observed mirror. T16 drops `GITHUB_PUSH_TOKEN` from its guard set: with the name gone from `.env.example`, mapping it fails T16 anyway

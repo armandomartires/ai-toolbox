@@ -13,6 +13,10 @@ serves `https://` and redirects `http://` there, so the Context's "`http://`
 only" no longer holds. `origin` is re-pointed to `https://`, and the push token
 no longer crosses the network in cleartext. The decision itself stands:
 `origin` stays the primary, and git still sends only the narrow project token.
+**Amended 2026-10-17 on the human's decision (`TASK-0170`):** GitLab
+push-mirrors `origin` to `github`, protected branches only. Agents push
+`origin` alone and confirm `github` by `ls-remote`; the GitHub credential lives
+in GitLab's mirror settings, so no agent or host holds one.
 
 Task: `TASK-0126`. Extends `ADR-0007` (a remote is recommended) and `ADR-0009`
 (configuration comes from the environment); supersedes neither. `ADR-0009`'s

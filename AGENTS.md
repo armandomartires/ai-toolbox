@@ -51,10 +51,10 @@ services, secrets.
   it**) or export the variables from your shell. All of it is optional for
   local work; `tests/validate.sh` is hermetic and passes with nothing set.
   Needed only for specific operations: `GITLAB_URL` + `GITLAB_PUSH_TOKEN`
-  to push to `origin`, and `GITHUB_PUSH_TOKEN` to push to the `github` mirror
-  (ADR-0007, ADR-0009, ADR-0028), the two tokens coming from Vault as the
-  per-host `~/.config/vault/ai-toolbox.map` names them (their mount's name is
-  private, so the tracked `secrets.map` maps neither; TASK-0169), with
+  to push to `origin` (ADR-0007, ADR-0009, ADR-0028); GitLab pushes the
+  `github` mirror itself (TASK-0170). The token comes from Vault as the
+  per-host `~/.config/vault/ai-toolbox.map` names it (its mount's name is
+  private, so the tracked `secrets.map` maps nothing; TASK-0169), with
   `VAULT_ADDR`/`VAULT_CACERT`/`VAULT_SECRETS_MAPS` exported (ADR-0030; setup:
   runbook, *Secrets on a new host*); `WORKSPACE_ROOT` for the
   ansible MCP server. `.env.example` documents names and meanings only,
@@ -155,17 +155,20 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   TASK-0162 still holds some names. CI and the
   published dashboard run on the mirror (`.github/workflows/`), since
   GitLab has no runner yet.
-- At task end: validate, review diff, commit, then push **to every
-  configured remote** — `origin`, then `github` — and confirm `git
-  rev-parse HEAD` equals `ls-remote` on each; with no remote, say so.
-  `origin` is authenticated with
+- At task end: validate, review diff, commit, then push **`origin` only**.
+  GitLab's push mirror carries it to `github` within minutes (TASK-0170);
+  never push `github` directly, since a diverged branch stops the mirror.
+  Confirm `git rev-parse HEAD` equals `ls-remote` on **both** remotes,
+  polling `github` for a few minutes; with no remote, say so. If `github`
+  does not catch up, the mirror's status in GitLab says why: report it,
+  do not push around it. `origin` is authenticated with
   `GITLAB_PUSH_TOKEN`, a repository-only project token, **never
   `GITLAB_TOKEN`** (ADR-0028), which no map holds: the human answers its
   prompt (TASK-0169). `origin` is `https://` (TASK-0166). A clone
   still on `http://` would send the credential in cleartext and lose it on
   GitLab's redirect, so `vgit_origin` rewrites it to `https://` per command
-  (TASK-0163). The mirror uses
-  `GITHUB_PUSH_TOKEN`. Never put a token in the remote URL or any tracked file;
+  (TASK-0163). No agent holds a GitHub credential: the mirror's lives in
+  GitLab. Never put a token in the remote URL or any tracked file;
   `git remote -v` must stay token-free. Commands: runbook, *Authenticating
   a push*.
 - **Git is the record** (ADR-0033). A task lands as one commit, subject

@@ -20,8 +20,7 @@ automatically. An exported value always wins over Vault.
 | `GITLAB_URL` | base URL of the intranet GitLab that hosts `origin` (ADR-0028) | only to fetch/push `origin` | shell profile |
 | `GITLAB_PUSH_TOKEN` | fetching/pushing `origin` — a project access token, `read_repository` + `write_repository`, this project only | only to fetch/push `origin` | Vault, via the per-host map |
 | `GITLAB_TOKEN` | the human's own admin token; used only for API administration (creating the project and its push token). **Never sent by git**, and in no map: the `gitlab` backend prompts for it | no | the human, at a prompt |
-| `GITHUB_URL` | the account that owns the `github` mirror | only to push the mirror | shell profile |
-| `GITHUB_PUSH_TOKEN` | pushing to the `github` mirror (`repo` scope) | only to push the mirror | Vault, via the per-host map |
+| `GITHUB_URL` | the account that owns the `github` mirror | no: GitLab pushes the mirror (TASK-0170) | shell profile |
 | `VAULT_ADDR` | `https://` address of the intranet Vault; internal, so never in a tracked file | to use any secret | shell profile |
 | `VAULT_CACERT` | the internal root CA certificate that verifies Vault | unless the system trusts that CA | shell profile |
 | `WORKSPACE_ROOT` | the ansible MCP server (`mcp-servers/ansible/server.json`) | to run that server | wiring |
@@ -64,8 +63,8 @@ Once per host, and the host then needs no exported token at all (ADR-0030):
    copied from another workstation (`scp`, never via `/mnt/c` or a synced
    folder), and export
    `VAULT_SECRETS_MAPS=secrets.map:$HOME/.config/vault/ai-toolbox.map`. It
-   maps both push tokens. The tracked `secrets.map` maps none, because their
-   paths name a mount whose name is private (TASK-0169).
+   maps `GITLAB_PUSH_TOKEN`. The tracked `secrets.map` maps nothing, because
+   the path names a mount whose name is private (TASK-0169).
 5. **Check:** `python3 skills/vault-secrets/scripts/vault_secrets.py check`.
    Every variable in both maps must read `readable from …`. One that
    reads `shadows Vault` is still exported somewhere, typically the shell
@@ -583,11 +582,16 @@ the next reader knows the file's state.
 ## Authenticating a push
 
 There are two remotes (ADR-0028): `origin`, the private project on the
-intranet GitLab, and `github`, the public mirror. Push to both, in that
-order. Both URLs are token-free and must stay that way, so the credential is
+intranet GitLab, and `github`, the public mirror. **Push `origin` only.**
+GitLab push-mirrors it to `github` (TASK-0170): the mirror is set in the
+project's Settings → Repository → *Mirroring repositories*, protected
+branches only, and its GitHub credential lives there, not in Vault. Never
+push `github` directly: a diverged branch makes the mirror fail. Here,
+`github` is for reading, and needs no token since the repository is public.
+Both URLs are token-free and must stay that way, so `origin`'s credential is
 supplied per-command, from Vault (ADR-0030; set the host up first, under
-*Secrets on a new host*). **Use basic auth, not bearer**, for both. Define
-this once, in the shell profile or the session, from the repo root:
+*Secrets on a new host*). **Use basic auth, not bearer.** Define this once,
+in the shell profile or the session, from the repo root:
 
 ```bash
 # Run git with one remote's credential, fetched from Vault. The token reaches
@@ -623,9 +627,7 @@ vgit_origin() {  # vgit_origin <git args...>
 
 # origin — the project access token, never GITLAB_TOKEN
 vgit_origin push origin master
-
-# github — the public mirror
-vgit GITHUB_PUSH_TOKEN <github-username> push github master
+# github — nothing to push: GitLab's mirror carries it
 ```
 
 **Why an `http://` origin needs the rewrite** (`TASK-0163`, observed 2026-10-11). GitLab
@@ -643,7 +645,7 @@ second branch. Re-point other clones too (below), since `.git/config` is not
 tracked.
 
 For a project access token the basic-auth username is ignored, but it must
-not be empty. Both tokens live in Vault, mapped in the per-host
+not be empty. The token lives in Vault, mapped in the per-host
 `~/.config/vault/ai-toolbox.map` (TASK-0169), no longer in the shell
 profile; that location replaces ADR-0028's 2026-09-30 amendment. A token
 still exported somewhere wins over Vault, and `vault_secrets.py check` names
@@ -689,10 +691,17 @@ code (`reference/git-workflow.md`; AGENTS.md's Git rules):
 ```
 git rev-parse HEAD
 vgit_origin ls-remote origin master
-git ls-remote github master
+git ls-remote github master    # the mirror: repeat for a few minutes
 ```
 
-All three hashes must match. Then check `git remote -v` is still token-free.
+All three hashes must match. `github` lags `origin` by the mirror's delay,
+usually under a minute. If it never catches up, read the mirror's status in
+GitLab and report it: the usual causes are an expired GitHub token, a branch
+pushed to `github` directly, or a token lacking *Workflows* write for a push
+that changes `.github/workflows/`. A clone without the `github` remote adds
+it token-free: `git remote add github
+https://github.com/armandomartires/ai-toolbox.git`. Then check `git remote
+-v` is still token-free.
 
 ## Verifying remote branch state
 

@@ -925,7 +925,7 @@ try:
               ", ".join(undocumented))
         # TASK-0169: these paths name a private mount, so only the per-host map holds them.
         tracked = sorted(set(m["var"] for m in map(mod.MAP_LINE.match, lines) if m)
-                         & {"GITLAB_PUSH_TOKEN", "GITLAB_TOKEN", "GITHUB_TOKEN", "GITHUB_PUSH_TOKEN"})
+                         & {"GITLAB_PUSH_TOKEN", "GITLAB_TOKEN", "GITHUB_TOKEN"})
         check("T16 the tracked secrets.map maps no git remote token", not tracked, ", ".join(tracked))
 finally:
     server.shutdown()
