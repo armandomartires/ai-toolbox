@@ -213,6 +213,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0165 — Keep the gate's throwaway `git init` out of the real repository
 - [x] TASK-0166 — Re-point `origin` to `https://`; amend ADR-0028
 - [x] TASK-0168 — Publish the dashboard to GitLab Pages as well, rebuilt daily by a schedule
+- [ ] TASK-0169 — Stop reading three retired secrets, so SIGMA-infrastructure can retire them
 
 ## Post-S9 (superseded by the promotion above)
 
