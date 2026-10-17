@@ -5,7 +5,12 @@
 Accepted (2026-10-03), on the human's decisions of 2026-10-01..03. Task:
 `TASK-0131`, which records the live verification. **Clause 3 amended
 2026-10-04 by `ADR-0031`:** a host may also hold the codebase's AppRole
-credential, which can write, but only under `kv/ai-toolbox/`.
+credential, which can write, but only under `kv/ai-toolbox/`. **Clause 1
+amended 2026-10-17 by `TASK-0169`:** `kv/` was retired 2026-10-15
+(SIGMA-infrastructure ADR 0025). This repo's secrets now live on a projects
+mount whose name is private, so the tracked `secrets.map` maps none of them.
+Their paths are in each host's `~/.config/vault/ai-toolbox.map`. The admin
+`GITLAB_TOKEN` is in no map at all: a human answers its prompt.
 
 Amends `ADR-0009` (configuration comes from the environment): the interface
 stands, and the *source* of secret values changes. Amends `ADR-0028` on where

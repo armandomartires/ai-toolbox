@@ -51,10 +51,12 @@ services, secrets.
   it**) or export the variables from your shell. All of it is optional for
   local work; `tests/validate.sh` is hermetic and passes with nothing set.
   Needed only for specific operations: `GITLAB_URL` + `GITLAB_PUSH_TOKEN`
-  to push to `origin`, and `GITHUB_TOKEN` to push to the `github` mirror
-  (ADR-0007, ADR-0009, ADR-0028), the two tokens coming from Vault as
-  `secrets.map` names them, with `VAULT_ADDR`/`VAULT_CACERT` exported
-  (ADR-0030; setup: runbook, *Secrets on a new host*); `WORKSPACE_ROOT` for the
+  to push to `origin`, and `GITHUB_PUSH_TOKEN` to push to the `github` mirror
+  (ADR-0007, ADR-0009, ADR-0028), the two tokens coming from Vault as the
+  per-host `~/.config/vault/ai-toolbox.map` names them (their mount's name is
+  private, so the tracked `secrets.map` maps neither; TASK-0169), with
+  `VAULT_ADDR`/`VAULT_CACERT`/`VAULT_SECRETS_MAPS` exported (ADR-0030; setup:
+  runbook, *Secrets on a new host*); `WORKSPACE_ROOT` for the
   ansible MCP server. `.env.example` documents names and meanings only,
   never values; `validate.sh` enforces that every `required` variable in
   any `server.json` appears there.
@@ -158,11 +160,12 @@ Details: `docs/development/`, runbook: `docs/operations/`.
   rev-parse HEAD` equals `ls-remote` on each; with no remote, say so.
   `origin` is authenticated with
   `GITLAB_PUSH_TOKEN`, a repository-only project token, **never
-  `GITLAB_TOKEN`** (ADR-0028). `origin` is `https://` (TASK-0166). A clone
+  `GITLAB_TOKEN`** (ADR-0028), which no map holds: the human answers its
+  prompt (TASK-0169). `origin` is `https://` (TASK-0166). A clone
   still on `http://` would send the credential in cleartext and lose it on
   GitLab's redirect, so `vgit_origin` rewrites it to `https://` per command
   (TASK-0163). The mirror uses
-  `GITHUB_TOKEN`. Never put a token in the remote URL or any tracked file;
+  `GITHUB_PUSH_TOKEN`. Never put a token in the remote URL or any tracked file;
   `git remote -v` must stay token-free. Commands: runbook, *Authenticating
   a push*.
 - **Git is the record** (ADR-0033). A task lands as one commit, subject

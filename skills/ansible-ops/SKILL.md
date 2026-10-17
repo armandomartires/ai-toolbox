@@ -4,7 +4,7 @@ description: "How to change Ansible content in a live estate safely - the obliga
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.2.1"
+  version: "1.2.2"
 ---
 
 # ansible-ops
@@ -152,10 +152,11 @@ to give and gate 8's verification more necessary.
   command line recorded in shell history, or in a CI log.
 - **Where the vault password should come from.** Use a
   `vault_password_file` *script* that does two things:
-  - takes `ANSIBLE_VAULT_PASSWORD` from the environment when it is set;
+  - takes the password from an environment variable the project names, when
+    it is set;
   - otherwise fetches it from a secrets manager. With the `vault-secrets`
-    skill, that is `vault_secrets.py exec --map secrets.map
-    ANSIBLE_VAULT_PASSWORD -- …`.
+    skill, that is `vault_secrets.py exec <VAR> -- …`, with `<VAR>` mapped
+    in the project's own map.
 
   Give it **no plaintext-file fallback**: a fallback keeps the copy, and it
   hides a broken path behind that copy until the day the file is missing.

@@ -18,10 +18,10 @@ automatically. An exported value always wins over Vault.
 | Variable | Needed for | Required? | Comes from |
 |----------|-----------|-----------|------------|
 | `GITLAB_URL` | base URL of the intranet GitLab that hosts `origin` (ADR-0028) | only to fetch/push `origin` | shell profile |
-| `GITLAB_PUSH_TOKEN` | fetching/pushing `origin` — a project access token, `read_repository` + `write_repository`, this project only | only to fetch/push `origin` | Vault |
-| `GITLAB_TOKEN` | the human's own admin token; used only for API administration (creating the project and its push token). **Never sent by git** | no | Vault |
+| `GITLAB_PUSH_TOKEN` | fetching/pushing `origin` — a project access token, `read_repository` + `write_repository`, this project only | only to fetch/push `origin` | Vault, via the per-host map |
+| `GITLAB_TOKEN` | the human's own admin token; used only for API administration (creating the project and its push token). **Never sent by git**, and in no map: the `gitlab` backend prompts for it | no | the human, at a prompt |
 | `GITHUB_URL` | the account that owns the `github` mirror | only to push the mirror | shell profile |
-| `GITHUB_TOKEN` | pushing to the `github` mirror (`repo` scope) | only to push the mirror | Vault |
+| `GITHUB_PUSH_TOKEN` | pushing to the `github` mirror (`repo` scope) | only to push the mirror | Vault, via the per-host map |
 | `VAULT_ADDR` | `https://` address of the intranet Vault; internal, so never in a tracked file | to use any secret | shell profile |
 | `VAULT_CACERT` | the internal root CA certificate that verifies Vault | unless the system trusts that CA | shell profile |
 | `WORKSPACE_ROOT` | the ansible MCP server (`mcp-servers/ansible/server.json`) | to run that server | wiring |
@@ -60,11 +60,17 @@ Once per host, and the host then needs no exported token at all (ADR-0030):
    for your AD password. Only a child token limited to `workstation-read` is
    stored, in `~/.vault-token` at mode 600, and it lasts 8 hours. Log in again
    when it expires; `exec` exits 3 and says so.
-4. **Check:** `python3 skills/vault-secrets/scripts/vault_secrets.py check`.
-   Every variable in `secrets.map` must read `readable from …`. One that
+4. **Place the per-host map** at `~/.config/vault/ai-toolbox.map`, mode 600,
+   copied from another workstation (`scp`, never via `/mnt/c` or a synced
+   folder), and export
+   `VAULT_SECRETS_MAPS=secrets.map:$HOME/.config/vault/ai-toolbox.map`. It
+   maps both push tokens. The tracked `secrets.map` maps none, because their
+   paths name a mount whose name is private (TASK-0169).
+5. **Check:** `python3 skills/vault-secrets/scripts/vault_secrets.py check`.
+   Every variable in both maps must read `readable from …`. One that
    reads `shadows Vault` is still exported somewhere, typically the shell
    profile: remove that export.
-5. **List the private host names** the gate must keep out of tracked files
+6. **List the private host names** the gate must keep out of tracked files
    in `.git/info/private-patterns`: one fixed string per line,
    case-insensitive, `#` for comments. A prefix covers a family (one line for
    every PVE node). git never tracks the file, so each clone needs it; every
@@ -121,7 +127,7 @@ redirect, which for `http://` means TLS is never tested.
 ## An application identity for this codebase (AppRole)
 
 This codebase also has its own Vault identity (ADR-0031). It can read,
-create and edit secrets under `kv/ai-toolbox/*`, never delete them, and asks
+create and edit secrets under its own prefix, never delete them, and asks
 for no password. Turn it on for a shell with:
 
 ```bash
@@ -619,7 +625,7 @@ vgit_origin() {  # vgit_origin <git args...>
 vgit_origin push origin master
 
 # github — the public mirror
-vgit GITHUB_TOKEN <github-username> push github master
+vgit GITHUB_PUSH_TOKEN <github-username> push github master
 ```
 
 **Why an `http://` origin needs the rewrite** (`TASK-0163`, observed 2026-10-11). GitLab
@@ -637,10 +643,13 @@ second branch. Re-point other clones too (below), since `.git/config` is not
 tracked.
 
 For a project access token the basic-auth username is ignored, but it must
-not be empty. Both tokens live in Vault (`secrets.map`), no longer in the
-shell profile; that location replaces ADR-0028's 2026-09-30 amendment. A token
+not be empty. Both tokens live in Vault, mapped in the per-host
+`~/.config/vault/ai-toolbox.map` (TASK-0169), no longer in the shell
+profile; that location replaces ADR-0028's 2026-09-30 amendment. A token
 still exported somewhere wins over Vault, and `vault_secrets.py check` names
-it. **The push token expires on 2027-09-28.** To rotate it, create a new
+it. **The push token's expiry** is set when the human creates it. The previous
+one, due to expire 2027-09-28, was destroyed in SIGMA-infrastructure `S073`, and a new
+one replaces it (TASK-0169). To rotate it, create a new
 project access token on the project with the same two scopes and Maintainer
 role, then run `vault_secrets.py put GITLAB_PUSH_TOKEN`.
 

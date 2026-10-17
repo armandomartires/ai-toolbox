@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: blocked   # on the human: steps 3 (new token), 7 and 8
 - Owner: agent, then the human (per-host maps and the Vault deletions)
 - Created: 2026-10-17
 - Updated: 2026-10-17
@@ -11,10 +11,8 @@
 
 ## Objective
 
-SIGMA-infrastructure's revocation script has three steps gated on this repo:
-revoke `GITHUB_TOKEN`, destroy the old GitLab admin-token copy (`GITLAB_TOKEN`
-here) and the retired ansible-vault password. Remove each read here, so the
-human can run them.
+SIGMA-infrastructure's revocation script has three steps gated on this repo: revoke `GITHUB_TOKEN`, destroy the old GitLab admin-token copy (`GITLAB_TOKEN` here)
+and the retired ansible-vault password. Remove each read here, so the human can run them.
 
 ## Inputs
 
@@ -58,15 +56,15 @@ human can run them.
 
 ## Acceptance criteria
 
-- [ ] No tracked file maps `GITLAB_PUSH_TOKEN` or `GITLAB_TOKEN`, and none names the private mount.
+- [x] No tracked file maps `GITLAB_PUSH_TOKEN` or `GITLAB_TOKEN`, and none names the private mount.
 - [ ] No per-host map names `ANSIBLE_VAULT_PASSWORD`.
 - [ ] After a day of normal work in this repository, SIGMA-infrastructure's audit-log reader shows no ai-toolbox read of `gitlab-admin` or `ansible`. It also shows none of `github` once step 6 is done.
 - [ ] The human reports the gated `retire` steps done.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] `scripts/check-private-names.sh`, after placing `.git/info/private-patterns`, which a fresh clone lacks (runbook, *Secrets on a new host*)
+- [x] tests/validate.sh
+- [ ] `scripts/check-private-names.sh` (passed on its 3 derived patterns), after placing `.git/info/private-patterns`, which a fresh clone lacks (runbook, *Secrets on a new host*)
 
 ## Risks and rollback
 
@@ -78,12 +76,14 @@ human can run them.
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `secrets.map`, `.env.example`, AGENTS.md, runbook, ADR-0030, `ansible-ops` 1.2.2 | `secrets.map` header only, and T16 fails if it maps a git remote token. Mirror pushed with `GITHUB_PUSH_TOKEN`; `GITLAB_TOKEN` and `ANSIBLE_VAULT_PASSWORD` in no tracked file's procedure; runbook step 4 places the per-host map; ADR clause 1 amended for the retired `kv/` |
 
-Next:
+Next: human — new `origin` token (`put GITLAB_PUSH_TOKEN`, map it per-host), step 7, place `private-patterns`, then step 8.
 
 ## Execution log
 
 - 2026-10-17 · claude/opus-5.5 (in SIGMA-infrastructure) · brief written at the human's request; no change made
   - Evidence: Inputs read from this clone and the per-host map (names and paths only), and from Vault's audit log (aggregates only)
   - Deviation: none
+- 2026-10-17 · claude/opus-5.5 · steps 1-5 done; 6-8 wait on the human. Decisions (human): step 2, names tracked and paths per-host, the mirror pushed with the per-host `GITHUB_PUSH_TOKEN`. Step 3, a new project token for `origin`, still named `GITLAB_PUSH_TOKEN`, mapped per-host only
+  - Evidence: Inputs rows re-read and matched. `test-vault-secrets` 114/114; with the old `secrets.map` restored, the new T16 check fails naming all three tokens. `check-private-names: OK (3 patterns)`. The diff does not name the mount. Deviation: `GITLAB_PUSH_TOKEN` stays in `.env.example`, because it is still read. Step 6 changed only the dead tracked `GITHUB_TOKEN` mapping. The per-host `GITHUB_PUSH_TOKEN` still reads the `github` secret, so `retire github-token` still waits

@@ -15,6 +15,8 @@
 # WHAT THIS PROVES: the script's behaviour and requests against a stub that
 # answers the way Vault's KV v2, token and LDAP endpoints are documented to; and
 # that the repo's secrets.map is well-formed and documented in .env.example.
+# Since TASK-0169 that map may be empty, and it must map no git remote token:
+# their paths name a private mount, so only the per-host map holds them.
 # WHAT IT DOES NOT PROVE: that the real Vault answers as the stub does, that its
 # policies allow these calls, or that TLS verifies against the real CA.
 # TASK-0131's live verification records that.
@@ -102,7 +104,7 @@ TOKENS = {
 state = {
     "requests": [],
     "store": {
-        "ai-toolbox/gitlab-push": ({"token": PUSH_VALUE}, 1),
+        "ai-toolbox/push": ({"token": PUSH_VALUE}, 1),
         "ai-toolbox/github": ({"token": GITHUB_VALUE, "note": "keep-me"}, 3),
         "ai-toolbox/private": ({"password": PRIVATE_VALUE}, 1),
     },
@@ -269,12 +271,12 @@ def write(name, text):
     return path
 
 
-MAP = write("secrets.map", "# test map\nGITLAB_PUSH_TOKEN=kv/ai-toolbox/gitlab-push#token\n"
+MAP = write("secrets.map", "# test map\nPUSH_TOKEN=kv/ai-toolbox/push#token\n"
                            "GITHUB_TOKEN=kv/ai-toolbox/github#token\n")
 GONE_MAP = write("gone.map", "GONE_TOKEN=kv/ai-toolbox/never-written#token\n"
                              "ODD_TOKEN=kv/ai-toolbox/github#nofield\n")
 BASE_ENV = {k: v for k, v in os.environ.items()
-            if not k.startswith("VAULT_") and k not in ("GITHUB_TOKEN", "GITLAB_TOKEN", "GITLAB_PUSH_TOKEN")}
+            if not k.startswith("VAULT_") and k not in ("GITHUB_TOKEN", "GITLAB_TOKEN", "PUSH_TOKEN")}
 BASE_ENV.update({"HOME": HOME, "VAULT_USER": "tester",
                  "VAULT_ADDR": "http://127.0.0.1:%d" % server.server_address[1]})
 
@@ -360,11 +362,11 @@ try:
 
     # T4 - exec exports only the variables it was asked for.
     set_tok(CHILD)
-    p = run(["exec", "--map", MAP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN", "GITLAB_PUSH_TOKEN"))
+    p = run(["exec", "--map", MAP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN", "PUSH_TOKEN"))
     seen = probe() or {}
     check("T4 exec runs the command", p.returncode == 0 and seen, p.stderr.strip())
     check("T4 the named variable arrives with Vault's value", seen.get("GITHUB_TOKEN") == GITHUB_VALUE)
-    check("T4 an unnamed mapped variable is NOT exported", "GITLAB_PUSH_TOKEN" in seen and seen["GITLAB_PUSH_TOKEN"] is None)
+    check("T4 an unnamed mapped variable is NOT exported", "PUSH_TOKEN" in seen and seen["PUSH_TOKEN"] is None)
 
     # T5 - an exported variable wins, and Vault is not consulted for it.
     taken()
@@ -379,10 +381,10 @@ try:
           p.returncode == 0 and (probe() or {}).get("GITHUB_TOKEN") == "from-the-environment", p.stderr.strip())
 
     # T6 - --all exports every mapped variable.
-    p = run(["exec", "--map", MAP, "--all"] + probe_cmd("GITHUB_TOKEN", "GITLAB_PUSH_TOKEN"))
+    p = run(["exec", "--map", MAP, "--all"] + probe_cmd("GITHUB_TOKEN", "PUSH_TOKEN"))
     seen = probe() or {}
     check("T6 --all exports every mapped variable",
-          seen.get("GITHUB_TOKEN") == GITHUB_VALUE and seen.get("GITLAB_PUSH_TOKEN") == PUSH_VALUE, p.stderr.strip())
+          seen.get("GITHUB_TOKEN") == GITHUB_VALUE and seen.get("PUSH_TOKEN") == PUSH_VALUE, p.stderr.strip())
 
     # T7 - naming nothing is refused.
     p = run(["exec", "--map", MAP] + probe_cmd("GITHUB_TOKEN"))
@@ -411,10 +413,10 @@ try:
 
     # T11 - check reports by name.
     set_tok(CHILD)
-    p = run(["check", "--map", MAP], env={"GITLAB_PUSH_TOKEN": "exported"})
+    p = run(["check", "--map", MAP], env={"PUSH_TOKEN": "exported"})
     check("T11 check exits 0 when everything is readable or shadowed", p.returncode == 0, (p.stdout + p.stderr).strip())
     check("T11 check reports a readable variable", "GITHUB_TOKEN: readable from kv/ai-toolbox/github#token" in p.stdout)
-    check("T11 check names a shadowed variable", "GITLAB_PUSH_TOKEN: set in the environment, shadows Vault" in p.stdout)
+    check("T11 check names a shadowed variable", "PUSH_TOKEN: set in the environment, shadows Vault" in p.stdout)
     p = run(["check", "--map", GONE_MAP])
     check("T11 check exits 1 and says MISSING for an absent secret",
           p.returncode == 1 and "GONE_TOKEN: MISSING" in p.stdout, (p.stdout + p.stderr).strip())
@@ -917,10 +919,14 @@ try:
             documented = set(re.findall(r"(?m)^([A-Z_][A-Z0-9_]*)=", fh.read()))
         malformed = [i for i, l in enumerate(lines, 1) if not mod.MAP_LINE.match(l)]
         undocumented = [m["var"] for m in map(mod.MAP_LINE.match, lines) if m and m["var"] not in documented]
-        check("T16 secrets.map lines are VAR=<mount>/<path>#<field>", lines and not malformed,
-              "entries %s" % malformed if malformed else "no entries")
+        check("T16 secrets.map lines are VAR=<mount>/<path>#<field>", not malformed,
+              "entries %s" % malformed)
         check("T16 every secrets.map variable is documented in .env.example", not undocumented,
               ", ".join(undocumented))
+        # TASK-0169: these paths name a private mount, so only the per-host map holds them.
+        tracked = sorted(set(m["var"] for m in map(mod.MAP_LINE.match, lines) if m)
+                         & {"GITLAB_PUSH_TOKEN", "GITLAB_TOKEN", "GITHUB_TOKEN", "GITHUB_PUSH_TOKEN"})
+        check("T16 the tracked secrets.map maps no git remote token", not tracked, ", ".join(tracked))
 finally:
     server.shutdown()
     glserver.shutdown()
