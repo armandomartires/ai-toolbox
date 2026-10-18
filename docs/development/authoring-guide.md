@@ -12,11 +12,15 @@ two files "cannot drift" is exactly the construction TASK-0046 logged as a
 false structural claim (its **B3**). Marking each row is what keeps the guide
 checkable against the gate.
 
+The length and character limits come from the Agent Skills specification
+(<https://agentskills.io/specification>, re-read 2026-10-18, `TASK-0173`).
+
 | Rule | Detail | Gated |
 |------|--------|-------|
 | Frontmatter delimiters | `---` on line 1, terminated by a closing `---`. | **yes** |
-| `name` | Required, non-empty, and **must equal the directory name** — it determines the install path, so a mismatch deploys to somewhere no client looks. `_template*` directories are exempt from the equality rule only. | **yes** |
-| `description` | Required, non-empty, **single line**. It renders into one registry table cell; a folded (`>`) or block (`|`) scalar breaks that row — including a bare sigil like `>-`, which reaches the registry as the sigil with the text dropped. | **yes** |
+| `name` | Required, non-empty, and **must equal the directory name** — it determines the install path, so a mismatch deploys to somewhere no client looks. `_template*` directories are exempt from the equality rule only. At most 64 characters of `a-z`, `0-9` and `-`, with no leading, trailing or doubled hyphen (Agent Skills spec). | **yes** |
+| `description` | Required, non-empty, **single line**. It renders into one registry table cell; a folded (`>`) or block (`|`) scalar breaks that row — including a bare sigil like `>-`, which reaches the registry as the sigil with the text dropped. At most 1024 characters (Agent Skills spec); every skill's description is loaded into every session, so say when to use the skill, not everything it does. | **yes** |
+| `compatibility` | Optional; 1–500 characters when present (Agent Skills spec). | **yes**, when present |
 | `license` | Optional, but non-empty if present. | **yes** |
 | `license` backed by a repo `LICENSE` file | A `license:` claim should be backed by a real `LICENSE`. | **no** — convention only; `validate.sh` never reads `LICENSE` |
 | `metadata.author` | Optional. | not applicable |

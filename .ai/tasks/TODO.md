@@ -217,6 +217,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0170 — Let GitLab push the public mirror, so agents push `origin` only
 - [x] TASK-0171 — Each project declares its work tracker: files, GitLab or GitHub
 - [x] TASK-0172 — Run the unattended loop on a forge tracker
+- [x] TASK-0173 — Gate the Agent Skills spec's length and name limits
 
 ## Post-S9 (superseded by the promotion above)
 

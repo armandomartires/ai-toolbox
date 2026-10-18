@@ -1,10 +1,10 @@
 ---
 name: project-workflow
-description: "Scaffolds and maintains a project's .ai/ directory - a consistent plan/develop/test/validate documentation convention (sprint-prefixed task briefs, architecture decision records, roadmap, ad-hoc task list, review checkpoints), and generates each artifact from the schema that owns its shape. USE FOR: setting up project planning docs, scaffolding .ai, writing a task brief, writing an ADR, recording a decision, tracking sprint history, starting a new project's documentation structure, standardizing how a project plans/develops/tests/validates work, and rendering that layer as an agile HTML dashboard (burn-up, burn-down, cumulative flow, velocity, cycle time, dependencies, backlog, roadmap, forecast), optionally published to GitHub Pages or GitLab Pages; or, when the project chooses GitLab or GitHub as its work tracker, mapping each artifact to issues, milestones, boards and the wiki. DO NOT USE FOR: writing normative project documentation (AGENTS.md, docs/ reference guides) - this skill is only for the WHY/WHAT'S-NEXT layer, never the WHAT-IS layer."
+description: "Scaffolds and maintains a project's .ai/ planning layer - a plan/develop/test/validate convention of sprint-prefixed task briefs, ADRs, roadmap, ad-hoc task list and review checkpoints - generating each artifact from the schema that owns its shape. USE FOR: scaffolding .ai or a new project's documentation structure, writing a task brief or ADR, recording a decision, tracking sprint history, building the agile HTML delivery dashboard (burn-up, velocity, forecast) or publishing it to GitHub or GitLab Pages, and mapping artifacts to issues, milestones, boards and the wiki on a GitLab or GitHub tracker. DO NOT USE FOR: normative project documentation (AGENTS.md, docs/ reference guides) - this skill owns only the WHY/WHAT'S-NEXT layer, never the WHAT-IS layer."
 license: MIT
 metadata:
   author: armando.martires
-  version: "7.1.0"
+  version: "7.1.1"
 ---
 
 # project-workflow

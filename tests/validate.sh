@@ -73,6 +73,14 @@ elif not dirname.startswith("_template") and name != dirname:
     # Templates are named _template*, so the rule cannot apply to them —
     # the same carve-out the MCP and loop checks already make.
     bad.append("name '%s' does not match directory '%s'" % (name, dirname))
+if name and len(name) > 64:
+    # The Agent Skills spec's limits (TASK-0173), stated in the authoring
+    # guide first so this gate enforces a requirement rather than authors
+    # one (ADR-0008). Characters, not bytes: the spec counts characters.
+    bad.append("name is %d characters — the spec allows at most 64" % len(name))
+if name and not re.match(r"^[a-z0-9]+(-[a-z0-9]+)*$", name):
+    bad.append("name '%s' must be a-z, 0-9 and single hyphens, not leading "
+               "or trailing (Agent Skills spec)" % name)
 
 desc, desc_span = scalar("description")
 if desc is None:
@@ -92,6 +100,16 @@ elif desc in (">", ">-", ">+", "|", "|-", "|+"):
     # because the value occupies one line.
     bad.append("description is the bare block sigil %r — the registry would "
                "render the sigil and drop the text" % desc)
+elif len(desc) > 1024:
+    # TASK-0173: project-workflow carried 1062 characters past this gate,
+    # which then checked only presence and one line.
+    bad.append("description is %d characters — the spec allows at most 1024"
+               % len(desc))
+
+compat, _ = scalar("compatibility")
+if compat is not None and not 1 <= len(compat) <= 500:
+    bad.append("compatibility is %d characters — the spec requires 1 to 500"
+               % len(compat))
 
 lic, _ = scalar("license")
 if lic is not None and not lic:
