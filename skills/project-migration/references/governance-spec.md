@@ -5,19 +5,21 @@ What each scaffolded file must contain. Read this when writing or reviewing one.
 ## Target structure
 
 ```text
-AGENTS.md  CLAUDE.md(symlink)  README.md  CHANGELOG.md  .gitignore
+AGENTS.md  CLAUDE.md(symlink)  README.md  CHANGELOG.md  .gitignore  tracker.conf
 .ai/
   README.md
   context/    CURRENT_STATE.md  PROJECT_MAP.md  GLOSSARY.md
   decisions/  ADR-0001-*.md
-  planning/   ROADMAP.md  BACKLOG.md  SPRINT-CURRENT.md  plans/PLAN-*.md
-  tasks/      TODO.md  TASK-*.md  completed/
-  sessions/   INDEX.md  SESSION-*.md
-  reviews/    REVIEW-*.md
+  planning/   ROADMAP.md  BACKLOG.md  SPRINT-CURRENT.md  plans/PLAN-*.md   [files]
+  tasks/      TODO.md  TASK-*.md  completed/                               [files]
+  sessions/   INDEX.md  SESSION-*.md                                       [files]
+  reviews/    REVIEW-*.md                                                  [files]
   templates/  PLAN.md  TASK.md  SESSION.md  ADR.md  REVIEW.md
 docs/  architecture/ development/ operations/ deployment/
 src/  tests/  scripts/
 ```
+
+`tracker.conf` names the work tracker: `files`, `gitlab` or `github` (absent means `files`). The `[files]` directories exist only for a files tracker. On a forge they are milestones, issues and the board, the wiki holds end-user docs, and `TASK.md` is the body of an issue. The full mapping is project-workflow's `templates/reference/tracker.md`.
 
 Keep `plans/`, `reviews/` and `BACKLOG.md` as stubs until real work produces content.
 
@@ -35,7 +37,7 @@ This is the single source of shared agent instructions. It must cover:
 - definition of done
 - ambiguity policy
 - destructive-change policy
-- planning references
+- planning references: the files, or the forge project and its board
 - the task process
 
 Keep it under ~500 lines and link to `docs/` for depth. When it grows, the fix is to delete material, not to add more.
@@ -55,6 +57,8 @@ These files are read every session, so they hold the current state only. History
 
 To update a live file, edit the state it describes. Never prepend a dated narrative.
 
+On a forge tracker, only the two `context/` files exist. `ROADMAP.md` is the milestones by due date, `BACKLOG.md` is the `type::backlog` issues, `SPRINT-CURRENT.md` is the open milestone, and `TODO.md` is that milestone's issue list. The forge holds no budget, so keep issue bodies within the brief's 90 lines anyway.
+
 ## Tasks, ADRs, reviews, sessions, plans
 
 Do not write these from an outline. Generate each one from its schema with `scripts/new-artifact.sh --kind task|adr|review|session|plan`, and check it with `scripts/check-artifact.sh`.
@@ -63,7 +67,7 @@ Do not write these from an outline. Generate each one from its schema with `scri
 - It opens with `## Status`: status, owner, dates, `Applies to:`, `Source:`.
 - Then the procedure: Objective, Inputs, Scope (In / Out), Likely files, Execution plan, Acceptance criteria, Mandatory validations, Risks and rollback.
 - Then the record: Outputs / handover, and an Execution log of one line per attempt plus its evidence.
-- Allowed statuses: `planned`, `ready`, `in_progress`, `blocked`, `review`, `done`, `cancelled`.
+- Allowed statuses: `planned`, `ready`, `in_progress`, `blocked`, `review`, `done`, `cancelled`. On a forge: `planned` is an open issue with no `status::` label; `ready`, `in_progress`, `blocked` and `review` are open with that `status::` label; `done` is closed; `cancelled` is closed with a `cancelled` label (GitHub: closed as *not planned*).
 - A task is not `done` while a validation is missing, a criterion is unmet, or the change is not committed and pushed.
 
 **An ADR** (`schemas/adr.md`, at most 80 lines) records a lasting decision: a framework, data model, auth, deployment, an environment, an integration, a compatibility trade-off. It does not record small changes. It opens with `**Status**:` and `**Date**:`.
@@ -87,14 +91,14 @@ Every task goes through seven steps:
 
 **On completion:**
 1. Validate and review `git diff`.
-2. Commit only this task's changes, with a subject `<Imperative summary> (TASK-NNNN)`.
+2. Commit only this task's changes, with a subject `<Imperative summary> (TASK-NNNN)`. On a forge the id is the issue: `(#123)`, with no closing keyword.
 3. Push, and confirm the remote holds the same hash.
 
 Git is the record: the brief does not carry its own hash, and no follow-up commit adds one. Leave unrelated pre-existing changes alone: separate them from the commit, or stop and ask.
 
 ## Task report
 
-Every task ends with this report in chat, one line per field:
+Every task ends with this report in chat, one line per field. On a forge, also post it as the issue's closing comment, then close the issue:
 
 ```
 Result:   done | blocked | partial — one line
@@ -127,7 +131,7 @@ A task is done when all of these hold:
 - They mark which tasks a weaker executor can take.
 
 **Implementation sessions:**
-1. Read `AGENTS.md`, then `CURRENT_STATE.md`, then the sprint, then the task.
+1. Read `AGENTS.md`, then `CURRENT_STATE.md`, then the sprint, then the task. On a forge, the sprint is the open milestone and the task is its issue.
 2. Present a short plan.
 3. Implement the smallest change that suffices, and validate as you go.
 4. Close out per the definition of done.

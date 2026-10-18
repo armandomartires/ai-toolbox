@@ -274,7 +274,51 @@ def gitlab_stub(conf):
             "  - local: %s\n" % (MARKER, conf["skill_dir"], GITLAB_CI, GITLAB_FRAGMENT))
 
 
+def tracker_mode(repo):
+    """The project's declared work tracker (tracker_lib.mode). The dashboard
+    renders a files tracker only (TASK-0171, ADR-0037): on a forge there is
+    no corpus to publish. Imported lazily; tracker_lib borrows git() and the
+    remote helpers from here the same way."""
+    import tracker_lib
+    try:
+        return tracker_lib.mode(repo)
+    except tracker_lib.Refusal as exc:
+        raise Refusal(str(exc))
+
+
+def not_applicable(tracker, path):
+    return ("not applicable: tracker = %s %s (tracker.conf); the dashboard is "
+            "for a files tracker" % (tracker, path))
+
+
+def render_on_forge(repo, check, tracker, path):
+    """Nothing is rendered on a forge. What is left is reported: a conf that
+    still declares targets, and any generated pipeline still deploying."""
+    print("ok       %s" % not_applicable(tracker, path))
+    stale = []
+    if os.path.isfile(os.path.join(repo, CONF)):
+        conf = load_conf(repo)
+        if not conf.get("declined"):
+            if not check:
+                raise Refusal("%s declares targets, but %s. Set `targets = "
+                              "none` and delete the generated pipelines"
+                              % (CONF, not_applicable(tracker, path)))
+            stale.append("%s declares targets; set `targets = none`" % CONF)
+    for target in sorted(TARGETS):
+        rel = TARGETS[target]["out"]
+        full = os.path.join(repo, rel)
+        if os.path.isfile(full) and read_text(full).startswith(MARKER):
+            stale.append("%s was generated for %s and still deploys - delete it"
+                         % (rel, target))
+    for msg in stale:
+        print("STALE    %s" % msg)
+    return 1 if stale else 0
+
+
 def render(repo, check, adopt):
+    tracker, path = tracker_mode(repo)
+    if tracker != "files":
+        return render_on_forge(repo, check, tracker, path)
     conf = load_conf(repo)
     stale = []
     if conf.get("declined"):
@@ -431,6 +475,15 @@ def decision(repo):
         host = remote_host(url)
         forge = forge_of(host) if host != "(local)" else "none"
         print("remote   %s %s %s" % (name, host, forge))
+    tracker, path = tracker_mode(repo)
+    if tracker != "files":
+        # Nothing to ask: the forge's boards are the view (ADR-0037).
+        print("answered %s" % not_applicable(tracker, path))
+        if os.path.isfile(os.path.join(repo, CONF)) and \
+                not load_conf(repo).get("declined"):
+            print("STALE    %s declares targets; set `targets = none` and run "
+                  "`publish-dashboard.sh render --check`" % CONF)
+        return 0
     if os.path.isfile(os.path.join(repo, CONF)):
         conf = load_conf(repo)
         if conf.get("declined"):

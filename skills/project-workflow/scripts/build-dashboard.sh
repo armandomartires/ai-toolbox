@@ -41,6 +41,9 @@
 #   --no-git     do not read git. Completion dates then fall back to each
 #                brief's own recorded fields and the Activity tab is empty.
 #
+#   Exits 2 with `not applicable` when the repository's tracker.conf names
+#   GitLab or GitHub: the dashboard is for a files tracker (tracker.sh).
+#
 #   --theme / --css / --css-href are accepted and IGNORED, with a warning. The
 #   generator's customisation surface is an optional `dashboard.custom.css`
 #   beside the output file, which it links last; see ../dashboard/SCHEMA.md.
@@ -85,7 +88,7 @@ while [ $# -gt 0 ]; do
       echo "  Put an optional dashboard.custom.css beside the output instead;" >&2
       echo "  the generated page links it last. See ../dashboard/SCHEMA.md." >&2
       shift 2 ;;
-    -h|--help)  sed -n '2,52p' "$0"; exit 0 ;;
+    -h|--help)  sed -n '2,55p' "$0"; exit 0 ;;
     *) echo "build-dashboard.sh: unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -95,6 +98,19 @@ done
 # otherwise the root is --root's parent, which is what the old default meant.
 if [ -z "$REPO" ]; then
   REPO="$(cd "$(dirname "$ROOT")" 2>/dev/null && pwd || echo ".")"
+fi
+
+# FILES TRACKER ONLY (TASK-0171, ADR-0037). A project whose tracker.conf names
+# GitLab or GitHub keeps its tasks, sprints and backlog on the forge, so there
+# is no corpus here to render, and the forge's boards and milestones are the
+# view. Refused, not skipped: a caller that gets no file must not read success.
+# A missing tracker.conf means files, so every existing caller is unaffected.
+MODE="$(python3 "$HERE/tracker_lib.py" check --repo "$REPO")" || exit 2
+if [ "$MODE" != files ]; then
+  echo "build-dashboard.sh: not applicable: tracker = $MODE (tracker.conf)." >&2
+  echo "  The dashboard renders a files tracker; this project's boards and" >&2
+  echo "  milestones are the view. See templates/reference/tracker.md." >&2
+  exit 2
 fi
 
 ARGS=(--root "$REPO" --out "$OUT")

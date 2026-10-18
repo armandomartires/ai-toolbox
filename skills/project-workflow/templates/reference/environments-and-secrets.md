@@ -19,3 +19,5 @@ The project chooses one backend at scaffolding and declares it in a tracked `sec
 | `github` | Actions secrets | no: write-only |
 
 The `vault-secrets` skill writes and reads these (`init`, `exec`, `check`, `put`). Changing backend is a decision: record it in an ADR.
+
+A forge tracker's CLI token (`GITLAB_TOKEN` for `glab`, `GH_TOKEN` for `gh`) is a secret like any other (`reference/tracker.md`, *Access*).

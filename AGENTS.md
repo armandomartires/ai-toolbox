@@ -73,7 +73,15 @@ services, secrets.
   the network (launchers fetch upstream), so it is deliberately *not* part
   of `tests/validate.sh`. Reports PASS / FAIL / SKIP as three distinct
   outcomes; a SKIP is not a pass.
-- Delivery dashboard: `skills/project-workflow/scripts/build-dashboard.sh
+- Work tracker: `tracker.conf` declares where a project tracks its work —
+  `files` (the `.ai/` layer), `gitlab` or `github` (issues, milestones,
+  boards; the wiki for end-user docs only). Absent means `files`. Both
+  planning skills ask at initialization; `skills/project-workflow/scripts/tracker.sh
+  check|decision|init` reads and writes it; mapping:
+  `skills/project-workflow/templates/reference/tracker.md` (ADR-0037).
+  **This repo is `files`**, and `tests/validate.sh` asserts it.
+- Delivery dashboard (**files tracker only**; on a forge it exits 2):
+  `skills/project-workflow/scripts/build-dashboard.sh
   --root .ai --project ai-toolbox --out docs/dashboard.html` — renders this
   repo's own `.ai/` as one self-contained HTML file (burn-up, burn-down,
   cumulative flow, velocity, cycle time, dependencies, backlog, roadmap,
@@ -118,7 +126,8 @@ services, secrets.
 ## Structure
 Component layer: `skills/`, `mcp-servers/`, `loops/`, `prompts/`,
 `agents/`, `configs/` (client wiring snapshots). Governance layer:
-`.ai/` per `.ai/README.md`. Index: `docs/registry.md` (generated).
+`.ai/` per `.ai/README.md`; `tracker.conf` says it tracks work in files.
+Index: `docs/registry.md` (generated).
 Details: `docs/development/`, runbook: `docs/operations/`.
 
 ## Git rules

@@ -270,6 +270,10 @@ expect 1 "decision: a host naming gitlab is gitlab" "remote   lab gitlab.example
 expect 1 "decision: never prints a token from a remote URL" -- grep -q -e s3cr3t -e ci-user "$TMP/decision.out"
 printf 'targets = none\n' > "$R/dashboard-publish.conf"
 expect 0 "decision: targets = none is answered" "answered declined" -- "$PUB" decision --repo "$R"
+# A declared files tracker is the same as none declared (TASK-0171); the forge
+# cases live in check-tracker.sh.
+printf 'tracker = files\n' > "$R/tracker.conf"
+expect 0 "decision: an explicit tracker = files changes nothing" "answered declined" -- "$PUB" decision --repo "$R"
 
 # --- guard -------------------------------------------------------------------
 model() { # path commits tasks shape [drop-key]

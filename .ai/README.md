@@ -1,6 +1,6 @@
 # .ai — governance layer
 
-Live files hold state, not history (ADR-0033); their line budgets are gated.
+Live files hold state, not history (ADR-0033); their line budgets are gated. This repository tracks its work in these files: `tracker.conf` says `files` (ADR-0037).
 
 - `context/`: CURRENT_STATE.md (≤ 200 lines), PROJECT_MAP.md, GLOSSARY.md.
 - `decisions/`: `NNNN-short-title.md`, for lasting decisions only. The identifier is still `ADR-NNNN`, in the H1 and in prose (TASK-0024).

@@ -95,6 +95,16 @@ An inline style from the editor beats the file, so use `!important` in the file 
 
 The light and dark themes are each designed separately, not one inverted from the other. The chosen theme is persisted in `localStorage` and in the URL hash, because `file://` pages often cannot use `localStorage`.
 
+## Files tracker only
+
+The dashboard renders the `.ai/` corpus, so it applies only when the project tracks its work in files. When `tracker.conf` names `gitlab` or `github` (`templates/reference/tracker.md`, ai-toolbox `ADR-0037`), the forge's boards and milestones are the view:
+
+- `build-dashboard.sh` exits 2 with `not applicable: tracker = …` and writes nothing.
+- `publish-dashboard.sh decision` answers `not applicable` and exits 0: there is nothing to ask. It adds a `STALE` line if `dashboard-publish.conf` still declares targets.
+- `render --check` exits 1 while the conf declares targets or a generated pipeline still deploys. `render` refuses to write one.
+
+A missing `tracker.conf` means `files`, so a project that predates it is unaffected. The forge's own charts depend on its tier: GitLab's milestone burndown and burnup are paid, and so are GitHub Projects' historical charts.
+
 ## When to rebuild
 
 The local file is rebuilt by the agent as a step, never by a git hook (ai-toolbox `ADR-0029`, `ADR-0035`):
@@ -123,7 +133,7 @@ PENDING  no dashboard-publish.conf: ask whether to publish ...
 ```
 
 - The forge is guessed from the host: `github.com` is `github`, a host containing `gitlab` is `gitlab`, anything else is `unknown`. A self-hosted GitLab is usually `unknown`, so ask; never guess. Only hosts are printed, never a URL, because a URL can carry a token.
-- Exit 1 means a remote exists and there is no conf: ask. It is asked when the layer is scaffolded or migrated, and at the first task-end push of a project that predates the question.
+- Exit 1 means a remote exists and there is no conf: ask. It is asked when the layer is scaffolded or migrated, and at the first task-end push of a project that predates the question. On a forge tracker it is never asked (see *Files tracker only*).
 - **No:** write `targets = none`, alone, under a comment that dates the answer. `render` then writes nothing, and `render --check` still reports any pipeline an earlier "yes" left deploying.
 - **Yes:** follow the steps below.
 

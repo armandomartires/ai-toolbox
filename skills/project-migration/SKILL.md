@@ -1,17 +1,17 @@
 ---
 name: project-migration
-description: "Harmonize an existing repository with the .ai agent-governance framework (AGENTS.md, CLAUDE.md, .ai/ context, decisions, planning, tasks, sessions, reviews). Use when asked to migrate, retrofit, restructure, or onboard a project for multi-agent work, or to scaffold that structure in a new repo. Not for ordinary feature work inside an already-governed repo."
+description: "Harmonize an existing repository with the .ai agent-governance framework (AGENTS.md, CLAUDE.md, .ai/ context, decisions, planning, tasks, sessions, reviews). Use when asked to migrate, retrofit, restructure, or onboard a project for multi-agent work, or to scaffold that structure in a new repo, including the choice of a files, GitLab or GitHub work tracker. Not for ordinary feature work inside an already-governed repo."
 license: MIT
 metadata:
   author: armando.martires
-  version: 4.2.0
+  version: 5.0.0
 ---
 
 # Project migration to the .ai governance framework
 
 Retrofit a live repository so a human, a planning model, and a weaker executor model can all resume work from files instead of conversation history.
 
-**Not `project-workflow`.** These scaffold two different frameworks, deliberately (ADR-0013 in `ai-toolbox`). This one: `.ai/context/`, `.ai/planning/`, `.ai/sessions/`, `.ai/templates/`, `TASK-####-*.md`, `ADR-NNNN-*.md`, entry point `AGENTS.md` — for migrating an existing repo. The other: `00.CONVENTIONS.md` + `20.PLAN.md`/`30.ROADMAP.md`/`35.AD_HOC_TASKS.md` + `reference/`, `S###.T###` tasks, `NNNN-title.md` ADRs — for maintaining the planning convention in a project that already has one. Pick one per project; do not mix them, and do not "align" the ADR filenames. The additive scaffold in this skill's own `scripts/ai-project-scaffold.sh` is the canonical structure — never hand-create the file layout, and never propose a big-bang reorganization. Invoke the script from the skill's own directory, never from a path relative to the target repo: `bash "<skill dir>/scripts/ai-project-scaffold.sh" …`. The script is not marked executable in every checkout, so always run it via `bash`, not by direct execution.
+**Not `project-workflow`.** These scaffold two different frameworks, deliberately (ADR-0013 in `ai-toolbox`). This one: `.ai/context/`, `.ai/planning/`, `.ai/sessions/`, `.ai/templates/`, `TASK-####-*.md`, `ADR-NNNN-*.md`, entry point `AGENTS.md` — for migrating an existing repo. On a forge tracker, planning, tasks, sessions and reviews live on the forge instead. The other: `00.CONVENTIONS.md` + `20.PLAN.md`/`30.ROADMAP.md`/`35.AD_HOC_TASKS.md` + `reference/`, `S###.T###` tasks, `NNNN-title.md` ADRs — for maintaining the planning convention in a project that already has one. Pick one per project; do not mix them, and do not "align" the ADR filenames. The additive scaffold in this skill's own `scripts/ai-project-scaffold.sh` is the canonical structure — never hand-create the file layout, and never propose a big-bang reorganization. Invoke the script from the skill's own directory, never from a path relative to the target repo: `bash "<skill dir>/scripts/ai-project-scaffold.sh" …`. The script is not marked executable in every checkout, so always run it via `bash`, not by direct execution.
 
 ## Hard rules
 
@@ -24,8 +24,9 @@ Retrofit a live repository so a human, a planning model, and a weaker executor m
 - The scaffold emits `.ai/templates/*.md` from this skill's `templates/`. In the migrated repository they are a point-in-time copy with no regenerator and no drift gate (B-051). To compare them with the installed skill: `T=$(mktemp -d); bash <skill dir>/scripts/ai-project-scaffold.sh "$T/fresh" --no-git && diff -r "$T/fresh/.ai/templates" .ai/templates`.
 - Keep artifacts small (ADR-0033). A brief is one module: Status first, then the procedure, then the record. Live files hold state, not history. Git is the record, so no brief carries its own hash. Budgets and contents: `references/governance-spec.md`.
 - Never commit secrets, tokens, or `.env` files; run a secrets scan before the first push.
-- Secrets move only if the user chooses it (Phase 1, step 5). Never open, print or quote a value; name variables only.
+- Secrets move only if the user chooses it (Phase 1, step 6). Never open, print or quote a value; name variables only.
 - Never force-push. If a push fails, diagnose and report — do not declare the task done.
+- The work tracker is declared once, in `tracker.conf` (files, GitLab or GitHub; ADR-0037 in `ai-toolbox`). Changing it later is an ADR plus a migration task, never a quiet edit.
 
 ## Phase 1 — Inventory and mapping (read-only)
 
@@ -35,27 +36,34 @@ Retrofit a live repository so a human, a planning model, and a weaker executor m
    - Never open or quote a value.
 3. Build the mapping table — one row per existing artifact: `| Current path | Responsibility | Proposed destination | Action (move/merge/keep/archive) |`.
 4. Flag duplicated, contradictory, and obsolete information, and which content becomes `AGENTS.md` rules, history, tasks, or ADRs.
-5. Ask whether to migrate secrets as part of this migration. If yes, ask which backend:
+5. Run `skills/project-workflow/scripts/tracker.sh decision`. Unless it reads `declared`, ask which work tracker the project will use:
+   - **files**: this framework's `.ai/planning/`, `.ai/tasks/`, `.ai/sessions/`, `.ai/reviews/`;
+   - **gitlab**: GitLab issues, milestones, boards, labels, and the wiki for end-user docs;
+   - **github**: GitHub issues, milestones, Projects, and the wiki for end-user docs.
+
+   Never assume the answer. On a forge, the mapping table sends old roadmaps, backlogs, task and session files to the forge objects in `skills/project-workflow/templates/reference/tracker.md`, and end-user docs to the wiki. Developer and operations docs stay in `docs/`.
+6. Ask whether to migrate secrets as part of this migration. If yes, ask which backend:
    - **local**: a git-ignored `.env`;
    - **vault**: HashiCorp Vault, in the project's own KV mount;
    - **gitlab**: GitLab CI variables;
    - **github**: GitHub Actions secrets.
 
    Never assume either answer. Put the choice under *Risks and pending decisions*.
-6. With a remote, run `skills/project-workflow/scripts/publish-dashboard.sh decision`. On exit 1, ask whether to publish the dashboard to **GitHub Pages**, **GitLab Pages**, both or neither, and which forge each `unknown` host is. Never assume the answer; put it under *Risks and pending decisions*.
-7. Present the proposal using the response format below and stop for approval.
+7. Files tracker only: with a remote, run `skills/project-workflow/scripts/publish-dashboard.sh decision`. On exit 1, ask whether to publish the dashboard to **GitHub Pages**, **GitLab Pages**, both or neither, and which forge each `unknown` host is. Never assume the answer; put it under *Risks and pending decisions*.
+8. Present the proposal using the response format below and stop for approval.
 
 Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis**, **Current → proposed mapping**, **Proposed structure**, **Migration plan**, **Risks and pending decisions**, **Next step**.
 
 ## Phase 2 — Additive overlay (after approval)
 
 1. `git checkout -b chore/ai-governance-migration` — the merge commit is the single rollback point.
-2. Run the scaffold against the repo root, using the skill's own script path (never the target repo's `scripts/`): `bash "<skill dir>/scripts/ai-project-scaffold.sh" . --force --type python|node|generic`. Add `--no-git` when the repo already has history you do not want touched.
+2. Run the scaffold against the repo root, using the skill's own script path (never the target repo's `scripts/`): `bash "<skill dir>/scripts/ai-project-scaffold.sh" . --force --type python|node|generic`, plus `--tracker gitlab --gitlab-project group/name` or `--tracker github --github-repo owner/name` for a forge. The scaffold writes `tracker.conf`; on a forge it skips `.ai/planning/`, `.ai/tasks/`, `.ai/sessions/` and `.ai/reviews/`. Add `--no-git` when the repo already has history you do not want touched.
 3. Fill `AGENTS.md` from reality: the project's actual install/run/test/lint/build commands and real conventions. Keep it lean — invented or generic requirements make agent tasks measurably worse. Read `references/governance-spec.md` for its required contents.
 4. Create `CLAUDE.md` as a symlink (`ln -s AGENTS.md CLAUDE.md`), confirm git recorded mode `120000`, and on Windows/WSL where symlinks are unreliable use a documented alternative plus an ADR. Two divergent sources of truth are the failure to avoid.
 5. Backfill only `CURRENT_STATE.md`, `PROJECT_MAP.md`, and `ROADMAP.md`, as a snapshot of today. Do not reconstruct history.
 6. Commit the scaffold as one commit; each later migration step gets its own.
-7. Record the Phase-1 publishing answer in `dashboard-publish.conf`, in its own commit. **No:** `targets = none` under a dated comment. **Yes:** the targets, then `publish-dashboard.sh render` (`skills/project-workflow/references/dashboard.md`, *Publishing it*).
+7. Confirm the tracker with `skills/project-workflow/scripts/tracker.sh check`. An existing repo the scaffold did not touch gets it with `tracker.sh init`, in its own commit.
+8. Files tracker only: record the Phase-1 publishing answer in `dashboard-publish.conf`, in its own commit. **No:** `targets = none` under a dated comment. **Yes:** the targets, then `publish-dashboard.sh render` (`skills/project-workflow/references/dashboard.md`, *Publishing it*).
 
 ## Phase 3 — Move content selectively
 
@@ -63,6 +71,11 @@ Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis*
 - Merge old roadmaps and task files into `.ai/planning/` and `.ai/tasks/`, or archive them — never leave two competing sources of truth.
 - Prune scaffold directories that do not apply (e.g. `docs/deployment/` for a library). A smaller final structure is correct; bureaucracy without value is not.
 - Adopt task discipline forward only: the first `TASK-0001.md` is the first new work after migration, not a rewrite of past work.
+- **On a forge tracker**, following `skills/project-workflow/templates/reference/tracker.md`:
+  - create the labels and the first milestone by hand with `glab` or `gh`, using the token through the declared secrets backend;
+  - file the open work as issues, with bodies generated by `new-artifact.sh` and checked by `check-artifact.sh`;
+  - only once those issues exist, remove the old planning, task and session files with `git rm` in their own commit, never before;
+  - move end-user docs into the wiki's own repository (`<project>.wiki.git`). Developer and operations docs stay in `docs/`.
 
 ## Phase 3b — Secrets (only if the user chose to migrate them)
 
@@ -86,9 +99,11 @@ If the user declined, record "secrets not migrated" in `CURRENT_STATE.md`, so th
 
 ## Phase 4 — Validate and finalize
 
-Run the project's real test/lint/build suite. Then start a fresh agent session from `AGENTS.md` and `CURRENT_STATE.md` and confirm it can state the objective and the next action. Grep for references to moved files, scan for secrets, then merge and push. Finish with the task report in `references/governance-spec.md`. From here on, every task follows that file's definition of done.
+Run the project's real test/lint/build suite. Then start a fresh agent session from `AGENTS.md` and `CURRENT_STATE.md` and confirm it can state the objective and the next action. On a forge, that session must also pass `glab auth status` or `gh auth status` under the declared secrets backend, and name the next issue from the board. Grep for references to moved files, scan for secrets, then merge and push. Finish with the task report in `references/governance-spec.md`. From here on, every task follows that file's definition of done.
 
 ## Seeing the layer
+
+**Files tracker only.** On a forge, `build-dashboard.sh` exits 2 with `not applicable` and the board is the view; `publish-dashboard.sh decision` answers `not applicable`.
 
 `skills/project-workflow/scripts/build-dashboard.sh --root .ai --out docs/dashboard.html` renders the briefs as one self-contained HTML dashboard. It reads this framework natively:
 - `TASK-####` briefs and their `## Status` fields
@@ -101,7 +116,7 @@ Keep those names when you edit a schema. The dashboard lives in the sibling skil
 
 Rebuild it as a step, never from a hook:
 - when a `PLAN-####` is approved **and** its `TODO.md` entries and `TASK-####` briefs are written;
-- after the push to every remote is confirmed. Before that push, if `publish-dashboard.sh decision` exits 1, ask the Phase-1 publishing question once.
+- after the push to every remote is confirmed. Before that push, if `publish-dashboard.sh decision` exits 1, ask the Phase-1 publishing question once (step 7).
 
 ## Adapting the framework
 

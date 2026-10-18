@@ -1542,6 +1542,23 @@ if [ -e skills/project-workflow/scripts/check-publish.sh ]; then
     fail=1
   fi
 fi
+# check-tracker.sh proves tracker.sh's grammar, refusals and never-overwrite
+# init, and that the dashboard scripts treat a forge tracker as not applicable
+# (TASK-0171, ADR-0037). Hermetic, a few seconds; same reason as above.
+# WHAT IT DOES NOT PROVE: that any forge project exists or follows
+# templates/reference/tracker.md. This repository itself tracks its work in
+# files: its dashboard is published, so a forge declaration here is a mistake.
+if [ -e skills/project-workflow/scripts/check-tracker.sh ]; then
+  if ! TRACKER_OUT="$(bash skills/project-workflow/scripts/check-tracker.sh 2>&1)"; then
+    printf '%s\n' "$TRACKER_OUT" | grep -v '^PASS' | sed 's/^/TRACKER: /'
+    fail=1
+  fi
+fi
+if ! TRACKER_MODE="$(bash skills/project-workflow/scripts/tracker.sh check 2>&1)" \
+   || [ "$TRACKER_MODE" != files ]; then
+  echo "TRACKER: this repository's tracker.conf must say files (ADR-0037); got: $TRACKER_MODE"
+  fail=1
+fi
 # check-vendor.sh proves vendor-skill.sh's write, refusal, staleness and
 # edit-detection rules in throwaway repositories (TASK-0161). Same reason.
 # WHAT IT DOES NOT PROVE: that any project's vendored copy is current; only
@@ -1846,6 +1863,26 @@ if [ -r "$SCAFFOLD" ]; then
     echo "SCAFFOLD: hard rules require generating the artifact instead"
     fail=1
   fi
+  # Two writers of tracker.conf, one reader (TASK-0171, ADR-0037): the scaffold
+  # writes it in bash, project-workflow's tracker.sh parses it. Scaffold both
+  # modes and have the reader accept each, so the grammar cannot drift apart;
+  # and a forge scaffold must not write the files-owned directories.
+  # WHAT IT DOES NOT PROVE: anything about a real forge project.
+  SCAF_TMP="$(mktemp -d)"
+  if ! bash "$SCAFFOLD" "$SCAF_TMP/files" --no-git >/dev/null 2>&1 \
+     || [ "$(bash skills/project-workflow/scripts/tracker.sh check --repo "$SCAF_TMP/files" 2>&1)" != files ] \
+     || [ ! -f "$SCAF_TMP/files/.ai/tasks/TODO.md" ]; then
+    echo "SCAFFOLD: a files scaffold must write tracker.conf = files and .ai/tasks/"
+    fail=1
+  fi
+  if ! bash "$SCAFFOLD" "$SCAF_TMP/forge" --no-git --tracker gitlab --gitlab-project grp/sub/app >/dev/null 2>&1 \
+     || [ "$(bash skills/project-workflow/scripts/tracker.sh check --repo "$SCAF_TMP/forge" 2>&1)" != "gitlab grp/sub/app" ] \
+     || [ -e "$SCAF_TMP/forge/.ai/tasks" ] || [ -e "$SCAF_TMP/forge/.ai/planning" ]; then
+    echo "SCAFFOLD: a gitlab scaffold must write a tracker.conf tracker.sh reads"
+    echo "SCAFFOLD: as 'gitlab grp/sub/app', and no .ai/tasks/ or .ai/planning/"
+    fail=1
+  fi
+  rm -rf "$SCAF_TMP"
 fi
 
 # --------------------------------------------------------------------------

@@ -4,7 +4,7 @@ Read this when you start a session, end one, or hand off.
 
 ## The invariant
 
-**Every task can be started cold, in a new session, from its brief plus `20.PLAN.md` and `30.ROADMAP.md`.** If you need an earlier transcript, the brief's `Inputs` is incomplete: fix the file, not the session.
+**Every task can be started cold, in a new session, from its brief plus `20.PLAN.md` and `30.ROADMAP.md`** (on a forge: from its issue plus the board and milestones). If you need an earlier transcript, the brief's `Inputs` is incomplete: fix the file, not the session.
 
 ## Starting
 

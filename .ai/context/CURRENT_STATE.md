@@ -5,15 +5,15 @@ State only (ADR-0033): edit this file, don't append to it. The history is in git
 ## Where the project is
 
 - **Roadmap:** Phases 1–10 are complete, and S10 closed 2026-09-26 (`REVIEW-0012`). No sprint is open. Work runs task by task on the human's routing (`TASK-0106` onward).
-- **Last delivered:** GitLab push-mirrors `origin` to `github` (`TASK-0170`, `ADR-0028` amended). Agents push `origin` only and confirm `github` by `ls-remote`; no host holds a GitHub token. Before it: the tracked `secrets.map` maps no secret (`TASK-0169`). `GITLAB_PUSH_TOKEN`, a new project token, is mapped only in the per-host `~/.config/vault/ai-toolbox.map`, because its path names a private mount. The admin `GITLAB_TOKEN` is in no map. Before it: the dashboard publishes to GitLab Pages too (`TASK-0168`): the instance runner now takes the `pages` job, and pipeline schedule 1 rebuilds it daily. Before it: the `repo-inventory` skill (`TASK-0167`): every repository under some roots and what in it is on no remote, read-only and offline. Before it: `origin` re-pointed to `https://`, on the human's decision; `ADR-0028` amended (`TASK-0166`). Before it: pushes to `origin` go over `https://` through a per-command rewrite, `vgit_origin` (`TASK-0163`). Before it: the gate's suites can no longer turn the repository bare when the pre-commit hook runs in a linked worktree (`TASK-0165`). Before it: selective install (`TASK-0164`): `--only` or a gitignored `install.selection`; deselected links and emitted agents leave the client (`ADR-0026` amended, which also fixed its prune for OpenCode). Before it: internal host names out of tracked files, enforced by the gate (`TASK-0162`); history still holds some, by the human's choice. Before it: dashboard rebuild points and the publishing question (`ADR-0035`, `TASK-0159`): the agent rebuilds when an approved plan's files are written and after a confirmed push; `publish-dashboard.sh decision` asks once per project with a remote, and a no is `targets = none`. Before it: a per-project secrets backend (`ADR-0034`, `TASK-0155`–`0158`): `local`, `vault` (own KV v2 mount via `provision`), `gitlab`, `github`. `project-workflow` asks at scaffolding; `project-migration` asks whether to migrate secrets, and `import` moves them.
-- **Backlog:** zero open rows. The gate recounts them against the "N items are open" sentence.
+- **Last delivered:** each project declares its work tracker in `tracker.conf`: `files`, `gitlab` or `github` (`TASK-0171`, `ADR-0037`). Both planning skills ask at initialization; on a forge, tasks are issues, sprints are milestones, the wiki holds end-user docs, and the dashboard exits as not applicable. This repo is `files`. Before it: GitLab push-mirrors `origin` to `github` (`TASK-0170`, `ADR-0028` amended). Agents push `origin` only and confirm `github` by `ls-remote`; no host holds a GitHub token. Before it: the tracked `secrets.map` maps no secret (`TASK-0169`). `GITLAB_PUSH_TOKEN`, a new project token, is mapped only in the per-host `~/.config/vault/ai-toolbox.map`, because its path names a private mount. The admin `GITLAB_TOKEN` is in no map. Before it: the dashboard publishes to GitLab Pages too (`TASK-0168`): the instance runner now takes the `pages` job, and pipeline schedule 1 rebuilds it daily. Before it: the `repo-inventory` skill (`TASK-0167`): every repository under some roots and what in it is on no remote, read-only and offline. Before it: `origin` re-pointed to `https://`, on the human's decision; `ADR-0028` amended (`TASK-0166`). Before it: pushes to `origin` go over `https://` through a per-command rewrite, `vgit_origin` (`TASK-0163`). Before it: the gate's suites can no longer turn the repository bare when the pre-commit hook runs in a linked worktree (`TASK-0165`). Before it: selective install (`TASK-0164`): `--only` or a gitignored `install.selection`; deselected links and emitted agents leave the client (`ADR-0026` amended, which also fixed its prune for OpenCode). Before it: internal host names out of tracked files, enforced by the gate (`TASK-0162`); history still holds some, by the human's choice. Before it: dashboard rebuild points and the publishing question (`ADR-0035`, `TASK-0159`): the agent rebuilds when an approved plan's files are written and after a confirmed push; `publish-dashboard.sh decision` asks once per project with a remote, and a no is `targets = none`. Before it: a per-project secrets backend (`ADR-0034`, `TASK-0155`–`0158`): `local`, `vault` (own KV v2 mount via `provision`), `gitlab`, `github`. `project-workflow` asks at scaffolding; `project-migration` asks whether to migrate secrets, and `import` moves them.
+- **Backlog:** one open row, `B-055` (the loops and agent roles assume a files tracker). The gate recounts them against the "N items are open" sentence.
 - **Remotes:** `origin` is the intranet GitLab over `https://` (primary), and `github` is the public mirror (`ADR-0028`). Everything committed is world-readable.
 
 ## Components
 
 | Kind | Items |
 |---|---|
-| Skills | `project-migration` 4.2.0, `project-workflow` 6.3.0, `ansible-ops` 1.2.2, `design-flow` 1.0.0, `unattended-ops` 1.3.2, `vault-secrets` 2.3.0, `repo-inventory` 1.0.0 |
+| Skills | `project-migration` 5.0.0, `project-workflow` 7.0.0, `ansible-ops` 1.2.2, `design-flow` 1.0.0, `unattended-ops` 1.3.2, `vault-secrets` 2.3.0, `repo-inventory` 1.0.0 |
 | MCP servers | `ansible` (external, pinned, destructive tools human-authorized), `gates` (authored, Python), `graphify` (external) |
 | Loops | `project-build`, `design-brief`, `ansible-change`, `release-check`, `unattended-run` |
 | Agents | 15 roles, emitted per client (`ADR-0018`); `prompts/` is empty by choice |
@@ -28,7 +28,7 @@ Index: `docs/registry.md`, generated by `scripts/sync-registry.sh`.
   - template drift, and artifact schemas: v1 frozen in `tests/legacy-schemas/`, v2 from `TASK-0153`/`ADR-0034`
   - backlog closures
   - live-file budgets
-  - the vault-secrets, worktree, private-names, install, repo-inventory and ci-alert suites
+  - the vault-secrets, worktree, private-names, install, repo-inventory, ci-alert and tracker suites; this repo's `tracker.conf` must say `files`, and the migration scaffold's conf must parse
   - no tracked file names a private host (`TASK-0162`): the `origin` host plus `.git/info/private-patterns`
   - a suite that creates a repository clears `GIT_DIR` first (`TASK-0165`)
 - **CI** (`.github/workflows/`) runs `validate`, `bindings` (both unattended-run binding suites, `ADR-0032`), `dashboard` plus `dashboard-daily` (the published page, `ADR-0029`), and `ci-alert`, which opens and closes an issue on red. GitLab CI on `origin` runs only the `pages` job, on the instance runner, on push and on schedule 1 daily (`TASK-0168`).
@@ -37,6 +37,7 @@ Index: `docs/registry.md`, generated by `scripts/sync-registry.sh`.
 
 ## Open items (not scheduled)
 
+- **Forge trackers, live (`ADR-0037`):** no project has been scaffolded on `gitlab` or `github` yet, and neither `glab` nor `gh` is on this host. The mapping in `tracker.md` is unexercised until one is. The loops follow at `B-055`.
 - **asset-management's vendored `project-workflow`** predates `vendor-skill.sh` (`TASK-0161`). Adopting it is a task in that repository.
 
 - **Secrets backends, live:** `provision`, and `put` to GitLab and GitHub, are proven against stubs only (`TASK-0156`, `TASK-0157`). The first real run is the human's: it needs the Vault admin login and a scratch repository. It also needs a Vault admin to create the `secrets-provisioner` policy first.
@@ -67,6 +68,7 @@ These are not to be re-litigated without a new ADR:
 - `ADR-0034`: each project declares its secrets backend; a Vault project gets its own mount.
 - `ADR-0035`: the dashboard is rebuilt by agent steps, not hooks; publishing is asked once and a no is recorded.
 - `ADR-0036`: a vendored skill copy carries a manifest and is verified by its project's gate.
+- `ADR-0037`: each project declares its work tracker; the dashboard is for a files tracker only.
 
 ## Environment
 
@@ -86,8 +88,8 @@ These are not to be re-litigated without a new ADR:
 
 ## Recent changes
 
+- `TASK-0171`, 2026-10-18: `tracker.conf` and `tracker.sh`; `project-workflow` 7.0.0 and `project-migration` 5.0.0 ask files, GitLab or GitHub (`ADR-0037`).
 - `TASK-0161`, 2026-10-11: `vendor-skill.sh` writes, checks and verifies a project's copy of `project-workflow` against `VENDORED.md` (`ADR-0036`).
 - `TASK-0160`, 2026-10-11: `install.sh link` makes verified junctions on Windows (it had silently copied); `install.sh --status`.
 - `TASK-0159`, 2026-10-11: dashboard rebuild points; `publish-dashboard.sh decision` and `targets = none` (`ADR-0035`).
 - `TASK-0158`, 2026-10-11: `project-migration` 4.1.0 offers to migrate secrets; `vault_secrets.py import` moves an old env file into the declared backend.
-- `TASK-0157`, 2026-10-11: `put` and `check` for the `gitlab` and `github` backends; values on stdin, names-only checks (`ADR-0034`).

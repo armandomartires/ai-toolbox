@@ -40,6 +40,11 @@
 #            exists and there is no conf yet. Prints hosts, never URLs.
 #   --repo   repository root. Default: the enclosing git work tree, else CWD.
 #
+# FILES TRACKER ONLY (ADR-0037). When tracker.conf names gitlab or github,
+# `decision` answers `not applicable` (exit 0), `render --check` reports only
+# a conf that still declares targets or a pipeline still deploying (exit 1),
+# and `render` refuses to write one (exit 2). See tracker.sh.
+#
 # dashboard-publish.conf (`key = value`; a `#` comment must start its own line,
 # so the notes on the right are for reading, not for the file):
 #   targets        = github-pages gitlab-pages     # one or more targets above,
@@ -60,7 +65,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-usage() { sed -n '2,57p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,62p' "$0" | sed 's/^# \{0,1\}//'; }
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
   "")        usage >&2; exit 2 ;;

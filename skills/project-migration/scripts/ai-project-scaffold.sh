@@ -12,6 +12,11 @@
 #   --no-git                     Do not run git init / commit
 #   --force                      Add files into a non-empty existing directory
 #                                (existing files are never overwritten)
+#   --tracker files|gitlab|github  Where work is tracked (default: files).
+#                                A forge tracker skips planning/, tasks/,
+#                                sessions/ and reviews/ (ADR-0037)
+#   --gitlab-project group/name  Required with --tracker gitlab
+#   --github-repo owner/name     Required with --tracker github
 #
 # Principles applied from the spec:
 #   - Only create files that provide immediate value; the rest are templates.
@@ -51,22 +56,56 @@ done
 unset _t
 
 # ---- Arguments -----------------------------------------------------------------
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] && usage
 [ $# -ge 1 ] || usage
 
 PROJECT="$1"; shift || true
 TYPE="generic"; DO_GIT="yes"; FORCE="no"
+TRACKER="files"; GITLAB_PROJECT=""; GITHUB_REPO=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --type)   TYPE="$2"; shift 2 ;;
+    --tracker)        TRACKER="$2"; shift 2 ;;
+    --gitlab-project) GITLAB_PROJECT="$2"; shift 2 ;;
+    --github-repo)    GITHUB_REPO="$2"; shift 2 ;;
     --no-git) DO_GIT="no"; shift ;;
     --force)  FORCE="yes"; shift ;;
     *) echo "Unknown option: $1" >&2; usage ;;
   esac
 done
 case "$TYPE" in python|node|generic) ;; *) echo "Invalid --type: $TYPE" >&2; exit 1 ;; esac
+
+# The work tracker (ADR-0037). Same rules as project-workflow's tracker.sh,
+# which reads the tracker.conf written below; ai-toolbox's tests/validate.sh
+# runs both against each other. The path is a name, never a host or URL.
+SEG='[A-Za-z0-9][A-Za-z0-9._-]*'
+case "$TRACKER" in
+  files)
+    [ -z "$GITLAB_PROJECT$GITHUB_REPO" ] || {
+      echo "--gitlab-project and --github-repo need --tracker gitlab or github" >&2; exit 1; }
+    TRACKER_PATH="" ;;
+  gitlab)
+    [ -z "$GITHUB_REPO" ] || { echo "--github-repo belongs to --tracker github" >&2; exit 1; }
+    [[ "$GITLAB_PROJECT" =~ ^$SEG(/$SEG)+$ ]] || {
+      echo "--tracker gitlab needs --gitlab-project group/name (a path, not a URL)" >&2; exit 1; }
+    TRACKER_PATH="$GITLAB_PROJECT"; TRACKER_KEY="gitlab_project"; FORGE_NAME="GitLab" ;;
+  github)
+    [ -z "$GITLAB_PROJECT" ] || { echo "--gitlab-project belongs to --tracker gitlab" >&2; exit 1; }
+    [[ "$GITHUB_REPO" =~ ^$SEG/$SEG$ ]] || {
+      echo "--tracker github needs --github-repo owner/name (a path, not a URL)" >&2; exit 1; }
+    TRACKER_PATH="$GITHUB_REPO"; TRACKER_KEY="github_repo"; FORGE_NAME="GitHub" ;;
+  *) echo "Invalid --tracker: $TRACKER (files | gitlab | github)" >&2; exit 1 ;;
+esac
+unset SEG
+if [ "$TRACKER" = files ]; then
+  AI_LAYOUT="context, decisions, planning, tasks, sessions, reviews"
+  NEXT_ACTION="create TASK-0001 in .ai/tasks/"
+else
+  AI_LAYOUT="context, decisions (work is tracked on ${FORGE_NAME}: tracker.conf)"
+  NEXT_ACTION="file the first issue on ${FORGE_NAME} (${TRACKER_PATH})"
+fi
 
 # ---- Guards ---------------------------------------------------------------------
 if [ -d "$PROJECT" ] && [ -n "$(ls -A "$PROJECT" 2>/dev/null)" ] && [ "$FORCE" != "yes" ]; then
@@ -90,7 +129,7 @@ mkfile README.md <<EOF
 
 ## Repository layout
 - \`AGENTS.md\` — single source of shared instructions for all agents (read first)
-- \`.ai/\` — governance: context, decisions, planning, tasks, sessions, reviews
+- \`.ai/\` — governance: ${AI_LAYOUT}
 - \`docs/\` — architecture, development, operations, deployment
 - \`src/\`, \`tests/\`, \`scripts/\` — code and automation
 - \`CHANGELOG.md\` — user-visible changes
@@ -99,6 +138,16 @@ mkfile README.md <<EOF
 See \`.ai/context/CURRENT_STATE.md\` for the current project state and the
 recommended next action.
 EOF
+
+# Absent, tracker.conf means files; it is written anyway so the answer shows.
+{
+  echo "# Work tracker for this project: files | gitlab | github (ADR-0037 in"
+  echo "# ai-toolbox; project-workflow's templates/reference/tracker.md)."
+  echo "# Written by ai-project-scaffold.sh on $(date +%Y-%m-%d). Changing it is a"
+  echo "# decision: record an ADR. Absent, this file means files."
+  echo "tracker = ${TRACKER}"
+  [ -z "$TRACKER_PATH" ] || echo "${TRACKER_KEY} = ${TRACKER_PATH}"
+} | mkfile tracker.conf
 
 mkfile CHANGELOG.md <<EOF
 # Changelog
@@ -229,11 +278,30 @@ human. State assumptions explicitly. Do not invent requirements.
 Deletions, overwrites, migrations that discard history, and force-pushes
 require explicit human authorization recorded in the task file.
 
+EOF
+if [ "$TRACKER" = files ]; then
+cat >> AGENTS.md <<'EOF'
 ## Planning references
 - Roadmap: `.ai/planning/ROADMAP.md`
 - Backlog: `.ai/planning/BACKLOG.md`
 - Active sprint: `.ai/planning/SPRINT-CURRENT.md`
 - Tasks: `.ai/tasks/` — Current state: `.ai/context/CURRENT_STATE.md`
+EOF
+else
+cat >> AGENTS.md <<EOF
+## Planning references
+- Work tracker: ${FORGE_NAME} project \`${TRACKER_PATH}\` (\`tracker.conf\`).
+  Tasks are issues, sprints are milestones, the board is the plan; the
+  mapping is project-workflow's \`templates/reference/tracker.md\`.
+- Current state: \`.ai/context/CURRENT_STATE.md\`; decisions: \`.ai/decisions/\`
+- End-user documentation lives in the project wiki; developer and
+  operations docs stay in \`docs/\`.
+EOF
+# On a forge the task id is the issue number (tracker.md, *Identifiers*).
+sed 's/(`TASK-NNNN`)/(`#123`, the issue)/; s/(TASK-NNNN)/(#123, the issue)/' AGENTS.md > AGENTS.md.tmp
+mv AGENTS.md.tmp AGENTS.md
+fi
+cat >> AGENTS.md <<'EOF'
 
 ## Mandatory task process
 Every task follows the work cycle:
@@ -262,6 +330,20 @@ if [ ! -e "CLAUDE.md" ]; then
 fi
 
 # ---- .ai governance layer -----------------------------------------------------------
+if [ "$TRACKER" != files ]; then
+mkfile .ai/README.md <<EOF
+# .ai — governance layer
+
+- \`context/\` — CURRENT_STATE.md, PROJECT_MAP.md, GLOSSARY.md
+- \`decisions/\` — ADR-NNNN-*.md (lasting decisions only)
+- \`templates/\` — TASK is the body of an issue; ADR is the decision record
+
+Work is tracked on ${FORGE_NAME} (\`${TRACKER_PATH}\`, declared in \`tracker.conf\`):
+tasks are issues, sprints are milestones, the board is the plan. The
+mapping is project-workflow's \`templates/reference/tracker.md\`.
+Process, statuses, and definition of done are defined in AGENTS.md.
+EOF
+fi
 mkfile .ai/README.md <<'EOF'
 # .ai — governance layer
 
@@ -288,7 +370,7 @@ mkfile .ai/context/CURRENT_STATE.md <<EOF
 - Risks: <!-- FILL -->
 - Expected current branch: main
 - Latest relevant commit: initial scaffold
-- Recommended next action: create TASK-0001 in .ai/tasks/
+- Recommended next action: ${NEXT_ACTION}
 - Known tests and validations: <!-- FILL -->
 - Environment validated in: <!-- FILL (e.g. Windows 11 + WSL) -->
 - Dev/staging/production differences: <!-- FILL; delete section if single-environment -->
@@ -339,13 +421,18 @@ and progress resumable in a new conversation.
 Adopt the .ai framework (context / decisions / planning / tasks /
 sessions / reviews / templates) with AGENTS.md as the single source of
 agent instructions and CLAUDE.md as a symlink to it. Stack preset:
-${TYPE}.
+${TYPE}. Work tracker: ${TRACKER}${TRACKER_PATH:+ (${TRACKER_PATH})}, declared in
+tracker.conf.
 
 ## Consequences
 - Every task is documented, validated, and traceable to a commit.
 - Operational context lives in files, not in conversation history.
 EOF
 
+# planning/, tasks/, sessions/ and reviews/ belong to a files tracker. On a
+# forge they are milestones, issues and the board (ADR-0037), so writing
+# them would leave two owners of "what's next".
+if [ "$TRACKER" = files ]; then
 mkfile .ai/planning/ROADMAP.md <<'EOF'
 # Roadmap
 
@@ -406,6 +493,7 @@ mkfile .ai/sessions/INDEX.md <<'EOF'
 EOF
 
 mkfile .ai/reviews/.gitkeep </dev/null
+fi # TRACKER = files
 
 # ---- .ai templates -----------------------------------------------------------------
 mkfile .ai/templates/TASK.md < "$TEMPLATE_DIR/TASK.md"
@@ -533,16 +621,24 @@ if [ "$DO_GIT" = "yes" ] && [ ! -d .git ]; then
 fi
 
 # ---- Report ----------------------------------------------------------------------------
-echo "Scaffolded '${PNAME}' (type: ${TYPE})"
+echo "Scaffolded '${PNAME}' (type: ${TYPE}, tracker: ${TRACKER}${TRACKER_PATH:+ ${TRACKER_PATH}})"
 echo
 echo "Next steps:"
 echo "  1. Fill the <!-- FILL --> markers in AGENTS.md, README.md,"
 echo "     and .ai/context/CURRENT_STATE.md."
+if [ "$TRACKER" = files ]; then
 echo "  2. Replace TODO.md's placeholder with your first executable task."
 echo "     Generate it, do not copy a template and imitate it:"
 echo "       ${SKILL_DIR}/scripts/new-artifact.sh --kind task"
 echo "     and prove it with ${SKILL_DIR}/scripts/check-artifact.sh."
 echo "     Both ship with this skill and need nothing else installed."
+else
+echo "  2. File the first issue on ${FORGE_NAME} (${TRACKER_PATH}). Generate its body,"
+echo "     do not copy a template and imitate it:"
+echo "       ${SKILL_DIR}/scripts/new-artifact.sh --kind task"
+echo "     prove it with ${SKILL_DIR}/scripts/check-artifact.sh, then paste it."
+echo "     Labels and milestones: project-workflow's templates/reference/tracker.md."
+fi
 echo "  3. Delete directories that do not apply (e.g. docs/deployment/)."
 echo "  4. Windows checkouts: verify CLAUDE.md symlink with"
 echo "     git ls-files -s CLAUDE.md (mode 120000 = OK)."
