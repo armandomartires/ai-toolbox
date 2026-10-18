@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: blocked   # on the human: one check of sigwstctl1's map (acceptance 2)
+- Status: done
 - Owner: agent, then the human (per-host maps and the Vault deletions)
 - Created: 2026-10-17
 - Updated: 2026-10-18
@@ -53,7 +53,7 @@ and the retired ansible-vault password. Remove each read here, so the human can 
 ## Acceptance criteria
 
 - [x] No tracked file maps `GITLAB_PUSH_TOKEN` or `GITLAB_TOKEN`, and none names the private mount.
-- [ ] No per-host map names `ANSIBLE_VAULT_PASSWORD`. This workstation: none (2026-10-18). sigwstctl1: not checked, no SSH from here.
+- [x] No per-host map names `ANSIBLE_VAULT_PASSWORD`: none on this workstation, and none on sigwstctl1 (the human's `grep -c`, 2026-10-18).
 - [x] ~~After a day of normal work, the audit-log reader shows no ai-toolbox read of `gitlab-admin`, `ansible` or `github`.~~ Not run: the human ran step 8 after the day. All three are destroyed, so no reader is left.
 - [x] The human reports the gated `retire` steps done (2026-10-18).
 
@@ -76,7 +76,7 @@ and the retired ansible-vault password. Remove each read here, so the human can 
 
 | Vault, `sigmarecon-projects/ai-toolbox/` | Only `gitlab-push`, the new `origin` token (step 3). `github`, `ansible`, `gitlab-admin` destroyed (step 8); step 6 done by `TASK-0170` |
 
-Next: human — on sigwstctl1, `grep -c '^ANSIBLE_VAULT_PASSWORD=' ~/.config/vault/ai-toolbox.map` must print 0; place `private-patterns`.
+Next: none. `private-patterns` is the human's per-clone step (runbook, *Secrets on a new host*).
 
 ## Execution log
 
@@ -87,3 +87,4 @@ Next: human — on sigwstctl1, `grep -c '^ANSIBLE_VAULT_PASSWORD=' ~/.config/vau
   - Evidence: Inputs rows re-read and matched. `test-vault-secrets` 114/114; with the old `secrets.map` restored, the new T16 check fails naming all three tokens. `check-private-names: OK (3 patterns)`. The diff does not name the mount. Deviation: `GITLAB_PUSH_TOKEN` stays in `.env.example`, because it is still read. Step 6 changed only the dead tracked `GITHUB_TOKEN` mapping. The per-host `GITHUB_PUSH_TOKEN` still reads the `github` secret, so `retire github-token` still waits
 - 2026-10-18 · claude/opus-5.5 · steps 3, 6-8 done by the human; recorded
   - Evidence: the human's `retire github-token admin-copy ansible-vault-password` dry run, `--apply` and re-run (all "done already"). As ai-toolbox's AppRole: `LIST …/ai-toolbox/` → `['gitlab-push']`; `github`, `ansible`, `gitlab-admin` → 404. `vgit_origin` push of `105eaad` worked with the new token. Deviation: acceptance 3's audit-log read was not run before the destruction
+- 2026-10-18 · claude/opus-5.5 · closed: the human's `grep -c '^ANSIBLE_VAULT_PASSWORD='` on sigwstctl1's map printed 0
