@@ -500,8 +500,10 @@ The lesson worth keeping:
 
 ### gates (authored — `mcp-servers/gates/pyproject.toml`)
 
-> **Not wired into this client, and not verified here.** `TASK-0090` verified
-> the connection in Claude Code and OpenCode only; Bionic is S10.4.
+> **Not supported on this client: retired 2026-10-18** (`ADR-0039`,
+> `TASK-0175`). `TASK-0090` verified the connection in Claude Code and
+> OpenCode only, and Bionic was never checked. Withdrawn from the claim rather
+> than left open.
 >
 > **Destructive capabilities.** `start_gate` runs whatever command the
 > consuming repository's gate map declares for a name; `kill_gate` terminates

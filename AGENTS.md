@@ -6,8 +6,8 @@ Rules and commands only; each rule's reason is in the ADR or runbook it names.
 Collect, develop, validate and deploy AI customization tools: skills, MCP
 servers, loops, prompts, agent roles. Each is self-contained and portable to
 every client that supports its capability: skills to Claude Code and OpenCode,
-MCP servers to those and Bionic (ADR-0020). Out of scope: application code,
-public services, secrets.
+MCP servers to those, and external ones to Bionic (ADR-0020, ADR-0039). Out of
+scope: application code, public services, secrets.
 
 ## Security and secrets
 - Never commit secrets, tokens, passwords, private keys, or `.env` files. Scan
@@ -43,8 +43,7 @@ public services, secrets.
   gitignored `install.selection`. Index: `scripts/sync-registry.sh`.
 - Run an authored server: `uv --directory mcp-servers/<name> run <name>`
   (ADR-0024); an external one as `scripts/install.sh` prints it.
-- Work tracker: `tracker.conf`; **this repo is `files`**, and the gate asserts
-  it. `skills/project-workflow/scripts/tracker.sh` (ADR-0037).
+- Work tracker: `tracker.conf`; this repo is `files`, gate-asserted (ADR-0037).
 - Dashboard: `skills/project-workflow/scripts/build-dashboard.sh --root .ai
   --project ai-toolbox --out docs/dashboard.html`. A gitignored view, not a
   gate: never commit or upload it. Rebuild it once an approved plan's files
@@ -53,8 +52,8 @@ public services, secrets.
 
 ## Structure
 Components: `skills/` `mcp-servers/` `loops/` `prompts/` `agents/` `configs/`
-(client wiring). Governance: `.ai/` (`.ai/README.md`). Index: `docs/registry.md`
-(generated). Details: `docs/development/`; runbook: `docs/operations/`.
+(client wiring). Governance: `.ai/`. Index: `docs/registry.md` (generated).
+Guides: `docs/development/`; runbook: `docs/operations/`.
 
 ## Git rules
 - Before changes: check `git status`, branch, remote, uncommitted changes.
@@ -90,9 +89,10 @@ Components: `skills/` `mcp-servers/` `loops/` `prompts/` `agents/` `configs/`
 ## Documentation rules
 - Update `.ai/context/CURRENT_STATE.md` after any significant change — edit
   the state it describes; do not append a narrative (history is in git).
-- New components: copy from the nearest `_template/`, then run
-  `scripts/sync-registry.sh` and commit the regenerated registry.
+- New component: copy the nearest `_template/`, then `scripts/sync-registry.sh`.
 - Decisions with lasting impact get an ADR in `.ai/decisions/`.
+- Capability no task could run for real gets an `Unexercised:` backlog row; at
+  the cap of 3, exercise or retire one before adding more (ADR-0039).
 
 ## Definition of done
 A task is complete only when acceptance criteria are satisfied, validations

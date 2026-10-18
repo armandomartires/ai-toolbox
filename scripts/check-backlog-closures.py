@@ -16,6 +16,10 @@ The table's shape comes from skills/project-migration/schemas/backlog.md's
 it, and every row must have that many cells. The schema is found beside this
 script's repository, never under a fixture root, and a missing one fails.
 
+At most UNEXERCISED_CAP open rows are titled "Unexercised:" (ADR-0039,
+TASK-0175): a capability nothing has run for real is an open row, and at the
+cap the next capability waits until one is exercised or retired.
+
 And BACKLOG.md holds exactly one "**<N> items are open**" sentence (or
 "item is"), whose N - a word up to twenty, or digits - equals the number of
 rows whose Status says neither done nor closed (TASK-0145).
@@ -39,6 +43,7 @@ backlog = os.path.join(root, ".ai/planning/BACKLOG.md")
 schema = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
                       "skills/project-migration/schemas/backlog.md")
 ID = r"(TASK|ADR|REVIEW)-(\d{4})"
+UNEXERCISED_CAP = 3  # chosen by the human; raise it only by amending ADR-0039
 WHERE = {"TASK": ".ai/tasks/TASK-{n}-*.md", "ADR": ".ai/decisions/{n}-*.md",
          "REVIEW": ".ai/reviews/REVIEW-{n}-*.md"}
 
@@ -57,7 +62,7 @@ except (OSError, IndexError) as e:
     print("BACKLOG: cannot read the columns from %s (%s)" % (schema, e or "no columns: line"))
     sys.exit(1)
 header = "| " + " | ".join(columns) + " |"
-for need in ("ID", "Status", "Ready when"):
+for need in ("ID", "Title", "Status", "Ready when"):
     if need not in columns:
         print("BACKLOG: the schema's columns have no %r, which this check reads" % need)
         sys.exit(1)
@@ -65,6 +70,7 @@ for need in ("ID", "Status", "Ready when"):
 findings = []
 closed = 0
 open_rows = []
+unexercised = []
 heads = [ln.strip() for ln in lines if ln.startswith("| ID ")]
 if heads != [header]:
     findings.append("the table header should be the schema's columns:\n      expected: %s\n      found:    %s"
@@ -81,6 +87,8 @@ for line in lines:
     status, note = cells[columns.index("Status")].lower(), cells[columns.index("Ready when")]
     if "done" not in status and "closed" not in status:
         open_rows.append(row)
+        if cells[columns.index("Title")].strip().startswith("Unexercised:"):
+            unexercised.append(row)
         continue
     closed += 1
     m = re.search(r"Closed \d{4}-\d{2}-\d{2} by `?" + ID, note) or re.search(r"\b" + ID + r"\b", note)
@@ -115,9 +123,14 @@ else:
         findings.append("the open-item sentence says %s, but %d rows are open (%s)"
                         % (said, len(open_rows), ", ".join(open_rows) or "none"))
 
+if len(unexercised) > UNEXERCISED_CAP:
+    findings.append("%d open rows are titled 'Unexercised:' (%s), over the cap of %d "
+                    "(ADR-0039): exercise or retire one first"
+                    % (len(unexercised), ", ".join(unexercised), UNEXERCISED_CAP))
+
 for f in findings:
     print("BACKLOG: " + f)
 if findings:
     sys.exit(1)
-print("check-backlog-closures: OK (%d closed rows, %d open, matching the sentence)"
-      % (closed, len(open_rows)))
+print("check-backlog-closures: OK (%d closed rows, %d open, matching the sentence; "
+      "%d of %d unexercised)" % (closed, len(open_rows), len(unexercised), UNEXERCISED_CAP))

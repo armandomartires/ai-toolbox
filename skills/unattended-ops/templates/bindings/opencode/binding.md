@@ -89,7 +89,7 @@ OpenCode is the one client with per-agent command boundaries (`ADR-0022`,
 | Rule (`skills/unattended-ops/`) | Enforced by | Strength |
 |---|---|---|
 | 1 — the tracker moves last, only the closer moves it | The closer is the only role whose allowlist admits `git add -- *` and `git commit -m *` (`agents/closer/`); the driver issues no git write | **Enforced** at the role boundary; the ordering itself is the driver's control flow |
-| 2 — gate commands from a hardcoded map | The driver invokes `run-gate.sh`; prompts carry gate handles and the evidence path, never a command. The driver refuses a map inside the repository, and `run-gate.sh` stores no copy of a command, so no file a role can reach holds one: every role declares `worktree-only`, emitted as `external_directory: deny` (`TASK-0098`) | **Structural** in prompts and on disk — the disk half rests on `external_directory` denying reads outside the worktree, observed for the skill directories (`TASK-0092` findings 7, 13), not yet for a map |
+| 2 — gate commands from a hardcoded map | The driver invokes `run-gate.sh`; prompts carry gate handles and the evidence path, never a command. The driver refuses a map inside the repository, and `run-gate.sh` stores no copy of a command, so no file a role can reach holds one: every role declares `worktree-only`, emitted as `external_directory: deny` (`TASK-0098`) | **Structural** in prompts and on disk — the disk half rests on `external_directory` denying reads outside the worktree, observed for the skill directories (`TASK-0092` findings 7, 13), not yet for a map: for a map it is stub-proven only (ai-toolbox `ADR-0039`) |
 | 3 — long gates batched and detached | `run-gate.sh` detaches behind a watchdog; step 13 runs groups one at a time | **Enforced** by construction; `ADR-0022` F7 untested |
 | 4 — nothing is invented | Evidence-line cross-check in `Driver.gate_report()`; out-of-enum verdict → `park`; the closer's `Commit:`/`Push:` entries must be the driver's fixed `log_lines`, checked after the commit (`TASK-0099`); the adjudicator is prompted with the evidence rule itself, not only the enum (`TASK-0106`) | **Partly** — a figure copied into a task file by the closer, and free prose outside those two labelled entries, are prompt-level |
 | 5 — one writer | `Driver.step1_preflight_repo()` refuses a dirty tree before any role runs | **Enforced** at start; a peer session arriving mid-run is not detected |
@@ -97,7 +97,10 @@ OpenCode is the one client with per-agent command boundaries (`ADR-0022`,
 **Still prompt-level on this client, stated rather than glossed:**
 `git add -- .` cannot be closed at the glob layer (`TASK-0083`) and lives as
 prose in `agents/closer/`; this driver does not stage on the closer's behalf,
-so it adds no bypass, but it does not close the hole either.
+so it adds no bypass, but it does not close the hole either. After the closer
+commits, the driver halts the run if the commit holds a file the task did not
+declare (`TASK-0097`). That halt is **stub-proven only**: no real run has
+tripped it (ai-toolbox `ADR-0039`).
 
 ## The gate map's format, and its silent-no-op switches
 

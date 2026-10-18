@@ -463,6 +463,7 @@ in this table is a claim, not a finding.
 `SUPPORTED, small sample`, F6 `CONFIRMED` (`TASK-0090`), F8 `PARTLY SETTLED`
 (`TASK-0088`/`TASK-0090`), and F7 and F9 were settled today — the last two that
 read `UNTESTED`. **F8 is the only one still open**, and only for Bionic (S10.4).
+**Updated 2026-10-18 (`TASK-0175`, `ADR-0039`): F8 is closed by retirement.** On the human's decision, Bionic is withdrawn from the authored-MCP claim, so F8 is settled for Claude Code and OpenCode, and no falsifier is open.
 F7 and F9 were measured against `opencode 1.18.32`, one patch above the version
 F1/F2/F4/F5 were settled on.
 

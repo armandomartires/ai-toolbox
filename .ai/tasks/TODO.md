@@ -219,6 +219,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0172 — Run the unattended loop on a forge tracker
 - [x] TASK-0173 — Gate the Agent Skills spec's length and name limits
 - [x] TASK-0174 — Make the session-start reading chain short and consistent
+- [x] TASK-0175 — Track unexercised capability as backlog rows, and cap it
 
 ## Post-S9 (superseded by the promotion above)
 
