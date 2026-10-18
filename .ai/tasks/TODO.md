@@ -214,7 +214,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0166 — Re-point `origin` to `https://`; amend ADR-0028
 - [x] TASK-0168 — Publish the dashboard to GitLab Pages as well, rebuilt daily by a schedule
 - [x] TASK-0169 — Stop reading three retired secrets, so SIGMA-infrastructure can retire them
-- [ ] TASK-0170 — Let GitLab push the public mirror, so agents push `origin` only
+- [x] TASK-0170 — Let GitLab push the public mirror, so agents push `origin` only
 
 ## Post-S9 (superseded by the promotion above)
 

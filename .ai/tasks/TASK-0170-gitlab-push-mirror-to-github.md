@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: blocked   # on the human: one check of sigwstctl1's map (step 7)
+- Status: done
 - Owner: the human (the mirror in GitLab), then agent (repo changes)
 - Created: 2026-10-17
 - Updated: 2026-10-18
@@ -47,7 +47,7 @@ settings. Agents then push `origin` only, and `retire github-token` can run.
 ## Acceptance criteria
 
 - [x] A push to `origin` alone reaches `github`: both `ls-remote` hashes equal `HEAD`.
-- [ ] No tracked file names `GITHUB_PUSH_TOKEN` (done, briefs aside), and no per-host map maps it: none on this workstation (2026-10-18); sigwstctl1 not checked.
+- [x] No tracked file names `GITHUB_PUSH_TOKEN` (briefs aside), and no per-host map maps it: none on this workstation or sigwstctl1 (2026-10-18).
 - [x] AGENTS.md and the runbook tell an agent to push `origin` only.
 - [x] GitHub Actions still run on the mirrored push (`validate.yml` for that commit).
 
@@ -69,7 +69,7 @@ settings. Agents then push `origin` only, and `retire github-token` can run.
 | AGENTS.md, runbook | Push `origin` only; confirm `github` by `ls-remote`, polling; mirror failures are read in GitLab and reported |
 | `.env.example`, `secrets.map`, T16, ADR-0028, CURRENT_STATE | No `GITHUB_PUSH_TOKEN`; ADR amended 2026-10-17 |
 
-Next: human — on sigwstctl1, `grep -c '^GITHUB_PUSH_TOKEN=' ~/.config/vault/ai-toolbox.map` must print 0. Step 8 done: `github` destroyed 2026-10-18.
+Next: none. Step 8 done: `github` destroyed 2026-10-18 (`TASK-0169`).
 
 ## Execution log
 
@@ -81,3 +81,4 @@ Next: human — on sigwstctl1, `grep -c '^GITHUB_PUSH_TOKEN=' ~/.config/vault/ai
   - Deviation: a procedure change, so no test fails on revert; the evidence is the observed mirror. T16 drops `GITHUB_PUSH_TOKEN` from its guard set: with the name gone from `.env.example`, mapping it fails T16 anyway
 - 2026-10-18 · claude/opus-5.5 · step 8 done by the human (`TASK-0169`'s run); step 7 confirmed on this workstation
   - Evidence: `sigmarecon-projects/ai-toolbox/github` → 404 as ai-toolbox's AppRole; this workstation's map has no `GITHUB_PUSH_TOKEN` line; every push since `4180e00` reached `github` by the mirror alone
+- 2026-10-18 · claude/opus-5.5 · closed: the human's `grep -c '^GITHUB_PUSH_TOKEN='` on sigwstctl1's map printed 0
