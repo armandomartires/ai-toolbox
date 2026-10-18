@@ -83,6 +83,38 @@ ROLES = ("preflight", "task-planner", "implementer", "gate-runner", "refuter",
 # one: "- Commit: ...", "**Push**: ..." (B-031, TASK-0099).
 LOG_ENTRY = re.compile(r"^[\s>*-]*(commit|push)\**\s*:", re.I)
 
+# The project's work tracker (ADR-0037), from tracker.conf at the repository
+# root; absent means files. On a forge (ADR-0038) the lock is still a committed
+# file - a snapshot of each queued issue - the queue id is the issue number, the
+# commit carries #<id>, and the run neither reads nor writes the forge. Only the
+# two keys a run needs are read here; skills/project-workflow/scripts/tracker.sh
+# owns the rest of the grammar.
+TRACKER_CONF = "tracker.conf"
+TRACKERS = ("files", "gitlab", "github")
+TRACKER_PATH_KEYS = {"gitlab": "gitlab_project", "github": "github_repo"}
+ISSUE_NUMBER = re.compile(r"^[1-9][0-9]*$")
+
+
+def read_tracker(path):
+    """(mode, project path or None); a conf that does not read is a Halt."""
+    if not os.path.isfile(path):
+        return "files", None
+    kv = {}
+    with open(path, encoding="utf-8") as fh:
+        for raw in fh.read().replace("\r\n", "\n").split("\n"):
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            m = re.match(r"^([A-Za-z_]+)\s*=\s*(.*)$", line)
+            if not m or m.group(1) in kv:
+                raise Halt("%s line %r does not read; run tracker.sh check" % (TRACKER_CONF, raw))
+            kv[m.group(1)] = m.group(2).strip()
+    mode = kv.get("tracker")
+    if mode not in TRACKERS:
+        raise Halt("%s names tracker %r; run tracker.sh check" % (TRACKER_CONF, mode))
+    return mode, kv.get(TRACKER_PATH_KEYS.get(mode, ""))
+
+
 # 128 + SIGINT, SIGKILL, SIGTERM: a role call whose shell reports it died of
 # a signal (TASK-0100).
 KILLED_EXITS = (130, 137, 143)
@@ -250,6 +282,20 @@ class Driver:
         self.start_head = None
         self.upstream = None
         self.stopped = None
+        self.track = ("files", None)
+
+    def forge(self):
+        return self.track[0] != "files"
+
+    def ref(self, task):
+        """The task's reference in a commit message: its id, or `#<issue>`."""
+        return "#" + task["id"] if self.forge() else task["id"]
+
+    def carries_ref(self, message, task):
+        if self.forge():
+            # `#1234` is not `#123`.
+            return re.search(r"#%s(?![0-9])" % re.escape(task["id"]), message) is not None
+        return task["id"] in message
 
     # -- plumbing -----------------------------------------------------------
 
@@ -395,6 +441,18 @@ class Driver:
 
     def step2_locks(self, queue):
         """Step 2 — exactly one committed task file per task (ADR-0022 clause 3)."""
+        self.track = read_tracker(os.path.join(self.repo, TRACKER_CONF))
+        if self.forge():
+            # ADR-0038: the issue is the tracker and the run never touches it,
+            # so no tracker file may be named; the queue id is the issue number.
+            if self.b.tracker != "not-applicable":
+                raise Halt("%s names %s: the issue is the tracker and the run never "
+                           "touches it, so tracker_path must be not-applicable (ADR-0038)"
+                           % (TRACKER_CONF, self.track[0]))
+            for task in queue:
+                if not ISSUE_NUMBER.match(task["id"]):
+                    raise Halt("task %s: on a %s tracker a queue id is the issue number "
+                               "(ADR-0038)" % (task["id"], self.track[0]))
         for task in queue:
             hits = glob.glob(self.b.task_glob.replace("{id}", task["id"]))
             if len(hits) != 1:
@@ -437,7 +495,7 @@ class Driver:
     def step3_open(self, queue):
         """Step 3 — one journal line before any task is touched."""
         self.journal("run-start", start_head=self.start_head, dry_run=self.dry_run,
-                     queue=[t["id"] for t in queue])
+                     tracker=self.track[0], queue=[t["id"] for t in queue])
 
     # -- the per-task cycle, steps 4-11 --------------------------------------
 
@@ -614,11 +672,15 @@ class Driver:
             "one with nothing behind it, stage "
             "each path with `git add -- <path>`, commit, report the hash. Push nothing. The "
             "task file's Commit and Push entries are log_lines, written verbatim: a commit "
-            "cannot contain its own hash, and landing records it." % task["id"],
+            "cannot contain its own hash, and landing records it. The commit message must "
+            "contain issue_reference." % task["id"] + (
+                " Work is tracked on %s: run no glab or gh, and write nothing to the "
+                "forge. The human updates the issue after the push (ADR-0038)."
+                % self.track[0] if self.forge() else ""),
             {"task_file": task["file"], "tracker": self.b.tracker,
              "declared_paths": declared, "log_lines": self.log_lines(),
              "evidence_file": self.b.evidence, "gate_reports": gates["report"],
-             "commit_shape": self.b.commit_shape},
+             "commit_shape": self.b.commit_shape, "issue_reference": self.ref(task)},
             '{"commit": "<hash>"} or {"refused": "<what was found>"}'))
         after = self.git("rev-parse", "HEAD")
         if isinstance(got, dict) and got.get("refused"):
@@ -633,7 +695,7 @@ class Driver:
                             "%s^{commit}" % claimed]).stdout.strip() if claimed else ""
         parent = self.git("rev-parse", "HEAD~1")
         if (resolved != after or parent != before or self.porcelain()
-                or task["id"] not in self.git("log", "-1", "--format=%B")):
+                or not self.carries_ref(self.git("log", "-1", "--format=%B"), task)):
             # The commit exists but does not verify: the state is unknown and
             # a human is needed (loop.md, "Never treat as authorization").
             # The task id in the message is what loop.md step 12's
@@ -663,7 +725,8 @@ class Driver:
             raise Halt("closer's log entries in %s do not verify — unexpected: %s; "
                        "placeholder not written exactly once: %s"
                        % (task["file"], unexpected or "none", unwritten or "none"))
-        self.closed.append({"id": task["id"], "commit": after[:12], "files": files})
+        self.closed.append({"id": task["id"], "commit": after[:12], "files": files,
+                            "file": task["file"]})
         self.journal("close", task=task["id"], commit=after[:12])
 
     def log_lines(self):
@@ -673,12 +736,13 @@ class Driver:
         anyway (TASK-0092: d80d843 landed as 57dbd49), and git is the record
         (ADR-0033).
         """
-        return ["Commit: in git \u2014 the subject carries the task id (run %s)" % self.b.run_id,
+        carried = "the issue reference" if self.forge() else "the task id"
+        return ["Commit: in git \u2014 the subject carries %s (run %s)" % (carried, self.b.run_id),
                 "Push: not taken \u2014 the run pushes nothing"]
 
     def step11_park(self, task, reason):
         """Step 11 — park-steward stashes; the driver checks the tree is clean."""
-        self.parked.append({"id": task["id"], "reason": reason})
+        self.parked.append({"id": task["id"], "reason": reason, "file": task.get("file")})
         message = (self.b.stash_namespace.replace("<run-id>", self.b.run_id)
                    .replace("<task-id>", task["id"]) + " " + reason)
         if not self.porcelain():
@@ -761,12 +825,43 @@ class Driver:
                 except Mechanical as exc:
                     self.journal("long-gate-report-failed", gate=gate, error=str(exc))
 
+    def forge_updates(self):
+        """ADR-0038: what the human does on the forge after the push. None of it
+        is done by the run."""
+        if not self.forge():
+            return []
+        return ([{"issue": "#" + c["id"], "commit": c["commit"], "snapshot": c.get("file"),
+                  "action": "update the issue from the snapshot, post the task report as "
+                            "its closing comment, close it, then remove the snapshot in "
+                            "its own commit"} for c in self.closed]
+                + [{"issue": "#" + p["id"], "commit": None, "snapshot": p.get("file"),
+                    "action": "post the park reason as a comment and set status::blocked; "
+                              "keep the snapshot until the task is re-queued: " + p["reason"]}
+                   for p in self.parked])
+
+    def write_forge_updates(self):
+        """Appended by the driver, not left to run-scribe: on a forge the
+        handover is the only place the issue updates are written down."""
+        if not self.forge():
+            return
+        mode, path = self.track
+        with open(self.b.handover, "a", encoding="utf-8") as fh:
+            fh.write("\n## Forge updates, NOT taken\n\n")
+            fh.write("Work is tracked on %s%s. The run wrote nothing there. After the "
+                     "push to every remote is confirmed, per issue:\n\n"
+                     % (mode, " (%s)" % path if path else ""))
+            for u in self.forge_updates() or [{"issue": "none", "commit": None,
+                                               "snapshot": None, "action": "nothing closed or parked"}]:
+                fh.write("- %s%s: %s%s\n" % (
+                    u["issue"], " @%s" % u["commit"] if u["commit"] else "", u["action"],
+                    " (snapshot %s)" % u["snapshot"] if u["snapshot"] else ""))
+
     def step14_handover(self):
         """Step 14 — run-scribe re-derives the handover; runs even on a halt."""
         os.makedirs(os.path.dirname(self.b.handover), exist_ok=True)
         facts = {"journal_file": self.b.journal_path, "evidence_file": self.b.evidence,
                  "handover_path": self.b.handover, "start_head": self.start_head,
-                 "halted": self.halted}
+                 "halted": self.halted, "work_tracker": self.track[0]}
         try:
             if not self.stopped:
                 # A stop a human asked for starts no further model call.
@@ -792,6 +887,7 @@ class Driver:
                 fh.write("Closed: %s\n\nParked: %s\n\nHalted: %s\n\n" % (
                     json.dumps(self.closed), json.dumps(self.parked), self.halted))
                 fh.write("Push: NOT TAKEN — merge and push are the human's.\n")
+        self.write_forge_updates()
 
     def on_signal(self, signum, _frame):
         """SIGTERM, SIGINT, SIGHUP: stop at once, with a handover (TASK-0100).
@@ -828,7 +924,8 @@ class Driver:
                     self.journal("upstream-moved", before=self.upstream, after=up)
             self.journal("run-end", closed=[c["id"] for c in self.closed],
                          parked=[p["id"] for p in self.parked], halted=self.halted,
-                         adhoc_titles=self.adhoc, overrides=self.overrides, pushed=False)
+                         adhoc_titles=self.adhoc, overrides=self.overrides, pushed=False,
+                         forge_updates=self.forge_updates())
             self.step14_handover()
         return 1 if self.halted else 0
 

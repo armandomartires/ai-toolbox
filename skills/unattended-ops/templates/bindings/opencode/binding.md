@@ -10,7 +10,7 @@ driver_entry: <FILL: python3 <path>/driver.py --binding <path>/binding.md --run-
 model: <FILL: provider/model, passed as -m on every opencode run>
 queue_source: <FILL: path of the queue file, written by a human before the run>
 task_file_glob: <FILL: glob with {id} for the task id, e.g. .ai/tasks/{id}-*.md>
-tracker_path: <FILL: the tracker file the closer updates one row of, or not-applicable>
+tracker_path: <FILL: the tracker file the closer updates one row of, or not-applicable (always, on a forge tracker)>
 gate_map: <FILL: path of the gate map JSON, outside the repository — the driver refuses one inside>
 gate_entry_point: <FILL: path of run-gate.sh as copied into the repository>
 long_gate_groups: <FILL: [group, ...] naming long_groups in the gate map, or not-applicable>
@@ -74,7 +74,9 @@ refuses to start on any slot that is blank, `unknown` or a placeholder, per
 
 ## Reasons for every `not-applicable`
 
-None in the template. A consumer that sets `tracker_path` or
+None in the template. On a forge tracker `tracker_path` is `not-applicable`
+by rule, and the reason is `ADR-0038`: the issue is the tracker, and the run
+never touches it. A consumer that sets `tracker_path` or
 `long_gate_groups` to `not-applicable` writes the reason here, one line per
 slot — `templates/binding.md` treats a reasonless `not-applicable` as an
 `unknown` in disguise.

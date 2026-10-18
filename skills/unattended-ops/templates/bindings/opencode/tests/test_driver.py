@@ -142,7 +142,7 @@ class Harness(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def make_repo(self, ids=("TASK-0001",), queue=None, binding=None, gates=None,
-                  binding_overrides=None, map_in_repo=False):
+                  binding_overrides=None, map_in_repo=False, tracker_conf=None):
         r = lambda *a: subprocess.run([REAL_GIT, *a], cwd=self.repo, check=True,
                                       capture_output=True)
         r("init", "-q", "-b", "master")
@@ -177,6 +177,15 @@ class Harness(unittest.TestCase):
         for i in ids:
             files[".ai/tasks/%s-demo.md" % i] = (
                 "# %s\n\n## Acceptance criteria\n- [ ] a.txt changes\n" % i)
+        if tracker_conf is not None:
+            # A forge tracker (ADR-0038): the lock is a committed snapshot of
+            # each queued issue, and there is no tracker file.
+            files["tracker.conf"] = tracker_conf
+            del files["TODO.md"]
+            for i in ids:
+                del files[".ai/tasks/%s-demo.md" % i]
+                files[".ai/run-queue/%s.md" % i] = (
+                    "# Issue %s\n\n## Acceptance criteria\n- [ ] a.txt changes\n" % i)
         for rel, body in files.items():
             path = os.path.join(self.repo, rel)
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -248,6 +257,109 @@ class Harness(unittest.TestCase):
     def porcelain(self):
         return subprocess.run([REAL_GIT, "status", "--porcelain"], cwd=self.repo,
                               capture_output=True, text=True).stdout
+
+
+FORGE_CONF = "# test\ntracker = gitlab\ngitlab_project = group/app\n"
+FORGE_BINDING = {"task_file_glob": ".ai/run-queue/{id}.md", "tracker_path": "not-applicable"}
+FORGE_LOG_LINES = ("- Commit: in git \u2014 the subject carries the issue reference (run r1)",
+                   LOG_LINES[1])
+
+
+def forge_closer(message="Change a (#{TASK})"):
+    """A closer for a forge run: appends to the snapshot, stages, commits."""
+    sh = ["printf '%%s\\n' %s >> .ai/run-queue/{TASK}.md" % " ".join("'%s'" % l for l in FORGE_LOG_LINES)]
+    sh += ["git add -- src/a.txt .ai/run-queue/{TASK}.md", "git commit -q -m '%s'" % message]
+    return {"sh": sh, "text": fence({"commit": "{HEAD}"})}
+
+
+def forge_agents(ids=("42",), message="Change a (#{TASK})"):
+    agents = happy(ids)
+    agents["closer"] = [forge_closer(message)]
+    return agents
+
+
+class TestForgeTracker(Harness):
+    """ADR-0038, TASK-0172: tracker.conf names a forge."""
+
+    def make_forge(self, ids=("42",), conf=FORGE_CONF, binding=None):
+        self.make_repo(ids=ids, tracker_conf=conf,
+                       binding_overrides=dict(FORGE_BINDING, **(binding or {})))
+
+    def handover(self):
+        with open(os.path.join(self.repo, ".run", "r1", "handover.md")) as fh:
+            return fh.read()
+
+    def test_closes_an_issue_and_hands_the_update_to_the_human(self):
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        self.assertEqual([e["task"] for e in self.events("close")], ["42"])
+        self.assertEqual(self.events("run-start")[0]["tracker"], "gitlab")
+        closer = self.invocations("closer")[0]
+        self.assertEqual(self.prompt_inputs(closer)["issue_reference"], "#42")
+        self.assertIn("write nothing to the forge", closer[-1])
+        updates = self.events("run-end")[0]["forge_updates"]
+        self.assertEqual([u["issue"] for u in updates], ["#42"])
+        self.assertEqual(updates[0]["snapshot"], ".ai/run-queue/42.md")
+        text = self.handover()
+        self.assertIn("## Forge updates, NOT taken", text)
+        self.assertIn("gitlab (group/app)", text)
+        self.assertRegex(text, r"- #42 @[0-9a-f]+: update the issue from the snapshot")
+
+    def test_no_role_is_asked_to_run_glab_or_gh(self):
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        for argv in self.invocations():
+            asks = re.sub(r"run no glab or gh[^.]*\.", "", argv[-1])
+            self.assertNotRegex(asks, r"\b(glab|gh) (issue|api|pr)\b")
+
+    def test_a_commit_carrying_421_but_not_42_halts(self):
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents(message="Change a (#421)")), 1)
+        self.assertIn("does not verify", self.events("halt")[0]["reason"])
+        self.assertEqual(self.events("close"), [])
+
+    def test_a_parked_issue_is_listed_with_status_blocked(self):
+        self.make_forge()
+        agents = forge_agents()
+        agents["adjudicator"] = [{"text": fence({"verdict": "park", "reasoning": "criterion unevidenced",
+                                                 "overrides": [], "adhoc_titles": []})}]
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        updates = self.events("run-end")[0]["forge_updates"]
+        self.assertEqual([u["issue"] for u in updates], ["#42"])
+        self.assertIn("status::blocked", updates[0]["action"])
+        self.assertIn("status::blocked", self.handover())
+
+    def test_a_tracker_file_halts_before_any_role(self):
+        self.make_forge(binding={"tracker_path": "TODO.md"})
+        self.assertEqual(self.run_driver(forge_agents()), 1)
+        self.assertIn("tracker_path must be not-applicable", self.events("halt")[0]["reason"])
+        self.assertEqual(self.invocations("preflight"), [])
+
+    def test_a_queue_id_that_is_not_an_issue_number_halts(self):
+        self.make_forge(ids=("TASK-0001",))
+        self.assertEqual(self.run_driver(forge_agents(ids=("TASK-0001",))), 1)
+        self.assertIn("queue id is the issue number", self.events("halt")[0]["reason"])
+        self.assertEqual(self.invocations("preflight"), [])
+
+    def test_a_tracker_conf_that_does_not_read_halts(self):
+        for conf in ("tracker = jira\n", "tracker gitlab\n", "tracker = gitlab\ntracker = github\n"):
+            with self.subTest(conf=conf):
+                self.tearDown(); self.setUp()
+                self.make_forge(conf=conf)
+                self.assertEqual(self.run_driver(forge_agents()), 1)
+                self.assertIn("tracker.conf", self.events("halt")[0]["reason"])
+
+    def test_an_explicit_files_tracker_runs_as_no_conf(self):
+        self.make_repo(tracker_conf=None)
+        with open(os.path.join(self.repo, "tracker.conf"), "w") as fh:
+            fh.write("tracker = files\n")
+        subprocess.run([REAL_GIT, "add", "tracker.conf"], cwd=self.repo, check=True)
+        subprocess.run([REAL_GIT, "commit", "-q", "-m", "conf"], cwd=self.repo, check=True)
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        self.assertEqual(self.events("run-start")[0]["tracker"], "files")
+        self.assertEqual(self.events("run-end")[0]["forge_updates"], [])
+        with open(os.path.join(self.repo, ".run", "r1", "handover.md")) as fh:
+            self.assertNotIn("Forge updates", fh.read())
 
 
 class TestHappyPath(Harness):

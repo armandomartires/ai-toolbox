@@ -67,6 +67,16 @@ zero files or to several, or whose acceptance criteria are absent, is a
 preflight **halt** — not a task to be interpreted. A field can be flipped by
 the next agent to open the file; a commit cannot.
 
+**On a forge tracker** (`tracker.conf` names `gitlab` or `github`,
+`ADR-0037`), an issue is a field anyone can edit, so it is not a lock. The
+lock is still a committed file: before the run, the human snapshots each
+queued issue's body into the repository, by convention
+`.ai/run-queue/<issue number>.md`, and commits it (`ADR-0038`). The queue id
+is the issue number, the binding's `tracker_path` is `not-applicable`, and
+**the run never reads or writes the forge**: updating, commenting on and
+closing the issue are the human's, after the push. The procedure is
+`skills/project-workflow/templates/reference/tracker.md`, *Unattended runs*.
+
 **Not for** a change whose design is still open — that is
 `loops/design-brief/`, and it requires a human. **Not for** a single task
 with a human present — that is `loops/project-build/`, which can stop and
@@ -144,7 +154,9 @@ leaves an honest tracker rather than a half-ticked one.
    role reads rather than globs for (an agent's glob tool may not see
    dot-directories such as `.ai/`; `TASK-0095`) — and read its acceptance
    criteria and its status, verbatim, from **both** its own file and any
-   tracker that claims to know its state.
+   tracker that claims to know its state. Read `tracker.conf` too: on a
+   forge, a `tracker_path` other than `not-applicable`, or a queue id that is
+   not an issue number, is a `halt`.
    Expected: exactly one file per task, criteria present, and the two
    sources agreeing. Zero matches or several is a `halt` for the run, not a
    skip for the task. Disagreement between the sources means a previous run
@@ -236,7 +248,8 @@ leaves an honest tracker rather than a half-ticked one.
     the task file's status and its criteria, copying **every figure the
     `gate-runner` reported at step 7**, each quoted from a log the evidence
     file names; update the tracker row and nothing else in that file; stage;
-    commit; report the hash.
+    commit; report the hash. On a forge there is no tracker row, the commit
+    carries the issue reference `#<id>`, and nothing is written to the forge.
     Expected: one logical change committed, the hash returned, a clean
     tree, and **nothing pushed**. Staging uses **`git add -- <path>`, by
     name, always** — the boundary that denies `git add -A` and `git add .`
@@ -291,7 +304,9 @@ leaves an honest tracker rather than a half-ticked one.
     and, for each, **exactly what a human must do to finish it**; what
     timed out or was killed; every finding the adjudicator overrode; every
     ad-hoc proposal as a **title only**, stating plainly that no identifier
-    was allocated; and **the push step, not taken**. The run ends here with
+    was allocated; and **the push step, not taken**. On a forge, a last
+    section, *Forge updates, NOT taken*, lists per closed and parked issue
+    what the human does there once the push is confirmed. The run ends here with
     the work committed and **unmerged, unpushed**. This step runs even when
     the run halted: a halted run that leaves no handover is indistinguishable
     from a crashed one.

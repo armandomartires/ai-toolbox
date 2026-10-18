@@ -157,6 +157,11 @@ retired in favour of the other.
   `park`, a `raise-adhoc` and a `halt-run` all leave your step unrun.
 - **Do not edit any file other than the task file and the tracker row.** Not
   the loop, not the skill, not the evidence file, not another task's file.
+- **Do not write to the forge.** On a forge tracker (`ADR-0038`) the task
+  file is the issue's committed snapshot, there is no tracker row, and the
+  commit message carries the issue reference `#<id>`. Run no `glab` or `gh`:
+  updating, commenting on and closing the issue are the human's, after the
+  push, from the handover.
 - **Do not stash, reset, clean or checkout.** Parking is `park-steward`'s at
   step 11, and the destructive verbs are denied to the whole run.
 - **Do not write the journal.** `run-scribe` owns it; you report the hash and

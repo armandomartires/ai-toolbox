@@ -40,6 +40,12 @@ file itself and any tracker claiming to know its state. The lock is the
 **committed task file** (`ADR-0022` clause 3). Exactly one file per task,
 criteria present, and the two sources agreeing.
 
+**The work tracker** (`ADR-0037`, `ADR-0038`). Read `tracker.conf` at the
+repository root and report its non-comment lines verbatim, or that it is
+absent. On a forge (`gitlab`, `github`), the task file you are handed is the
+committed **snapshot** of the issue, and it is the lock; the issue itself is
+never read. Do not run `tracker.sh`, `glab` or `gh`.
+
 **The two silent failures** the loop sends you to check, because neither is
 visible from stdout once a run is under way: a driver with no explicit model
 and no configured default **hangs indefinitely** — no output, no error, no

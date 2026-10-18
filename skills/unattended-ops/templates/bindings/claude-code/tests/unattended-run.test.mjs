@@ -54,7 +54,8 @@ function runtime(over = {}) {
       }
       const ids = /Tasks: (.*)$/m.exec(prompt)[1].split(', ')
       return { branch: 'master', head: state.head.slice(0, 7), porcelain: '', verdict: 'proceed', reason: '',
-        tasks: ids.map(id => ({ id, globMatches: 1, taskFile: `.ai/tasks/${id}-x.md`, criteriaPresent: true, statusTaskFile: 'planned', statusTracker: 'planned', agree: true })) }
+        tasks: ids.map(id => ({ id, globMatches: 1, taskFile: `.ai/tasks/${id}-x.md`, criteriaPresent: true, statusTaskFile: 'planned', statusTracker: 'planned', agree: true })),
+        trackerConfFound: false, trackerConf: [] }
     },
     'task-planner': () => ({ files: ['src/a.txt'], reused: [], order: ['edit'], verification: ['unit'] }),
     implementer: () => ({ status: 'done', filesChanged: ['src/a.txt'], unsatisfiedCriteria: [], reason: '' }),
@@ -333,6 +334,109 @@ test('a dry run plans and gates but never implements or closes', async () => {
 })
 
 // --- De-domaining and the declaration -------------------------------------------
+
+// --- A forge tracker (ADR-0038, TASK-0172) ----------------------------------------
+// tracker.conf names gitlab or github: the lock is a committed snapshot of each
+// queued issue, the queue id is the issue number, the commit carries #<id>, and
+// the run writes nothing to the forge; the handover lists what the human does.
+
+const FORGE_CONF = ['tracker = gitlab', 'gitlab_project = group/app']
+const forgePreflight = (conf = FORGE_CONF) => (prompt, opts, state, d) => {
+  const got = d.preflight(prompt, opts, state)
+  if (opts.label === 'preflight:verify') return got
+  got.tasks.forEach(t => { t.taskFile = `.ai/run-queue/${t.id}.md`; t.statusTracker = 'not-applicable' })
+  return Object.assign(got, { trackerConfFound: true, trackerConf: conf })
+}
+const forgeCloser = message => (prompt, opts, state) => {
+  const id = /Close task (\S+);/.exec(prompt)[1]
+  state.parent = state.head
+  state.head = 'c' + String(++state.n).padStart(15, '0')
+  state.message = message(id)
+  state.files = ['src/a.txt', `.ai/run-queue/${id}.md`]
+  return { commit: state.head, refused: '' }
+}
+const forgeArgs = (over = {}) => baseArgs(Object.assign({ queue: [{ id: '42' }] }, over,
+  { binding: Object.assign({ task_file_glob: '.ai/run-queue/{id}.md', tracker_path: 'not-applicable' }, over.binding || {}) }))
+
+test('forge: closes an issue whose commit carries #<id>, and lists the update for the human', async () => {
+  const r = await run(forgeArgs(), { preflight: forgePreflight(), closer: forgeCloser(id => `Fix the thing (#${id})`) })
+  assert.equal(r.result.halted, null)
+  assert.equal(r.result.tracker, 'gitlab')
+  assert.deepEqual(r.result.closed.map(c => c.id), ['42'])
+  const close = r.calls('closer')[0].prompt
+  assert.match(close, /The message must contain #42\./)
+  assert.match(close, /run no glab or gh, and write nothing to the forge/)
+  assert.equal(r.result.forgeUpdates.length, 1)
+  assert.equal(r.result.forgeUpdates[0].issue, '#42')
+  assert.equal(r.result.forgeUpdates[0].snapshot, '.ai/run-queue/42.md')
+  assert.match(r.result.forgeUpdates[0].action, /closing comment, close it/)
+  const handover = r.calls('run-scribe').filter(c => c.opts.label === 'run-scribe:handover')[0].prompt
+  assert.match(handover, /Forge updates, NOT taken/)
+  assert.match(handover, /group\/app/)
+  assert.match(handover, /#42/)
+  assert.equal(r.events('run-start')[0].tracker, 'gitlab')
+  assert.equal(r.result.pushed, false)
+})
+
+test('forge: no role is asked to run glab or gh', async () => {
+  const r = await run(forgeArgs(), { preflight: forgePreflight(), closer: forgeCloser(id => `Fix (#${id})`) })
+  for (const c of r.s.calls) {
+    const asks = c.prompt.replace(/(run no|Do not run) [^.]*\./g, '')
+    assert.doesNotMatch(asks, /\b(glab|gh) (issue|api|pr)\b/, c.opts.label)
+  }
+})
+
+test('forge: a commit carrying #421 but not #42 does not verify', async () => {
+  const r = await run(forgeArgs(), { preflight: forgePreflight(), closer: forgeCloser(() => 'Fix (#421)') })
+  assert.match(r.result.halted || '', /does not verify/)
+  assert.deepEqual(r.result.closed, [])
+})
+
+test('forge: a parked issue is listed with its reason and status::blocked', async () => {
+  const r = await run(forgeArgs(), { preflight: forgePreflight(),
+    adjudicator: { verdict: 'park', reasoning: 'criterion 2 unevidenced', overrides: [], adhocTitles: [], guidance: '' } })
+  assert.deepEqual(r.result.parked.map(p => p.id), ['42'])
+  assert.equal(r.result.forgeUpdates.length, 1)
+  assert.match(r.result.forgeUpdates[0].action, /status::blocked.*criterion 2 unevidenced/)
+  assert.equal(r.result.forgeUpdates[0].commit, null)
+})
+
+test('forge: a tracker_path file halts at preflight, before any task role', async () => {
+  const r = await run(forgeArgs({ binding: { tracker_path: 'TODO.md' } }), { preflight: forgePreflight() })
+  assert.match(r.result.halted || '', /tracker_path must be not-applicable/)
+  assert.equal(r.calls('task-planner').length, 0)
+})
+
+test('forge: a queue id that is not an issue number halts at preflight', async () => {
+  for (const id of ['TASK-0001', '#42', '042']) {
+    const r = await run(forgeArgs({ queue: [{ id }] }), { preflight: forgePreflight() })
+    assert.match(r.result.halted || '', /queue id is the issue number/, id)
+    assert.equal(r.calls('task-planner').length, 0, id)
+  }
+})
+
+test('a tracker.conf that does not read, or a preflight that does not report it, halts', async () => {
+  for (const conf of [['tracker = jira'], ['tracker gitlab'], ['tracker = gitlab', 'tracker = github']]) {
+    const r = await run(forgeArgs(), { preflight: forgePreflight(conf) })
+    assert.match(r.result.halted || '', /tracker\.conf/, JSON.stringify(conf))
+    assert.equal(r.calls('task-planner').length, 0)
+  }
+  const r = await run(baseArgs(), { preflight: (p, o, st, d) => { const g = d.preflight(p, o, st); delete g.trackerConfFound; return g } })
+  assert.match(r.result.halted || '', /did not say whether tracker\.conf exists/)
+})
+
+test('an explicit tracker = files runs exactly as no tracker.conf', async () => {
+  const r = await run(baseArgs(), { preflight: (p, o, st, d) => {
+    const g = d.preflight(p, o, st)
+    return o.label === 'preflight:verify' ? g : Object.assign(g, { trackerConfFound: true, trackerConf: ['tracker = files'] })
+  } })
+  assert.equal(r.result.halted, null)
+  assert.deepEqual(r.result.closed.map(c => c.id), ['TASK-0001'])
+  assert.equal(r.result.tracker, 'files')
+  assert.deepEqual(r.result.forgeUpdates, [])
+  assert.match(r.calls('closer')[0].prompt, /The message must contain TASK-0001\./)
+  assert.doesNotMatch(r.calls('closer')[0].prompt, /glab/)
+})
 
 test('the template carries none of the source project\'s identifiers', () => {
   const code = SRC.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n')

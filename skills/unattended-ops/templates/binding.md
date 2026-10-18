@@ -9,7 +9,7 @@ driver_entry: <FILL: the command that starts a run, verbatim>
 model: <FILL: the explicit provider/model passed, or how a default is guaranteed>
 queue_source: <FILL: where the queue of settled tasks comes from>
 task_file_glob: <FILL: the glob resolving a task id to exactly one file>
-tracker_path: <FILL: the file whose row the closer updates, or not-applicable>
+tracker_path: <FILL: the file whose row the closer updates, or not-applicable (always, on a forge tracker)>
 gate_map: <FILL: where the map lives — the file, not the commands>
 gate_entry_point: <FILL: the one detaching entry point every long gate goes through>
 long_gate_groups: <FILL: the groups batched after the cycle, or not-applicable>
@@ -86,8 +86,8 @@ decoration.
 | `driver_entry` | How a run starts | — |
 | `model` | The explicit `provider/model`, or how a configured default is guaranteed | **`opencode run` with no configured default model and no TTY hangs indefinitely — no output, no error, no exit** (`ADR-0022` clause 5.3, observed 2026-09-23). This is the failure a nightly run hits at 3am with nothing in the log to explain it |
 | `queue_source` | Where the settled queue comes from | Nothing in the run selects its own work |
-| `task_file_glob` | How a task id resolves to exactly one file | **The committed task file is the lock** (`ADR-0022` clause 3). Zero matches or several is a preflight halt |
-| `tracker_path` | The one file whose row the closer updates | Project-specific, and the only other file the closer may touch |
+| `task_file_glob` | How a task id resolves to exactly one file | **The committed task file is the lock** (`ADR-0022` clause 3). Zero matches or several is a preflight halt. On a forge tracker it resolves the issue's committed snapshot, by convention `.ai/run-queue/{id}.md` (`ADR-0038`) |
+| `tracker_path` | The one file whose row the closer updates | Project-specific, and the only other file the closer may touch. **`not-applicable` on a forge tracker**, which the driver checks at preflight: the issue is the tracker and the run never touches it (`ADR-0038`) |
 | `gate_map` | Where the gate commands live | **Never the task file** (rule 2). `references/gate-map.md` |
 | `gate_entry_point` | The one detaching entry point | Rule 3, and the single choke point a `gate-runner`'s boundary allowlists |
 | `long_gate_groups` | What is batched after the cycle | `references/long-gates.md` |

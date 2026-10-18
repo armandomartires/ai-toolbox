@@ -4,7 +4,7 @@ description: "The method behind the unattended-run loop - the harness's five rul
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.3.2"
+  version: "1.4.0"
 ---
 
 # unattended-ops
@@ -120,6 +120,25 @@ which Claude Code has no expression for (`ADR-0022` Consequences,
 temporary state.** Under Claude Code and Bionic the same method runs with
 prompt-level rules that are **weaker by construction** — not equivalent, and
 not to be described as equivalent.
+
+## On a forge tracker
+
+When `tracker.conf` names `gitlab` or `github` (`ADR-0037`), the method is
+unchanged and three things are fixed (`ADR-0038`):
+
+- **The lock is a committed snapshot of each queued issue**, by convention
+  `.ai/run-queue/<issue number>.md`, made by the human before the run. An
+  issue body is a field anyone can edit; a commit is not.
+- **The queue id is the issue number**, the commit carries `#<id>`, and
+  `tracker_path` is `not-applicable`. Both drivers halt at preflight
+  otherwise.
+- **The run never reads or writes the forge.** The handover ends with
+  *Forge updates, NOT taken*: what the human posts, closes or relabels once
+  the push is confirmed. On OpenCode the closer's allowlist already denies
+  `glab` and `gh`; on Claude Code that boundary is prompt-level.
+
+The snapshot procedure is `skills/project-workflow/templates/reference/tracker.md`,
+*Unattended runs*.
 
 ## Two honest caveats
 

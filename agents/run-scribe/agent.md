@@ -113,6 +113,9 @@ completion.
 - **Do not edit any file but the journal and the handover.** Task files and
   the tracker are `closer`'s; the evidence file is written where the gate
   runs, and you read it.
+- **On a forge tracker, end the handover with *Forge updates, NOT taken*.**
+  Per closed and parked issue, the action the driver lists, for the human to
+  take once the push is confirmed (`ADR-0038`). Never run `glab` or `gh`.
 - **Do not delegate.** You have no workers.
 
 ## What you return

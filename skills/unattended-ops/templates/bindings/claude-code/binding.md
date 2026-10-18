@@ -10,7 +10,7 @@ driver_entry: "Workflow({ name: 'unattended-run', args: { runId, binding, queue,
 model: inherited from the Claude Code session by every agent() call; no per-agent model is set
 queue_source: <FILL: who writes args.queue, and from what — a human, before the run>
 task_file_glob: <FILL: glob with {id} for the task id, passed as args.binding.task_file_glob>
-tracker_path: <FILL: the tracker file the closer updates one row of, or not-applicable>
+tracker_path: <FILL: the tracker file the closer updates one row of, or not-applicable (always, on a forge tracker)>
 gate_map: <FILL: path of the gate map JSON read by run-gate.sh, passed as args.binding.gate_map>
 gate_entry_point: <FILL: path of run-gate.sh (the OpenCode binding's), passed as args.binding.gate_entry_point>
 long_gate_groups: <FILL: the groups in args.longGroups, or not-applicable>
@@ -107,7 +107,9 @@ missing run id or any blank, `unknown` or `<FILL>` value
 
 ## Reasons for every `not-applicable`
 
-None in the template. A consumer that sets `tracker_path` or
+None in the template. On a forge tracker `tracker_path` is `not-applicable`
+by rule, and the reason is `ADR-0038`: the issue is the tracker, and the run
+never touches it. A consumer that sets `tracker_path` or
 `long_gate_groups` to `not-applicable` writes the reason here — a reasonless
 `not-applicable` is an `unknown` in disguise (`templates/binding.md`).
 

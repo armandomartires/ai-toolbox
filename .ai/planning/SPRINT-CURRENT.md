@@ -9,7 +9,7 @@ S10 closed 2026-09-26 on `REVIEW-0012` and is archived in `planning/sprints/`. O
 3. **`ansible-ops`.** All nine gates were exercised once (`TASK-0116`). A guest-level change with a real PVE snapshot has not been.
 4. **`ADR-0022` F8.** The only open falsifier, and it applies only to Bionic (S10.4).
 5. **Secrets backends, live (`ADR-0034`).** `provision` and the GitLab and GitHub `put` are proven against stubs only (`TASK-0156`, `TASK-0157`). The first real run needs the Vault admin login, the `secrets-provisioner` policy, and a scratch repository.
-6. **Forge trackers, live (`ADR-0037`).** No project runs on a `gitlab` or `github` tracker yet; `glab` and `gh` are not on this host. The loops follow at `B-055`.
+6. **Forge trackers, live (`ADR-0037`).** No project runs on a `gitlab` or `github` tracker yet; `glab` and `gh` are not on this host. The mapping and the unattended run's snapshot procedure (`ADR-0038`) are unexercised.
 7. **An untested commitment.** "If a sprint shrinks, cut a product, never the spike." Restate it in the next plan that risks shrinking.
 
 ## Known limitation

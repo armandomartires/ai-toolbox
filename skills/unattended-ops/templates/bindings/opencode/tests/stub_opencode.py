@@ -11,7 +11,8 @@ Environment:
 A response is {"text": str|null, "raw": str, "stderr": str, "exit": int,
 "sh": [shell commands run first, with GIT_CALLER=stub], "auto": name}.
 Responses are consumed in order; the last one repeats. `sh` and `text` may
-contain {TASK} (the first `task TASK-nnnn` in the prompt); `text` may contain
+contain {TASK} (the first `task TASK-nnnn`, or on a forge `task <issue number>`,
+in the prompt); `text` may contain
 {HEAD} (resolved after `sh` runs). `auto` builds a dynamic reply:
   gate-runner  -> report every handle's line from the evidence file
   stash        -> run `git stash push -u -m <stash_message>` from the prompt
@@ -46,7 +47,7 @@ def main():
         fh.write(str(n + 1))
     resp = queue[min(n, len(queue) - 1)]
     env = dict(os.environ, GIT_CALLER="stub")
-    m = re.search(r"\btask (TASK-\d+)", prompt)
+    m = re.search(r"\btask (TASK-\d+|[1-9][0-9]*)\b", prompt)
     task = m.group(1) if m else ""
     for cmd in resp.get("sh", []):
         subprocess.run(cmd.replace("{TASK}", task), shell=True, check=True, env=env)

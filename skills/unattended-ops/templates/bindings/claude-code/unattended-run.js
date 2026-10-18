@@ -167,6 +167,10 @@ const BOOL = { type: 'boolean' }
 const closed = []
 const parked = []
 const adhoc = []
+// The project's work tracker (ADR-0037), learned at preflight from tracker.conf,
+// which keeps one owner: this script has no filesystem, so the preflight role
+// reads the file and reports it. Files until preflight says otherwise.
+let TRACK = { mode: 'files', path: null }
 const overrides = []
 let halted = null
 let startHead = null
@@ -176,8 +180,37 @@ let startHead = null
 const PREFLIGHT_SCHEMA = S({
   branch: STR, head: STR, porcelain: STR,
   tasks: { type: 'array', items: S({ id: STR, globMatches: { type: 'number' }, taskFile: STR, criteriaPresent: BOOL, statusTaskFile: STR, statusTracker: STR, agree: BOOL }) },
+  trackerConfFound: BOOL, trackerConf: STRS,
   verdict: { type: 'string', enum: ['proceed', 'halt'] }, reason: STR,
 })
+
+// ADR-0038. On a forge the lock is still a committed file (ADR-0022 clause 3):
+// a snapshot of each queued issue. The run never reads or writes the forge; the
+// human does, after the push. Only the two keys a run needs are read here;
+// skills/project-workflow/scripts/tracker.sh owns the rest of the grammar.
+const TRACKERS = ['files', 'gitlab', 'github']
+const PATH_KEYS = { gitlab: 'gitlab_project', github: 'github_repo' }
+
+function trackerFrom(p) {
+  if (typeof p.trackerConfFound !== 'boolean') throw new Halt('preflight did not say whether tracker.conf exists')
+  if (!p.trackerConfFound) return { mode: 'files', path: null }
+  const kv = {}
+  for (const raw of p.trackerConf || []) {
+    const m = /^\s*([A-Za-z_]+)\s*=\s*(.*?)\s*$/.exec(String(raw))
+    if (!m || m[1] in kv) throw new Halt(`tracker.conf line ${JSON.stringify(raw)} does not read; run tracker.sh check`)
+    kv[m[1]] = m[2]
+  }
+  if (!TRACKERS.includes(kv.tracker)) throw new Halt(`tracker.conf names tracker ${JSON.stringify(kv.tracker)}; run tracker.sh check`)
+  return { mode: kv.tracker, path: kv[PATH_KEYS[kv.tracker]] || null }
+}
+
+const FORGE = () => TRACK.mode !== 'files'
+// The task's reference in a commit message: its id, or on a forge the issue,
+// `#123`, which must not run on into another digit (`#1234` is not `#123`).
+const ref = task => FORGE() ? '#' + task.id : task.id
+const carriesRef = (message, task) => FORGE()
+  ? new RegExp('#' + task.id + '(?![0-9])').test(message || '')
+  : (message || '').indexOf(task.id) !== -1
 
 async function preflight() {
   // Steps 1 and 2. A missing or unparseable preflight is `halt`, never
@@ -186,6 +219,7 @@ async function preflight() {
     `Read-only: edit, stage, stash and commit nothing.\n\n` +
     `Step 1: run \`git rev-parse --abbrev-ref HEAD\`, \`git rev-parse --short HEAD\` and \`git status --porcelain\`; report the porcelain verbatim. Any output is a halt naming the paths — do not work out whose they are and do not clean them (rule 5).\n\n` +
     `Step 2: for each task below, glob \`${B.task_file_glob}\` with {id} replaced, report the match count and the one path, whether it has acceptance criteria, and its status verbatim from both its own file and ${TRACKER === 'not-applicable' ? 'no tracker (not-applicable)' : TRACKER}. Match nothing against a fixed literal.\n\n` +
+    `Also read \`tracker.conf\` at the repository root (ADR-0037): report whether it exists, and every line of it that is neither blank nor a \`#\` comment, verbatim. Do not run tracker.sh, glab or gh.\n\n` +
     `Tasks: ${QUEUE.map(t => t.id).join(', ')}`,
     PREFLIGHT_SCHEMA)
   if (!got) throw new Halt('preflight returned nothing')
@@ -202,6 +236,14 @@ async function preflight() {
     if (p.globMatches !== 1) throw new Halt(`${t.id}: task_file_glob matches ${p.globMatches} files`)
     if (!p.criteriaPresent || !p.agree) throw new Halt(`${t.id}: lock not verified (${JSON.stringify(p)})`)
     t.file = p.taskFile
+  }
+  TRACK = trackerFrom(got)
+  if (FORGE()) {
+    // ADR-0038: on a forge the issue is the tracker, and the run neither
+    // reads nor writes it, so no tracker file may be named; and the queue id
+    // is the issue number, which the commit carries as #<id>.
+    if (TRACKER !== 'not-applicable') throw new Halt(`tracker.conf names ${TRACK.mode}: the issue is the tracker and the run never touches it, so tracker_path must be not-applicable (ADR-0038)`)
+    for (const t of QUEUE) if (!/^[1-9][0-9]*$/.test(String(t.id))) throw new Halt(`${t.id}: on a ${TRACK.mode} tracker a queue id is the issue number (ADR-0038)`)
   }
 }
 
@@ -346,8 +388,10 @@ async function step10Close(task, impl, gates) {
     `1. \`git status --porcelain\`; refuse on any path not in ${JSON.stringify(declared)}.\n` +
     `2. Update ${task.file}'s status and criteria, copying every figure from the gate reports below, each quoted from a log ${EVIDENCE} names, and refusing one with nothing behind it (rule 4).\n` +
     (TRACKER === 'not-applicable' ? '' : `3. Update ${task.id}'s row in ${TRACKER} and nothing else there.\n`) +
-    `4. Stage each path with \`git add -- <path>\`, by name (ADR-0022 clause 5.4); commit in this shape: ${B.commit_shape}. The message must contain ${task.id}.\n` +
-    `5. Push nothing (ADR-0022 clause 4.1). Return the full commit hash, or refused with what you found.\n\nGate reports: ${JSON.stringify(gates)}`,
+    `4. Stage each path with \`git add -- <path>\`, by name (ADR-0022 clause 5.4); commit in this shape: ${B.commit_shape}. The message must contain ${ref(task)}.\n` +
+    `5. Push nothing (ADR-0022 clause 4.1). Return the full commit hash, or refused with what you found.\n` +
+    (FORGE() ? `6. Work is tracked on ${TRACK.mode}: run no glab or gh, and write nothing to the forge. The human updates issue ${ref(task)} after the push (ADR-0038).\n` : '') +
+    `\nGate reports: ${JSON.stringify(gates)}`,
     CLOSE_SCHEMA, task.id)
   const after = await verifyHead()
   if (got && got.refused) {
@@ -360,7 +404,7 @@ async function step10Close(task, impl, gates) {
   // task id in the message is loop.md step 12's `git log --grep` guard, which
   // searches the current branch and never --all: the park stash carries it too.
   if (!got || !got.commit || after.head.indexOf(got.commit) !== 0 || after.parent !== before.head ||
-      (after.porcelain || '').trim() || (after.message || '').indexOf(task.id) === -1) {
+      (after.porcelain || '').trim() || !carriesRef(after.message, task)) {
     throw new Halt(`closer's commit for ${task.id} does not verify (claimed ${got && got.commit}, HEAD ${after.head})`)
   }
   // The closer's glob boundary admits `git add -- .` (TASK-0092 finding 18),
@@ -371,12 +415,12 @@ async function step10Close(task, impl, gates) {
   if (!Array.isArray(after.files) || undeclared.length) {
     throw new Halt(`closer's commit for ${task.id} contains undeclared paths: ${undeclared.join(', ') || '(no file list reported)'}`)
   }
-  closed.push({ id: task.id, commit: after.head.slice(0, 12), files: declared })
+  closed.push({ id: task.id, commit: after.head.slice(0, 12), files: declared, file: task.file })
   await journal({ event: 'close', task: task.id, commit: after.head.slice(0, 12) })
 }
 
 async function step11Park(task, reason) {
-  parked.push({ id: task.id, reason })
+  parked.push({ id: task.id, reason, file: task.file })
   const message = String(B.stash_namespace).replace(/<run-id>/g, RUN_ID).replace(/<task-id>/g, task.id) + ' ' + reason.replace(/"/g, "'").slice(0, 160)
   let got
   try {
@@ -441,12 +485,23 @@ async function step13LongGates() {
   }
 }
 
+// ADR-0038: what the human does on the forge once the push is confirmed. None
+// of it is done by the run.
+function forgeUpdates() {
+  if (!FORGE()) return []
+  return closed.map(c => ({ issue: '#' + c.id, commit: c.commit, snapshot: c.file,
+    action: 'update the issue from the snapshot, post the task report as its closing comment, close it, then remove the snapshot in its own commit' }))
+    .concat(parked.map(p => ({ issue: '#' + p.id, commit: null, snapshot: p.file,
+      action: 'post the park reason as a comment and set status::blocked; keep the snapshot until the task is re-queued: ' + p.reason })))
+}
+
 async function step14Handover() {
   // Runs even on a halt: a halted run with no handover is indistinguishable
   // from a crashed one (loop.md step 14).
   try {
     await ask('run-scribe', 14, 'Handover',
-      `Re-derive the handover from ${JOURNAL} and ${EVIDENCE} — not from this message — and write it to ${HANDOVER}. Answer, in order: the repository's state now (\`git status --porcelain\` and \`git log --oneline ${startHead || 'HEAD~0'}..HEAD\`, verbatim); what closed, with hashes; what parked and exactly what a human must do to finish each; what timed out or was killed; every adjudicator override; ad-hoc proposals as titles only, stating that no identifier was allocated; and the push step, NOT taken. Halted: ${halted || 'no'}.`,
+      `Re-derive the handover from ${JOURNAL} and ${EVIDENCE} — not from this message — and write it to ${HANDOVER}. Answer, in order: the repository's state now (\`git status --porcelain\` and \`git log --oneline ${startHead || 'HEAD~0'}..HEAD\`, verbatim); what closed, with hashes; what parked and exactly what a human must do to finish each; what timed out or was killed; every adjudicator override; ad-hoc proposals as titles only, stating that no identifier was allocated; and the push step, NOT taken. Halted: ${halted || 'no'}.` +
+      (FORGE() ? ` Last, a section headed "Forge updates, NOT taken": work is tracked on ${TRACK.mode}${TRACK.path ? ' (' + TRACK.path + ')' : ''}, the run wrote nothing there, and after the push is confirmed the human does, per issue: ${JSON.stringify(forgeUpdates())}.` : ''),
       JOURNAL_SCHEMA, 'handover')
   } catch (e) {
     log('HANDOVER NOT WRITTEN: ' + e.message)
@@ -458,7 +513,7 @@ async function step14Handover() {
 try {
   phase('Preflight')
   await preflight()
-  await journal({ event: 'run-start', startHead, dryRun: DRY_RUN, queue: QUEUE.map(t => t.id) })   // step 3
+  await journal({ event: 'run-start', startHead, dryRun: DRY_RUN, tracker: TRACK.mode, queue: QUEUE.map(t => t.id) })   // step 3
   for (const task of QUEUE) {
     log(`--- ${task.id} ---`)
     await cycle(task)
@@ -473,9 +528,9 @@ try {
 
 phase('Handover')
 try {
-  await journal({ event: 'run-end', closed: closed.map(c => c.id), parked: parked.map(p => p.id), halted, adhocTitles: adhoc, overrides, pushed: false })
+  await journal({ event: 'run-end', closed: closed.map(c => c.id), parked: parked.map(p => p.id), halted, adhocTitles: adhoc, overrides, pushed: false, forgeUpdates: forgeUpdates() })
 } catch (e) { log('journal failed at run end: ' + e.message) }
 await step14Handover()
 log(`Run ${RUN_ID}: ${closed.length} closed, ${parked.length} parked${halted ? ', HALTED' : ''}. Nothing pushed.`)
 
-return { runId: RUN_ID, startHead, closed, parked, halted, adhocTitles: adhoc, overrides, pushed: false }
+return { runId: RUN_ID, startHead, closed, parked, halted, adhocTitles: adhoc, overrides, pushed: false, tracker: TRACK.mode, forgeUpdates: forgeUpdates() }

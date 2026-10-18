@@ -38,7 +38,7 @@ github_repo = owner/name
 | End-user documentation | The project wiki | The repository wiki |
 | Dashboard | Not applicable: boards and milestone progress | Not applicable: Project views |
 
-The forge's object is then the only owner. Do not keep a copy in `.ai/`.
+The forge's object is then the only owner. Do not keep a copy in `.ai/`; the one exception is an unattended run's snapshot, which lives only from the lock to the close (*Unattended runs*, below).
 
 ## Identifiers and commits
 
@@ -82,6 +82,24 @@ The wiki is a separate git repository, `<project>.wiki.git`. Clone it beside the
 - **GitLab Free:** issues, tasks (child work items), milestones, boards, labels and wiki. Burndown and burnup charts, epics, iterations and the *blocks* link are paid tiers. On Free, a dependency is a related issue plus a `Blocked by #N` line.
 - **GitHub Free:** issues, sub-issues, milestones, Projects (board, table and roadmap views, iteration fields) and wiki. Historical Project charts need a paid plan. A private repository's wiki needs a paid plan.
 
-## Not yet covered
+## Unattended runs
 
-`loops/unattended-run/` and the agent roles in ai-toolbox read a task file and a `TODO.md` row. A forge-tracked project runs tasks by hand until they learn to read an issue.
+`loops/unattended-run/` needs a lock that a commit fixes (ai-toolbox `ADR-0022` clause 3), and an issue body is a field anyone can edit. So the lock is a committed **snapshot** of each queued issue, and the run never reads or writes the forge (ai-toolbox `ADR-0038`).
+
+**Before the run** (the human, or an agent with the human present):
+
+1. Settle each issue. Its body is the task schema, with acceptance criteria, and it is labelled `status::ready`.
+2. Snapshot each body to `.ai/run-queue/<issue number>.md`:
+   ```
+   gh issue view 42 --json body --jq .body > .ai/run-queue/42.md
+   glab api projects/:id/issues/42 | python3 -c 'import json,sys; print(json.load(sys.stdin)["description"])' > .ai/run-queue/42.md
+   ```
+   Neither command has been run from this skill yet; check the file before committing it.
+3. Check each snapshot with `scripts/check-artifact.sh`, then commit them together, for example `Lock #42 #43 for unattended run <run-id>`. **That commit is the lock.**
+4. In the binding: the queue lists issue numbers (`42`, never `#42`), `task_file_glob` is `.ai/run-queue/{id}.md`, `tracker_path` is `not-applicable`, and `commit_shape` carries `(#{id})`. Both drivers halt at preflight otherwise.
+
+**During the run**, the closer updates the snapshot as it would a brief, and commits with `#<id>`. No role runs `glab` or `gh`.
+
+**After the run**, the handover ends with *Forge updates, NOT taken*. Once the push to every remote is confirmed:
+- **Closed issue:** replace its description with the snapshot, post the task report as its closing comment, close it, then remove the snapshot with `git rm` in its own commit. Git keeps it.
+- **Parked issue:** post the park reason, set `status::blocked`, and keep the snapshot until the task is re-queued.
