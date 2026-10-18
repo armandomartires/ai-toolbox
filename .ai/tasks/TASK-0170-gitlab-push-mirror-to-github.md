@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: blocked   # on the human: step 7 (per-host maps), then 8
+- Status: blocked   # on the human: one check of sigwstctl1's map (step 7)
 - Owner: the human (the mirror in GitLab), then agent (repo changes)
 - Created: 2026-10-17
-- Updated: 2026-10-17
+- Updated: 2026-10-18
 - Applies to: `AGENTS.md` (Commands, Git rules, task report), `docs/operations/runbook.md`, `.env.example`, `secrets.map` header, `.ai/decisions/0028-gitlab-is-the-primary-remote.md`, `.ai/context/CURRENT_STATE.md`; per-host `~/.config/vault/ai-toolbox.map` (untracked)
 - Source: the human's request of 2026-10-17 ("gitlab as main and gitlab pushing to github"); completes `TASK-0169` step 6
 
@@ -47,7 +47,7 @@ settings. Agents then push `origin` only, and `retire github-token` can run.
 ## Acceptance criteria
 
 - [x] A push to `origin` alone reaches `github`: both `ls-remote` hashes equal `HEAD`.
-- [ ] No tracked file names `GITHUB_PUSH_TOKEN` (done, briefs aside), and no per-host map maps it (step 7, human).
+- [ ] No tracked file names `GITHUB_PUSH_TOKEN` (done, briefs aside), and no per-host map maps it: none on this workstation (2026-10-18); sigwstctl1 not checked.
 - [x] AGENTS.md and the runbook tell an agent to push `origin` only.
 - [x] GitHub Actions still run on the mirrored push (`validate.yml` for that commit).
 
@@ -69,7 +69,7 @@ settings. Agents then push `origin` only, and `retire github-token` can run.
 | AGENTS.md, runbook | Push `origin` only; confirm `github` by `ls-remote`, polling; mirror failures are read in GitLab and reported |
 | `.env.example`, `secrets.map`, T16, ADR-0028, CURRENT_STATE | No `GITHUB_PUSH_TOKEN`; ADR amended 2026-10-17 |
 
-Next: human — delete `GITHUB_PUSH_TOKEN` from each per-host map, then `TASK-0169` step 8 (`retire github-token`).
+Next: human — on sigwstctl1, `grep -c '^GITHUB_PUSH_TOKEN=' ~/.config/vault/ai-toolbox.map` must print 0. Step 8 done: `github` destroyed 2026-10-18.
 
 ## Execution log
 
@@ -79,3 +79,5 @@ Next: human — delete `GITHUB_PUSH_TOKEN` from each per-host map, then `TASK-01
 - 2026-10-17 · claude/opus-5.5 · steps 1-6 done; 7-8 are the human's
   - Evidence: `vgit_origin push origin master` alone → `git ls-remote github` = `4180e00` = `HEAD`; Actions on `4180e00`: validate, dashboard, ci-alert ×2 → success; `tests/validate.sh` → OK
   - Deviation: a procedure change, so no test fails on revert; the evidence is the observed mirror. T16 drops `GITHUB_PUSH_TOKEN` from its guard set: with the name gone from `.env.example`, mapping it fails T16 anyway
+- 2026-10-18 · claude/opus-5.5 · step 8 done by the human (`TASK-0169`'s run); step 7 confirmed on this workstation
+  - Evidence: `sigmarecon-projects/ai-toolbox/github` → 404 as ai-toolbox's AppRole; this workstation's map has no `GITHUB_PUSH_TOKEN` line; every push since `4180e00` reached `github` by the mirror alone
