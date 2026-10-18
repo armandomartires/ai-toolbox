@@ -1762,8 +1762,34 @@ fi
 # Live files hold state, not history (ADR-0033): each has a line budget, and
 # no BACKLOG.md line may exceed 600 characters. Raise a budget only by
 # amending ADR-0033, never to fit what is already there.
+# .ai-layout.json is how an agent finds this repo's process at session start,
+# and the rules for a malformed one are layout-declaration.md's (TASK-0174).
+# It named `.ai/AGENTS.md`, a missing file, until TASK-0174.
+if [ -f .ai-layout.json ]; then
+  python3 - <<'PY' || fail=1
+import json, os, sys
+try:
+    d = json.load(open(".ai-layout.json", encoding="utf-8"))
+except ValueError as e:
+    sys.exit("LAYOUT: .ai-layout.json does not parse: %s" % e)
+bad = ["unknown key %r" % k for k in d if k not in ("root", "entrypoint")]
+root = d.get("root", ".ai/")
+entry = d.get("entrypoint", "00.CONVENTIONS.md")
+if os.path.isabs(root):
+    bad.append("root %r is absolute" % root)
+elif not os.path.isdir(root):
+    bad.append("root %r does not exist" % root)
+elif not os.path.isfile(os.path.join(root, entry)):
+    bad.append("entrypoint %r is not a file in %r" % (entry, root))
+for b in bad:
+    print("LAYOUT: .ai-layout.json: %s (layout-declaration.md)" % b)
+sys.exit(1 if bad else 0)
+PY
+fi
+
+# AGENTS.md joined in TASK-0174: every session loads it whole.
 for spec in .ai/context/CURRENT_STATE.md:200 .ai/planning/SPRINT-CURRENT.md:80 \
-            .ai/tasks/TODO.md:400; do
+            .ai/tasks/TODO.md:400 AGENTS.md:120; do
   f="${spec%:*}" max="${spec##*:}"
   [ -f "$f" ] || continue
   n="$(wc -l < "$f" | tr -d ' ')"

@@ -190,3 +190,5 @@ The model JSON is never published.
 | Dependencies | `**Depends on**:` | not recorded |
 
 The detected layout is recorded as `project.corpus_shape`. Both layouts fill the same payload keys; a key with no data is an empty array, never absent.
+
+`scripts/check-dashboard.sh` proves the reader on the layout a repository does not use: it runs the generator against the sprint-brief fixture in `fixtures/dashboard/`. Run it after re-syncing `dashboard/`.

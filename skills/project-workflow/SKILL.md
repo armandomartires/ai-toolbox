@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ planning layer - a plan/d
 license: MIT
 metadata:
   author: armando.martires
-  version: "7.1.1"
+  version: "7.1.2"
 ---
 
 # project-workflow

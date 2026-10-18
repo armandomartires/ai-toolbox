@@ -5,6 +5,7 @@
 **Status**: Accepted
 **Date**: 2026-10-10
 **Task**: `TASK-0150` (plan: `PLAN-0007`)
+**Amended 2026-10-18 on the human's request (`TASK-0174`):** `AGENTS.md` is a live file too, budget 120 lines (clause 4).
 
 ## Context
 
@@ -36,6 +37,7 @@ The human asked for smaller, simpler files and outputs. The model they chose was
 4. **Budgets are gated.**
    - A schema may declare `max_lines`, which `check-artifact` enforces.
    - The live files (`CURRENT_STATE`, `SPRINT-CURRENT`, `TODO`, `BACKLOG`) have line budgets in `tests/validate.sh`.
+   - `AGENTS.md` has one too: 120 lines (`TASK-0174`). Every session loads it whole, so it holds rules and commands; the reasons stay in the ADR or runbook a rule names. 120 is half its 240 lines on 2026-10-18 with every section kept; it is a chosen number, like the others, not a derived one.
 5. **Guidance lives in the schema, never in the artifact.** No rationale goes into `!body`.
 6. **Live files hold state, not history.** Updating `CURRENT_STATE.md` means editing the state; history stays in git.
 7. **Every task ends with the same short report:** Result, Changed, Verified, Pushed, Next.
