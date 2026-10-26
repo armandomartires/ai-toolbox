@@ -69,7 +69,7 @@ These are not to be re-litigated without a new ADR:
 - The gate is green under WSL. Under Git Bash, `test-worktree.sh` and a `check-publish.sh` case fail (`TASK-0148`).
 - Skills are installed as junctions to this checkout (`TASK-0160`), so a `git pull` updates every project on the machine; check with `install.sh --status`.
 - On Windows, `vault_secrets.py exec` waits for its child (`TASK-0149`). Intranet TLS for Git and curl is set up per the runbook's *Secrets on a new host*.
-- Mods need Claude Code 2.1.308+. This host's WSL `claude` is 2.1.284, so `tests/test-mods.sh` uses the Windows `claude.exe` (2.1.310), which reads the checkout over `\\wsl.localhost`.
+- Mods need Claude Code 2.1.308+. This host's WSL `claude` and Windows `claude.exe` are both 2.1.310; `tests/test-mods.sh` uses the first new enough, `claude.exe` reading the checkout over `\\wsl.localhost`.
 - Ansible: `ansible-core` 2.21.4, and `ansible-lint` reports 53 rules with 0 failures (`TASK-0115`).
 
 ## Lessons that keep recurring
