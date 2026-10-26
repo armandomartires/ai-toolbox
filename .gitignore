@@ -53,3 +53,6 @@ node_modules/
 /_site/
 # Per-machine choice of components for scripts/install.sh (TASK-0164).
 /install.selection
+# The API types and tsconfig Claude Code lays into a mod it loads from a
+# watched folder: generated per CLI version (ADR-0040).
+/mods/*/.claude-plugin/types/

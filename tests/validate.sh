@@ -446,6 +446,20 @@ for f in loops/*/loop.md; do
   done
 done
 
+# Mods: manifest, hooks modules, contract and README (ADR-0040, TASK-0177).
+# Shape only and offline; the mods' own tests need a `claude` that supports
+# mods, so they run in tests/test-mods.sh, outside the gate. The API types
+# Claude Code lays into a loaded mod are generated per CLI version and
+# ignored; one tracked would go stale on the next CLI update.
+if ! MODS_OUT="$(python3 scripts/check-mods.py 2>&1)"; then
+  printf '%s\n' "$MODS_OUT"
+  fail=1
+fi
+if [ -n "$(git ls-files 'mods/*/.claude-plugin/types/*')" ]; then
+  echo "MOD SHAPE: generated types are tracked under mods/*/.claude-plugin/types/ — git rm --cached them"
+  fail=1
+fi
+
 # Wiring claims in shipped scripts. A script that claims a named runner in
 # THIS repository executes it must actually be referenced by that runner. The
 # rule is defined in docs/development/authoring-guide.md under "Claims a

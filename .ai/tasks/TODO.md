@@ -221,6 +221,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0174 — Make the session-start reading chain short and consistent
 - [x] TASK-0175 — Track unexercised capability as backlog rows, and cap it
 - [ ] TASK-0176 — Exercise the GitLab tracker and a forge unattended run for real
+- [x] TASK-0177 — Merge claude-mods, and develop mods here from now on
 
 ## Post-S9 (superseded by the promotion above)
 

@@ -325,6 +325,65 @@ enforce rather than restating them. A loop that copies `AGENTS.md`'s rules
 creates a second owner of those rules, which will drift. See
 `loops/release-check/loop.md` for the worked example.
 
+## Mods
+A mod is a Claude Code plugin whose code the engine loads: hooks on
+sessions, turns and tool calls, panes and other UI, commands, tools
+(`ADR-0040`). It needs Claude Code 2.1.308 or later and runs in no other
+client. Copy `mods/_template/`, and load the `plugin-authoring` skill before
+changing a mod: it gives the running build's API types and rules.
+`scripts/check-mods.py`, run by `tests/validate.sh`, enforces the **Gated**
+column; `tests/test-mods.sh` runs `claude plugin validate` and
+`claude plugin test`, and is required for any task that changes a mod.
+
+| Element | Rule | Gated |
+|---------|------|-------|
+| `.claude-plugin/plugin.json` | Required, a JSON object. `name` is lowercase kebab-case and matches the directory. | **yes** |
+| `description` in `plugin.json` | Required, one line: it is the registry row and the plugin library's listing. | **yes** |
+| `hooks/hooks.json` | Required. `modules` lists the hooks modules, each a file in `hooks/`. | **yes** |
+| `types` in `plugin.json` | The `$.state` contract, `types/index.d.ts` by convention. Every `$.state` key a module uses is declared there, and it exports types only. | the file exists; **its content is checked by `plugin validate` only** |
+| `README.md` | Required: the user-facing spec and install line. | **yes** |
+| `*.test.ts`, `*.test.tsx` | Pure logic sits in plain functions, tested directly; hooks and panes through `claude-code/testing`. | **no**: `tests/test-mods.sh` |
+| `.claude-plugin/types/` | Laid by the engine per CLI version. Never committed. | **yes** (`.gitignore`, and the gate fails on a tracked one) |
+
+A mod's own module map and traps go in its `DEVELOPING.md`, as
+`mods/task-compass/` does. Loading a mod in development: runbook, *Loading a
+mod in development*.
+
+Type-check with TypeScript 5.4 or later. Once the engine has loaded a mod
+from a watched folder, `tsc -p mods/<name>` works through the laid
+`tsconfig.json`; install TypeScript in a scratch folder with its own
+`package.json`, never globally or here.
+
+Engine and desktop behaviour found while building `task-compass`, which any
+mod meets:
+
+- **Auto mode will not evaluate writes to a loaded mod's files**, because
+  sessions load them as code. Use a permission mode that asks before edits.
+- **A security plugin (`cc-plugin-sec-default`) skips mods'
+  `prompt.compose` hooks.** Reach the model through a registered tool's
+  description instead (`$.tool.register` with `isDeferred: false`).
+- **The desktop app starts a session in a temporary folder and then moves
+  it.** Resolve paths from `$.session.cwd()` when they are used, never once
+  at `session.start`.
+- **The engine lists a module's `$.state` reads and writes from atoms
+  declared in that file**, so a shared atoms module will not load. Each
+  module declares the atoms it uses.
+- **A `tool.call` matcher naming an MCP tool fails `tsc`** ("excessively
+  deep") once many MCP tools are connected. Compare `e.tool` in the general
+  hook instead.
+- **Hover never shows in a desktop pane.** Open things on a click. A
+  desktop draws a `Button` natively and drops the colours of `Text`s inside
+  it, so keep coloured `Text` outside the `Button`.
+- **A desktop draws each pane row as a line of text with spacing**, so
+  stacked `│` cells come out dashed, and **every `Box` border has rounded
+  corners** whatever `borderStyle` says. Draw a line or a straight edge as
+  one side of a bordered `Box` clipped to a one-cell `overflow="hidden"`
+  strip. An absolute `Box` paints only over what comes before it in the
+  tree: there is no z-index.
+- **In tests, `ui.find` leaves `hover` out of the props it reports**, and a
+  `Button`'s `Text` children show only as its label: find it by
+  `ui.find({ text })` without `type: 'Text'`.
+
 ## Claims a component makes about its own wiring
 
 **The rule applies to every component category. The gate enforces it for

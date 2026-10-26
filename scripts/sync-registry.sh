@@ -113,6 +113,14 @@ print("%s\t%s\texternal" % (m.get("name", "?"),
         return 1
       fi
       ;;
+    mod)
+      [ -f "$d/.claude-plugin/plugin.json" ] || return 1
+      python3 -c '
+import json, sys
+m = json.load(open(sys.argv[1]))
+print("%s\t%s" % (m.get("name", "?"), m.get("description", "").replace("\n", " ")))
+' "$d/.claude-plugin/plugin.json"
+      ;;
   esac
 }
 
@@ -162,6 +170,10 @@ emit_section() {
   emit_section "MCP Servers" mcp   mcp-servers Shape
   echo
   emit_section "Loops"       loop  loops
+  echo
+  # Mods are Claude Code plugins; the registry reads their plugin.json
+  # (ADR-0040).
+  emit_section "Mods"        mod   mods
   echo
   # Agents carry no Shape column: one shape only. A role's `mode`
   # (primary/subagent) is arguably the most consequential fact about it,

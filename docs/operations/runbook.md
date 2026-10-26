@@ -372,6 +372,32 @@ Skills the repo does not own (e.g. `agent-tiers` under OpenCode) are never
 touched. Every client in `install.sh`'s list must have a
 `configs/<client>/README.md`; `tests/validate.sh` enforces the pairing.
 
+## Loading a mod in development
+`install.sh` does not deploy mods (`ADR-0040`). Every session on a host
+loads a mod straight from this checkout through two variables in the
+`env` block of that host's `~/.claude/settings.json`, the one the Claude
+desktop app reads (on Windows, `%USERPROFILE%\.claude\settings.json`):
+
+```json
+"CLAUDE_CODE_PLUGIN_DIRS": "\\\\wsl.localhost\\<distro>\\home\\<user>\\work\\sigmarecon\\ai-toolbox\\mods\\task-compass",
+"CLAUDE_CODE_PLUGIN_DIR_WATCH": "1"
+```
+
+The example is a Windows app reading a WSL checkout; on one filesystem,
+use the plain path. With the watch on, an edit reloads the mod
+when the turn that made it ends; if it does not over `\\wsl.localhost`,
+start a new session. As with linked skills, the main checkout's branch is
+what every session loads, so keep it on `master`.
+
+- **Edit the mod here**, never in a `~/.claude/dev-mods/<session>/` copy,
+  which would load a second plugin of the same name.
+- **Check it** with `tests/test-mods.sh`. In WSL it picks the Windows
+  `claude.exe` when the WSL `claude` is older than 2.1.308, and that CLI reads
+  this checkout over `\\wsl.localhost`. `claude update` upgrades either.
+- **Teammates install it from the organization plugin library**; the
+  install line is in the mod's `README.md`. Publishing a new version there
+  is a human step.
+
 ## Wiring the `gather_subset` guard into a consuming Ansible repository
 
 `skills/ansible-ops/scripts/gather_subset_guard.py` is a custom

@@ -65,5 +65,6 @@
 | B-061 | `worktree-only` is not enforced on Claude Code, and its emission is undecided (`TASK-0111`) | medium | medium | none | medium | **waiting** | Raised 2026-10-18 by `TASK-0175`, from `CURRENT_STATE.md`. Waiting on the human's decision on how `ADR-0018` clause 7 emits the term. |
 | B-062 | asset-management's vendored `project-workflow` predates `vendor-skill.sh` and is behind 7.1.2 | low | medium | none | low | **waiting** | Raised 2026-10-18 by `TASK-0175`, from `CURRENT_STATE.md`. A task in that repository: re-vendor with `vendor-skill.sh --write` (`ADR-0036`). |
 | B-063 | Estate repository work waiting on the human: pushes of `b92e2a9` (`B-039`) and `2a09fa0` (`B-052`); LDAP config drift, estate `#96` | medium | medium | none | low | **waiting** | Raised 2026-10-18 by `TASK-0175`, from `CURRENT_STATE.md`. Human steps in the estate repository. |
+| B-064 | `task-compass`'s README has no screenshots | low | medium | none | low | **waiting** | Raised 2026-10-26 by `TASK-0177`: the one open story of the retired `claude-mods/GOALS.md`. A task that captures the pane on the terminal and the desktop and adds the images to `mods/task-compass/README.md`. |
 
-**Six items are open**, counted from the Status column. A closed row's "Ready when" names its closer (rule: `.ai/README.md`); the full history of each row is in git (ADR-0033).
+**Seven items are open**, counted from the Status column. A closed row's "Ready when" names its closer (rule: `.ai/README.md`); the full history of each row is in git (ADR-0033).

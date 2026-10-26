@@ -4,10 +4,10 @@ Rules and commands only; each rule's reason is in the ADR or runbook it names.
 
 ## Objective and scope
 Collect, develop, validate and deploy AI customization tools: skills, MCP
-servers, loops, prompts, agent roles. Each is self-contained and portable to
-every client that supports its capability: skills to Claude Code and OpenCode,
-MCP servers to those, and external ones to Bionic (ADR-0020, ADR-0039). Out of
-scope: application code, public services, secrets.
+servers, loops, mods, prompts, agent roles, each self-contained and portable to
+every client with its capability: skills to Claude Code and OpenCode, MCP
+servers to those and external ones to Bionic, mods to Claude Code (ADR-0020,
+ADR-0039, ADR-0040). Out of scope: application code, public services, secrets.
 
 ## Security and secrets
 - Never commit secrets, tokens, passwords, private keys, or `.env` files. Scan
@@ -29,14 +29,14 @@ scope: application code, public services, secrets.
   possible; developed on WSL.
 - MCP servers, one marker file each (ADR-0005): authored (`pyproject.toml`;
   Python 3.10+, FastMCP, one tool per concern, tests required) or external
-  (`server.json` wiring an upstream package; no vendored source). Rules:
+  (`server.json` wiring an upstream package; no vendored source).
+- Mods: Claude Code plugins in TypeScript (ADR-0040). Rules for every kind:
   `docs/development/authoring-guide.md`.
 
 ## Commands
-- Validate: `tests/validate.sh` (Bash, `python3` ≥ 3.11) — the mandatory gate.
-  Offline, hermetic, fast; keep it that way. MCP smoke test:
-  `tests/smoke-mcp.sh [--server <name>]`, networked so not in the gate; a SKIP
-  is not a pass.
+- Validate: `tests/validate.sh` (Bash, `python3` ≥ 3.11), the mandatory gate:
+  offline, hermetic, fast; keep it so. Not in it, so a SKIP is not a pass:
+  `tests/smoke-mcp.sh [--server <name>]`, `tests/test-mods.sh [--mod <name>]`.
 - Environment: optional locally. Copy `.env.example` to a gitignored `.env`,
   never committed; per-operation variables: runbook, *Environment variables*.
 - Deploy: `scripts/install.sh [link|copy]`, `--status`, `--only a,b` or a
@@ -51,9 +51,9 @@ scope: application code, public services, secrets.
   (ADR-0029). `dashboard/` is vendored: never edit it here (`VENDORED.md`).
 
 ## Structure
-Components: `skills/` `mcp-servers/` `loops/` `prompts/` `agents/` `configs/`
-(client wiring). Governance: `.ai/`. Index: `docs/registry.md` (generated).
-Guides: `docs/development/`; runbook: `docs/operations/`.
+Components: `skills/` `mcp-servers/` `loops/` `mods/` `prompts/` `agents/`
+`configs/` (client wiring). Governance: `.ai/`. Index: `docs/registry.md`
+(generated). Guides: `docs/development/`; runbook: `docs/operations/`.
 
 ## Git rules
 - Before changes: check `git status`, branch, remote, uncommitted changes.

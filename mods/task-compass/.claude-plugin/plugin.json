@@ -1,0 +1,7 @@
+{
+  "name": "task-compass",
+  "version": "0.1.0",
+  "description": "A Compass pane beside the chat: the project's GOALS.md sprints side by side, the story Claude is on with its live tasks, and the subagents running. Claude keeps the board current.",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
