@@ -77,7 +77,7 @@
 | `B-064` | README screenshots, from the retired `GOALS.md` |
 | Windows `settings.json` | `CLAUDE_CODE_PLUGIN_DIRS` → `\\wsl.localhost\AlmaLinux-10\…\ai-toolbox\mods\task-compass` |
 
-Next: the human opens a new desktop session to confirm the pane and the edit reload, then deletes `claude-mods/`.
+Next: the human deletes `claude-mods/`.
 
 ## Execution log
 
@@ -87,4 +87,4 @@ Next: the human opens a new desktop session to confirm the pane and the edit rel
   - Evidence: `tests/validate.sh` with `name` changed and a types file force-added → both `MOD SHAPE` lines, exit 1; restored → `validate.sh: OK`
   - Evidence: `tests/test-mods.sh` → `PASS task-compass: 15 pass`, `PASS _template: 1 pass`; a broken template test → `FAIL _template: plugin test`, exit 1; no CLI on PATH → SKIP, exit 3
   - Evidence: `claude.exe plugin list` → `task-compass@inline`, the `\\wsl.localhost` path, `Status: √ loaded`
-  - Deviation: the copy's one file normalized to LF. The edit-reload watch over `\\wsl.localhost` is not observed: a human check in a new desktop session.
+  - Deviation: the copy's one file normalized to LF. The human confirmed in a new desktop session that the pane loads from `\\wsl.localhost` and an edit reloads it.

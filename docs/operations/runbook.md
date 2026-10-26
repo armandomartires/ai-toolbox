@@ -385,8 +385,8 @@ desktop app reads (on Windows, `%USERPROFILE%\.claude\settings.json`):
 
 The example is a Windows app reading a WSL checkout; on one filesystem,
 use the plain path. With the watch on, an edit reloads the mod
-when the turn that made it ends; if it does not over `\\wsl.localhost`,
-start a new session. As with linked skills, the main checkout's branch is
+when the turn that made it ends, over `\\wsl.localhost` too (observed
+2026-10-26, `TASK-0177`). As with linked skills, the main checkout's branch is
 what every session loads, so keep it on `master`.
 
 - **Edit the mod here**, never in a `~/.claude/dev-mods/<session>/` copy,
