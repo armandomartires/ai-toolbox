@@ -2,7 +2,30 @@ import { expect, test } from 'claude-code/testing'
 import type { AgentInfo } from 'claude-code'
 
 import type { AgentRow } from '../types'
-import { applyPlan, bar, colorOf, groupAgents, HUES, iconOf, mergeListed, nested, nextHue, outcomeOf, progressOf, spawnedRow } from './model'
+import {
+  activityLine,
+  alertText,
+  applyPlan,
+  bar,
+  callEnded,
+  callStarted,
+  colorOf,
+  endedBadly,
+  groupAgents,
+  HUES,
+  iconOf,
+  markAlerted,
+  mergeListed,
+  nested,
+  nextHue,
+  outcomeOf,
+  progressOf,
+  runningText,
+  spawnedRow,
+  summarizeCall,
+  tokensOf,
+  turnCounted,
+} from './model'
 
 const row = (id: string, status: string, hue = 0, more: Partial<AgentRow> = {}): AgentRow => ({
   id,
@@ -11,6 +34,8 @@ const row = (id: string, status: string, hue = 0, more: Partial<AgentRow> = {}):
   status,
   startedAt: 0,
   hue,
+  calls: 0,
+  tokens: 0,
   ...more,
 })
 
@@ -93,4 +118,43 @@ test('update_plan items, advance, done and start follow the app; the bar fills w
   expect(bar(2, 3, 6)).toBe('▰▰▰▰▱▱')
   expect(bar(0, 0, 4)).toBe('▱▱▱▱')
   expect(bar(5, 5, 4)).toBe('▰▰▰▰')
+})
+
+test('a call is summarized by its main argument, and the row counts it', () => {
+  expect(summarizeCall('Bash', { command: 'ls  -la\n  /tmp' })).toEqual({ tool: 'Bash', detail: 'ls -la /tmp' })
+  expect(summarizeCall('Read', { file_path: '/p/a.ts' })).toEqual({ tool: 'Read', detail: '/p/a.ts' })
+  expect(summarizeCall('Grep', { pattern: 'x' }).detail).toBe('x')
+  expect(summarizeCall('Agent', { description: 'look' }).detail).toBe('look')
+  expect(summarizeCall('TodoWrite', { todos: [] }).detail).toBe('')
+  expect(summarizeCall('Bash', { command: 'a'.repeat(50) }, 10).detail).toBe('aaaaaaaaa…')
+
+  let rows = [row('a', 'running')]
+  rows = callStarted(rows, 'a', { tool: 'Bash', detail: 'ls', since: 100 })
+  expect(activityLine(rows[0]!, 1_000)).toBe('Bash: ls · 0 calls')
+  expect(activityLine(rows[0]!, 9_100)).toBe('Bash: ls (9s) · 0 calls')
+  rows = callEnded(rows, 'a')
+  expect(rows[0]).toMatchObject({ calls: 1, activity: undefined })
+  expect(callEnded(rows, 'zz')).toEqual(rows)
+  expect(tokensOf({ input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 })).toBe(1200)
+  expect(tokensOf({ input_tokens: 5 })).toBe(5)
+  expect(tokensOf(undefined)).toBe(0)
+  rows = turnCounted(rows, 'a', 1200, 'm1')
+  expect(rows[0]).toMatchObject({ tokens: 1200, model: 'm1' })
+  expect(activityLine(rows[0]!, 0)).toBe('1 call · 1.2k tok')
+  expect(activityLine(turnCounted(rows, 'a', 2_000_000)[0]!, 0)).toBe('1 call · 2M tok')
+  // The fields survive a list merge, and the activity leaves with the status.
+  const merged = mergeListed(rows, [{ id: 'a', type: 'Explore', description: 'a', status: 'completed' }], 5)
+  expect(merged[0]).toMatchObject({ calls: 1, tokens: 1200, model: 'm1', activity: undefined })
+  expect(spawnedRow([], { id: 'b', type: 'Plan', description: 'p', model: 'm2' }, 1)[0]).toMatchObject({ model: 'm2', calls: 0, tokens: 0 })
+})
+
+test('a failed or stopped agent is alerted once', () => {
+  const before = [row('a', 'running'), row('b', 'running'), row('c', 'completed')]
+  const after = [row('a', 'failed'), row('b', 'killed'), row('c', 'failed'), row('d', 'failed')]
+  expect(endedBadly(before, after).map(one => one.id)).toEqual(['a', 'b', 'd'])
+  const marked = markAlerted(after, ['a', 'b', 'd'])
+  expect(endedBadly(after, marked)).toEqual([])
+  expect(alertText(row('a', 'failed'))).toBe('Explore · a failed')
+  expect(alertText(row('b', 'killed'))).toBe('Explore · b was stopped')
+  expect([runningText(0), runningText(1), runningText(2)]).toEqual([undefined, '1 agent running', '2 agents running'])
 })

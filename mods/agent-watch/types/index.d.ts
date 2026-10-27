@@ -18,7 +18,20 @@ export type AgentRow = {
   endedAt?: number
   /** Its place in the palette, fixed when it was first seen. */
   hue: number
+  /** The model it resolved to, from the spawn's answer. */
+  model?: string
+  /** Tool calls that ended in its loop. */
+  calls: number
+  /** Tokens of its turns so far, the four usage counts summed. */
+  tokens: number
+  /** The tool call in flight in its loop, if any. */
+  activity?: Activity
+  /** Set once its failure or stop was toasted; on the row, so it survives a hot reload. */
+  isAlerted?: true
 }
+
+/** A tool call in flight: the tool, its main argument cut short, and when it started. */
+export type Activity = { tool: string; detail: string; since: number }
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed'
 

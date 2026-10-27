@@ -1,7 +1,7 @@
 // Pure logic: no `$`, so a test calls it directly.
 import type { AgentInfo } from 'claude-code'
 
-import type { AgentRow, Task, TaskStatus } from '../types'
+import type { Activity, AgentRow, Task, TaskStatus } from '../types'
 
 /** A loop that is not over: it may still run a turn. */
 export const isActive = (status: string) =>
@@ -60,7 +60,7 @@ export const nextHue = (rows: AgentRow[]) => {
 /** The row an `agent.spawn` answer starts, before the engine lists it. */
 export const spawnedRow = (
   rows: AgentRow[],
-  spawn: { id: string; parentId?: string; type: string; description: string },
+  spawn: { id: string; parentId?: string; type: string; description: string; model?: string },
   at: number,
 ): AgentRow[] => {
   const known = rows.find(row => row.id === spawn.id)
@@ -72,6 +72,9 @@ export const spawnedRow = (
     status: 'running',
     startedAt: known?.startedAt ?? at,
     hue: known?.hue ?? nextHue(rows),
+    model: spawn.model ?? known?.model,
+    calls: known?.calls ?? 0,
+    tokens: known?.tokens ?? 0,
   }
 
   return [...rows.filter(one => one.id !== row.id), row]
@@ -97,6 +100,11 @@ export const mergeListed = (rows: AgentRow[], listed: readonly AgentInfo[], at: 
       startedAt: row?.startedAt ?? at,
       endedAt: isActive(info.status) ? undefined : wasActive ? at : row?.endedAt ?? at,
       hue: row?.hue ?? nextHue(next),
+      model: row?.model,
+      calls: row?.calls ?? 0,
+      tokens: row?.tokens ?? 0,
+      activity: isActive(info.status) ? row?.activity : undefined,
+      isAlerted: row?.isAlerted,
     }
     if (i === -1) next.push(merged)
     else next[i] = merged
@@ -184,3 +192,90 @@ export const bar = (done: number, total: number, width: number) => {
   const filled = total > 0 ? Math.round((cells * Math.min(done, total)) / total) : 0
   return '▰'.repeat(filled) + '▱'.repeat(cells - filled)
 }
+
+/** The argument that names what a tool call does, per tool; none for the rest. */
+const MAIN_ARG: Record<string, string> = {
+  Bash: 'command',
+  Read: 'file_path',
+  Edit: 'file_path',
+  Write: 'file_path',
+  Grep: 'pattern',
+  Glob: 'pattern',
+  Agent: 'description',
+  WebFetch: 'url',
+  WebSearch: 'query',
+}
+
+/** A tool call as the activity line names it: the tool, and its main argument cut to `width`. */
+export const summarizeCall = (tool: string, args: Record<string, unknown>, width = 40): Pick<Activity, 'tool' | 'detail'> => {
+  const key = MAIN_ARG[tool]
+  const raw = key === undefined ? undefined : args[key]
+  const detail = typeof raw === 'string' ? fit(raw.replace(/\s+/g, ' ').trim(), width) : ''
+
+  return { tool, detail }
+}
+
+const onRow = (rows: AgentRow[], agentId: string, change: (row: AgentRow) => AgentRow) =>
+  rows.map(row => (row.id === agentId ? change(row) : row))
+
+export const callStarted = (rows: AgentRow[], agentId: string, activity: Activity) =>
+  onRow(rows, agentId, row => ({ ...row, activity }))
+
+export const callEnded = (rows: AgentRow[], agentId: string) =>
+  onRow(rows, agentId, row => ({ ...row, activity: undefined, calls: row.calls + 1 }))
+
+type Usage = {
+  input_tokens?: number
+  output_tokens?: number
+  cache_read_input_tokens?: number
+  cache_creation_input_tokens?: number
+}
+
+/** A turn's tokens, the four counts summed; none while the turn had no usage. */
+export const tokensOf = (usage?: Usage) =>
+  usage === undefined
+    ? 0
+    : (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0)
+
+export const turnCounted = (rows: AgentRow[], agentId: string, tokens: number, model?: string) =>
+  onRow(rows, agentId, row => ({ ...row, tokens: row.tokens + tokens, model: model ?? row.model }))
+
+export const tokensText = (n: number) =>
+  n < 1_000 ? String(n) : n < 1_000_000 ? `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}k` : `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+
+/** How long a call in flight is named: past this it shows its elapsed time. */
+const SLOW_CALL_MS = 5_000
+
+/** The caption under a running row: the call in flight, its calls so far, its tokens. */
+export const activityLine = (row: AgentRow, at: number) => {
+  const parts: string[] = []
+  if (row.activity) {
+    const slow = at - row.activity.since > SLOW_CALL_MS ? ` (${elapsed(at - row.activity.since)})` : ''
+    parts.push(`${row.activity.tool}${row.activity.detail ? `: ${row.activity.detail}` : ''}${slow}`)
+  }
+  parts.push(`${row.calls} call${row.calls === 1 ? '' : 's'}`)
+  if (row.tokens > 0) parts.push(`${tokensText(row.tokens)} tok`)
+
+  return parts.join(' · ')
+}
+
+/** Rows that just ended badly: failed or killed now, active before (or new), and not yet alerted. */
+export const endedBadly = (before: AgentRow[], after: AgentRow[]) => {
+  const was = new Map(before.map(row => [row.id, row]))
+  return after.filter(row => {
+    if (row.isAlerted || (row.status !== 'failed' && row.status !== 'killed')) return false
+    const old = was.get(row.id)
+    return old === undefined || isActive(old.status)
+  })
+}
+
+export const markAlerted = (rows: AgentRow[], ids: Iterable<string>) => {
+  const set = new Set(ids)
+  return rows.map(row => (set.has(row.id) ? { ...row, isAlerted: true as const } : row))
+}
+
+export const alertText = (row: AgentRow) =>
+  `${row.type} · ${row.description} ${row.status === 'failed' ? 'failed' : 'was stopped'}`
+
+/** The status-line entry; none at zero, which clears it. */
+export const runningText = (n: number) => (n === 0 ? undefined : `${n} agent${n === 1 ? '' : 's'} running`)

@@ -5,9 +5,12 @@ A Claude Code mod that keeps an **Agents** pane beside the chat: every subagent 
 - **Running**: the subagents whose loop is not over (`pending`, `running`, `waiting`, `idle`), newest first, nested under the agent that spawned them. Each row: its icon, its type, the task it was given, and the time it has run.
 - **Completed**: the ones that ended (`completed`, `failed`, `killed`), dim, with the time they took and a mark: `✓` completed, `✗` failed, `⏹` stopped.
 - **One color and one icon per agent**, kept for the session: `●` `◆` `▲` `■` `★` `⬢` `✦` `◉`, each in its own theme color, so they follow your light or dark theme. The icon pulses (solid, hollow, solid) while the agent runs, stays hollow while it waits to run, and stays solid once it ended.
+- **Under a running row**, what it is doing: the tool call in flight with its main argument (`Bash: ls -la`, with its elapsed time once it runs past five seconds), how many calls it has made, and its tokens so far.
 - **Click a row** to open that agent's transcript in the main view; click it again to come back.
+- **A toast** when a subagent fails or is stopped, once, within a second of its end.
+- **The status line** under the prompt says `2 agents running` while any does.
 - `/agent-watch` opens the pane when it is closed.
-- **A progress bar above the prompt**: `▰▰▰▱▱ 3/5` of Claude's live task list (`TodoWrite`, `TaskCreate`/`TaskUpdate`, or the desktop app's plan list), the step in progress beside it, green and `all done` once every step is, and the pulsing icon of each running subagent with their count. The band stays empty while there is no task list and nothing runs.
+- **A progress bar above the prompt**: `▰▰▰▱▱ 3/5` of Claude's live task list (`TodoWrite`, `TaskCreate`/`TaskUpdate`, or the desktop app's plan list), the step in progress beside it, green and `all done` once every step is, and the pulsing icon of each running subagent with their count. The band stays empty while there is no task list and nothing runs. Click an icon to open that agent's transcript, and the step text to open the Agents pane.
 
 ## Install
 

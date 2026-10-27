@@ -2,10 +2,24 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { registerBand } from './band'
-import { applyPlan, isActive, mergeListed, spawnedRow } from './model'
+import {
+  alertText,
+  applyPlan,
+  callEnded,
+  callStarted,
+  endedBadly,
+  isActive,
+  markAlerted,
+  mergeListed,
+  runningText,
+  spawnedRow,
+  summarizeCall,
+  tokensOf,
+  turnCounted,
+} from './model'
 import type { PlanUpdate } from './model'
 import { PANE, TITLE, renderPane } from './view'
-import type { Task } from '../types'
+import type { AgentRow, Task } from '../types'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
 // in that same file, so each module declares the atoms it uses.
@@ -23,10 +37,35 @@ const TICK_MS = 1_000
 /** How often a running agent's icon pulses. */
 export const FRAME_MS = 400
 
+/** The status-line text last set, so the entry is written only when it changes. */
+let lastStatus: string | undefined
+
+/** `N agents running` under the prompt; cleared at zero. */
+const syncStatus = async ($: EngineInterface) => {
+  const rows = await read($, agents)
+  const text = runningText(rows.filter(row => isActive(row.status)).length)
+  if (text !== lastStatus) {
+    lastStatus = text
+    $.ui.status(text)
+  }
+}
+
+/**
+ * The rows brought up to date with `$.agent.list()`. An agent that just
+ * failed or was stopped is toasted once: found inside the updater, which
+ * may run twice on a version miss, so the ids are collected in a map.
+ */
 const refresh = async ($: EngineInterface) => {
   const [listed, at] = await Promise.all([$.agent.list(), $.clock.now()])
-  await update($, agents, rows => mergeListed(rows, listed, at))
+  const alerts = new Map<string, AgentRow>()
+  await update($, agents, rows => {
+    const next = mergeListed(rows, listed, at)
+    for (const row of endedBadly(rows, next)) alerts.set(row.id, row)
+    return markAlerted(next, alerts.keys())
+  })
   await update($, now, () => at)
+  for (const row of alerts.values()) $.ui.toast(alertText(row), { timeoutMs: 8_000 })
+  await syncStatus($)
 }
 
 export const register: Register = on => {
@@ -72,9 +111,10 @@ export const register: Register = on => {
     const ran = await next(e)
     if (ran.deny === undefined && ran.agentId) {
       const at = await $.clock.now()
-      const spawn = { id: ran.agentId, parentId: e.parentAgentId, type: e.subagentType, description: e.description }
+      const spawn = { id: ran.agentId, parentId: e.parentAgentId, type: e.subagentType, description: e.description, model: ran.model }
       await update($, agents, rows => spawnedRow(rows, spawn, at))
       await update($, now, () => at)
+      await syncStatus($)
     }
 
     return ran
@@ -88,17 +128,44 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     const done = await next(e)
-    if (e.agentId) await refresh($).catch(() => undefined)
+    if (e.agentId) {
+      const id = e.agentId
+      const tokens = tokensOf(e.usage)
+      const model = e.usage?.model
+      await update($, agents, rows => turnCounted(rows, id, tokens, model)).catch(() => undefined)
+      await refresh($).catch(() => undefined)
+    }
 
     return done
+  })
+
+  // The moment a subagent stops, before the one-second tick would see it.
+  on('classic.SubagentStop', async ($, e, next) => {
+    await refresh($).catch(() => undefined)
+
+    return next(e)
   })
 
   // The main loop's task list: TodoWrite, TaskCreate/TaskUpdate, or the
   // desktop app's plan tools. One hook for every tool: a matcher would make
   // TypeScript expand every connected MCP tool's type, past its depth.
   on('tool.call', async ($, e, next) => {
+    // In a subagent's loop: the call in flight is its activity, and counted
+    // once it ended, a deny or a throw included.
+    if (e.agentId) {
+      const id = e.agentId
+      const since = await $.clock.now()
+      const { tool, detail } = summarizeCall(String(e.tool), e as unknown as Record<string, unknown>)
+      await update($, agents, rows => callStarted(rows, id, { tool, detail, since })).catch(() => undefined)
+      try {
+        return await next(e)
+      } finally {
+        await update($, agents, rows => callEnded(rows, id)).catch(() => undefined)
+      }
+    }
+
     const ran = await next(e)
-    if (e.agentId || ran.deny !== undefined || ran.isError) return ran
+    if (ran.deny !== undefined || ran.isError) return ran
 
     const name = String(e.tool)
     if (e.tool === 'TodoWrite') {

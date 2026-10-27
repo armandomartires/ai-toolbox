@@ -15,16 +15,39 @@ const PANE = {
   },
 } as const
 
-/** The engine beneath the mod: a list of agents the test moves. */
-const engine = (on: On, listed: { value: AgentInfo[] }) => {
+/** What the mod said to the engine's UI: toasts, status-line texts, views, pane opens. */
+type Said = { toasts: string[]; statuses: (string | undefined)[]; views: unknown[]; opens: string[] }
+
+/** The engine beneath the mod: a list of agents the test moves, and what the mod said. */
+const engine = (on: On, listed: { value: AgentInfo[] }): Said => {
+  const said: Said = { toasts: [], statuses: [], views: [], opens: [] }
   on('command.register', (_, e) => ({ value: { command: e.name } }))
-  on('ui.open', () => ({ value: { isPlaced: true } }))
-  on('ui.view', () => ({ value: {} }))
+  on('ui.open', (_, e) => {
+    said.opens.push(e.id)
+    return { value: { isPlaced: true } }
+  })
+  on('ui.view', (_, e) => {
+    said.views.push(e)
+    return { value: {} }
+  })
+  on('ui.toast', (_, e) => {
+    said.toasts.push(e.text)
+    return { value: undefined }
+  })
+  on('ui.status', (_, e) => {
+    said.statuses.push(e.text)
+    return { value: undefined }
+  })
+  on('classic.SubagentStop', () => ({}))
   on('agent.list', () => ({ value: listed.value }))
   on('agent.spawn', (_, e) => ({ model: 'm', agentId: `id-${e.description}` }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('turn.complete', (_, e) => ({ text: e.answer }))
+
+  return said
 }
+
+const STOP = { stop_hook_active: false, agent_id: 'id-Find hooks', agent_transcript_path: '/t', agent_type: 'Explore' }
 
 test('the pane shows a spawned agent under Running, then under Completed', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
@@ -143,6 +166,90 @@ test('the band shows the task list as a bar and the running agents, and nothing 
   ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, hasSurvey: true }, surface: 'terminal' })
   expect((await ui.find({ type: 'Text' }))?.text).toBe('engine')
   await ui.unmount()
+})
+
+test('the pane shows what a running agent is doing: its call, its calls, its tokens', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  on('tool.call', () => ({ result: {} }))
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'running' }]
+
+  const caption = async (surface: 'terminal' | 'desktop') => {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    const text = (await ui.find({ type: 'Text', text: /^  \d+ calls?/ }))?.text
+    await ui.unmount()
+    return text
+  }
+  // No call yet: no caption.
+  expect(await caption('terminal')).toBeUndefined()
+  // The engine stub answers a call at once, so one call has ended.
+  await $.tool.call({ tool: 'Bash', command: 'ls -la', agentId: 'id-Find hooks' })
+  expect(await caption('terminal')).toBe('  1 call')
+  await $.turn.complete({
+    agentId: 'id-Find hooks',
+    reason: 'answer',
+    answer: 'done',
+    durationMs: 1,
+    isAborted: false,
+    turnId: 't1',
+    usage: { input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: 'm1' },
+  })
+  await clock.advance(1_000)
+  for (const surface of ['terminal', 'desktop'] as const) expect(await caption(surface)).toBe('  1 call · 1.2k tok')
+})
+
+test('a failed agent raises one toast, at once on SubagentStop', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  const listed = { value: [] as AgentInfo[] }
+  const said = engine(on, listed)
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'running' }]
+  await clock.advance(1_000)
+  expect(said.toasts).toEqual([])
+
+  listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'failed' }]
+  await $.classic.SubagentStop(STOP)
+  // No clock advance: the stop itself raised it.
+  expect(said.toasts).toEqual(['Explore · Find hooks failed'])
+  await clock.advance(5_000)
+  await $.classic.SubagentStop(STOP)
+  expect(said.toasts.length).toBe(1)
+})
+
+test('band buttons open the agent and the pane; the status line counts the running', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  const listed = { value: [] as AgentInfo[] }
+  const said = engine(on, listed)
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: [{ content: 'Draw the band', status: 'in_progress' }] } as AppTool)
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'running' }]
+  await clock.advance(1_000)
+  expect(said.statuses).toEqual(['1 agent running'])
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...BAND, surface })
+    const opensBefore = said.opens.length
+    await ui.press({ key: 'band-agent-id-Find hooks' })
+    expect(said.views).toContainEqual({ agentId: 'id-Find hooks' })
+    await ui.press({ key: 'band-step' })
+    expect(said.opens.length).toBe(opensBefore + 1)
+    expect(said.opens[said.opens.length - 1]).toBe('agent-watch')
+    await ui.unmount()
+  }
+
+  listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'completed' }]
+  await $.classic.SubagentStop(STOP)
+  expect(said.statuses).toEqual(['1 agent running', undefined])
 })
 
 test('/agent-watch opens the pane', async ($, on) => {

@@ -405,6 +405,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0180-compass-goals-under-ai.md
 - [x] TASK-0181 — agent-watch: a subagents pane and a task-progress band
   .ai/tasks/TASK-0181-agent-watch-mod.md
+- [x] TASK-0182 — agent-watch 0.2.0: live activity, failure alerts, band interactions
+  .ai/tasks/TASK-0182-agent-watch-live.md
 - [x] TASK-0184 — Harmonize every task into .ai/GOALS.md, and make keeping it current a rule
   .ai/tasks/TASK-0184-goals-md-harmonized.md
 

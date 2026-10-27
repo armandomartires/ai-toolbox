@@ -2,7 +2,7 @@ import { atom, read } from 'claude-code'
 import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { AgentRow } from '../types'
-import { colorOf, elapsed, fit, groupAgents, iconOf, isActive, nested, outcomeOf } from './model'
+import { activityLine, colorOf, elapsed, fit, groupAgents, iconOf, isActive, nested, outcomeOf } from './model'
 
 // The same $.state values register.tsx writes: the engine lists a module's
 // reads and writes from atoms declared in that file.
@@ -39,8 +39,11 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
       Math.max(8, cols - indent.length - time.length - outcome.length - 4),
     )
     const show = () => void $.ui.view(isViewed ? {} : { agentId: row.id })
+    // Under a running row, what it is doing: the call in flight, calls, tokens.
+    const caption = active && (row.activity || row.calls > 0 || row.tokens > 0) ? activityLine(row, at) : ''
 
     return (
+      <Box flexDirection="column">
       <Box flexDirection="row">
         <Box flexShrink={0}>
           <Text color={color} dimColor={!active}>
@@ -56,6 +59,12 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
           {outcome !== '' && <Text color={outcomeColor(row.status)}>{` ${outcome}`}</Text>}
           <Text dimColor tabular size="caption">{` ${time}`}</Text>
         </Box>
+      </Box>
+      {caption !== '' && (
+        <Text dimColor size="caption" wrap="truncate-end">
+          {`${indent}  ${caption}`}
+        </Text>
+      )}
       </Box>
     )
   }
