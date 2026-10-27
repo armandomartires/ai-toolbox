@@ -93,13 +93,13 @@ test('a project-workflow project shows its open sprints, centred and current', a
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
-    expect(await text(/S087–S089 open · 88 sprints/)).toBeDefined()
+    expect(await text(/S087–S089 OPEN · 88 SPRINTS/)).toBeDefined()
     expect(await text(/S087 Net Box Network/)).toBeDefined()
     expect(await text(/S088 Project Vault/)).toBeDefined()
     expect(await text(/S089 Owner Step Tiers/)).toBeDefined()
     // Every open sprint is current; the closed ones are one scroll away.
     expect((await ui.findAll({ type: 'Text', text: '◉' })).length).toBe(3)
-    expect(await text(/‹ 85 earlier/)).toBeDefined()
+    expect(await text(/‹ 85 EARLIER/)).toBeDefined()
     expect(await text(/Site To Site Tunnel/)).toBeDefined()
     expect(await text(/late/)).toBeUndefined()
     await ui.unmount()

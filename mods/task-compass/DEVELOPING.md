@@ -4,9 +4,10 @@
 
 ## Modules
 
-- `hooks/model.ts`: pure logic (parse sprints, status table `STATUS`, sticky colors, `setStoryStatus`, `applyPlan`, `guessStory`, `wrap`). Tested directly in `register.test.tsx`.
+- `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
+- `hooks/model.ts`: pure logic (parse sprints, status table `STATUS` on SIGMAorbital tokens, `setStoryStatus`, `applyPlan`, `guessStory`, `wrap`). Tested directly in `register.test.tsx`.
 - `hooks/rails.ts`: pure layout of the pane: `focusOf`, `carousel`, `columnRows` (rows, cards, progress, folding), sprint dates. Tested directly in `rails.test.ts`.
-- `hooks/view.tsx`: the `ui.render` pane, drawing what `rails.ts` lays out.
+- `hooks/view.tsx`: the `ui.render` pane, drawing what `rails.ts` lays out, and `renderOutput`, `/compass` and `/goals` drawn as panels from the results `register.tsx` keeps with `remember`.
 - `hooks/plan.ts`: pure reading of a project-workflow `.ai/` layer: `layoutOf`, `parseRoadmap`, `briefStory`, `statusOfRaw`, `planSprints` (open sprints last). Tested directly in `plan.test.ts`.
 - `hooks/register.tsx`: the hooks, the `story` tool, board loading (`<layout root>/GOALS.md`, else a root `GOALS.md` copied there, else the `.ai/` layer, re-reading only the briefs whose mtime or size moved), subagent tracking. It is the only module that knows the source (`source` in `$.state`), and it writes only when the source is `goals`. Its `.ai/` behaviour is tested in `layer.test.tsx`.
 - `types/index.d.ts`: the `$.state` contract.
@@ -20,11 +21,11 @@ Its shape is the locked brief `docs/design/task-compass-ai-planning-brief.md`; c
 
 ## Statuses
 
-Statuses map to fixed `GOALS.md` markers: plain item = backlog, `[ ]` todo, `[>]` in_progress, `[?]` review, `[!]` blocked, `[x]` done. Colors are theme keys (`inactive`, `suggestion`, `warning`, `merged`, `error`, `success`), so they follow light and dark.
+Statuses map to fixed `GOALS.md` markers: plain item = backlog, `[ ]` todo, `[>]` in_progress, `[?]` review, `[!]` blocked, `[x]` done. Colours are SIGMAorbital tokens (`text-3`, `text-2`, `cyan`, `amber`, `red`, `text-1`), drawn as exact hex for the theme the host is set to (`syncTheme`, `watchTheme`). Rows and cards carry token names; `view.tsx` turns them into hex.
 
 ## How it meets the guide's traps
 
 - The model reads the board from the `story` tool's description, re-described when `GOALS.md` changes.
 - The story tool is answered from the general `tool.call` hook by comparing `e.tool` with `mcp__task-compass__story`.
 - Cards open on a click on a dot's name, a plain `Button`; the dot stays a `Text` outside it. The open card sits in its column's flow under its story, so the rows below slide down. The tree fills the pane with `minHeight` of `e.props.scroll.bodyRows`, not the viewport's rows.
-- On a desktop the rail is the left edge of a bordered `Box` clipped by a one-cell `overflow="hidden"` Box (`railRun`), and cards are four straight edges (`squareFrame` in `view.tsx`); the terminal keeps `│` text.
+- On a desktop the rail is the left edge of a bordered `Box` clipped by a one-cell `overflow="hidden"` Box (`railRun`), and cards are four straight edges (`frame` from `sigma.tsx`); the terminal keeps `│` text.

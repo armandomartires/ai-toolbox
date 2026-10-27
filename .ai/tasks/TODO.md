@@ -234,6 +234,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0187 — switchboard 0.3.0: a switch-style toggle, skills listed, app servers protected
 - [x] TASK-0188 — SIGMAorbital for mods: one shared design module, its gate, ADR-0043
 - [x] TASK-0189 — agent-watch 0.3.0 on SIGMAorbital
+- [x] TASK-0190 — task-compass 0.4.0 on SIGMAorbital
 
 ## Post-S9 (superseded by the promotion above)
 

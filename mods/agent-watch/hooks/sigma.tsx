@@ -287,8 +287,8 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
     const { on, off } = segments(done, total, width)
     return (
       <Box flexDirection="row" flexShrink={0}>
-        <Text color={color(token)}>{on}</Text>
-        <Text color={color('line')}>{off}</Text>
+        {on !== '' && <Text color={color(token)}>{on}</Text>}
+        {off !== '' && <Text color={color('line')}>{off}</Text>}
       </Box>
     )
   }

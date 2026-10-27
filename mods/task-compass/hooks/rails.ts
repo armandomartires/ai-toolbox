@@ -1,5 +1,6 @@
 import type { Focus, Sprint, Status, Story, Task } from '../types'
 import { currentSprint, guessStory, STATUS, STATUSES, taskStatus, wrap } from './model'
+import type { Token } from './sigma'
 
 /** The narrowest a sprint's column gets, and the most columns shown. */
 export const COLUMN_MIN = 22
@@ -9,9 +10,9 @@ export const RAIL_GUTTER = 2
 const BAR = 5
 const DAY_MS = 86_400_000
 
-export type CardLine = { text: string; color?: string; bold?: boolean; dim?: boolean }
+export type CardLine = { text: string; color?: Token; bold?: boolean; dim?: boolean }
 
-export type Card = { color: string; lines: CardLine[] }
+export type Card = { color: Token; lines: CardLine[] }
 
 /**
  * One row of a sprint's column: a dot and its name, a live task, a progress
@@ -23,10 +24,10 @@ export type Row = {
   /** `'│ '` hangs the row off the rail, as a live task does. */
   prefix: string
   glyph: string
-  color: string
+  /** SIGMAorbital tokens: the glyph's, and the name's where it differs from text-1/2/3. */
+  color: Token
   text: string
-  /** The name's own color, where it differs from the glyph's. */
-  textColor?: string
+  textColor?: Token
   bold?: boolean
   dim?: boolean
   card?: Card
@@ -244,8 +245,9 @@ export const columnRows = (one: Sprint, ctx: ColumnContext): Row[] => {
   const header: Row = {
     key: `s${one.n}`,
     prefix: '',
+    // The current sprint's mark is the screen's one peak, in white.
     glyph: ctx.isCurrent ? '◉' : STATUS[one.status].glyph,
-    color: STATUS[one.status].color,
+    color: ctx.isCurrent ? 'white' : STATUS[one.status].color,
     text: `${sprintLabel(one)} ${shortTitle(one)}`,
     bold: ctx.isCurrent,
     dim: !ctx.isCurrent && one.status === 'done',
@@ -254,8 +256,8 @@ export const columnRows = (one: Sprint, ctx: ColumnContext): Row[] => {
   const progress: Row = {
     prefix: '│ ',
     glyph: '',
-    color: 'inactive',
-    text: `${progressBar(one)}${late ? ' late' : ''}`,
+    color: 'line',
+    text: `${progressBar(one)}${late ? ' LATE' : ''}`,
     textColor: late ? STATUS.blocked.color : undefined,
     dim: !late,
   }
@@ -341,7 +343,7 @@ export const columnRows = (one: Sprint, ctx: ColumnContext): Row[] => {
 
   // A run of the rail between dots while there is room for it.
   const body = [...folded, ...stories.flatMap(storyRows)]
-  const rail: Row = { prefix: '', glyph: '│', color: 'inactive', text: '' }
+  const rail: Row = { prefix: '', glyph: '│', color: 'line', text: '' }
   const gaps = body.filter((row, i) => i > 0 && !row.prefix).length
   const isSpaced = fixed + height(body) + gaps <= ctx.room
   const spaced = isSpaced ? body.flatMap((row, i) => (i === 0 || row.prefix ? [row] : [rail, row])) : body

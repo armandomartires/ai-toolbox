@@ -1,12 +1,12 @@
 # task-compass
 
-A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, Claude's live tasks under it, and the subagents running. The sprints come from a `GOALS.md` kept in the project's `.ai/` folder, or from a project-workflow `.ai/` plan (below).
+A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, Claude's live tasks under it, and the subagents running. The sprints come from a `GOALS.md` kept in the project's `.ai/` folder, or from a project-workflow `.ai/` plan (below). It draws in SIGMAorbital (`ADR-0043`): monochrome, colour for state only, uppercase labels, its Night ops or Daylight colours following your theme setting.
 
-- **Sprints side by side**: each sprint is a vertical rail, its stories dots down the rail in file order, the current sprint marked `◉` and placed in the middle. `‹ n earlier` and `n later ›` say what doesn't fit; click them to scroll the sprints one at a time, and `↺ Sprint n of m` to go back to the current one. In the terminal, with the pane focused, `h`, `l` and `c` do the same.
-- **Progress** under each sprint's dot: `▰▰▰▱▱ 3/5` stories done, red and marked `late` once a sprint that is not done has run past the last date on its `Dates:` line.
-- **The story being worked on** is bold with `▸` (or `~` when the mod matched it from the wording of Claude's live task). Claude's live task list (`TodoWrite`, `TaskCreate`/`TaskUpdate`, or the desktop app's plan list) hangs under it as small dots.
-- **Click a name** beside a dot for a card, a pastel sticky note in the status's color that opens under it, the rows below sliding down: a story's full title, status, sprint and details; a sprint's goal, dates, days left and progress; a task's text and status. Click it again to close it. A long column folds its leading done stories into one dot, counting the open card.
-- **Subagents**: every running subagent with its type, description and elapsed time. Finished ones stay visible for a minute. Click one to open its transcript in the main view, and again to go back.
+- **Sprints side by side**: each sprint is a vertical rail, its stories dots down the rail in file order, the current sprint marked `◉` in white and placed in the middle. `‹ n EARLIER` and `n LATER ›` say what doesn't fit; click them to scroll the sprints one at a time, and `↺ SPRINT n OF m` to go back to the current one. In the terminal, with the pane focused, `h`, `l` and `c` do the same.
+- **Progress** under each sprint's dot: `▰▰▰▱▱ 3/5` stories done, red and marked `LATE` once a sprint that is not done has run past the last date on its `Dates:` line.
+- **The story being worked on** is bright (`text-1`) with `▸` (or `~` when the mod matched it from the wording of Claude's live task). Claude's live task list (`TodoWrite`, `TaskCreate`/`TaskUpdate`, or the desktop app's plan list) hangs under it as small dots.
+- **Click a name** beside a dot for a card, a square panel on `surface` with its title uppercase and its status as glyph and word in the status's colour, that opens under it, the rows below sliding down: a story's full title, status, sprint and details; a sprint's goal, dates, days left and progress; a task's text and status. Click it again to close it. A long column folds its leading done stories into one dot, counting the open card.
+- **SUBAGENTS**: every running subagent with its type, description and elapsed time, and the same glyph agent-watch gives it, coloured by its state (cyan running, `text-1` done, red failed). Finished ones stay visible for a minute. Click one to open its transcript in the main view, and again to go back.
 
 ## Install
 
@@ -20,16 +20,16 @@ Mods need Claude Code 2.1.308 or later. The pane reads `.ai/GOALS.md`; `/goals i
 
 ## Statuses
 
-| Status | In GOALS.md | Dot | Color |
+| Status | In GOALS.md | Dot | Colour (SIGMAorbital token) |
 | --- | --- | --- | --- |
-| Backlog | plain item, `- Idea` | ◌ | grey |
-| To do | `- [ ] Story` | ○ | blue |
-| In progress | `- [>] Story` | ◐ | amber |
-| In review | `- [?] Story` | ◑ | purple |
-| Blocked | `- [!] Story` | ✖ | red |
-| Done | `- [x] Story` | ● | green |
+| Backlog | plain item, `- Idea` | ◌ | dim grey (`text-3`) |
+| To do | `- [ ] Story` | ○ | grey (`text-2`) |
+| In progress | `- [>] Story` | ◐ | cyan |
+| In review | `- [?] Story` | ▲ | amber: it waits on a person |
+| Blocked | `- [!] Story` | ◆ | red |
+| Done | `- [x] Story` | ● | bright (`text-1`) |
 
-The colors are theme colors, so they follow your light or dark theme.
+The colours are SIGMAorbital's Night ops or Daylight values, picked by your theme setting.
 
 ## GOALS.md
 
@@ -74,5 +74,5 @@ A project with no `GOALS.md` (under `.ai/`, or a root one the mod has yet to cop
 
 ## Commands
 
-- `/compass` opens the pane again if you closed it.
-- `/goals init` writes a starter `.ai/GOALS.md`; `/goals` reloads the board and says where it read it from. In a `.ai/` project, `/goals` lists the open sprints and `init` writes nothing.
+- `/compass` opens the pane again if you closed it, and answers with a panel of the board's counts.
+- `/goals init` writes a starter `.ai/GOALS.md`; `/goals` reloads the board and says where it read it from, drawn as a GOALS panel of the last eight sprints with their progress. In a `.ai/` project, `/goals` lists the open sprints and `init` writes nothing.

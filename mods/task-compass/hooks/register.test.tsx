@@ -1,7 +1,10 @@
 import { expect, mock, test } from 'claude-code/testing'
-import type { AgentSpawnInput, AgentStatus, On } from 'claude-code'
+import type { AgentSpawnInput, AgentStatus, ConfigRow, On } from 'claude-code'
 
-import { applyPlan, currentSprint, guessStory, parseSprints, setStoryStatus, STICKY } from './model'
+import { applyPlan, currentSprint, guessStory, parseSprints, setStoryStatus } from './model'
+import { TOKENS } from './sigma'
+
+const DARK = TOKENS.dark
 
 const GOALS = `# Project
 
@@ -157,14 +160,17 @@ test('the timeline shows sprints side by side with cards, tasks and subagents', 
     expect(await text(/S1 Setup/)).toBeDefined()
     expect(await text(/S2 Timeline/)).toBeDefined()
     expect(await text(/S3 Sharing/)).toBeDefined()
-    expect(await text(/Sprint 2 of 3/)).toBeDefined()
+    expect(await text(/SPRINT 2 OF 3/)).toBeDefined()
     // The story in progress carries Claude's live tasks under it.
     expect(await text(/▸Draw the rails/)).toBeDefined()
     expect(await text(/1 task done/)).toBeDefined()
     expect(await text(/Render the dots/)).toBeDefined()
-    // The dots keep their status colors outside the name's Button, and the
-    // tree fills the pane's rows.
-    expect((await ui.find({ type: 'Text', text: '◐' }))?.props.color).toBe('warning')
+    // The dots keep their status colours outside the name's Button, and the
+    // tree fills the pane's rows. In progress is cyan; the current sprint's
+    // mark is white, the one peak.
+    expect((await ui.find({ type: 'Text', text: '◐' }))?.props.color).toBe(DARK.cyan)
+    expect((await ui.find({ type: 'Text', text: '◉' }))?.props.color).toBe(DARK.white)
+    expect((await ui.findAll({ type: 'Text' })).filter(one => one.props.dimColor).length).toBe(0)
     expect((await ui.find({ type: 'Button', text: /▸Draw the rails/ }))?.text).not.toContain('◐')
     expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBe(40)
     // No card is open until a dot or its name is pressed.
@@ -174,17 +180,17 @@ test('the timeline shows sprints side by side with cards, tasks and subagents', 
     expect(await card()).toBeUndefined()
     await ui.press({ key: 'st2.1' })
     expect(await text(/· One color per/)).toBeDefined()
-    // A flat pastel sticky of the story's status, filling its column (the
-    // second of three in 72 cells) right of the rail, in the flow under its
-    // story: the stories below it slide down.
+    // A SIGMAorbital panel on `surface`, filling its column (the second of
+    // three in 72 cells) right of the rail, in the flow under its story: the
+    // stories below it slide down.
     const opened = await card()
     // The card's rows: its text lines and the two its frame takes.
     const cardRows =
       (opened?.children ?? []).filter(one => typeof one === 'object' && (one as { type?: string }).type === 'Text').length + 2
-    expect(opened?.props).toMatchObject({ backgroundColor: STICKY.warning?.paper, width: 22 })
+    expect(opened?.props).toMatchObject({ backgroundColor: DARK.surface, width: 22 })
     expect(opened?.props.position).toBeUndefined()
     // A square-cornered border on the terminal; elsewhere no border, padded to the same size.
-    if (surface === 'terminal') expect(opened?.props).toMatchObject({ borderStyle: 'single', paddingX: 1 })
+    if (surface === 'terminal') expect(opened?.props).toMatchObject({ borderStyle: 'single', borderColor: DARK.line, paddingX: 1 })
     else expect(opened?.props).toMatchObject({ paddingX: 2, paddingY: 1 })
     if (surface !== 'terminal') {
       expect(opened?.props.borderStyle).toBeUndefined()
@@ -212,13 +218,14 @@ test('the timeline shows sprints side by side with cards, tasks and subagents', 
       expect(before.find(one => one.type === 'Box' && one.props.width === 2)?.text).toBe('│'.repeat(cardRows))
     } else {
       const edge = before.find(one => one.props.borderStyle === 'single')
-      expect(edge?.props).toMatchObject({ position: 'absolute', width: 3, height: cardRows + 2, borderColor: 'inactive' })
+      expect(edge?.props).toMatchObject({ position: 'absolute', width: 3, height: cardRows + 2, borderColor: DARK.line })
       expect(all.find(one => one.props.overflow === 'hidden' && one.props.height === cardRows)?.props.width).toBe(1)
     }
     // Another press opens that one instead; pressing it again closes it.
     await ui.press({ key: 'st2.3' })
     expect(await text(/· One color per/)).toBeUndefined()
-    expect((await ui.find({ type: 'Text', text: /◑ In review/ }))?.props).toMatchObject({ color: STICKY.merged?.ink, mono: true, wrap: 'truncate-end' })
+    // The status line is the status's glyph and word, in its colour: review is amber.
+    expect((await ui.find({ type: 'Text', text: /▲ IN REVIEW/ }))?.props).toMatchObject({ color: DARK.amber, mono: true, wrap: 'truncate-end' })
     await ui.press({ key: 's2' })
     expect(await text(/Goal: Show sprints/)).toBeDefined()
     await ui.press({ key: 's2' })
@@ -228,15 +235,17 @@ test('the timeline shows sprints side by side with cards, tasks and subagents', 
     const styled = await ui.findAll({ type: 'Text' })
     // (A desktop adds bold beside a semibold weight of its own accord.)
     expect(styled.every(one => one.props.bold === undefined || one.props.weight !== undefined)).toBe(true)
-    expect((await ui.find({ type: 'Text', text: /^Subagents/ }))?.props).toMatchObject({ weight: 'semibold', size: 'heading' })
-    expect((await ui.find({ type: 'Text', text: / In review$/ }))?.props.size).toBe('caption')
+    expect((await ui.find({ type: 'Text', text: /^SUBAGENTS$/ }))?.props).toMatchObject({ weight: 'bold', color: DARK['text-1'] })
+    expect((await ui.find({ type: 'Text', text: / IN REVIEW$/ }))?.props).toMatchObject({ size: 'caption', color: DARK['text-3'] })
     expect((await ui.find({ type: 'Text', text: /^ 12s$/ }))?.props).toMatchObject({ tabular: true, size: 'caption' })
     // Names and labels are cut at the edge, never wrapped onto a second row.
     expect((await ui.find({ type: 'Text', text: / S2 Timeline/ }))?.props.wrap).toBe('truncate-end')
     expect((await ui.find({ type: 'Text', text: /Explore · Find hooks/ }))?.props.wrap).toBe('truncate-end')
     // The legend and the subagent.
-    expect(await text(/In review/)).toBeDefined()
+    expect(await text(/IN REVIEW/)).toBeDefined()
     expect(await text(/Explore · Find hooks 12s/)).toBeDefined()
+    // The subagent's glyph is its identity, in its state's colour: running is cyan.
+    expect((await ui.find({ type: 'Text', text: /^■ $/ }))?.props.color).toBe(DARK.cyan)
     await ui.unmount()
   }
 })
@@ -250,13 +259,13 @@ test('earlier and later scroll the sprints like a carousel', async ($, on) => {
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: 44 } })
   const has = async (pattern: RegExp) => (await ui.find({ text: pattern })) !== undefined
   expect([await has(/S1 Setup/), await has(/S2 Timeline/), await has(/S3 Sharing/)]).toEqual([false, true, true])
-  expect(await has(/‹ 1 earlier/)).toBe(true)
-  expect(await has(/later ›/)).toBe(false)
+  expect(await has(/‹ 1 EARLIER/)).toBe(true)
+  expect(await has(/LATER ›/)).toBe(false)
 
   await ui.press({ key: 'earlier' })
   expect([await has(/S1 Setup/), await has(/S2 Timeline/), await has(/S3 Sharing/)]).toEqual([true, true, false])
-  expect(await has(/1 later ›/)).toBe(true)
-  expect(await has(/earlier/)).toBe(false)
+  expect(await has(/1 LATER ›/)).toBe(true)
+  expect(await has(/EARLIER/)).toBe(false)
 
   // Away from the current sprint, the middle label goes back to it.
   await ui.press({ key: 'current' })
@@ -380,4 +389,48 @@ test('a session started in a temporary folder describes the board of the folder 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   expect((await ui.find({ type: 'Text', text: /S2 Timeline/ }))?.text).toBeDefined()
   await ui.unmount()
+})
+
+const OUTPUT = (command: string, text: string) => ({
+  plugin: 'task-compass',
+  component: 'CommandOutput',
+  props: { command, args: '', text, isErrored: false },
+}) as const
+
+test('/compass and /goals draw as panels in the host theme; an unknown row stays text', async ($, on) => {
+  mock.clock(on)
+  engine(on, { value: 'completed' })
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'light' } as ConfigRow] }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const LIGHT = TOKENS.light
+
+  const compass = ((await $.command.run({ command: 'compass', args: '' } as never)) as { text: string }).text
+  expect(compass).toBe('Compass pane opened: 3 sprints, 8 stories.')
+  const goals = ((await $.command.run({ command: 'goals', args: '' } as never)) as { text: string }).text
+  expect(goals).toBe('Compass: 3 sprints, 8 stories loaded from /p/.ai/GOALS.md.')
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    let ui = await $.ui.mount({ ...OUTPUT('compass', compass), surface })
+    expect((await ui.find({ type: 'Text', text: /^COMPASS$/ }))?.props.color).toBe(LIGHT['text-1'])
+    expect((await ui.find({ type: 'Text', text: /^8$/ }))?.props.tabular).toBe(true)
+    await ui.unmount()
+
+    ui = await $.ui.mount({ ...OUTPUT('goals', goals), surface })
+    expect((await ui.find({ type: 'Text', text: /^GOALS$/ }))?.props.color).toBe(LIGHT['text-1'])
+    expect(await ui.find({ text: /3 SPRINTS/ })).toBeDefined()
+    // The current sprint is marked white, the others by their status.
+    expect((await ui.find({ type: 'Text', text: '◉' }))?.props.color).toBe(LIGHT.white)
+    expect((await ui.find({ type: 'Text', text: /Timeline$/ }))?.props.color).toBe(LIGHT['text-1'])
+    expect((await ui.find({ type: 'Text', text: /^0\/5$/ }))?.props.tabular).toBe(true)
+    expect((await ui.findAll({ type: 'Text' })).filter(one => one.text === '').length).toBe(0)
+    await ui.unmount()
+  }
+
+  const old = await $.ui.mount({ ...OUTPUT('goals', 'Compass: 2 sprints, 4 stories loaded from /x.'), surface: 'terminal' })
+  expect((await old.find({ type: 'Text' }))?.text).toBe('engine')
+  await old.unmount()
 })

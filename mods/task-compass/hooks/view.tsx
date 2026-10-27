@@ -1,10 +1,11 @@
 import { atom, read, update } from 'claude-code'
-import type { On } from 'claude-code'
+import type { EngineInterface, On, RenderInput } from 'claude-code'
 
-import type { AgentRow } from '../types'
-import { elapsed, fit, isActive, STATUS, STATUSES, STICKY_MUTED, STICKY_TEXT, stickyOf } from './model'
-import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, focusOf, isRailRow, RAIL_GUTTER } from './rails'
+import type { AgentRow, Sprint, Status } from '../types'
+import { elapsed, fit, isActive, STATUS, STATUSES } from './model'
+import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, focusOf, isRailRow, RAIL_GUTTER, sprintLabel } from './rails'
 import type { Row } from './rails'
+import { IDENTITY, agentState, color, kit, recall } from './sigma'
 
 // The same $.state values register.tsx writes: the engine lists a module's
 // reads and writes from atoms declared in that file.
@@ -22,30 +23,94 @@ export const PANE = 'task-compass'
 const GOALS_FILE = 'GOALS.md'
 const AGENTS_SHOWN = 6
 
-const agentGlyph = (status: string) =>
-  status === 'running'
-    ? '◐'
-    : status === 'pending' || status === 'waiting'
-      ? '○'
-      : status === 'idle'
-        ? '◌'
-        : status === 'completed'
-          ? '●'
-          : '✖'
+/**
+ * A subagent's glyph, as agent-watch draws it: its identity by the order it
+ * was first seen, hollow while it waits and solid otherwise. Its colour is
+ * its state (`agentState`).
+ */
+const agentGlyph = (index: number, status: string) => {
+  const pair = IDENTITY[index % IDENTITY.length] ?? IDENTITY[0]!
+  return isActive(status) && status !== 'running' ? pair[1] : pair[0]
+}
 
-const agentColor = (status: string) =>
-  status === 'running'
-    ? 'warning'
-    : isActive(status)
-      ? 'suggestion'
-      : status === 'completed'
-        ? 'success'
-        : 'error'
+/** What `/compass` answers; what `/goals` answers, a sprint per row. */
+export type CompassOutput = { isPlaced: boolean; sprints: number; stories: number }
+export type GoalsOutput = {
+  from: string
+  sprints: { label: string; title: string; status: Status; done: number; total: number; isCurrent: boolean }[]
+}
+
+/** A sprint as `/goals` draws it. */
+export const goalsRow = (sprint: Sprint, isCurrent: boolean): GoalsOutput['sprints'][number] => ({
+  label: sprintLabel(sprint),
+  title: sprint.title,
+  status: sprint.status,
+  done: sprint.stories.filter(story => story.status === 'done').length,
+  total: sprint.stories.length,
+  isCurrent,
+})
+
+/** The sprints `/goals` draws: the last ones, the current one included. */
+const GOALS_SHOWN = 8
+
+/**
+ * `/compass` and `/goals` as SIGMAorbital panels; none for a row this
+ * session did not answer (a resume, a reload), which the engine draws as
+ * text. Declarations: the engine follows `$` past an import only into one.
+ */
+export function renderOutput($: EngineInterface, e: RenderInput<'CommandOutput'>) {
+  if (e.props.isErrored) return undefined
+  const kept = recall<CompassOutput | GoalsOutput>(e.props.text)
+  if (kept === undefined) return undefined
+  const ui = $.ui.resolve(e)
+  const { Box, Text } = ui
+  const { label, meter, panel, value } = kit(ui, e.surface)
+  const width = Math.min(72, e.viewport?.columns ?? 72)
+
+  if ('isPlaced' in kept) {
+    return panel(
+      { title: 'Compass', code: kept.isPlaced ? 'pane open' : 'no pane here', width },
+      <Box flexDirection="row" columnGap={2}>
+        {label('Sprints')}
+        {value(String(kept.sprints))}
+        {label('Stories')}
+        {value(String(kept.stories))}
+      </Box>,
+    )
+  }
+  const shown = kept.sprints.slice(-GOALS_SHOWN)
+  return panel(
+    { title: 'Goals', code: `${kept.sprints.length} sprints`, width },
+    <Box flexDirection="column">
+      <Text color={color('text-3')} size="caption" wrap="truncate-end">{kept.from}</Text>
+      {kept.sprints.length > shown.length && label(`${kept.sprints.length - shown.length} earlier not shown`)}
+      {shown.map(one => (
+        <Box flexDirection="row" columnGap={1}>
+          <Box flexShrink={0}>
+            <Text color={color(one.isCurrent ? 'white' : STATUS[one.status].color)}>{one.isCurrent ? '◉' : STATUS[one.status].glyph}</Text>
+          </Box>
+          <Box flexShrink={0} width={6}>
+            {label(one.label)}
+          </Box>
+          <Box flexGrow={1} flexShrink={1}>
+            <Text color={color(one.isCurrent ? 'text-1' : 'text-2')} wrap="truncate-end">{one.title}</Text>
+          </Box>
+          {meter(one.done, one.total, 5)}
+          {value(`${one.done}/${one.total}`)}
+        </Box>
+      ))}
+    </Box>,
+  )
+}
 
 /** The Compass pane: the sprint carousel, a legend, the subagents. */
-export const registerPane = (on: On) =>
+export const registerPane = (on: On) => {
+  on('ui.render', { component: 'CommandOutput', props: { command: 'compass' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
+  on('ui.render', { component: 'CommandOutput', props: { command: 'goals' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Button, Text } = $.ui.resolve(e)
+    const ui = $.ui.resolve(e)
+    const { Box, Button, Text } = ui
+    const { frame, panel } = kit(ui, e.surface)
     const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled, from] = await Promise.all([
       read($, sprints),
       read($, focus),
@@ -79,7 +144,7 @@ export const registerPane = (on: On) =>
       isTerminal ? (
         <Box flexDirection="column" width={1}>
           {Array.from({ length: height }, () => (
-            <Text color="inactive">│</Text>
+            <Text color={color('line')}>│</Text>
           ))}
         </Box>
       ) : (
@@ -91,29 +156,10 @@ export const registerPane = (on: On) =>
             width={3}
             height={height + 2}
             borderStyle="single"
-            borderColor="inactive"
+            borderColor={color('line')}
           />
         </Box>
       )
-
-    // A square frame for a desktop card, `height` rows tall and as wide as the
-    // card: each edge is one straight side of a bordered Box, clipped to a
-    // strip one cell thick with the rounded corners pushed outside the clip.
-    // The four lines meet at the card's own corners, square. Drawn first, so
-    // the card's text paints over any of it.
-    const squareFrame = (height: number, color: string) => {
-      const side = (clip: { top: number; left: number; width: number; height: number }, inner: { top: number; left: number; width: number; height: number }) => (
-        <Box position="absolute" {...clip} overflow="hidden">
-          <Box position="absolute" {...inner} borderStyle="single" borderColor={color} />
-        </Box>
-      )
-      return [
-        side({ top: 0, left: 0, width: cardWidth, height: 1 }, { top: 0, left: -1, width: cardWidth + 2, height: 3 }),
-        side({ top: height - 1, left: 0, width: cardWidth, height: 1 }, { top: -2, left: -1, width: cardWidth + 2, height: 3 }),
-        side({ top: 0, left: 0, width: 1, height }, { top: -1, left: 0, width: 3, height: height + 2 }),
-        side({ top: 0, left: cardWidth - 1, width: 1, height }, { top: -1, left: -2, width: 3, height: height + 2 }),
-      ]
-    }
 
     const drawRow = (row: Row) => {
       if (isRailRow(row)) return railRun(1)
@@ -127,14 +173,15 @@ export const registerPane = (on: On) =>
       // a second row, and the dot never gives up its cell.
       const glyph = row.glyph ? (
         <Box flexShrink={0}>
-          <Text color={row.color}>{row.glyph}</Text>
+          <Text color={color(row.color)}>{row.glyph}</Text>
         </Box>
       ) : null
+      // Brightness is the hierarchy: the focus and the current sprint in
+      // text-1, a finished or parked one in text-3, the rest text-2.
       const name = row.text ? (
         <Text
-          color={row.textColor}
+          color={color(row.textColor ?? (row.bold ? 'text-1' : row.dim ? 'text-3' : 'text-2'))}
           weight={row.bold ? 'semibold' : undefined}
-          dimColor={row.dim}
           wrap="truncate-end"
         >
           {`${row.glyph ? ' ' : ''}${fit(row.text, Math.max(4, columnWidth - row.prefix.length - 3))}`}
@@ -168,10 +215,10 @@ export const registerPane = (on: On) =>
 
       // The card opens in the flow under its dot, so the rows below slide down
       // to make room, and beside the rail, which runs on past it as it does
-      // past the live tasks. A flat pastel sticky note: theme colors would
-      // not read on it, so a line's color becomes the sticky's ink and a dim
-      // line a muted ink.
-      const sticky = stickyOf(row.card.color)
+      // past the live tasks. A SIGMAorbital panel: `surface` behind a square
+      // `line` frame, the title uppercase in text-1, the status in its colour
+      // with its glyph, the rest text-2 and text-3.
+      const fill = color('surface')
       return (
         <Box flexDirection="column">
           {dot}
@@ -180,26 +227,26 @@ export const registerPane = (on: On) =>
               {railRun(cardHeight(row.card))}
             </Box>
             {/* The terminal draws `single` with square corners, ┌┐. A desktop
-                rounds every border whatever its style, so there the note is
-                padded paper framed by four straight edges laid over it. */}
+                rounds every border whatever its style, so there the panel is
+                padded and framed by four straight edges laid over it. */}
             <Box
               width={cardWidth}
               flexDirection="column"
-              backgroundColor={sticky.paper}
+              backgroundColor={fill}
               {...(isTerminal
-                ? { borderStyle: 'single', borderColor: sticky.ink, paddingX: 1 }
+                ? { borderStyle: 'single', borderColor: color('line'), paddingX: 1 }
                 : { paddingX: 2, paddingY: 1 })}
             >
-              {!isTerminal && squareFrame(cardHeight(row.card), sticky.ink)}
+              {!isTerminal && frame(cardWidth, cardHeight(row.card))}
               {row.card.lines.map(line => (
                 <Text
-                  color={line.color ? sticky.ink : line.dim ? STICKY_MUTED : STICKY_TEXT}
-                  backgroundColor={sticky.paper}
+                  color={color(line.color ?? (line.bold ? 'text-1' : line.dim ? 'text-3' : 'text-2'))}
+                  backgroundColor={fill}
                   weight={line.bold ? 'semibold' : undefined}
                   mono
                   wrap="truncate-end"
                 >
-                  {line.text.padEnd(inner)}
+                  {(line.bold || line.color ? line.text.toUpperCase() : line.text).padEnd(inner)}
                 </Text>
               ))}
             </Box>
@@ -232,22 +279,22 @@ export const registerPane = (on: On) =>
     const header = (
       <Box flexDirection="row" justifyContent="space-between">
         {first > 0 ? (
-          <Button key="earlier" plain dimColor hotkey={isTerminal ? 'h' : undefined} onPress={scrollTo(first - 1)}>
-            {`‹ ${first} earlier`}
+          <Button key="earlier" plain hotkey={isTerminal ? 'h' : undefined} onPress={scrollTo(first - 1)}>
+            <Text color={color('text-2')}>{`‹ ${first} EARLIER`}</Text>
           </Button>
         ) : (
           <Text> </Text>
         )}
         {first === centred ? (
-          <Text dimColor tabular>{title}</Text>
+          <Text color={color('text-3')} tabular>{title.toUpperCase()}</Text>
         ) : (
-          <Button key="current" plain dimColor hotkey={isTerminal ? 'c' : undefined} onPress={scrollTo(null)}>
-            {`↺ ${title}`}
+          <Button key="current" plain hotkey={isTerminal ? 'c' : undefined} onPress={scrollTo(null)}>
+            <Text color={color('text-2')}>{`↺ ${title.toUpperCase()}`}</Text>
           </Button>
         )}
         {later > 0 ? (
-          <Button key="later" plain dimColor hotkey={isTerminal ? 'l' : undefined} onPress={scrollTo(first + 1)}>
-            {`${later} later ›`}
+          <Button key="later" plain hotkey={isTerminal ? 'l' : undefined} onPress={scrollTo(first + 1)}>
+            <Text color={color('text-2')}>{`${later} LATER ›`}</Text>
           </Button>
         ) : (
           <Text> </Text>
@@ -265,9 +312,10 @@ export const registerPane = (on: On) =>
     }
     const agentRow = (row: AgentRow) => {
       const isViewed = row.id === viewing
+      const active = isActive(row.status)
       const indent = '  '.repeat(Math.min(3, depth(row)))
       const time = elapsed((row.endedAt ?? at) - row.startedAt)
-      const label = fit(
+      const name = fit(
         `${isViewed ? '▸' : ''}${row.type} · ${row.description}`,
         Math.max(8, cols - indent.length - time.length - 3),
       )
@@ -275,15 +323,15 @@ export const registerPane = (on: On) =>
       return (
         <Box flexDirection="row">
           <Box flexShrink={0}>
-            <Text color={agentColor(row.status)} dimColor={!isActive(row.status)}>
-              {`${indent}${agentGlyph(row.status)} `}
+            <Text color={color(agentState(row.status).token)}>
+              {`${indent}${agentGlyph(agentRows.indexOf(row), row.status)} `}
             </Text>
           </Box>
-          <Button key={`agent-${row.id}`} plain dimColor={!isActive(row.status) && !isViewed} onPress={show}>
-            <Text wrap="truncate-end">{label}</Text>
+          <Button key={`agent-${row.id}`} plain onPress={show}>
+            <Text color={color(active || isViewed ? 'text-1' : 'text-2')} wrap="truncate-end">{name}</Text>
           </Button>
           <Box flexShrink={0}>
-            <Text dimColor tabular size="caption">{` ${time}`}</Text>
+            <Text color={color('text-3')} tabular size="caption">{` ${time}`}</Text>
           </Box>
         </Box>
       )
@@ -292,7 +340,7 @@ export const registerPane = (on: On) =>
     return (
       <Box flexDirection="column" minHeight={e.props.scroll.bodyRows}>
         {sprintList.length === 0 ? (
-          <Text dimColor>
+          <Text color={color('text-3')}>
             {from === 'ai'
               ? /\.ai-layout\.json: /.test(where)
                 ? where
@@ -310,19 +358,22 @@ export const registerPane = (on: On) =>
         <Box marginTop={1} flexDirection="row" flexWrap="wrap" columnGap={2}>
           {STATUSES.map(status => (
             <Box flexDirection="row">
-              <Text color={STATUS[status].color} size="caption">{STATUS[status].glyph}</Text>
-              <Text dimColor size="caption">{` ${STATUS[status].label}`}</Text>
+              <Text color={color(STATUS[status].color)} size="caption">{STATUS[status].glyph}</Text>
+              <Text color={color('text-3')} size="caption">{` ${STATUS[status].label.toUpperCase()}`}</Text>
             </Box>
           ))}
         </Box>
 
         <Box marginTop={1} flexDirection="column">
-          <Text weight="semibold" size="heading" color="claude">
-            {agentRows.length > 0 ? `Subagents  ${running} running` : 'Subagents'}
-          </Text>
-          {agentRows.length === 0 && <Text dimColor>None running.</Text>}
-          {shownAgents.map(agentRow)}
+          {panel(
+            { title: 'Subagents', code: agentRows.length > 0 ? `${running} running` : undefined, width: cols },
+            <Box flexDirection="column">
+              {agentRows.length === 0 && <Text color={color('text-3')}>None running.</Text>}
+              {shownAgents.map(agentRow)}
+            </Box>,
+          )}
         </Box>
       </Box>
     )
   })
+}

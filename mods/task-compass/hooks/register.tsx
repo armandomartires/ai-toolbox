@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { AgentRow, Source, Sprint, Status, Task } from '../types'
 import {
   applyPlan,
+  currentSprint,
   isActive,
   parseSprints,
   setStoryStatus,
@@ -15,7 +16,9 @@ import {
 import type { PlanUpdate } from './model'
 import { briefName, layoutOf, parseRoadmap, planSprints, ROADMAP_FILE, taskIdOf } from './plan'
 import type { BriefFile } from './plan'
-import { PANE, registerPane } from './view'
+import { remember, syncTheme, watchTheme } from './sigma'
+import { PANE, goalsRow, registerPane } from './view'
+import type { CompassOutput, GoalsOutput } from './view'
 
 // The engine lists a module's $.state reads and writes from atoms declared in
 // that same file, so view.tsx declares the ones it draws from again.
@@ -315,6 +318,19 @@ const answerTask = async ($: EngineInterface, input: StoryInput) => {
   return { result: `Task ${story.id} "${story.title}" is the one the Compass pane shows you on.${status}` }
 }
 
+/**
+ * `/goals`'s answer, its board kept so its row draws as a panel. The current
+ * sprint is the open one on a `.ai/` board, else the focus's. A declaration:
+ * the engine follows `$` past an import only into one.
+ */
+async function goalsOutput($: EngineInterface, from: string, text: string) {
+  const list = await read($, sprints)
+  const hasOpen = list.some(one => one.isOpen)
+  const cur = currentSprint(list)
+  const out: GoalsOutput = { from, sprints: list.map((one, i) => goalsRow(one, hasOpen ? one.isOpen === true : i === cur)) }
+  return { text: list.length > 0 ? remember(text, out) : text }
+}
+
 const refreshAgents = async ($: EngineInterface) => {
   const [listed, at] = await Promise.all([$.agent.list(), $.clock.now()])
   await update($, agents, rows => {
@@ -352,7 +368,11 @@ const isUnder = (path: string, dir: string) => {
 }
 
 export const register: Register = on => {
+  // SIGMAorbital's colours follow the host's theme setting (ADR-0043).
+  watchTheme(on)
+
   on('session.start', async ($, e, next) => {
+    await syncTheme($)
     await $.command.register({
       name: 'compass',
       description: 'Open the Compass pane: sprints, stories, live tasks, running subagents',
@@ -387,9 +407,13 @@ export const register: Register = on => {
 
   on('command.run', { command: 'compass' }, async $ => {
     const { isPlaced } = await $.ui.open({ id: PANE, title: TITLE })
+    const list = await read($, sprints)
+    const out: CompassOutput = { isPlaced, sprints: list.length, stories: list.reduce((sum, one) => sum + one.stories.length, 0) }
+    const text = `${isPlaced ? 'Compass pane opened' : 'Compass pane is open but this surface does not show panes'}: ${out.sprints} sprints, ${out.stories} stories.`
 
-    return { text: isPlaced ? 'Compass pane opened.' : 'Compass pane is open but this surface does not show panes.' }
+    return { text: remember(text, out) }
   })
+
 
   on('command.run', { command: 'goals' }, async ($, e) => {
     await loadGoals($, true)
@@ -401,9 +425,11 @@ export const register: Register = on => {
       const list = await read($, sprints)
       const taskCount = list.reduce((sum, sprint) => sum + sprint.stories.length, 0)
       const open = list.filter(sprint => sprint.isOpen).map(sprint => sprint.label ?? `S${sprint.n}`)
-      return {
-        text: `Compass: ${list.length} sprints, ${taskCount} tasks loaded from ${aiRoot}; open: ${open.length > 0 ? open.join(', ') : 'none'}.`,
-      }
+      return goalsOutput(
+        $,
+        aiRoot,
+        `Compass: ${list.length} sprints, ${taskCount} tasks loaded from ${aiRoot}; open: ${open.length > 0 ? open.join(', ') : 'none'}.`,
+      )
     }
     if (e.args.trim() === 'init') {
       if (await $.fs.exists(goalsAt)) {
@@ -418,12 +444,13 @@ export const register: Register = on => {
       ? ` ${leftover} is a leftover copy of the board now kept in ${goalsAt}; delete it with: rm -- "${leftover}"`
       : ''
 
-    return {
-      text:
-        (list.length > 0
-          ? `Compass: ${list.length} sprints, ${storyCount} stories loaded from ${goalsAt}.`
-          : `Compass: no sprints found in ${goalsAt}. Run /goals init to start one.`) + stale,
-    }
+    return goalsOutput(
+      $,
+      goalsAt,
+      (list.length > 0
+        ? `Compass: ${list.length} sprints, ${storyCount} stories loaded from ${goalsAt}.`
+        : `Compass: no sprints found in ${goalsAt}. Run /goals init to start one.`) + stale,
+    )
   })
 
   // The description is written when the engine renders the tool, from the

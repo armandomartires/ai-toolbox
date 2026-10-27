@@ -1,47 +1,29 @@
 import type { Sprint, Status, Story, Task, TaskStatus } from '../types'
+import { elapsed, fit } from './sigma'
+import type { Token } from './sigma'
+
+export { elapsed, fit }
 
 export type StatusStyle = {
   label: string
   glyph: string
-  /** A theme key, so the colors follow the person's light or dark theme. */
-  color: string
+  /** A SIGMAorbital token: monochrome by brightness, colour for state only (ADR-0043). */
+  color: Token
   /** The checkbox character in GOALS.md; null for a plain item (backlog). */
   marker: string | null
 }
 
 export const STATUS: Record<Status, StatusStyle> = {
-  backlog: { label: 'Backlog', glyph: '◌', color: 'inactive', marker: null },
-  todo: { label: 'To do', glyph: '○', color: 'suggestion', marker: ' ' },
-  in_progress: { label: 'In progress', glyph: '◐', color: 'warning', marker: '>' },
-  review: { label: 'In review', glyph: '◑', color: 'merged', marker: '?' },
-  blocked: { label: 'Blocked', glyph: '✖', color: 'error', marker: '!' },
-  done: { label: 'Done', glyph: '●', color: 'success', marker: 'x' },
+  backlog: { label: 'Backlog', glyph: '◌', color: 'text-3', marker: null },
+  todo: { label: 'To do', glyph: '○', color: 'text-2', marker: ' ' },
+  in_progress: { label: 'In progress', glyph: '◐', color: 'cyan', marker: '>' },
+  // Review waits on a human: caution.
+  review: { label: 'In review', glyph: '▲', color: 'amber', marker: '?' },
+  blocked: { label: 'Blocked', glyph: '◆', color: 'red', marker: '!' },
+  done: { label: 'Done', glyph: '●', color: 'text-1', marker: 'x' },
 }
 
 export const STATUSES = Object.keys(STATUS) as Status[]
-
-/**
- * A hover card's sticky-note colors: a flat pastel `paper`, and a deeper
- * `ink` of the same hue for its border and status. They are raw colors, the
- * same in light and dark themes, so the text on them is dark ink too.
- */
-export type Sticky = { paper: string; ink: string }
-
-/** The sticky for each status theme key. */
-export const STICKY: Record<string, Sticky> = {
-  inactive: { paper: '#ecebe6', ink: '#6b6a64' },
-  suggestion: { paper: '#d4e6ff', ink: '#2f5fb3' },
-  warning: { paper: '#fff1a6', ink: '#8a6500' },
-  merged: { paper: '#e6d9ff', ink: '#6a3fc2' },
-  error: { paper: '#ffd1d8', ink: '#b3263e' },
-  success: { paper: '#cdeccd', ink: '#2e7d32' },
-}
-
-/** Text on a sticky, and its quieter lines. */
-export const STICKY_TEXT = '#2b2a27'
-export const STICKY_MUTED = '#5f5d57'
-
-export const stickyOf = (color: string): Sticky => STICKY[color] ?? STICKY.inactive!
 
 const MARKERS: Record<string, Status> = {
   ' ': 'todo',
@@ -303,16 +285,6 @@ export const guessStory = (text: string, stories: Story[]): string | undefined =
 
 export const isActive = (status: string) =>
   status === 'running' || status === 'pending' || status === 'waiting'
-
-export const elapsed = (ms: number) => {
-  const s = Math.max(0, Math.round(ms / 1000))
-  if (s < 60) return `${s}s`
-  const m = Math.floor(s / 60)
-  return m < 60 ? `${m}m${String(s % 60).padStart(2, '0')}s` : `${Math.floor(m / 60)}h${m % 60}m`
-}
-
-export const fit = (text: string, columns: number) =>
-  text.length <= columns ? text : `${text.slice(0, Math.max(1, columns - 1))}…`
 
 /** Words wrapped to `width` columns; a word longer than that is cut. */
 export const wrap = (text: string, width: number): string[] => {

@@ -48,8 +48,8 @@ test('a sprint shows its progress and whether it ran past its end', () => {
 
   // The progress line under the sprint's dot, red and marked once late.
   const late = columnRows(setup!, context({ nowMs: at('2026-10-28') }))[1]
-  expect(late?.text).toBe('▰▰▰▰▱ 4/5 late')
-  expect(late?.textColor).toBe('error')
+  expect(late?.text).toBe('▰▰▰▰▱ 4/5 LATE')
+  expect(late?.textColor).toBe('red')
   expect(columnRows(next!, context({ nowMs: at('2026-10-28') }))[1]?.text).toBe('▰▰▰▱▱ 1/2')
   // The sprint's card says how long is left.
   const card = columnRows(next!, context({ nowMs: at('2026-11-04') }))[0]?.card
