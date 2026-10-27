@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: done
 - Owner: agent (Claude Code), with the human for the closing check in a sigma-infrastructure session
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -47,33 +47,42 @@ The loop's roles map onto Claude Code as follows: plan, build, qa-test and the d
 
 ## Acceptance criteria
 
-- [ ] The brief's success criterion holds in a sigma-infrastructure session: `S087`–`S089` (or the open set then current) centred, dots matching the briefs, no false `late`, an edited status shown within a few seconds.
-- [ ] Existing tests pass unchanged; new tests on redacted fixtures cover items 1–11, and each fails with its change reverted.
-- [ ] In `.ai/` mode no test sees an `fs.write`, and `/goals init` refuses.
-- [ ] The gate passes, and fails on a fixture line with an unredacted host name.
-- [ ] README and `DEVELOPING.md` describe the `.ai/` board; `plugin.json` is 0.2.0.
+- [x] The brief's success criterion holds in a sigma-infrastructure session: `S087`–`S089` centred, dots matching the briefs, no false `late` (the human's check). An edited status showing within seconds is proven by `layer.test.tsx`, not in that session.
+- [x] Existing tests pass unchanged; new tests on redacted fixtures cover items 1–11, and each fails with its change reverted.
+- [x] In `.ai/` mode no test sees an `fs.write`, and `/goals init` refuses.
+- [x] The gate passes, and fails on a fixture line with an unredacted host name.
+- [x] README and `DEVELOPING.md` describe the `.ai/` board; `plugin.json` is 0.2.0.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] tests/test-mods.sh
-- [ ] each new test red-proved against its reverted change
-- [ ] the pane checked in a sigma-infrastructure session
+- [x] tests/validate.sh
+- [x] tests/test-mods.sh
+- [x] each new test red-proved against its reverted change
+- [x] the pane checked in a sigma-infrastructure session
 
 ## Risks and rollback
 
-- **The first load is slow** (1.78 MB in 235 reads inside `session.start`). Measured in step 7; the brief's fallback is to load the open sprints first.
-- **sigma-infrastructure's layout changed after `90f9a4d`.** Step 1 re-reads it; a change the brief cannot absorb stops the task and goes back to the design loop.
+- **The first load is slow** (1.78 MB in 231 reads). The human saw the pane fill promptly; no tool measured it.
+- **sigma-infrastructure's layout changes later.** The fixtures pin `90f9a4d`; a change the brief cannot absorb is a new design run.
 - Rollback: git revert the task commit
 
 ## Outputs / handover
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `mods/task-compass/` 0.2.0 | `hooks/plan.ts` reads the `.ai/` layer; `register.tsx` alone knows the source and writes only for GOALS.md; 27 tests |
+| `hooks/fixtures/sigma.ts` | structure-only, names replaced; refreshed by hand (`DEVELOPING.md`) |
+| `.git/info/private-patterns` (this host, untracked) | 17 patterns: the estate's host names, the LDAP DN, a person's name |
+| `TASK-0169`, `TASK-0170` | the workstation name replaced |
 
-Next:
+Next: publish 0.2.0 to the organization plugin library (a human step), so teammates get the `.ai/` board.
 
 ## Execution log
 
-- 2026-10-27 · Claude Code (Opus 5.5) · opened, not started
+- 2026-10-27 · Claude Code (Opus 5.5) · done
+  - Plan: `plan.ts` reads roadmap and briefs (items 2–5); `rails.ts` centres the open group in `focusOf`, `sprintEnd`, label, caption, unknown count (6–7); `register.tsx` detects, caches, gates writes and the tool by `source` (1, 8–10); `view.tsx` marks open sprints current
+  - Evidence: `tests/test-mods.sh` → `PASS task-compass: 27 pass` (15 existing, unchanged), `PASS _template: 1 pass`; `tsc -p mods/task-compass` → exit 0; `tests/validate.sh` → `validate.sh: OK`
+  - Evidence: 19 mutations, one per item and fix, each turned a named test red (the first run left "the open group is centred" green; a test now separates it); the gate with a fixture line unredacted → `PRIVATE NAME`, exit 1
+  - Evidence: review (read-only subagent, brief and diff only) → pass; its two should-fix items and five notes fixed. Notes left: Windows paths and a cwd move untested; an edit keeping mtime and size waits for the next change; `canceled` and loose task ids accepted; the `/goals` description names `.ai/`
+  - Evidence: the human's check in a sigma-infrastructure session at `90f9a4d`: open sprints centred, dots match, no false `late`, the pane filled promptly
+  - Deviation (human): the fixtures keep structure only, not rule B's verbatim copies, which would publish 33 internal briefs (372 KB); the workstation name is replaced in `TASK-0169` and `TASK-0170` so it can join the patterns

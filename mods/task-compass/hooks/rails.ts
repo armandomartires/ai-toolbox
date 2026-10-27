@@ -53,14 +53,18 @@ const wrapped = (text: string, width: number, style: Omit<CardLine, 'text'> = {}
  * else a guess from the live task's words.
  */
 export const focusOf = (sprints: Sprint[], declared: Focus | null, tasks: Task[]) => {
-  const cur = currentSprint(sprints)
-  const sprint = sprints[cur]
+  // A `.ai/` board's open sprints sit together at its end: the middle one is
+  // the one the carousel centres, and all of them are searched.
+  const open = sprints.flatMap((sprint, i) => (sprint.isOpen ? [i] : []))
+  const cur = open.length > 0 ? (open[Math.floor((open.length - 1) / 2)] ?? 0) : currentSprint(sprints)
+  const current = open.length > 0 ? open.map(i => sprints[i]!) : sprints[cur] ? [sprints[cur]!] : []
+  const stories = current.flatMap(sprint => sprint.stories)
   const named = sprints
     .flatMap(one => one.stories)
     .find(story => story.id === declared?.story && story.status !== 'done')
-  const working = sprint?.stories.find(story => story.status === 'in_progress')
+  const working = stories.find(story => story.status === 'in_progress')
   const liveTask = tasks.find(task => task.status === 'in_progress')
-  const guessed = liveTask && sprint ? guessStory(liveTask.text, sprint.stories) : undefined
+  const guessed = liveTask && current.length > 0 ? guessStory(liveTask.text, stories) : undefined
 
   return {
     cur,
@@ -94,9 +98,38 @@ export const carousel = (cols: number, sprintCount: number, cur: number, scrolle
   }
 }
 
-/** The day a sprint ends: the last `YYYY-MM-DD` of its `Dates:` line. */
-export const sprintEnd = (sprint: Sprint): string | undefined =>
-  sprint.dates.match(/\d{4}-\d{2}-\d{2}/g)?.at(-1)
+/**
+ * The day a sprint ends: the date after the arrow or dash of its `Dates:`
+ * line, else its last date. An arrow or dash with nothing after it, or
+ * `(open)`, says it has not ended: `2026-10-19 →` has no end.
+ */
+export const sprintEnd = (sprint: Sprint): string | undefined => {
+  const range = /\d{4}-\d{2}-\d{2}\s*(?:→|->|[–—-])\s*(\d{4}-\d{2}-\d{2}|\(open\)|$)/i.exec(sprint.dates)
+  if (range) return /^\d/.test(range[1] ?? '') ? range[1] : undefined
+
+  return sprint.dates.match(/\d{4}-\d{2}-\d{2}/g)?.at(-1)
+}
+
+/** A sprint's name on the pane: `S087`, or `S3` for a GOALS.md sprint. */
+export const sprintLabel = (sprint: Sprint) => sprint.label ?? `S${sprint.n}`
+
+/**
+ * The carousel's caption: `Sprint 2 of 5`, or for a `.ai/` board the open
+ * sprints and how many there are, `S087–S089 open · 88 sprints`.
+ */
+export const boardTitle = (sprints: Sprint[], cur: number) => {
+  const open = sprints.filter(sprint => sprint.isOpen)
+  if (open.length === 0) return `Sprint ${cur + 1} of ${sprints.length}`
+  const plural = sprints.length === 1 ? '' : 's'
+  // A run of numbers reads as a range; open sprints apart are listed.
+  const isRun = open.every((sprint, i) => i === 0 || sprint.n === open[i - 1]!.n + 1)
+  const names =
+    open.length > 1 && isRun
+      ? `${sprintLabel(open[0]!)}–${sprintLabel(open.at(-1)!)}`
+      : open.map(sprintLabel).join(', ')
+
+  return `${names} open · ${sprints.length} sprint${plural}`
+}
 
 /**
  * Whole days from `nowMs`'s day to the sprint's last day: 0 on it, negative
@@ -171,6 +204,9 @@ export const columnRows = (one: Sprint, ctx: ColumnContext): Row[] => {
           ? wrapped(daysText(days), inner, late ? { color: STATUS.blocked.color } : { dim: true })
           : []),
         ...wrapped(`${doneCount}/${one.stories.length} stories done${counts.length ? ` · ${counts.join(' · ')}` : ''}`, inner, { dim: true }),
+        ...(one.unknown
+          ? wrapped(`${one.unknown} with a status the pane does not know`, inner, { color: STATUS.blocked.color })
+          : []),
       ],
     }
   }
@@ -210,7 +246,7 @@ export const columnRows = (one: Sprint, ctx: ColumnContext): Row[] => {
     prefix: '',
     glyph: ctx.isCurrent ? '◉' : STATUS[one.status].glyph,
     color: STATUS[one.status].color,
-    text: `S${one.n} ${shortTitle(one)}`,
+    text: `${sprintLabel(one)} ${shortTitle(one)}`,
     bold: ctx.isCurrent,
     dim: !ctx.isCurrent && one.status === 'done',
     card: sprintCard(),

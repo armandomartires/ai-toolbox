@@ -64,7 +64,7 @@ const clean = (text: string) =>
 /** A status from words people write: "in progress", "Done", "blocked". */
 export const statusFromWords = (text: string): Status | undefined => {
   const words = text.toLowerCase().replace(/[\s_-]+/g, ' ').trim()
-  if (/^(done|complete|completed|closed|finished)$/.test(words)) return 'done'
+  if (/^(done|complete|completed|closed|finished|resolved|cancelled|canceled)$/.test(words)) return 'done'
   if (/^(in progress|active|current|doing|started|wip)$/.test(words)) return 'in_progress'
   if (/^(in review|review|reviewing)$/.test(words)) return 'review'
   if (/^blocked$/.test(words)) return 'blocked'

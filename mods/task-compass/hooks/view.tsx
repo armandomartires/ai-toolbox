@@ -3,7 +3,7 @@ import type { On } from 'claude-code'
 
 import type { AgentRow } from '../types'
 import { elapsed, fit, isActive, STATUS, STATUSES, STICKY_MUTED, STICKY_TEXT, stickyOf } from './model'
-import { cardHeight, carousel, columnRows, COLUMN_MIN, focusOf, isRailRow, RAIL_GUTTER } from './rails'
+import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, focusOf, isRailRow, RAIL_GUTTER } from './rails'
 import type { Row } from './rails'
 
 // The same $.state values register.tsx writes: the engine lists a module's
@@ -16,6 +16,7 @@ const now = atom({ plugin: 'task-compass', key: 'now' } as const, 0)
 const goalsPath = atom({ plugin: 'task-compass', key: 'goalsPath' } as const, '')
 const openCard = atom({ plugin: 'task-compass', key: 'openCard' } as const, null)
 const railStart = atom({ plugin: 'task-compass', key: 'railStart' } as const, null)
+const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
 
 export const PANE = 'task-compass'
 const GOALS_FILE = 'GOALS.md'
@@ -45,7 +46,7 @@ const agentColor = (status: string) =>
 export const registerPane = (on: On) =>
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Text } = $.ui.resolve(e)
-    const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled] = await Promise.all([
+    const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled, from] = await Promise.all([
       read($, sprints),
       read($, focus),
       read($, tasks),
@@ -54,6 +55,7 @@ export const registerPane = (on: On) =>
       read($, goalsPath),
       read($, openCard),
       read($, railStart),
+      read($, source),
     ])
     const isTerminal = e.surface === 'terminal'
     const cols = Math.max(COLUMN_MIN, e.props.bodyColumns)
@@ -206,10 +208,13 @@ export const registerPane = (on: On) =>
       )
     }
 
+    // A `.ai/` board marks every open sprint current; GOALS.md has one.
+    const hasOpen = sprintList.some(one => one.isOpen)
+    const title = boardTitle(sprintList, cur)
     const columns = shown.map(one => (
       <Box flexDirection="column" width={columnWidth}>
         {columnRows(one, {
-          isCurrent: one.n === sprintList[cur]?.n,
+          isCurrent: hasOpen ? one.isOpen === true : one.n === sprintList[cur]?.n,
           focusId,
           isGuess,
           declared,
@@ -234,10 +239,10 @@ export const registerPane = (on: On) =>
           <Text> </Text>
         )}
         {first === centred ? (
-          <Text dimColor tabular>{`Sprint ${cur + 1} of ${sprintList.length}`}</Text>
+          <Text dimColor tabular>{title}</Text>
         ) : (
           <Button key="current" plain dimColor hotkey={isTerminal ? 'c' : undefined} onPress={scrollTo(null)}>
-            {`↺ Sprint ${cur + 1} of ${sprintList.length}`}
+            {`↺ ${title}`}
           </Button>
         )}
         {later > 0 ? (
@@ -287,7 +292,13 @@ export const registerPane = (on: On) =>
     return (
       <Box flexDirection="column" minHeight={e.props.scroll.bodyRows}>
         {sprintList.length === 0 ? (
-          <Text dimColor>{`No sprints in ${where || GOALS_FILE} — run /goals init`}</Text>
+          <Text dimColor>
+            {from === 'ai'
+              ? /\.ai-layout\.json: /.test(where)
+                ? where
+                : `No sprints in ${where || '.ai/'}: its roadmap's Sprint history has no rows`
+              : `No sprints in ${where || GOALS_FILE} — run /goals init`}
+          </Text>
         ) : (
           header
         )}

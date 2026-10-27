@@ -53,7 +53,7 @@ and the retired ansible-vault password. Remove each read here, so the human can 
 ## Acceptance criteria
 
 - [x] No tracked file maps `GITLAB_PUSH_TOKEN` or `GITLAB_TOKEN`, and none names the private mount.
-- [x] No per-host map names `ANSIBLE_VAULT_PASSWORD`: none on this workstation, and none on sigwstctl1 (the human's `grep -c`, 2026-10-18).
+- [x] No per-host map names `ANSIBLE_VAULT_PASSWORD`: none on this workstation, and none on the second workstation (the human's `grep -c`, 2026-10-18).
 - [x] ~~After a day of normal work, the audit-log reader shows no ai-toolbox read of `gitlab-admin`, `ansible` or `github`.~~ Not run: the human ran step 8 after the day. All three are destroyed, so no reader is left.
 - [x] The human reports the gated `retire` steps done (2026-10-18).
 
@@ -87,4 +87,4 @@ Next: none. `private-patterns` is the human's per-clone step (runbook, *Secrets 
   - Evidence: Inputs rows re-read and matched. `test-vault-secrets` 114/114; with the old `secrets.map` restored, the new T16 check fails naming all three tokens. `check-private-names: OK (3 patterns)`. The diff does not name the mount. Deviation: `GITLAB_PUSH_TOKEN` stays in `.env.example`, because it is still read. Step 6 changed only the dead tracked `GITHUB_TOKEN` mapping. The per-host `GITHUB_PUSH_TOKEN` still reads the `github` secret, so `retire github-token` still waits
 - 2026-10-18 · claude/opus-5.5 · steps 3, 6-8 done by the human; recorded
   - Evidence: the human's `retire github-token admin-copy ansible-vault-password` dry run, `--apply` and re-run (all "done already"). As ai-toolbox's AppRole: `LIST …/ai-toolbox/` → `['gitlab-push']`; `github`, `ansible`, `gitlab-admin` → 404. `vgit_origin` push of `105eaad` worked with the new token. Deviation: acceptance 3's audit-log read was not run before the destruction
-- 2026-10-18 · claude/opus-5.5 · closed: the human's `grep -c '^ANSIBLE_VAULT_PASSWORD='` on sigwstctl1's map printed 0
+- 2026-10-18 · claude/opus-5.5 · closed: the human's `grep -c '^ANSIBLE_VAULT_PASSWORD='` on the second workstation's map printed 0

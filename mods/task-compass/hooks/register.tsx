@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { AgentRow, Sprint, Status, Task } from '../types'
+import type { AgentRow, Source, Sprint, Status, Task } from '../types'
 import {
   applyPlan,
   isActive,
@@ -13,6 +13,8 @@ import {
   statusFromWords,
 } from './model'
 import type { PlanUpdate } from './model'
+import { briefName, layoutOf, parseRoadmap, planSprints, ROADMAP_FILE, taskIdOf } from './plan'
+import type { BriefFile } from './plan'
 import { PANE, registerPane } from './view'
 
 // The engine lists a module's $.state reads and writes from atoms declared in
@@ -23,6 +25,7 @@ const tasks = atom({ plugin: 'task-compass', key: 'tasks' } as const, [])
 const agents = atom({ plugin: 'task-compass', key: 'agents' } as const, [])
 const now = atom({ plugin: 'task-compass', key: 'now' } as const, 0)
 const goalsPath = atom({ plugin: 'task-compass', key: 'goalsPath' } as const, '')
+const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
 
 const TITLE = 'Compass'
 const GOALS_FILE = 'GOALS.md'
@@ -34,33 +37,140 @@ const LINGER_MS = 60_000
 
 let goalsMtime = -1
 let goalsAt = ''
+/** Which board the last load found; only a GOALS.md board is ever written. */
+let boardSource: Source = 'goals'
+/** The `.ai/` layer's root, when it is the board. */
+let aiRoot = ''
+/** Why a declared layer cannot be read: a malformed `.ai-layout.json`, reported as is. */
+let layerError = ''
+/** What the `.ai/` board was last built from: the roadmap's and each brief's mtime and size. */
+let layerKey = ''
+/** Each brief's text by its full path, with the mtime and size it was read at. */
+const briefCache = new Map<string, { mtimeMs: number; size: number; text: string }>()
 /** The board the model's copy of the story tool's description carries. */
 let described: string | undefined
 
-/**
- * GOALS.md in the session's current folder, by its full path. A board that
- * differs from the one the story tool's description carries asks the engine
- * to describe the tool again, from the next turn on.
- */
-const loadGoals = async ($: EngineInterface, force = false) => {
-  const dir = (await $.session.cwd()).replace(/[\\/]+$/, '')
-  const path = `${dir}${dir.includes('\\') ? '\\' : '/'}${GOALS_FILE}`
-  const stat = await $.fs.stat(path).catch(() => undefined)
-  const mtime = stat?.mtimeMs ?? 0
-  if (!force && mtime === goalsMtime && path === goalsAt) return
-  goalsMtime = mtime
-  goalsAt = path
-  const text = stat ? await $.fs.read(path).catch(() => '') : ''
-  const list = parseSprints(text)
+const join = (dir: string, name: string) => `${dir}${dir.includes('\\') ? '\\' : '/'}${name}`
+
+const isFile = async ($: EngineInterface, path: string) =>
+  (await $.fs.stat(path).catch(() => undefined)) !== undefined
+
+/** Shows a board and, when the model's copy of it is stale, asks for the tool to be described again. */
+const publish = async ($: EngineInterface, list: Sprint[], from: Source, where: string) => {
+  boardSource = from
   await update($, sprints, () => list)
-  await update($, goalsPath, () => path)
-  if (described !== undefined && boardText(list) !== described) {
+  await update($, goalsPath, () => where)
+  await update($, source, () => from)
+  if (described !== undefined && boardText(list, from) !== described) {
     described = undefined
     $.ui.invalidate('tool.describe')
   }
 }
 
-const boardText = (list: Sprint[]) =>
+/**
+ * A project-workflow layer in `dir`: `.ai-layout.json` or its defaults, with
+ * the entry point and the roadmap both present. A malformed declaration is
+ * reported, never guessed past.
+ */
+const findLayer = async ($: EngineInterface, dir: string): Promise<{ root: string } | { error: string } | undefined> => {
+  const declared = join(dir, '.ai-layout.json')
+  const json = (await isFile($, declared)) ? await $.fs.read(declared).catch(() => '') : undefined
+  const layout = layoutOf(json)
+  if ('error' in layout) return { error: `${declared}: ${layout.error}` }
+  const root = join(dir, layout.root.replace(/[\\/]/g, dir.includes('\\') ? '\\' : '/'))
+  const hasLayer = (await isFile($, join(root, layout.entrypoint))) && (await isFile($, join(root, ROADMAP_FILE)))
+
+  return hasLayer ? { root } : undefined
+}
+
+/**
+ * The `.ai/` board, rebuilt only when the roadmap or a brief changed: each
+ * tick lists `tasks/` once and reads only the briefs whose mtime or size
+ * moved. Nothing here writes.
+ */
+const loadLayer = async ($: EngineInterface, root: string, force: boolean) => {
+  const roadmap = join(root, ROADMAP_FILE)
+  const tasksDir = join(root, 'tasks')
+  const [stat, entries] = await Promise.all([
+    $.fs.stat(roadmap).catch(() => undefined),
+    $.fs.list(tasksDir).catch(() => []),
+  ])
+  const files = entries.filter(entry => entry.kind === 'file' && briefName(entry.name))
+  const key = `${root}#${stat?.mtimeMs}:${stat?.size}#${files.map(f => `${f.name}:${f.mtimeMs}:${f.size}`).join('|')}`
+  if (!force && boardSource === 'ai' && key === layerKey) return
+  layerKey = key
+  aiRoot = root
+  layerError = ''
+  goalsMtime = -1
+
+  // Only the briefs whose mtime or size moved are read, side by side.
+  const paths = files.map(entry => join(tasksDir, entry.name))
+  const stale = files.filter((entry, i) => {
+    const cached = briefCache.get(paths[i]!)
+    return !cached || cached.mtimeMs !== entry.mtimeMs || cached.size !== entry.size
+  })
+  const texts = await Promise.all(stale.map(entry => $.fs.read(join(tasksDir, entry.name)).catch(() => '')))
+  stale.forEach((entry, i) =>
+    briefCache.set(join(tasksDir, entry.name), { mtimeMs: entry.mtimeMs, size: entry.size, text: texts[i] ?? '' }),
+  )
+  const seen = new Set(paths)
+  for (const path of briefCache.keys()) if (!seen.has(path)) briefCache.delete(path)
+  const briefs: BriefFile[] = files.map((entry, i) => ({ file: entry.name, text: briefCache.get(paths[i]!)?.text ?? '' }))
+
+  const text = stat ? await $.fs.read(roadmap).catch(() => '') : ''
+  await publish($, planSprints(parseRoadmap(text), briefs, tasksDir), 'ai', root)
+}
+
+/**
+ * The board of the session's current folder: its GOALS.md by full path,
+ * else a project-workflow `.ai/` layer, else an empty GOALS.md board.
+ */
+const loadGoals = async ($: EngineInterface, force = false) => {
+  const dir = (await $.session.cwd()).replace(/[\\/]+$/, '')
+  const path = join(dir, GOALS_FILE)
+  const stat = await $.fs.stat(path).catch(() => undefined)
+  if (!stat) {
+    const layer = await findLayer($, dir)
+    if (layer && 'error' in layer) {
+      if (!force && boardSource === 'ai' && layerError === layer.error) return
+      layerKey = ''
+      goalsMtime = -1
+      aiRoot = ''
+      layerError = layer.error
+      return publish($, [], 'ai', layer.error)
+    }
+    if (layer) return loadLayer($, layer.root, force)
+  }
+  const mtime = stat?.mtimeMs ?? 0
+  if (!force && boardSource === 'goals' && mtime === goalsMtime && path === goalsAt) return
+  goalsMtime = mtime
+  goalsAt = path
+  layerKey = ''
+  layerError = ''
+  const text = stat ? await $.fs.read(path).catch(() => '') : ''
+  await publish($, parseSprints(text), 'goals', path)
+}
+
+/** A `.ai/` board as the model reads it: the open sprints and their tasks. */
+const aiBoardText = (list: Sprint[]) => {
+  if (layerError) return `No plan is shown: ${layerError}.`
+  const open = list.filter(sprint => sprint.isOpen)
+  if (open.length === 0) return 'No sprint is open.'
+
+  return open
+    .flatMap(sprint => [
+      `${sprint.label ?? `S${sprint.n}`} ${sprint.title} [open]${sprint.goal ? ` goal: ${sprint.goal}` : ''}`,
+      ...sprint.stories.map(story => `  ${story.id} ${story.title} [${STATUS[story.status].label}]`),
+    ])
+    .join('\n')
+}
+
+const boardText = (list: Sprint[], from: Source = boardSource) =>
+  from === 'ai'
+    ? aiBoardText(list)
+    : goalsBoardText(list)
+
+const goalsBoardText = (list: Sprint[]) =>
   list
     .flatMap(sprint =>
       sprint.status === 'done'
@@ -83,7 +193,12 @@ const boardText = (list: Sprint[]) =>
  * keep the board current unprompted.
  */
 const storyDescription = (list: Sprint[]) =>
-  list.length === 0
+  boardSource === 'ai'
+    ? [
+        `Record which task of this project's .ai/ plan${aiRoot ? ` (${aiRoot})` : ''} you are working on, for the person's Compass pane: call this with the task's id, e.g. "S087.T004", when you start one, and again when you move to another. This tool writes nothing. A task's status lives in the **Status**: line of its brief in the plan's tasks folder; change it there under the project's own rules, and the pane follows within seconds. Open sprints and their tasks:`,
+        aiBoardText(list),
+      ].join('\n')
+    : list.length === 0
     ? `Update the person's sprint board (${GOALS_FILE}) and their Compass pane. No ${GOALS_FILE} with sprints was found in the session's folder when this was written. If the person has one, or starts one with /goals init, call this all the same with a story id (<sprint>.<story>, e.g. "1.2") and a status: each call reads the file afresh and says which ids exist.`
     : [
         `Update the person's sprint board (${GOALS_FILE}) and their Compass pane. The person relies on you to keep it current and does no upkeep of their own, so do it unprompted as you work: call this with a story id and a status when you start a story (in_progress), hand it over for review (review), finish it (done) or get stuck (blocked); without a status it only marks the story you are working on. Use review only for work the person still has to look at; a story in review is done once they have seen it and moved on without asking for changes, so set it to done then, at the latest when you next call this. Call it again only when the story or its status changes. When you take on work the board has no story for, add one first: a "- [ ] <story>" line under the sprint it belongs to in ${GOALS_FILE}, details indented under it. The board:`,
@@ -110,8 +225,9 @@ type StoryInput = { story?: unknown; status?: unknown; why?: unknown }
 
 /** The story tool: rewrites a story's checkbox and marks it as the current story. */
 const answerStory = async ($: EngineInterface, input: StoryInput) => {
-  const id = String(input.story ?? '').trim().replace(/^s(?:tory)?\s*/i, '')
   await loadGoals($, true)
+  if (boardSource === 'ai') return answerTask($, input)
+  const id = String(input.story ?? '').trim().replace(/^s(?:tory)?\s*/i, '')
   const list = await read($, sprints)
   const story = list.flatMap(sprint => sprint.stories).find(one => one.id === id)
   if (!story) {
@@ -136,6 +252,30 @@ const answerStory = async ($: EngineInterface, input: StoryInput) => {
   }))
 
   return { result: `Story ${id} "${story.title}"${changed}; the Compass pane shows it as the current story.` }
+}
+
+/**
+ * The story tool on a `.ai/` board: it marks the task Claude is on and
+ * writes nothing, whatever it is given. A status belongs in the brief.
+ */
+const answerTask = async ($: EngineInterface, input: StoryInput) => {
+  const raw = String(input.story ?? '').trim()
+  const id = taskIdOf(raw)
+  const list = await read($, sprints)
+  const story = list.flatMap(sprint => sprint.stories).find(one => one.id === id)
+  if (!story) return { result: `No task "${raw}" in ${aiRoot}. Ids are S<sprint>.T<task>, e.g. "S087.T004". ${aiBoardText(list)}` }
+
+  await update($, focus, () => ({
+    story: story.id,
+    why: typeof input.why === 'string' ? input.why : undefined,
+  }))
+  const where = story.details[1] ?? aiRoot
+  const status =
+    input.status === undefined
+      ? ''
+      : ` Nothing was written: the status is line ${story.line + 1} of ${where}. Change it there under the project's own rules, and the pane follows.`
+
+  return { result: `Task ${story.id} "${story.title}" is the one the Compass pane shows you on.${status}` }
 }
 
 const refreshAgents = async ($: EngineInterface) => {
@@ -166,6 +306,14 @@ const refreshAgents = async ($: EngineInterface) => {
   await update($, now, () => at)
 }
 
+/** Whether a path lies inside a folder, whichever way its slashes lean. */
+const isUnder = (path: string, dir: string) => {
+  if (!dir) return false
+  const norm = (one: string) => one.replace(/\\/g, '/').toLowerCase()
+
+  return norm(path).startsWith(`${norm(dir)}/`)
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -174,7 +322,7 @@ export const register: Register = on => {
     })
     await $.command.register({
       name: 'goals',
-      description: 'Reload GOALS.md for the Compass pane; "/goals init" writes a starter sprint board',
+      description: 'Reload the Compass board (GOALS.md, or a project-workflow .ai/ plan); "/goals init" writes a starter GOALS.md',
       argumentHint: '[init]',
     })
     await loadGoals($, true)
@@ -208,6 +356,18 @@ export const register: Register = on => {
 
   on('command.run', { command: 'goals' }, async ($, e) => {
     await loadGoals($, true)
+    if (boardSource === 'ai') {
+      if (layerError) return { text: `Compass cannot read this project's plan: ${layerError}. Fix the declaration; no ${GOALS_FILE} is written.` }
+      if (e.args.trim() === 'init') {
+        return { text: `This project plans in ${aiRoot}, which the Compass pane reads; it needs no ${GOALS_FILE}.` }
+      }
+      const list = await read($, sprints)
+      const taskCount = list.reduce((sum, sprint) => sum + sprint.stories.length, 0)
+      const open = list.filter(sprint => sprint.isOpen).map(sprint => sprint.label ?? `S${sprint.n}`)
+      return {
+        text: `Compass: ${list.length} sprints, ${taskCount} tasks loaded from ${aiRoot}; open: ${open.length > 0 ? open.join(', ') : 'none'}.`,
+      }
+    }
     if (e.args.trim() === 'init') {
       if (await $.fs.exists(goalsAt)) {
         return { text: `${GOALS_FILE} already exists; edit it to change the sprints.` }
@@ -316,7 +476,7 @@ export const register: Register = on => {
       )
     } else if (
       (e.tool === 'Write' || e.tool === 'Edit') &&
-      /(^|[\\/])GOALS\.md$/i.test(e.file_path)
+      (/(^|[\\/])GOALS\.md$/i.test(e.file_path) || isUnder(e.file_path, aiRoot))
     ) {
       await loadGoals($, true)
     } else if (PLAN_TOOL.test(name)) {

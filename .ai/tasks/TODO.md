@@ -223,7 +223,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [ ] TASK-0176 — Exercise the GitLab tracker and a forge unattended run for real
 - [x] TASK-0177 — Merge claude-mods, and develop mods here from now on
 - [x] TASK-0178 — Design how task-compass reads a project's .ai/ planning
-- [ ] TASK-0179 — Compass reads a project's .ai/ planning
+- [x] TASK-0179 — Compass reads a project's .ai/ planning
 
 ## Post-S9 (superseded by the promotion above)
 

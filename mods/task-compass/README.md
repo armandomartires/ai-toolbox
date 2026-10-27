@@ -1,6 +1,6 @@
 # task-compass
 
-A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, Claude's live tasks under it, and the subagents running.
+A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, Claude's live tasks under it, and the subagents running. The sprints come from a `GOALS.md` at the project's root, or from a project-workflow `.ai/` plan (below).
 
 - **Sprints side by side**: each sprint is a vertical rail, its stories dots down the rail in file order, the current sprint marked `◉` and placed in the middle. `‹ n earlier` and `n later ›` say what doesn't fit; click them to scroll the sprints one at a time, and `↺ Sprint n of m` to go back to the current one. In the terminal, with the pane focused, `h`, `l` and `c` do the same.
 - **Progress** under each sprint's dot: `▰▰▰▱▱ 3/5` stories done, red and marked `late` once a sprint that is not done has run past the last date on its `Dates:` line.
@@ -55,7 +55,16 @@ Each `## ` heading is a sprint; `Goal:`, `Dates:` and `Status:` lines under it a
 
 You do no upkeep. The mod gives Claude a `story` tool whose description carries the board and asks Claude to keep it current unprompted: it calls the tool with a story id and a status when it starts a story, sends it for review, finishes it or gets stuck, and the tool rewrites that story's checkbox in `GOALS.md`. When Claude takes on work the board has no story for, it adds one under the sprint it belongs to. A story Claude sent for review becomes done once you have seen it and moved on without asking for changes. Claude's live task list counts as finished when Claude wraps up its turn. You can still edit the file by hand; the pane re-reads it within a few seconds.
 
+## Projects that plan in `.ai/`
+
+A project with no `GOALS.md` whose `.ai/` layer follows the project-workflow convention gets its board from that plan, read-only. The layer is found through `.ai-layout.json`, or `.ai/` with `00.CONVENTIONS.md` by default, and must have a `30.ROADMAP.md`.
+
+- **Sprints** are the rows of the roadmap's *Sprint history* table, named `S087`. A sprint is **open** when its Dates cell says `(open)` and at least one of its tasks is not done. Every open sprint is current: they sit together in the middle, as many as the pane's width allows, and the caption reads `S087–S089 open · 88 sprints`.
+- **Stories** are the task briefs in `tasks/` (`S087_Name.T004_Name.md`, or `S087.T004_Name.md`), named `S087.T004`. A task's status is the first words of its brief's `**Status**:` line: `completed`, `complete`, `done`, `closed`, `resolved` and `cancelled` are done; `not started` is to do; `in progress`, `blocked` and `in review` are what they say. Any other status shows as to do, its own words on the card, and the sprint's card counts them. Change records and the template are not tasks.
+- **The pane never writes `.ai/`.** The `story` tool there only records which task Claude is on; a status changes in the brief, under the project's own rules, and the pane picks it up within a few seconds. `/goals init` declines in such a project.
+- A `GOALS.md`, if there is one, wins over `.ai/`. A malformed `.ai-layout.json` is reported in the pane and by `/goals`, not guessed past.
+
 ## Commands
 
 - `/compass` opens the pane again if you closed it.
-- `/goals init` writes a starter `GOALS.md`; `/goals` reloads it and says where it read it from.
+- `/goals init` writes a starter `GOALS.md`; `/goals` reloads the board and says where it read it from. In a `.ai/` project, `/goals` lists the open sprints and `init` writes nothing.

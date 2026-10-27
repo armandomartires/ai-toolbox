@@ -47,7 +47,7 @@ settings. Agents then push `origin` only, and `retire github-token` can run.
 ## Acceptance criteria
 
 - [x] A push to `origin` alone reaches `github`: both `ls-remote` hashes equal `HEAD`.
-- [x] No tracked file names `GITHUB_PUSH_TOKEN` (briefs aside), and no per-host map maps it: none on this workstation or sigwstctl1 (2026-10-18).
+- [x] No tracked file names `GITHUB_PUSH_TOKEN` (briefs aside), and no per-host map maps it: none on this workstation or the second workstation (2026-10-18).
 - [x] AGENTS.md and the runbook tell an agent to push `origin` only.
 - [x] GitHub Actions still run on the mirrored push (`validate.yml` for that commit).
 
@@ -81,4 +81,4 @@ Next: none. Step 8 done: `github` destroyed 2026-10-18 (`TASK-0169`).
   - Deviation: a procedure change, so no test fails on revert; the evidence is the observed mirror. T16 drops `GITHUB_PUSH_TOKEN` from its guard set: with the name gone from `.env.example`, mapping it fails T16 anyway
 - 2026-10-18 · claude/opus-5.5 · step 8 done by the human (`TASK-0169`'s run); step 7 confirmed on this workstation
   - Evidence: `sigmarecon-projects/ai-toolbox/github` → 404 as ai-toolbox's AppRole; this workstation's map has no `GITHUB_PUSH_TOKEN` line; every push since `4180e00` reached `github` by the mirror alone
-- 2026-10-18 · claude/opus-5.5 · closed: the human's `grep -c '^GITHUB_PUSH_TOKEN='` on sigwstctl1's map printed 0
+- 2026-10-18 · claude/opus-5.5 · closed: the human's `grep -c '^GITHUB_PUSH_TOKEN='` on the second workstation's map printed 0
