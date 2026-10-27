@@ -27,5 +27,5 @@ On 2026-10-26 the human asked to merge `claude-mods`, a folder outside any repos
 
 - One place to develop, review and push mods, under the same gate and record as every other component.
 - The mod tests are not enforced by the gate. Run `tests/test-mods.sh` for any task that changes a mod.
-- The pane reads `GOALS.md` at a project's root, so it shows no board in this repository.
+- The pane reads `GOALS.md` from a project's `.ai/` folder (`TASK-0180`; it first read the project root), so it shows no board in this repository.
 - No `Unexercised:` row is added (`ADR-0039`): `task-compass` is in daily use, and its tests run for real.

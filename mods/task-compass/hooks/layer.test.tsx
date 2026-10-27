@@ -24,12 +24,14 @@ const T004 = 'S087_NetBoxNetworkModel.T004_SiteToSiteTunnel.md'
  * its `.ai/` layer from the structure-only fixtures, with every read and
  * write recorded.
  */
-const project = (on: On, extra: Record<string, string> = {}) => {
+const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
   const files = new Map<string, { text: string; mtime: number }>()
   const put = (path: string, text: string) => files.set(path, { text, mtime: (files.get(path)?.mtime ?? 0) + 1 })
-  put('/q/.ai/00.CONVENTIONS.md', '# Conventions\n')
-  put('/q/.ai/30.ROADMAP.md', ROADMAP)
-  for (const [name, text] of Object.entries(BRIEFS)) put(`/q/.ai/tasks/${name}`, text)
+  if (plan) {
+    put('/q/.ai/00.CONVENTIONS.md', '# Conventions\n')
+    put('/q/.ai/30.ROADMAP.md', ROADMAP)
+    for (const [name, text] of Object.entries(BRIEFS)) put(`/q/.ai/tasks/${name}`, text)
+  }
   for (const [path, text] of Object.entries(extra)) put(path, text)
   const log = { reads: [] as string[], writes: [] as string[] }
 
@@ -168,14 +170,14 @@ test('an edited brief shows within a tick, and only changed briefs are read agai
 
 test('a GOALS.md wins over .ai/, and a malformed declaration is reported', async ($, on) => {
   mock.clock(on)
-  const { put, files, log } = project(on, { '/q/GOALS.md': '## Sprint 1 — Own board\n- [ ] Mine\n' })
+  const { put, files, log } = project(on, { '/q/.ai/GOALS.md': '## Sprint 1 — Own board\n- [ ] Mine\n' })
   await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
   let ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   expect(await ui.find({ text: /S1 Own board/ })).toBeDefined()
   expect(await ui.find({ text: /S087/ })).toBeUndefined()
   await ui.unmount()
 
-  files.delete('/q/GOALS.md')
+  files.delete('/q/.ai/GOALS.md')
   put('/q/.ai-layout.json', '{ "root": ".ai", "tracker": "files" }')
   const init = await $.command.run(GOALS('init'))
   expect(init.text).toBe(
@@ -187,4 +189,96 @@ test('a GOALS.md wins over .ai/, and a malformed declaration is reported', async
   expect(await ui.find({ text: /goals init|Sprint history/ })).toBeUndefined()
   await ui.unmount()
   expect((await $.tool.describe(DESCRIBE)).description).toContain('No plan is shown: /q/.ai-layout.json')
+})
+
+const OWN = '## Sprint 1 — Own board\n- [ ] Mine\n'
+const OTHER = '## Sprint 1 — Other board\n- [ ] Theirs\n'
+const STORY = { tool: 'mcp__task-compass__story', story: '1.1', status: 'done' } as const
+
+test('a root GOALS.md is copied to .ai/GOALS.md, which becomes the board and the one the story tool writes', async ($, on) => {
+  mock.clock(on)
+  const { files, log } = project(on, { '/q/GOALS.md': OWN }, false)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  expect(files.get('/q/.ai/GOALS.md')?.text).toBe(OWN)
+  expect(log.writes).toEqual(['/q/.ai/GOALS.md'])
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /S1 Own board/ })).toBeDefined()
+  await ui.unmount()
+
+  await $.tool.call(STORY)
+  expect(files.get('/q/.ai/GOALS.md')?.text).toContain('- [x] Mine')
+  expect(files.get('/q/GOALS.md')?.text).toBe(OWN)
+  expect(log.writes).toEqual(['/q/.ai/GOALS.md', '/q/.ai/GOALS.md'])
+
+  const listed = await $.command.run(GOALS())
+  expect(listed.text).toContain('loaded from /q/.ai/GOALS.md')
+  expect(listed.text).toContain('/q/GOALS.md is a leftover copy')
+  expect((await $.tool.describe(DESCRIBE)).description).toContain('/q/GOALS.md is a leftover copy')
+})
+
+test('both files: the .ai/ one is the board, and neither is overwritten', async ($, on) => {
+  mock.clock(on)
+  const { files, log } = project(on, { '/q/GOALS.md': OTHER, '/q/.ai/GOALS.md': OWN }, false)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  expect(log.writes).toEqual([])
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /S1 Own board/ })).toBeDefined()
+  expect(await ui.find({ text: /Other board/ })).toBeUndefined()
+  await ui.unmount()
+  expect(files.get('/q/GOALS.md')?.text).toBe(OTHER)
+  expect((await $.command.run(GOALS())).text).toContain('/q/GOALS.md is a leftover copy')
+})
+
+test('only .ai/GOALS.md: nothing is written and no leftover is reported', async ($, on) => {
+  mock.clock(on)
+  const { log } = project(on, { '/q/.ai/GOALS.md': OWN }, false)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  expect(log.writes).toEqual([])
+  expect((await $.command.run(GOALS())).text).toBe('Compass: 1 sprints, 1 stories loaded from /q/.ai/GOALS.md.')
+})
+
+test('with no GOALS.md nothing is written on load, and /goals init creates .ai/GOALS.md', async ($, on) => {
+  mock.clock(on)
+  const { files, log } = project(on, {}, false)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+  expect(log.writes).toEqual([])
+  expect((await $.command.run(GOALS())).text).toBe('Compass: no sprints found in /q/.ai/GOALS.md. Run /goals init to start one.')
+
+  await $.command.run(GOALS('init'))
+  expect(log.writes).toEqual(['/q/.ai/GOALS.md'])
+  expect(files.has('/q/GOALS.md')).toBe(false)
+  expect(files.get('/q/.ai/GOALS.md')?.text).toContain('## Sprint 1')
+  expect((await $.command.run(GOALS('init'))).text).toBe('GOALS.md already exists; edit it to change the sprints.')
+})
+
+test('a project that plans in .ai/ gets no GOALS.md written on load', async ($, on) => {
+  mock.clock(on)
+  const { files, log } = project(on)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  expect(log.writes).toEqual([])
+  expect(files.has('/q/.ai/GOALS.md')).toBe(false)
+  expect(files.has('/q/GOALS.md')).toBe(false)
+})
+
+test('the layout root decides where GOALS.md lives, and a malformed declaration uses the root file in place', async ($, on) => {
+  mock.clock(on)
+  const { put, files, log } = project(
+    on,
+    { '/q/GOALS.md': OWN, '/q/.ai-layout.json': '{ "root": "docs/ai" }' },
+    false,
+  )
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+  expect(files.get('/q/docs/ai/GOALS.md')?.text).toBe(OWN)
+  expect(files.has('/q/.ai/GOALS.md')).toBe(false)
+
+  files.delete('/q/docs/ai/GOALS.md')
+  log.writes.length = 0
+  put('/q/.ai-layout.json', '{ "root": ".ai", "tracker": "files" }')
+  const listed = await $.command.run(GOALS())
+  expect(listed.text).toBe('Compass: 1 sprints, 1 stories loaded from /q/GOALS.md.')
+  expect(log.writes).toEqual([])
 })

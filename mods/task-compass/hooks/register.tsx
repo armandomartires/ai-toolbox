@@ -41,6 +41,8 @@ let goalsAt = ''
 let boardSource: Source = 'goals'
 /** The `.ai/` layer's root, when it is the board. */
 let aiRoot = ''
+/** A root GOALS.md the board no longer reads, because a copy lives under the layout root. */
+let leftover = ''
 /** Why a declared layer cannot be read: a malformed `.ai-layout.json`, reported as is. */
 let layerError = ''
 /** What the `.ai/` board was last built from: the roadmap's and each brief's mtime and size. */
@@ -68,20 +70,27 @@ const publish = async ($: EngineInterface, list: Sprint[], from: Source, where: 
 }
 
 /**
- * A project-workflow layer in `dir`: `.ai-layout.json` or its defaults, with
- * the entry point and the roadmap both present. A malformed declaration is
- * reported, never guessed past.
+ * Where a project keeps its planning files: `.ai-layout.json`'s root and entry
+ * point, or the defaults. A malformed declaration is reported, never guessed past.
  */
-const findLayer = async ($: EngineInterface, dir: string): Promise<{ root: string } | { error: string } | undefined> => {
+const layoutAt = async (
+  $: EngineInterface,
+  dir: string,
+): Promise<{ root: string; entrypoint: string } | { error: string }> => {
   const declared = join(dir, '.ai-layout.json')
   const json = (await isFile($, declared)) ? await $.fs.read(declared).catch(() => '') : undefined
   const layout = layoutOf(json)
   if ('error' in layout) return { error: `${declared}: ${layout.error}` }
-  const root = join(dir, layout.root.replace(/[\\/]/g, dir.includes('\\') ? '\\' : '/'))
-  const hasLayer = (await isFile($, join(root, layout.entrypoint))) && (await isFile($, join(root, ROADMAP_FILE)))
+  const root = layout.root === '.' ? dir : join(dir, layout.root.replace(/[\\/]/g, dir.includes('\\') ? '\\' : '/'))
 
-  return hasLayer ? { root } : undefined
+  return { root, entrypoint: layout.entrypoint }
 }
+
+/** A project-workflow layer: the entry point and the roadmap both present under the layout's root. */
+const findLayer = async ($: EngineInterface, layout: { root: string; entrypoint: string }) =>
+  (await isFile($, join(layout.root, layout.entrypoint))) && (await isFile($, join(layout.root, ROADMAP_FILE)))
+    ? { root: layout.root }
+    : undefined
 
 /**
  * The `.ai/` board, rebuilt only when the roadmap or a brief changed: each
@@ -122,23 +131,45 @@ const loadLayer = async ($: EngineInterface, root: string, force: boolean) => {
 }
 
 /**
- * The board of the session's current folder: its GOALS.md by full path,
- * else a project-workflow `.ai/` layer, else an empty GOALS.md board.
+ * The board of the session's current folder: its GOALS.md under the layout
+ * root, else a project-workflow `.ai/` layer, else an empty GOALS.md board.
+ * A GOALS.md at the project root is copied under the layout root when that
+ * has none; a mod cannot delete, so the root file stays and is reported as a
+ * leftover. Without a readable layout the root file is used in place.
  */
 const loadGoals = async ($: EngineInterface, force = false) => {
   const dir = (await $.session.cwd()).replace(/[\\/]+$/, '')
-  const path = join(dir, GOALS_FILE)
-  const stat = await $.fs.stat(path).catch(() => undefined)
+  const rootPath = join(dir, GOALS_FILE)
+  const layout = await layoutAt($, dir)
+  const homePath = 'error' in layout || layout.root === dir ? undefined : join(layout.root, GOALS_FILE)
+  const statOf = (path: string) => $.fs.stat(path).catch(() => undefined)
+
+  let path = homePath ?? rootPath
+  let stat = await statOf(path)
+  let stale = ''
+  if (homePath && stat) {
+    if (await isFile($, rootPath)) stale = rootPath
+  } else if (homePath && !stat) {
+    const rootStat = await statOf(rootPath)
+    if (rootStat) {
+      const copied = await $.fs.read(rootPath).then(text => $.fs.write(homePath, text)).then(() => true, () => false)
+      stat = copied ? await statOf(homePath) : undefined
+      if (stat) stale = rootPath
+      else [path, stat] = [rootPath, rootStat]
+    }
+  }
+  leftover = stale
+
   if (!stat) {
-    const layer = await findLayer($, dir)
-    if (layer && 'error' in layer) {
-      if (!force && boardSource === 'ai' && layerError === layer.error) return
+    if ('error' in layout) {
+      if (!force && boardSource === 'ai' && layerError === layout.error) return
       layerKey = ''
       goalsMtime = -1
       aiRoot = ''
-      layerError = layer.error
-      return publish($, [], 'ai', layer.error)
+      layerError = layout.error
+      return publish($, [], 'ai', layout.error)
     }
+    const layer = await findLayer($, layout)
     if (layer) return loadLayer($, layer.root, force)
   }
   const mtime = stat?.mtimeMs ?? 0
@@ -184,6 +215,12 @@ const goalsBoardText = (list: Sprint[]) =>
     )
     .join('\n')
 
+/** Tells the person, through the model, that a root GOALS.md is a copy nothing reads any more. */
+const leftoverNote = () =>
+  leftover
+    ? ` ${leftover} is a leftover copy of the board now kept in ${goalsAt}; tell the person once and offer to delete it.`
+    : ''
+
 /**
  * The story tool carries the board and when to call it in its own
  * description, kept out of ToolSearch, so the model reads them every request.
@@ -199,9 +236,9 @@ const storyDescription = (list: Sprint[]) =>
         aiBoardText(list),
       ].join('\n')
     : list.length === 0
-    ? `Update the person's sprint board (${GOALS_FILE}) and their Compass pane. No ${GOALS_FILE} with sprints was found in the session's folder when this was written. If the person has one, or starts one with /goals init, call this all the same with a story id (<sprint>.<story>, e.g. "1.2") and a status: each call reads the file afresh and says which ids exist.`
+    ? `Update the person's sprint board (${GOALS_FILE}) and their Compass pane. No ${GOALS_FILE} with sprints was found in the session's folder when this was written. If the person has one, or starts one with /goals init, call this all the same with a story id (<sprint>.<story>, e.g. "1.2") and a status: each call reads the file afresh and says which ids exist.${leftoverNote()}`
     : [
-        `Update the person's sprint board (${GOALS_FILE}) and their Compass pane. The person relies on you to keep it current and does no upkeep of their own, so do it unprompted as you work: call this with a story id and a status when you start a story (in_progress), hand it over for review (review), finish it (done) or get stuck (blocked); without a status it only marks the story you are working on. Use review only for work the person still has to look at; a story in review is done once they have seen it and moved on without asking for changes, so set it to done then, at the latest when you next call this. Call it again only when the story or its status changes. When you take on work the board has no story for, add one first: a "- [ ] <story>" line under the sprint it belongs to in ${GOALS_FILE}, details indented under it. The board:`,
+        `Update the person's sprint board (${GOALS_FILE}) and their Compass pane. The person relies on you to keep it current and does no upkeep of their own, so do it unprompted as you work: call this with a story id and a status when you start a story (in_progress), hand it over for review (review), finish it (done) or get stuck (blocked); without a status it only marks the story you are working on. Use review only for work the person still has to look at; a story in review is done once they have seen it and moved on without asking for changes, so set it to done then, at the latest when you next call this. Call it again only when the story or its status changes. When you take on work the board has no story for, add one first: a "- [ ] <story>" line under the sprint it belongs to in ${goalsAt || GOALS_FILE}, details indented under it.${leftoverNote()} The board:`,
         boardText(list),
       ].join('\n')
 
@@ -322,7 +359,7 @@ export const register: Register = on => {
     })
     await $.command.register({
       name: 'goals',
-      description: 'Reload the Compass board (GOALS.md, or a project-workflow .ai/ plan); "/goals init" writes a starter GOALS.md',
+      description: 'Reload the Compass board (.ai/GOALS.md, or a project-workflow .ai/ plan); "/goals init" writes a starter .ai/GOALS.md',
       argumentHint: '[init]',
     })
     await loadGoals($, true)
@@ -377,12 +414,15 @@ export const register: Register = on => {
     }
     const list = await read($, sprints)
     const storyCount = list.reduce((sum, sprint) => sum + sprint.stories.length, 0)
+    const stale = leftover
+      ? ` ${leftover} is a leftover copy of the board now kept in ${goalsAt}; delete it with: rm -- "${leftover}"`
+      : ''
 
     return {
       text:
-        list.length > 0
+        (list.length > 0
           ? `Compass: ${list.length} sprints, ${storyCount} stories loaded from ${goalsAt}.`
-          : `Compass: no sprints found in ${goalsAt}. Run /goals init to start one.`,
+          : `Compass: no sprints found in ${goalsAt}. Run /goals init to start one.`) + stale,
     }
   })
 

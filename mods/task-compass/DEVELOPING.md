@@ -8,7 +8,7 @@
 - `hooks/rails.ts`: pure layout of the pane: `focusOf`, `carousel`, `columnRows` (rows, cards, progress, folding), sprint dates. Tested directly in `rails.test.ts`.
 - `hooks/view.tsx`: the `ui.render` pane, drawing what `rails.ts` lays out.
 - `hooks/plan.ts`: pure reading of a project-workflow `.ai/` layer: `layoutOf`, `parseRoadmap`, `briefStory`, `statusOfRaw`, `planSprints` (open sprints last). Tested directly in `plan.test.ts`.
-- `hooks/register.tsx`: the hooks, the `story` tool, board loading (`GOALS.md`, else the `.ai/` layer, re-reading only the briefs whose mtime or size moved), subagent tracking. It is the only module that knows the source (`source` in `$.state`), and it writes only when the source is `goals`. Its `.ai/` behaviour is tested in `layer.test.tsx`.
+- `hooks/register.tsx`: the hooks, the `story` tool, board loading (`<layout root>/GOALS.md`, else a root `GOALS.md` copied there, else the `.ai/` layer, re-reading only the briefs whose mtime or size moved), subagent tracking. It is the only module that knows the source (`source` in `$.state`), and it writes only when the source is `goals`. Its `.ai/` behaviour is tested in `layer.test.tsx`.
 - `types/index.d.ts`: the `$.state` contract.
 
 ## The `.ai/` board

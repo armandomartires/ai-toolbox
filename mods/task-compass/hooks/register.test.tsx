@@ -51,7 +51,7 @@ const SURFACES = ['terminal', 'desktop'] as const
 type AppTool = never
 
 /**
- * The engine beneath the mod: a GOALS.md kept in memory in /p, the session's
+ * The engine beneath the mod: a .ai/GOALS.md kept in memory in /p, the session's
  * folder unless the test moves it, and one subagent.
  */
 const engine = (on: On, agentStatus: { value: AgentStatus }) => {
@@ -64,7 +64,7 @@ const engine = (on: On, agentStatus: { value: AgentStatus }) => {
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('session.cwd', () => ({ value: file.cwd }))
   on('fs.stat', (_, e) => {
-    if (!/[\\/]p[\\/]GOALS\.md$/.test(e.path)) throw new Error('ENOENT')
+    if (!/[\\/]p[\\/]\.ai[\\/]GOALS\.md$/.test(e.path)) throw new Error('ENOENT')
     return { value: { kind: 'file', size: file.text.length, mtimeMs: file.mtime, isLink: false } }
   })
   on('fs.read', () => ({ value: file.text }))
