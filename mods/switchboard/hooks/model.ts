@@ -214,6 +214,19 @@ export const shownName = (kind: Kind, name: string, hints: Readonly<Record<strin
 /** The switch's knob, drawn in text at the end it stands at: right when on. */
 export const switchText = (isOn: boolean) => (isOn ? '━━●' : '●━━')
 
+/** What `/switchboard list` answers, as its panel draws it: per kind, each name and whether it is on. */
+export type ListOutput = { kind: Kind; takesEffect: string; rows: { name: string; isOn: boolean; isSelf: boolean }[] }[]
+
+export const listData = (off: Names, seen: Names, hints: Readonly<Record<string, string>> = {}): ListOutput =>
+  KINDS.map(kind => ({
+    kind,
+    takesEffect: takesEffect[kind],
+    rows: [...new Set([...seen[kind], ...off[kind]])]
+      .filter(name => !(kind === 'connector' && isProtected(name)))
+      .sort()
+      .map(name => ({ name: shownName(kind, name, hints), isOn: !isOff(off, kind, name), isSelf: kind === 'mod' && name === SELF })),
+  }))
+
 /** The text `/switchboard list` answers: each kind, what is seen, what is off. */
 export const listText = (off: Names, seen: Names, hints: Readonly<Record<string, string>> = {}) =>
   KINDS.map(kind => {

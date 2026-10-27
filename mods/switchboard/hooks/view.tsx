@@ -3,6 +3,8 @@ import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { Kind } from '../types'
 import { KINDS, SELF, isOff, isProtected, pendingNote, shownName, switchText, takesEffect } from './model'
+import type { ListOutput } from './model'
+import { STATUS, color, kit, recall } from './sigma'
 import { saveOff } from './store'
 
 // The same $.state values the hooks write: the engine lists a module's reads
@@ -28,7 +30,9 @@ const HEADINGS: Record<Kind, string> = { mod: 'Mods', skill: 'Skills', connector
  * switch (`TASK-0187`). The label names the control for a reader.
  */
 export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => {
-  const { Box, Button, Text } = $.ui.resolve(e)
+  const ui = $.ui.resolve(e)
+  const { Box, Button, Text } = ui
+  const { label, panel } = kit(ui, e.surface)
   const [held, known, gone, shown, named] = await Promise.all([
     read($, off),
     read($, seen),
@@ -49,23 +53,27 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     const note = kind === 'mod' && !isSelf ? pendingNote(held, gone, name) : undefined
     const press = () => void saveOff($, kind, name, isOn).catch(() => undefined)
 
-    // The name takes the row's width; the switch keeps its own at the end.
+    // The state's glyph, then the name, which takes the row's width; the
+    // switch keeps its own at the end. On is nominal, off is offline.
+    const state = STATUS[isOn ? 'nominal' : 'offline']
     return (
       <Box flexDirection="column">
         <Box flexDirection="row">
+          <Box flexShrink={0}>
+            <Text color={color(state.token)}>{`${state.glyph} `}</Text>
+          </Box>
           <Box flexGrow={1} flexShrink={1}>
-            <Text dimColor={!isOn} wrap="truncate-end">{shownName(kind, name, named)}</Text>
+            <Text color={color(isOn ? 'text-1' : 'text-3')} wrap="truncate-end">{shownName(kind, name, named)}</Text>
           </Box>
           <Box flexShrink={0} marginLeft={1}>
-            {isSelf ? (
-              <Text dimColor>always on</Text>
-            ) : (
-              toggle(`${kind}-${name}`, isOn, press)
-            )}
+            {isSelf ? label('always on') : toggle(`${kind}-${name}`, isOn, press)}
           </Box>
         </Box>
         {note !== undefined && (
-          <Text color="warning" size="caption">{`  ${note}`}</Text>
+          <Box flexDirection="row">
+            <Text color={color('status-caution')} size="caption">{`  ${STATUS.caution.glyph}`}</Text>
+            <Text color={color('status-caution')} size="caption">{` ${note}`}</Text>
+          </Box>
         )}
       </Box>
     )
@@ -79,23 +87,61 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     const isOpen = shown.includes(kind)
     const flip = () =>
       void update($, open, list => (list.includes(kind) ? list.filter(k => k !== kind) : [...list, kind])).catch(() => undefined)
-    const counts = `${names.length}${offCount > 0 ? ` · ${offCount} off` : ''}`
+    const counts = `${names.length}${offCount > 0 ? ` · ${offCount} OFF` : ''}`
 
     return (
-      <Box flexDirection="column" marginBottom={1}>
+      <Box flexDirection="column" marginTop={1}>
         <Button key={`section-${kind}`} plain onPress={flip}>
-          <Text bold>{`${isOpen ? '▾' : '▸'} ${HEADINGS[kind]}  ${counts}`}</Text>
+          <Text color={color('text-1')} weight="semibold">{`${isOpen ? '▾' : '▸'} ${HEADINGS[kind].toUpperCase()}  ${counts}`}</Text>
         </Button>
-        {isOpen && <Text dimColor size="caption" wrap="wrap">{`Takes effect ${takesEffect[kind]}.`}</Text>}
-        {isOpen && names.length === 0 && <Text dimColor>None seen yet in this session.</Text>}
+        {isOpen && <Text color={color('text-3')} size="caption" wrap="wrap">{`Takes effect ${takesEffect[kind]}.`}</Text>}
+        {isOpen && names.length === 0 && <Text color={color('text-3')}>None seen yet in this session.</Text>}
         {isOpen && names.map(name => row(kind, name))}
       </Box>
     )
   }
 
+  const allOff = KINDS.reduce((sum, kind) => sum + held[kind].length, 0)
   return (
     <Box flexDirection="column" minHeight={e.props.scroll.bodyRows}>
-      {KINDS.map(section)}
+      {panel({ title: 'Switchboard', code: allOff > 0 ? `${allOff} off` : 'all on', width: Math.max(20, e.props.bodyColumns) }, <Box flexDirection="column">{KINDS.map(section)}</Box>)}
+    </Box>
+  )
+}
+
+/**
+ * `/switchboard list` as a panel per kind; none for a row this session did
+ * not answer (a resume, a reload), which the engine draws as text. A
+ * declaration: the engine follows `$` past an import only into one.
+ */
+export function renderOutput($: EngineInterface, e: RenderInput<'CommandOutput'>) {
+  if (e.props.isErrored) return undefined
+  const kinds = recall<ListOutput>(e.props.text)
+  if (kinds === undefined) return undefined
+  const ui = $.ui.resolve(e)
+  const { Box, Text } = ui
+  const { badge, label, panel } = kit(ui, e.surface)
+  const width = Math.min(64, e.viewport?.columns ?? 64)
+
+  return (
+    <Box flexDirection="column" rowGap={1}>
+      {kinds.map(one =>
+        panel(
+          { title: HEADINGS[one.kind], code: `${one.rows.filter(row => !row.isOn).length} off`, width },
+          <Box flexDirection="column">
+            <Text color={color('text-3')} size="caption">{`Takes effect ${one.takesEffect}.`}</Text>
+            {one.rows.length === 0 && <Text color={color('text-3')}>None seen yet.</Text>}
+            {one.rows.map(row => (
+              <Box flexDirection="row" columnGap={2}>
+                <Box width={8} flexShrink={0}>
+                  {row.isSelf ? label('always') : badge(row.isOn ? 'nominal' : 'offline', row.isOn ? 'on' : 'off')}
+                </Box>
+                <Text color={color(row.isOn ? 'text-1' : 'text-3')} wrap="truncate-end">{row.name}</Text>
+              </Box>
+            ))}
+          </Box>,
+        ),
+      )}
     </Box>
   )
 }

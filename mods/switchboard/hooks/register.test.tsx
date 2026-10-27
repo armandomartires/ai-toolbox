@@ -1,6 +1,10 @@
 import { expect, mock, test } from 'claude-code/testing'
-import type { On } from 'claude-code'
+import type { ConfigRow, On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
+
+import { TOKENS } from './sigma'
+
+const DARK = TOKENS.dark
 
 const PANE = {
   plugin: 'switchboard',
@@ -163,11 +167,16 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
-    expect((await ui.find({ text: /Mods  3/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /MODS  3/ }))?.text).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^SWITCHBOARD$/ }))?.props.color).toBe(DARK['text-1'])
     expect((await ui.find({ text: /^agent-watch$/ }))?.text).toBeDefined()
     expect((await ui.find({ text: /^task-compass$/ }))?.text).toBeDefined()
     expect(await ui.find({ text: /skills-only/ })).toBeUndefined()
-    expect((await ui.find({ text: /^always on$/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /^ALWAYS ON$/ }))?.text).toBeDefined()
+    // On is nominal: a cyan glyph beside a text-1 name.
+    expect((await ui.find({ type: 'Text', text: /^agent-watch$/ }))?.props.color).toBe(DARK['text-1'])
+    expect((await ui.findAll({ type: 'Text', text: /^● $/ }))[0]?.props.color).toBe(DARK.cyan)
+    expect((await ui.findAll({ type: 'Text' })).filter(one => one.props.dimColor || (one.props.bold && !one.props.weight)).length).toBe(0)
     // A switch: a filled Button named On, its knob at the right.
     const on = await ui.find({ type: 'Button', text: /^━━●$/ })
     expect(on?.props.label).toBe('On')
@@ -177,13 +186,15 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   await ui.press({ key: 'mod-agent-watch' })
-  expect((await ui.find({ text: /Mods  3 · 1 off/ }))?.text).toBeDefined()
+  expect((await ui.find({ text: /MODS  3 · 1 OFF/ }))?.text).toBeDefined()
+  // Off is offline: a text-3 ring and name.
+  expect((await ui.find({ type: 'Text', text: /^agent-watch$/ }))?.props.color).toBe(DARK['text-3'])
   const switched = await ui.find({ type: 'Button', text: /^●━━$/ })
   expect(switched?.props.label).toBe('Off')
   expect(switched?.props.variant).toBe('secondary')
-  expect((await ui.find({ type: 'Text', text: /^\s+off from the next session$/ }))?.props.color).toBe('warning')
+  expect((await ui.find({ type: 'Text', text: /^ off from the next session$/ }))?.props.color).toBe(DARK.amber)
   await ui.press({ key: 'mod-agent-watch' })
-  expect(await ui.find({ type: 'Text', text: /^\s+(on|off) from the next session$/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /^ (on|off) from the next session$/ })).toBeUndefined()
   await ui.unmount()
 })
 
@@ -194,7 +205,7 @@ test('skills and connectors open from their header; a toggle there acts next tur
   await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect((await ui.find({ text: /Skills  3/ }))?.text).toBeDefined()
+  expect((await ui.find({ text: /SKILLS  3/ }))?.text).toBeDefined()
   expect(await ui.find({ text: /^loop$/ })).toBeUndefined()
   await ui.press({ key: 'section-skill' })
   expect((await ui.find({ text: /^loop$/ }))?.text).toBeDefined()
@@ -232,4 +243,39 @@ test("the desktop app's own servers are never listed, turned off or refused", as
   expect((await off($, 'off connector ccd_turn')).text).toContain('stays on')
   expect((await $.tool.call({ tool: 'mcp__ccd_turn__update_plan' } as never)).deny).toBeUndefined()
   expect(said.ran).toContain('mcp__ccd_turn__update_plan')
+})
+
+const OUTPUT = (text: string) => ({
+  plugin: 'switchboard',
+  component: 'CommandOutput',
+  props: { command: 'switchboard', args: 'list', text, isErrored: false },
+}) as const
+
+test('/switchboard list draws a panel per kind in the host theme; an unknown row stays text', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'light' } as ConfigRow] }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await start($)
+  await off($, 'off mod agent-watch')
+  const { text } = await off($, 'list')
+  // The text the model reads is unchanged.
+  expect(text).toContain('off  agent-watch')
+  const LIGHT = TOKENS.light
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...OUTPUT(text), surface })
+    expect((await ui.find({ type: 'Text', text: /^MODS$/ }))?.props.color).toBe(LIGHT['text-1'])
+    expect(await ui.find({ type: 'Text', text: /^SKILLS$/ })).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^agent-watch$/ }))?.props.color).toBe(LIGHT['text-3'])
+    expect((await ui.find({ type: 'Text', text: /^task-compass$/ }))?.props.color).toBe(LIGHT['text-1'])
+    expect((await ui.findAll({ type: 'Text', text: / ON$/ }))[0]?.props.color).toBe(LIGHT.cyan)
+    await ui.unmount()
+  }
+  const old = await $.ui.mount({ ...OUTPUT('mods (next session):'), surface: 'terminal' })
+  expect((await old.find({ type: 'Text' }))?.text).toBe('engine')
+  await old.unmount()
 })

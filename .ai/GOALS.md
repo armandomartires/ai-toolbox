@@ -425,6 +425,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0190-task-compass-sigmaorbital.md
 - [x] TASK-0191 — task-orchestrator 0.2.0 on SIGMAorbital
   .ai/tasks/TASK-0191-task-orchestrator-sigmaorbital.md
+- [x] TASK-0192 — switchboard 0.4.0 on SIGMAorbital
+  .ai/tasks/TASK-0192-switchboard-sigmaorbital.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

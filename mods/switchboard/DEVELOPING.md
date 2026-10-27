@@ -4,12 +4,13 @@
 
 ## Modules
 
-- `hooks/model.ts`: pure logic: `asNames`, `isOff`, `toggle`, `setOff`, `addSeen`, `refusal`, `pendingNote`, `pluginDirs`, `isProtected`, `isIdName`, `toolHints`, `shownName`, `switchText`, the server names (`serverOfTool`, `serverOfProvider`, `toolSpelling`, `offName`), the skill listing (`listedSkills`, `dropSkills`), and the command (`parseArgs`, `listText`). Tested in `model.test.ts`.
+- `hooks/model.ts`: pure logic: `asNames`, `isOff`, `toggle`, `setOff`, `addSeen`, `refusal`, `pendingNote`, `pluginDirs`, `isProtected`, `isIdName`, `toolHints`, `shownName`, `switchText`, the server names (`serverOfTool`, `serverOfProvider`, `toolSpelling`, `offName`), the skill listing (`listedSkills`, `dropSkills`), and the command (`parseArgs`, `listText`, `listData`). Tested in `model.test.ts`.
+- `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
 - `hooks/store.ts`: `loadOff`, `syncOff`, `saveOff`: `$.store` under `off:<project root>` is the truth, mirrored into `$.state` `off` for the pane. A toggle invalidates `prompt.attachment` and `tool.describe`, so the next turn reads it.
 - `hooks/kinds/mods.ts` (`plugin.register`), `kinds/skills.ts` (`prompt.attachment` `skill_listing`, `tool.call` on `Skill`, `skill.prompt`), `kinds/connectors.ts` (`tool.describe`, `tool.call`): one hook set per kind, each recording what it sees into `$.state` `seen`.
 - `hooks/inventory.ts`: `modsFromPluginDirs`: the mods `CLAUDE_CODE_PLUGIN_DIRS` names, by each folder's `plugin.json`, only where `hooks/hooks.json` exists; `refreshInventory`: those, plus the skills and MCP servers of `$.session.usage({ breakdown: 'summary' })` with up to three tool names per server (`$.state` `hints`), and `$.tool.list()`. Run at `session.start` and on `/switchboard` and `list`.
 - `hooks/register.tsx`: wires the kinds, `/switchboard`, the pane, and `refreshInventory`.
-- `hooks/view.tsx`: the pane: sections behind a header `Button` (`$.state` `open`), a row per item with a switch: a `Button` labelled On or Off, `variant` primary or secondary, its knob drawn in text by `switchText`, and a mod's `pendingNote` from `$.state` `refused`. `types/index.d.ts`: the `$.state` contract.
+- `hooks/view.tsx`: the pane: sections behind a header `Button` (`$.state` `open`), a row per item with a switch: a `Button` labelled On or Off, `variant` primary or secondary, its knob drawn in text by `switchText`, and a mod's `pendingNote` from `$.state` `refused`, all in one SIGMAorbital panel; and `renderOutput`, `/switchboard list` drawn as a panel per kind from the `listData` the command keeps with `remember`. `types/index.d.ts`: the `$.state` contract.
 
 ## Live behaviour (TASK-0185, Claude Code 2.1.310 and 2.1.312)
 

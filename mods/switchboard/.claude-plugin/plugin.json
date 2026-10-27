@@ -1,7 +1,7 @@
 {
   "name": "switchboard",
-  "version": "0.3.0",
-  "description": "A Switchboard pane listing every installed mod, skill and MCP server or connector with an on/off switch, per project: an off one is refused when called and, where the engine allows, hidden from what the model reads.",
+  "version": "0.4.0",
+  "description": "A Switchboard pane, in SIGMAorbital, listing every installed mod, skill and MCP server or connector with an on/off switch, per project: an off one is refused when called and, where the engine allows, hidden from what the model reads.",
   "license": "MIT",
   "types": "./types/index.d.ts"
 }
