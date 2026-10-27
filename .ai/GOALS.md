@@ -411,6 +411,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0184-goals-md-harmonized.md
 - [x] TASK-0183 — task-orchestrator: a mod that routes delegated work by model and effort
   .ai/tasks/TASK-0183-task-orchestrator-mod.md
+- [x] TASK-0185 — switchboard: one mod that turns mods, skills and connectors on and off
+  .ai/tasks/TASK-0185-switchboard-mod.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
