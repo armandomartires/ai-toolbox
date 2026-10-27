@@ -226,6 +226,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0179 — Compass reads a project's .ai/ planning
 - [x] TASK-0180 — Compass keeps GOALS.md under .ai/
 - [x] TASK-0181 — agent-watch: a subagents pane and a task-progress band
+- [x] TASK-0184 — Harmonize every task into .ai/GOALS.md, and make keeping it current a rule
 
 ## Post-S9 (superseded by the promotion above)
 

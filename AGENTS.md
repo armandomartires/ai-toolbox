@@ -95,10 +95,10 @@ Components: `skills/` `mcp-servers/` `loops/` `mods/` `prompts/` `agents/`
   the cap of 3, exercise or retire one before adding more (ADR-0039).
 
 ## Definition of done
-A task is complete only when acceptance criteria are satisfied, validations
-pass (`tests/validate.sh` at minimum), docs and registry are updated, no
-secrets are included, the diff is reviewed, the task is `done`, its commit
-subject names it, and the task report confirms the push to every remote.
+A task is complete only when acceptance criteria are satisfied, `tests/validate.sh`
+passes, docs and registry are updated, no secrets are included, the diff is
+reviewed, the task is `done` in its brief, `TODO.md` and `.ai/GOALS.md` (the
+Compass board), its commit subject names it, and the report confirms the push.
 
 ## Ambiguity policy
 If requirements are significantly ambiguous or risky, stop and ask the human.
