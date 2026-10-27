@@ -228,6 +228,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0181 — agent-watch: a subagents pane and a task-progress band
 - [x] TASK-0182 — agent-watch 0.2.0: live activity, failure alerts, band interactions
 - [x] TASK-0184 — Harmonize every task into .ai/GOALS.md, and make keeping it current a rule
+- [x] TASK-0183 — task-orchestrator: a mod that routes delegated work by model and effort
 
 ## Post-S9 (superseded by the promotion above)
 

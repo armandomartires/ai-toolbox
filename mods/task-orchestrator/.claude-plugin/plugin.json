@@ -1,0 +1,7 @@
+{
+  "name": "task-orchestrator",
+  "version": "0.1.0",
+  "description": "Makes the session a lead coordinator: worker profiles with an explicit model and effort per task class, dispatched as real isolated subagents under enforced concurrency, nesting, retry and writer-overlap limits, with requested versus observed settings reported.",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
