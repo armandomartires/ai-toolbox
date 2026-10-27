@@ -230,6 +230,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0184 — Harmonize every task into .ai/GOALS.md, and make keeping it current a rule
 - [x] TASK-0183 — task-orchestrator: a mod that routes delegated work by model and effort
 - [x] TASK-0185 — switchboard: one mod that turns mods, skills and connectors on and off
+- [x] TASK-0186 — switchboard 0.2.0: every mod in the pane, with On/Off toggle buttons
 
 ## Post-S9 (superseded by the promotion above)
 

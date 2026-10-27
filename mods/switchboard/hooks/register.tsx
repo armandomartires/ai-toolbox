@@ -4,7 +4,8 @@ import type { Register } from 'claude-code'
 import { registerConnectors } from './kinds/connectors'
 import { registerMods } from './kinds/mods'
 import { registerSkills } from './kinds/skills'
-import { USAGE, addSeen, listText, parseArgs, pluginOfKey, serverOfTool, takesEffect } from './model'
+import { modsFromPluginDirs } from './inventory'
+import { SELF, USAGE, addSeen, listText, parseArgs, serverOfTool, takesEffect } from './model'
 import { loadOff, saveOff, syncOff } from './store'
 import { PANE, TITLE, renderPane } from './view'
 
@@ -25,17 +26,19 @@ export const register: Register = on => {
     })
     await syncOff($).catch(() => undefined)
 
-    // What the session can already name: the marketplace plugins in the
-    // settings, and the connected MCP servers by their tool-name spelling
+    // What the session can already name: the mods `CLAUDE_CODE_PLUGIN_DIRS`
+    // loads (judged before switchboard's own hook, when it loads after them),
+    // and the connected MCP servers by their tool-name spelling
     // (`tool.describe` adds each server's own name as its tools are shown).
-    const enabled = await $.settings.read({ key: 'enabledPlugins' }).catch(() => undefined)
-    const plugins = enabled && typeof enabled === 'object' ? Object.keys(enabled).map(pluginOfKey) : []
+    // Not `enabledPlugins`: a plugin with no hooks module is never judged, so a
+    // toggle for one would do nothing.
+    const plugins = await modsFromPluginDirs($).catch(() => [])
     const tools = await $.tool.list().catch(() => [])
     const servers = tools.flatMap(tool => {
       const server = tool.mcp ? serverOfTool(tool.name) : undefined
       return server ? [server] : []
     })
-    await update($, seen, held => addSeen(addSeen(held, 'mod', plugins), 'connector', servers)).catch(() => undefined)
+    await update($, seen, held => addSeen(addSeen(held, 'mod', [SELF, ...plugins]), 'connector', servers)).catch(() => undefined)
 
     return next(e)
   })

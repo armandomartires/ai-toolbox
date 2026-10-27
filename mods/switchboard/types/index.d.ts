@@ -18,6 +18,10 @@ declare module 'claude-code' {
       off: Names
       /** What the session has seen of each kind, so the pane can list it. */
       seen: Names
+      /** The mods switchboard refused as they loaded in this session. */
+      refused: string[]
+      /** The pane's sections shown open; the others show their header alone. */
+      open: Kind[]
     }
   }
 }

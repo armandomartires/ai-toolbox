@@ -31,7 +31,20 @@ const engine = (on: On, root: { value: string }) => {
   on('session.root', () => ({ value: root.value }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('tool.list', () => ({ value: [{ name: 'mcp__figma__get_screenshot', description: 'x', mcp: true }] }))
-  on('settings.read', () => ({ value: { enabledPlugins: { 'agent-watch@lib': true }, model: 'opus' } }))
+  // One plugin folder, `/mods`, holding two mods with hooks and one plugin without.
+  const files: Record<string, string> = {
+    '/mods/agent-watch/.claude-plugin/plugin.json': '{"name":"agent-watch"}',
+    '/mods/agent-watch/hooks/hooks.json': '{}',
+    '/mods/task-compass/.claude-plugin/plugin.json': '{"name":"task-compass"}',
+    '/mods/task-compass/hooks/hooks.json': '{}',
+    '/mods/skills-only/.claude-plugin/plugin.json': '{"name":"skills-only"}',
+  }
+  mock.env(on, { CLAUDE_CODE_PLUGIN_DIRS: '/mods' })
+  on('fs.exists', (_, e) => ({ value: e.path in files }))
+  on('fs.read', (_, e) => (e.path in files ? { value: files[e.path] as string } : { deny: 'ENOENT' }))
+  on('fs.list', (_, e) =>
+    e.path === '/mods' ? { value: ['agent-watch', 'task-compass', 'skills-only'].map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) } : { value: [] },
+  )
   on('tool.call', (_, e) => {
     ran.push(String(e.tool))
     return { result: {} }
@@ -126,24 +139,53 @@ test('toggles are kept per project root and survive in the store', async ($, on)
   expect((await $.tool.call({ tool: 'Skill', skill: 'loop' })).deny).toBeUndefined()
 })
 
-test('the pane lists each kind and a press turns a row off', async ($, on) => {
+test('the pane lists every mod with hooks from the plugin folders, each with an On/Off toggle', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  await start($)
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    expect((await ui.find({ text: /Mods  3/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /^agent-watch$/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /^task-compass$/ }))?.text).toBeDefined()
+    expect(await ui.find({ text: /skills-only/ })).toBeUndefined()
+    expect((await ui.find({ text: /^always on$/ }))?.text).toBeDefined()
+    expect((await ui.find({ type: 'Button', text: /^On$/ }))?.props.variant).toBe('primary')
+    await ui.unmount()
+  }
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'mod-agent-watch' })
+  expect((await ui.find({ text: /Mods  3 · 1 off/ }))?.text).toBeDefined()
+  expect((await ui.find({ type: 'Button', text: /^Off$/ }))?.props.variant).toBe('secondary')
+  expect((await ui.find({ type: 'Text', text: /^\s+off from the next session$/ }))?.props.color).toBe('warning')
+  await ui.press({ key: 'mod-agent-watch' })
+  expect(await ui.find({ type: 'Text', text: /^\s+(on|off) from the next session$/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('skills and connectors open from their header; a toggle there acts next turn', async ($, on) => {
   mock.store(on)
   engine(on, { value: '/p' })
   await start($)
   await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
 
-  for (const surface of ['terminal', 'desktop'] as const) {
-    const ui = await $.ui.mount({ ...PANE, surface })
-    expect((await ui.find({ text: /^Mods/ }))?.text).toBeDefined()
-    expect((await ui.find({ text: /agent-watch/ }))?.text).toBeDefined()
-    expect((await ui.find({ text: /figma/ }))?.text).toBeDefined()
-    expect((await ui.find({ text: /^loop$/ }))?.text).toBeDefined()
-    await ui.unmount()
-  }
-
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ text: /Skills  2/ }))?.text).toBeDefined()
+  expect(await ui.find({ text: /^loop$/ })).toBeUndefined()
+  await ui.press({ key: 'section-skill' })
+  expect((await ui.find({ text: /^loop$/ }))?.text).toBeDefined()
   await ui.press({ key: 'skill-loop' })
   expect((await $.tool.call({ tool: 'Skill', skill: 'loop' })).deny).toContain('turned off')
-  expect((await ui.find({ text: /loop \(off\)/ }))?.text).toBeDefined()
+  await ui.press({ key: 'section-connector' })
+  expect((await ui.find({ text: /^figma$/ }))?.text).toBeDefined()
   await ui.unmount()
+})
+
+test('the command opens the pane when a kind or a name is left out', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  await start($)
+  for (const args of ['', 'on', 'off mod', 'mod']) expect((await off($, args)).text).toBe('Switchboard opened.')
 })

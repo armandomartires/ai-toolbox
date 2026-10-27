@@ -9,7 +9,13 @@ A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or
 - **switchboard itself is always on**: it cannot turn itself off.
 - It writes no settings file and not `install.selection`: deploying stays `scripts/install.sh`'s job; this only turns off what is installed.
 
-The pane lists what the session has seen: the plugins in your settings and those loading after this one, the skills in the listing, and the connected servers. Press a row to turn it off or on.
+## The pane
+
+`/switchboard` opens it. Three sections: **Mods** open, **Skills** and **Connectors** behind their header (press it to open or close), each header with its count and how many are off. Every row has an **On/Off** button: press it to flip that item.
+
+- **Mods** lists every mod (a plugin with a hooks module) in the folders `CLAUDE_CODE_PLUGIN_DIRS` names, and any of your own that loads after switchboard. A plugin that only ships skills or servers is not listed: it has nothing to refuse. Managed and built-in plugins are not listed or touched. switchboard's own row says *always on*.
+- A mod whose toggle this session cannot apply says so in its row: *off from the next session* (it is running) or *on from the next session* (switchboard refused it at load).
+- **Skills** lists those in the listing; **Connectors** the connected servers.
 
 ## Install
 
@@ -21,6 +27,6 @@ Mods need Claude Code 2.1.308 or later. Once published to the organization plugi
 
 ## Commands
 
-- `/switchboard` opens the pane (or lists, on a surface without panes).
+- `/switchboard` opens the pane (or lists, on a surface without panes); so does a command missing its kind or name, such as `/switchboard on`.
 - `/switchboard list` lists each kind, on or off.
 - `/switchboard off skill loop`, `/switchboard on connector claude.ai Gmail`, `/switchboard off mod agent-watch`: one item. `mcp` and `server` also name a connector; `plugin` a mod.

@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { EMPTY, asNames, dropSkills, isOff, listedSkills, offName, parseArgs, refusal, serverOfTool, toggle } from './model'
+import { EMPTY, asNames, dropSkills, isOff, listedSkills, offName, parseArgs, pendingNote, pluginDirs, refusal, serverOfTool, toggle } from './model'
 
 const LISTING = [
   'The following skills are available for use with the Skill tool:',
@@ -64,4 +64,21 @@ test('the command reads list, on and off', () => {
   expect(parseArgs('off skill loop')).toEqual({ kind: 'set', target: 'skill', name: 'loop', wantOff: true })
   expect(parseArgs('on mcp claude.ai Gmail')).toEqual({ kind: 'set', target: 'connector', name: 'claude.ai Gmail', wantOff: false })
   expect(parseArgs('off thing x').kind).toBe('usage')
+  expect(parseArgs('on')).toEqual({ kind: 'open' })
+  expect(parseArgs('on mod')).toEqual({ kind: 'open' })
+  expect(parseArgs('skills')).toEqual({ kind: 'open' })
+})
+
+test('the plugin folders split by the separator the value uses', () => {
+  expect(pluginDirs('/a/mods/x:/b/y/')).toEqual(['/a/mods/x', '/b/y'])
+  expect(pluginDirs('\\\\wsl.localhost\\d\\x;C:\\mods\\y\\')).toEqual(['\\\\wsl.localhost\\d\\x', 'C:\\mods\\y'])
+  expect(pluginDirs(undefined)).toEqual([])
+})
+
+test('a mod toggle waits for the next session only when the session differs from it', () => {
+  const off = { ...EMPTY, mod: ['agent-watch'] }
+  expect(pendingNote(off, [], 'agent-watch')).toBe('off from the next session')
+  expect(pendingNote(off, ['agent-watch'], 'agent-watch')).toBeUndefined()
+  expect(pendingNote(EMPTY, ['agent-watch'], 'agent-watch')).toBe('on from the next session')
+  expect(pendingNote(EMPTY, [], 'agent-watch')).toBeUndefined()
 })

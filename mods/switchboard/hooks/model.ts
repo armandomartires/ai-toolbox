@@ -102,8 +102,28 @@ export const dropSkills = (text: string, off: readonly string[]) => {
     .join('\n')
 }
 
-/** The name part of an `enabledPlugins` key, `<name>@<marketplace>`. */
-export const pluginOfKey = (key: string) => key.split('@')[0] ?? key
+/**
+ * The folders a `CLAUDE_CODE_PLUGIN_DIRS` value names: `;`-separated on
+ * Windows, `:`-separated elsewhere (a `;` in the value says which).
+ */
+export const pluginDirs = (value: string | undefined) =>
+  (value ?? '')
+    .split(value?.includes(';') ? ';' : ':')
+    .map(dir => dir.trim().replace(/[\\/]+$/, ''))
+    .filter(dir => dir !== '')
+
+/**
+ * When a mod's toggle waits for the next session: turned off while it runs,
+ * or on while switchboard refused it. Undefined when the session already
+ * matches the toggle.
+ */
+export const pendingNote = (off: Names, refused: readonly string[], mod: string) => {
+  const isRefused = refused.includes(mod)
+  if (isOff(off, 'mod', mod) && !isRefused) return 'off from the next session'
+  if (!isOff(off, 'mod', mod) && isRefused) return 'on from the next session'
+  return undefined
+}
+
 
 /** Why a plugin about to load is refused, or undefined when it may load; `switchboard` always may. */
 export const refusal = (off: Names, plugin: string) =>
@@ -142,13 +162,13 @@ const KIND_WORDS: Record<string, Kind> = {
 /** `/switchboard [list | on|off <mod|skill|connector> <name>]` read. */
 export const parseArgs = (args: string): Ask => {
   const words = args.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return { kind: 'open' }
+  if (words.length === 0 || (words.length === 1 && KIND_WORDS[words[0] ?? ''])) return { kind: 'open' }
   if (words[0] === 'list' && words.length === 1) return { kind: 'list' }
   if (words[0] === 'on' || words[0] === 'off') {
     const target = KIND_WORDS[words[1] ?? '']
     const name = words.slice(2).join(' ')
-    if (!target) return { kind: 'usage', why: `say which kind: mod, skill or connector` }
-    if (name === '') return { kind: 'usage', why: `name the ${target}` }
+    // A kind or name left out opens the pane, where each row has its toggle.
+    if (!target || name === '') return words.length > 2 && !target ? { kind: 'usage', why: `say which kind: mod, skill or connector` } : { kind: 'open' }
     if (target === 'mod' && name === SELF) return { kind: 'usage', why: 'switchboard cannot turn itself off' }
     return { kind: 'set', target, name, wantOff: words[0] === 'off' }
   }
