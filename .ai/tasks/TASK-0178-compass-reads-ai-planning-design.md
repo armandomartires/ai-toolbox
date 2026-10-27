@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: done
 - Owner: agent with the human (the design-brief loop needs a human in the session)
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -52,13 +52,13 @@
 
 ## Acceptance criteria
 
-- [ ] The brief exists at the agreed path, accepted and locked by the human.
-- [ ] It answers all six questions above, or says which are deferred and why.
-- [ ] Its handover names the implementation task and how that task will be tested.
+- [x] The brief exists at the agreed path, accepted and locked by the human.
+- [x] It answers all six questions above, or says which are deferred and why.
+- [x] Its handover names the implementation task and how that task will be tested.
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 
 ## Risks and rollback
 
@@ -70,10 +70,18 @@
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `docs/design/task-compass-ai-planning-brief.md` | accepted 2026-10-27: C1 amended (one data contract, `source` known only to `register.tsx`); rules A and B decided; C2, C3, C4 rejected with reasons |
 
-Next:
+Questions 1–6: detection (approach 1), sprints and statuses (2–5), read-only (9–10), schema drift (5, and the Python owner accepted), cost (8, first load to be measured), project-migration deferred (*Out of scope*).
+
+Next: an implementation task, `loops/project-build/` on the locked brief, tested by `tests/test-mods.sh` on redacted fixtures plus a check in a sigma-infrastructure session.
 
 ## Execution log
 
-- 2026-10-27 · Claude Code (Opus 5.5) · opened, not started
+- 2026-10-27 · Claude Code (Opus 5.5) · step 1 drafted in the brief; waiting on the human's confirmation
+  - Evidence: sigma-infrastructure read at its clone's `origin/master` `90f9a4d` (S089): 235 briefs, statuses tallied; `git fetch` needs credentials
+  - Deviation: none
+- 2026-10-27 · Claude Code (Opus 5.5) · done: one iteration, accepted
+  - Evidence: ideator → 4 candidates on 3 axes; 4 critics, one per candidate, each against the 8 obligations; C4's premise refuted from sigma transcripts (Bash reads 572 vs `Read` 14)
+  - Evidence: the human chose rule A (both), rule B (redacted copies) and accepted, through AskUserQuestion
+  - Deviation: the brief is committed with this task file, not on its own (AGENTS.md's one task, one commit wins over the loop), and directly: `git-ops` is not emitted for Claude Code
