@@ -455,6 +455,12 @@ if ! MODS_OUT="$(python3 scripts/check-mods.py 2>&1)"; then
   printf '%s\n' "$MODS_OUT"
   fail=1
 fi
+# Rule 7's own cases: a differing sigma.tsx copy, or a drawing mod without
+# one, must fail (ADR-0043, TASK-0188).
+if ! CHECK_MODS_OUT="$(bash tests/test-check-mods.sh 2>&1)"; then
+  printf '%s\n' "$CHECK_MODS_OUT"
+  fail=1
+fi
 if [ -n "$(git ls-files 'mods/*/.claude-plugin/types/*')" ]; then
   echo "MOD SHAPE: generated types are tracked under mods/*/.claude-plugin/types/ — git rm --cached them"
   fail=1

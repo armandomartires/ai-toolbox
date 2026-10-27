@@ -12,10 +12,14 @@ each directory mods/<dir>/:
   4. a `types` path it declares exists inside the mod;
   5. hooks/hooks.json parses, and its `modules` is a non-empty list of files
      that exist inside the mod's hooks/ folder;
-  6. README.md exists.
+  6. README.md exists;
+  7. its hooks/sigma.tsx, the SIGMAorbital design module (ADR-0043), is a
+     byte-identical copy of mods/_template/hooks/sigma.tsx, its one owner;
+     and a mod whose hooks draw (`ui.render`) carries one.
 
 WHAT THIS PROVES: Claude Code can find the mod's manifest, hooks modules and
-contract, and the registry can index it. WHAT IT DOES NOT PROVE: that the
+contract, and the registry can index it; every mod draws from one copy of
+the design module. WHAT IT DOES NOT PROVE: that the
 modules load, type-check or pass their tests. That needs a `claude` that
 supports mods, which the gate must not require: tests/test-mods.sh runs
 `claude plugin validate` and `claude plugin test`.
@@ -28,6 +32,8 @@ import re
 import sys
 
 NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+SIGMA_OWNER = os.path.join("mods", "_template", "hooks", "sigma.tsx")
+DRAWS = re.compile(r"""['"]ui\.render['"]""")
 
 
 def load(path, bad, what):
@@ -87,6 +93,44 @@ def check(mod, bad):
                                "hooks/" % (mod, m))
     if not os.path.isfile(os.path.join(mod, "README.md")):
         bad.append("%s: missing README.md" % mod)
+    check_sigma(mod, hooks_dir, bad)
+
+
+def read_bytes(path):
+    try:
+        with open(path, "rb") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+def draws(hooks_dir):
+    """True when a hooks module (not a test) hooks `ui.render`."""
+    for root, _, files in os.walk(hooks_dir):
+        for f in files:
+            if f.endswith((".ts", ".tsx")) and ".test." not in f:
+                text = read_bytes(os.path.join(root, f)) or b""
+                if DRAWS.search(text.decode("utf-8", "replace")):
+                    return True
+    return False
+
+
+def check_sigma(mod, hooks_dir, bad):
+    copy = os.path.join(hooks_dir, "sigma.tsx")
+    if os.path.normpath(copy) == os.path.normpath(SIGMA_OWNER):
+        return
+    owner = read_bytes(SIGMA_OWNER)
+    mine = read_bytes(copy)
+    if mine is None:
+        if draws(hooks_dir):
+            bad.append("%s: draws (ui.render) without hooks/sigma.tsx; "
+                       "cp %s %s" % (mod, SIGMA_OWNER, copy))
+    elif owner is None:
+        bad.append("%s: has hooks/sigma.tsx but its owner %s is missing"
+                   % (mod, SIGMA_OWNER))
+    elif mine != owner:
+        bad.append("%s: hooks/sigma.tsx differs from its owner; change the "
+                   "owner, then cp %s %s" % (mod, SIGMA_OWNER, copy))
 
 
 def main():

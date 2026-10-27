@@ -12,4 +12,8 @@ Mods need Claude Code 2.1.308 or later. Once published to the organization plugi
 
 ## Commands
 
-- `/hello [name]` says hello.
+- `/hello [name]` says hello, drawn as a SIGMAorbital panel.
+
+## Design
+
+`hooks/sigma.tsx` is the SIGMAorbital design module (`ADR-0043`). This template owns it; every mod keeps a byte-identical copy. `/hello` shows how a mod uses it: `syncTheme` and `watchTheme`, then `remember` and a `CommandOutput` hook that draws with `kit`.

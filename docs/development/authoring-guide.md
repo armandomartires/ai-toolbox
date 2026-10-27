@@ -345,6 +345,12 @@ column; `tests/test-mods.sh` runs `claude plugin validate` and
 | `*.test.ts`, `*.test.tsx` | Pure logic sits in plain functions, tested directly; hooks and panes through `claude-code/testing`. | **no**: `tests/test-mods.sh` |
 | `.claude-plugin/types/` | Laid by the engine per CLI version. Never committed. | **yes** (`.gitignore`, and the gate fails on a tracked one) |
 
+**Design.** Every mod draws in SIGMAorbital (`ADR-0043`) from
+`hooks/sigma.tsx`: its tokens, status glyphs and primitives, and, in its
+header, the rules every surface follows. `mods/_template/hooks/sigma.tsx`
+is the one owner; each mod holds a byte-identical copy, which the gate
+checks. Change the owner, then copy it to every mod.
+
 A mod's own module map and traps go in its `DEVELOPING.md`, as
 `mods/task-compass/` does. Loading a mod in development: runbook, *Loading a
 mod in development*.
