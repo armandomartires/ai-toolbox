@@ -16,13 +16,15 @@ From this checkout, add the folder to `CLAUDE_CODE_PLUGIN_DIRS` in `~/.claude/se
 
 ## Activation
 
+While it is on, the status line reads `ORCH BALANCED · 2 RUNNING · 1 QUEUED`, and a finished worker is toasted as `T1 · SCOUT · COMPLETED · next step`.
+
 Orchestration starts **off**. `/orchestrate on` turns it on for this project's sessions (the choice is stored) and hands the model the coordinator protocol; `/orchestrate off` stops new dispatches, leaves the ledger and every running worker alone, and changes nothing of yours.
 
 ## Usage
 
-- `/orchestrate status`: on or off, policy, the coordinator's model, every task as `id → worker [agent id] → requested model/effort → observed … → status → next`, blockers, and the overrides in force.
+- `/orchestrate status`: on or off, policy, the coordinator's model, every task as `id → worker [agent id] → requested model/effort → observed … → status → next`, blockers, and the overrides in force. In the transcript it draws as SIGMAorbital panels (`ADR-0043`): ORCHESTRATOR with the run and a row per task, its state as glyph and word (queued grey, running cyan, done bright, failed red, blocked or partial amber), and OVERRIDES IN FORCE; the model reads the same text as before.
 - `/orchestrate policy economy|balanced|quality`: picks the policy; the worker profiles are registered again under it. `balanced` is the brief's table (haiku/low for extraction and lookup, sonnet/medium for exploration, implementation and tests, sonnet/high for review, opus/high for architecture, debugging and risk review); `economy` lowers exploration, documentation, review, architecture and debugging one step, never risk review; `quality` raises lookup, exploration, documentation, implementation, tests and review.
-- `/orchestrate routing`: the table under the current policy, with the model ids spawns resolved the aliases to so far.
+- `/orchestrate routing`: the table under the current policy, with the model ids spawns resolved the aliases to so far, drawn as a ROUTING panel.
 - `/orchestrate models`: the alias resolutions seen this session and the models a spawn refused.
 - `/orchestrate opt-in high-effort|frontier [off]`: `xhigh`, `max` and the `fable` alias are refused until opted in.
 - `/orchestrate providers [enable|disable <id>]`: the external-provider adapters. None is implemented in this version; enabling one is refused and the data-sharing disclosure is shown.

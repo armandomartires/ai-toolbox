@@ -10,6 +10,8 @@
 - `hooks/contract.ts`: pure. `buildContract` (the worker's assignment), `parseReport` (its labelled report), `COORDINATOR_PROTOCOL`.
 - `hooks/overrides.ts`, `hooks/providers.ts`: pure. Disclosure of host overrides; the provider adapter interface and its disabled registry.
 - `hooks/register.tsx`: the hooks. `session.start` loads the config (defaults ← `~/.claude/task-orchestrator.json` ← `<cwd>/.claude/task-orchestrator.json` ← the store), reads the overrides, registers `/orchestrate`, the four tools and the worker profiles. `command.run` answers `/orchestrate`. `agent.spawn` denies a worker's spawn and tracks a worker profile the model took through the Agent tool. `tool.call` answers the mod's tools and fences a worker's calls. `turn.step` records a worker's observed model and effort. `turn.complete` closes the task, parses the report, appends a hidden note for the coordinator and starts queued work.
+- `hooks/view.tsx`: `renderOutput`, `/orchestrate status` and `routing` drawn as SIGMAorbital panels from the data `register.tsx` keeps with `remember` beside the unchanged text; `statusLineText`; the task-state colours.
+- `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
 - `types/index.d.ts`: the `$.state` contract and the unions the modules import.
 
 ## Traps found while building it
@@ -20,4 +22,4 @@
 - **The test's `session.append` stub must call `next(e)`**: an answer without `next` is refused ("the row is kept").
 - **A hook's budget counts a wait on a plain promise.** The first live `collect` overran the ten-second budget and was skipped ("no tool.call hook answered this call") because it waited on `new Promise` around a timer; a wait on `$.clock.sleep` is free, so `collect` polls with it.
 - **`$.store` is not on the test's `$`**: assert through the mod's own commands, or give `mock.store(on, entries)` its starting rows.
-- Not run: `tsc -p mods/task-orchestrator`: no `tsc` on this host, and the engine lays the types only once it has loaded the mod.
+- `tsc -p mods/task-orchestrator` against the 2.1.312 types reports 31 errors, all in `register.test.tsx`: its command and tool inputs predate fields 2.1.312 requires (`origin`, `presentation`). The tests still run; new calls cast `as never`.

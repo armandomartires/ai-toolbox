@@ -1,11 +1,14 @@
 import { expect, mock, test } from 'claude-code/testing'
-import type { AgentSpawnInput, On } from 'claude-code'
+import type { AgentSpawnInput, ConfigRow, On } from 'claude-code'
+
+import { TOKENS } from './sigma'
 
 /** The engine beneath the mod: registrations answered, spawns numbered, settings as given. */
 const engine = (on: On, options: { settings?: unknown; denySpawn?: string } = {}) => {
   const spawned: { type: string; model?: string; name?: string; prompt: string }[] = []
   const registered: Record<string, unknown>[] = []
   const stopped: string[] = []
+  const statuses: (string | undefined)[] = []
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__task-orchestrator__${e.name}` } }))
   on('agent.register', (_, e) => {
@@ -33,7 +36,10 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string } = {}
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.append', (_, e, next) => next(e))
   on('fs.read', () => { throw new Error('ENOENT') })
-  on('ui.status', () => ({ value: undefined }))
+  on('ui.status', (_, e) => {
+    statuses.push(e.text)
+    return { value: undefined }
+  })
   on('ui.toast', () => ({ value: undefined }))
   on('ui.log', () => ({ value: undefined }))
   on('tool.call', (_, e) => {
@@ -44,7 +50,7 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string } = {}
   on('turn.step', async function* (_, e) {
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
   })
-  return { spawned, registered, stopped }
+  return { spawned, registered, stopped, statuses }
 }
 
 const dispatch = (input: Record<string, unknown>) => ({ tool: 'mcp__task-orchestrator__dispatch', ...input })
@@ -208,4 +214,52 @@ test('the policy changes the table and the profiles without touching code, and i
   expect(usage.text).toContain('usage: /orchestrate policy')
   const providers = await $.command.run({ command: 'orchestrate', args: 'providers enable openai' })
   expect(providers.text).toContain('not enabled: OpenAI (chat completions): no adapter is implemented')
+})
+
+const OUTPUT = (text: string) => ({
+  plugin: 'task-orchestrator',
+  component: 'CommandOutput',
+  props: { command: 'orchestrate', args: 'status', text, isErrored: false },
+}) as const
+
+test('/orchestrate status and routing draw as panels in the host theme; the status line is uppercase', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, { HOME: '/home/x' })
+  const { statuses } = engine(on)
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'light' } as ConfigRow] }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' } as never)
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser' }) as never)
+  expect(statuses[statuses.length - 1]).toBe('ORCH BALANCED · 1 RUNNING · 0 QUEUED')
+
+  const status = ((await $.command.run({ command: 'orchestrate', args: 'status' } as never)) as { text: string }).text
+  // The text the model reads keeps its facts.
+  expect(status).toContain('T1 → scout [agent-1] → requested haiku/low')
+  const LIGHT = TOKENS.light
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...OUTPUT(status), surface })
+    expect((await ui.find({ type: 'Text', text: /^ORCHESTRATOR$/ }))?.props.color).toBe(LIGHT['text-1'])
+    expect(await ui.find({ text: /ON · BALANCED/ })).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^ RUNNING$/ }))?.props.color).toBe(LIGHT.cyan)
+    expect((await ui.find({ type: 'Text', text: /^T1$/ }))?.props.tabular).toBe(true)
+    expect(await ui.find({ text: /haiku\/low →/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^OVERRIDES IN FORCE$/ })).toBeDefined()
+    await ui.unmount()
+  }
+
+  const routing = ((await $.command.run({ command: 'orchestrate', args: 'routing' } as never)) as { text: string }).text
+  const ui = await $.ui.mount({ ...OUTPUT(routing), surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /^ROUTING$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^LOOKUP$/ })).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /^haiku\/low/ }))?.props.color).toBe(LIGHT['text-1'])
+  await ui.unmount()
+
+  const old = await $.ui.mount({ ...OUTPUT('task-orchestrator off, policy balanced'), surface: 'terminal' })
+  expect((await old.find({ type: 'Text' }))?.text).toBe('engine')
+  await old.unmount()
 })

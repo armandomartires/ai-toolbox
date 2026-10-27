@@ -11,6 +11,9 @@ import { gate, isBlocked, route } from './router'
 import type { Decision } from './router'
 import { DEFAULT_CONFIG, EFFORTS, POLICIES, READ_ONLY_TOOLS, ROLE_PROFILES, TASK_CLASSES, WORKER_DENIED_TOOLS, mergeConfig, routesUnder } from './routing'
 import type { Config, Effort, Policy, Role, TaskClass } from './routing'
+import { remember, syncTheme, watchTheme } from './sigma'
+import { renderOutput, statusLineText } from './view'
+import type { OrchestrateOutput } from './view'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
 // in that same file, so each module declares the atoms it uses.
@@ -108,7 +111,7 @@ const statusLine = async ($: EngineInterface) => {
   if (!on) return $.ui.status(undefined)
   const rows = await read($, ledger)
   const queued = rows.filter(task => task.status === 'queued').length
-  $.ui.status(`orch ${config.policy}: ${activeCount(rows)} running, ${queued} queued`)
+  $.ui.status(statusLineText(config.policy, activeCount(rows), queued))
 }
 
 /** A role's profile under the settings a dispatch asks for; registered again only when they changed. */
@@ -147,16 +150,54 @@ const registerProfiles = async ($: EngineInterface): Promise<string[]> => {
   return problems
 }
 
+/** The routing table as `/orchestrate` draws it. */
+const routingView = (): OrchestrateOutput['routes'] =>
+  Object.entries(routesUnder(config)).map(([taskClass, routeOf]) => {
+    const gated = gate(routeOf.model, routeOf.effort, config)
+    const seen = resolved.get(routeOf.model)
+    return { taskClass, role: routeOf.role, settings: `${routeOf.model}/${routeOf.effort}${seen ? ` (${seen})` : ''}`, ...(gated ? { gated } : {}) }
+  })
+
+const limitsText = () =>
+  `limits: ${config.limits.maxConcurrent} concurrent, nesting ${config.limits.maxNesting}, ${config.limits.maxRetries} retries, ${config.limits.maxEscalations} escalation(s)`
+
 const routingTable = (): string =>
   [
     `policy ${config.policy} (${POLICIES.join('|')}); opt-in: high-effort ${config.optIn.highEffort ? 'on' : 'off'}, frontier ${config.optIn.frontier ? 'on' : 'off'}`,
-    `limits: ${config.limits.maxConcurrent} concurrent, nesting ${config.limits.maxNesting}, ${config.limits.maxRetries} retries, ${config.limits.maxEscalations} escalation(s)`,
+    limitsText(),
     ...Object.entries(routesUnder(config)).map(([taskClass, routeOf]) => {
       const gated = gate(routeOf.model, routeOf.effort, config)
       const seen = resolved.get(routeOf.model)
       return `- ${taskClass}: ${routeOf.role} → ${routeOf.model}/${routeOf.effort}${seen ? ` (resolved ${seen})` : ''}${gated ? ` [gated: ${gated}]` : ''}`
     }),
   ].join('\n')
+
+/** `/orchestrate status`'s text, kept with its panels' data. */
+const statusAnswer = async ($: EngineInterface): Promise<string> => {
+  const text = await statusText($)
+  const rows = await read($, ledger)
+  const settings = (one?: { model: string; effort: string }) => (one ? `${one.model}/${one.effort}` : '?')
+  const out: OrchestrateOutput = {
+    isOn: await read($, enabled),
+    policy: config.policy,
+    coordinator: await $.session.model().catch(() => 'unknown'),
+    run: overall(rows),
+    tasks: rows.map(task => ({
+      id: task.id,
+      role: task.role,
+      status: task.status,
+      requested: settings(task.requested),
+      observed: task.observed ? settings(task.observed) : task.resolvedModel ? `${task.resolvedModel}, effort unverified` : 'unverified',
+      next: task.report?.next?.trim() || task.reason || '',
+    })),
+    overrides: overridesText(await read($, overrides)).split('\n').map(one => one.replace(/^- /, '')),
+  }
+  return remember(text, out)
+}
+
+/** A routing table answer, kept with its panel's data. */
+const routingAnswer = async ($: EngineInterface, text: string): Promise<string> =>
+  remember(text, { isOn: await read($, enabled), policy: config.policy, routes: routingView(), limits: limitsText() } satisfies OrchestrateOutput)
 
 const statusText = async ($: EngineInterface): Promise<string> => {
   const on = await read($, enabled)
@@ -357,7 +398,11 @@ const setProvider = async ($: EngineInterface, args: string[], env: Record<strin
 }
 
 export const register: Register = on => {
+  // SIGMAorbital's colours follow the host's theme setting (ADR-0043).
+  watchTheme(on)
+
   on('session.start', async ($, e, next) => {
+    await syncTheme($)
     const env = await envOf($)
     const refused = await loadConfig($, env)
     const settings = await $.settings.read().catch(() => undefined)
@@ -436,7 +481,7 @@ export const register: Register = on => {
         return { text: `task-orchestrator off: no new dispatch starts. ${open} open task(s) stay in the ledger (${rows.filter(task => task.status === 'running').length} running finish on their own); nothing of yours was changed.`, context: ['task-orchestrator is off: do not call its dispatch tool; work directly or ask the person to turn it on.'] }
       }
       case 'status':
-        return { text: await statusText($) }
+        return { text: await statusAnswer($) }
       case 'policy': {
         const next = args[0]
         if (!next || !(POLICIES as readonly string[]).includes(next)) return { text: `usage: /orchestrate policy <${POLICIES.join('|')}>\n${routingTable()}` }
@@ -445,10 +490,10 @@ export const register: Register = on => {
         await saveSettings($)
         for (const problem of await registerProfiles($)) $.ui.log(`${PLUGIN}: ${problem}`)
         await statusLine($)
-        return { text: `policy ${next} (stored).\n${routingTable()}`, context: [`The orchestrator's policy is now ${next}; the routing table changed accordingly.`] }
+        return { text: await routingAnswer($, `policy ${next} (stored).\n${routingTable()}`), context: [`The orchestrator's policy is now ${next}; the routing table changed accordingly.`] }
       }
       case 'routing':
-        return { text: routingTable() }
+        return { text: await routingAnswer($, routingTable()) }
       case 'models': {
         const refused = await read($, unavailable)
         const seen = [...resolved.entries()].map(([alias, id]) => `- ${alias} → ${id}`)
@@ -464,6 +509,8 @@ export const register: Register = on => {
         return { text: 'usage: /orchestrate on|off|status|policy <name>|routing|models|opt-in <what> [off]|providers [enable|disable <id>]|cancel [<task>|all]' }
     }
   })
+
+  on('ui.render', { component: 'CommandOutput', props: { command: 'orchestrate' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
 
   // Spawns the model or another plugin makes: a worker never delegates, and a
   // worker profile taken through the Agent tool still counts and is fenced.
@@ -561,7 +608,7 @@ export const register: Register = on => {
     const status: Task['status'] = e.reason !== 'answer' ? 'failed' : report.status === 'unknown' ? 'partial' : report.status
     const reason = e.reason !== 'answer' ? `the worker's turn ended by ${e.reason}` : report.status === 'unknown' ? 'the worker gave no Status line; read its report' : undefined
     await settle($, task, { status, report, reason, endedAt: await $.clock.now() })
-    $.ui.toast(`${task.id} (${task.role}) ${status}${report.next ? `: ${report.next}` : ''}`)
+    $.ui.toast(`${task.id} · ${task.role.toUpperCase()} · ${status.toUpperCase()}${report.next ? ` · ${report.next}` : ''}`)
     await $.session
       .append({ message: { type: 'user', content: [{ type: 'text', text: `[task-orchestrator] ${line(byId(await read($, ledger), task.id) ?? task)}. Call collect for the report.` }] } })
       .catch(() => undefined)
