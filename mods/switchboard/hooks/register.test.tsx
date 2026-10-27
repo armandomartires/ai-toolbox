@@ -30,7 +30,24 @@ const engine = (on: On, root: { value: string }) => {
   })
   on('session.root', () => ({ value: root.value }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.list', () => ({ value: [{ name: 'mcp__figma__get_screenshot', description: 'x', mcp: true }] }))
+  on('tool.list', () => ({
+    value: [
+      { name: 'mcp__figma__get_screenshot', description: 'x', mcp: true },
+      { name: 'mcp__ccd_turn__update_plan', description: 'x', mcp: true },
+    ],
+  }))
+  // The context breakdown: two skills, a desktop connector named by its id.
+  const ID = '1a59c906-04da-521d-bda7-7f71b9f9e01c'
+  on('session.usage', () => ({
+    value: {
+      context: {
+        breakdown: {
+          skills: { skillFrontmatter: [{ name: 'deploy' }, { name: 'review' }] },
+          mcpTools: ['batch', 'guide', 'update', 'read'].map(tool => ({ name: `mcp__${ID}__${tool}`, serverName: ID })),
+        },
+      },
+    } as never,
+  }))
   // One plugin folder, `/mods`, holding two mods with hooks and one plugin without.
   const files: Record<string, string> = {
     '/mods/agent-watch/.claude-plugin/plugin.json': '{"name":"agent-watch"}',
@@ -151,14 +168,19 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
     expect((await ui.find({ text: /^task-compass$/ }))?.text).toBeDefined()
     expect(await ui.find({ text: /skills-only/ })).toBeUndefined()
     expect((await ui.find({ text: /^always on$/ }))?.text).toBeDefined()
-    expect((await ui.find({ type: 'Button', text: /^On$/ }))?.props.variant).toBe('primary')
+    // A switch: a filled Button named On, its knob at the right.
+    const on = await ui.find({ type: 'Button', text: /^━━●$/ })
+    expect(on?.props.label).toBe('On')
+    expect(on?.props.variant).toBe('primary')
     await ui.unmount()
   }
 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   await ui.press({ key: 'mod-agent-watch' })
   expect((await ui.find({ text: /Mods  3 · 1 off/ }))?.text).toBeDefined()
-  expect((await ui.find({ type: 'Button', text: /^Off$/ }))?.props.variant).toBe('secondary')
+  const switched = await ui.find({ type: 'Button', text: /^●━━$/ })
+  expect(switched?.props.label).toBe('Off')
+  expect(switched?.props.variant).toBe('secondary')
   expect((await ui.find({ type: 'Text', text: /^\s+off from the next session$/ }))?.props.color).toBe('warning')
   await ui.press({ key: 'mod-agent-watch' })
   expect(await ui.find({ type: 'Text', text: /^\s+(on|off) from the next session$/ })).toBeUndefined()
@@ -172,7 +194,7 @@ test('skills and connectors open from their header; a toggle there acts next tur
   await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect((await ui.find({ text: /Skills  2/ }))?.text).toBeDefined()
+  expect((await ui.find({ text: /Skills  3/ }))?.text).toBeDefined()
   expect(await ui.find({ text: /^loop$/ })).toBeUndefined()
   await ui.press({ key: 'section-skill' })
   expect((await ui.find({ text: /^loop$/ }))?.text).toBeDefined()
@@ -188,4 +210,26 @@ test('the command opens the pane when a kind or a name is left out', async ($, o
   engine(on, { value: '/p' })
   await start($)
   for (const args of ['', 'on', 'off mod', 'mod']) expect((await off($, args)).text).toBe('Switchboard opened.')
+})
+
+test('skills and servers come from the context breakdown; an id-named server shows its tools', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  await start($)
+
+  const { text } = await off($, 'list')
+  expect(text).toContain('on   deploy')
+  expect(text).toContain('1a59c906… (batch, guide, update)')
+  expect(text).not.toContain('read')
+})
+
+test("the desktop app's own servers are never listed, turned off or refused", async ($, on) => {
+  mock.store(on, { 'off:/p': { mod: [], skill: [], connector: ['ccd_turn'] } })
+  const said = engine(on, { value: '/p' })
+  await start($)
+
+  expect((await off($, 'list')).text).not.toContain('ccd_turn')
+  expect((await off($, 'off connector ccd_turn')).text).toContain('stays on')
+  expect((await $.tool.call({ tool: 'mcp__ccd_turn__update_plan' } as never)).deny).toBeUndefined()
+  expect(said.ran).toContain('mcp__ccd_turn__update_plan')
 })

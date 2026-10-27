@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { Kind } from '../types'
-import { KINDS, SELF, isOff, pendingNote, takesEffect } from './model'
+import { KINDS, SELF, isOff, isProtected, pendingNote, shownName, switchText, takesEffect } from './model'
 import { saveOff } from './store'
 
 // The same $.state values the hooks write: the engine lists a module's reads
@@ -11,6 +11,7 @@ const off = atom({ plugin: 'switchboard', key: 'off' } as const, { mod: [], skil
 const seen = atom({ plugin: 'switchboard', key: 'seen' } as const, { mod: [], skill: [], connector: [] })
 const refused = atom({ plugin: 'switchboard', key: 'refused' } as const, [])
 const open = atom({ plugin: 'switchboard', key: 'open' } as const, ['mod'])
+const hints = atom({ plugin: 'switchboard', key: 'hints' } as const, {})
 
 export const PANE = 'switchboard'
 export const TITLE = 'Switchboard'
@@ -19,11 +20,28 @@ const HEADINGS: Record<Kind, string> = { mod: 'Mods', skill: 'Skills', connector
 
 /**
  * The pane: one section per kind, Mods open and the others behind their
- * header, and a row per item with an On/Off button that flips it.
+ * header, and a row per item with a switch that flips it.
+ *
+ * The switch is a `Button`, filled while on, with a knob drawn in text at
+ * the end it stands at. Only a `Button` takes a press and it holds only
+ * text, and a `Client` draws no `Svg`, so no surface can press an SVG
+ * switch (`TASK-0187`). The label names the control for a reader.
  */
 export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => {
   const { Box, Button, Text } = $.ui.resolve(e)
-  const [held, known, gone, shown] = await Promise.all([read($, off), read($, seen), read($, refused), read($, open)])
+  const [held, known, gone, shown, named] = await Promise.all([
+    read($, off),
+    read($, seen),
+    read($, refused),
+    read($, open),
+    read($, hints),
+  ])
+
+  const toggle = (key: string, isOn: boolean, press: () => void) => (
+    <Button key={key} label={isOn ? 'On' : 'Off'} variant={isOn ? 'primary' : 'secondary'} onPress={press}>
+      {switchText(isOn)}
+    </Button>
+  )
 
   const row = (kind: Kind, name: string) => {
     const isSelf = kind === 'mod' && name === SELF
@@ -31,21 +49,18 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     const note = kind === 'mod' && !isSelf ? pendingNote(held, gone, name) : undefined
     const press = () => void saveOff($, kind, name, isOn).catch(() => undefined)
 
-    // The name takes the row's width; the toggle keeps its own at the end.
-    // A desktop draws a Button natively and drops the colors inside it.
+    // The name takes the row's width; the switch keeps its own at the end.
     return (
       <Box flexDirection="column">
         <Box flexDirection="row">
           <Box flexGrow={1} flexShrink={1}>
-            <Text dimColor={!isOn} wrap="truncate-end">{name}</Text>
+            <Text dimColor={!isOn} wrap="truncate-end">{shownName(kind, name, named)}</Text>
           </Box>
           <Box flexShrink={0} marginLeft={1}>
             {isSelf ? (
               <Text dimColor>always on</Text>
             ) : (
-              <Button key={`${kind}-${name}`} variant={isOn ? 'primary' : 'secondary'} onPress={press}>
-                {isOn ? 'On' : 'Off'}
-              </Button>
+              toggle(`${kind}-${name}`, isOn, press)
             )}
           </Box>
         </Box>
@@ -57,7 +72,9 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
   }
 
   const section = (kind: Kind) => {
-    const names = [...new Set([...known[kind], ...held[kind]])].sort((a, b) => a.localeCompare(b))
+    const names = [...new Set([...known[kind], ...held[kind]])]
+      .filter(name => !(kind === 'connector' && isProtected(name)))
+      .sort((a, b) => a.localeCompare(b))
     const offCount = names.filter(name => isOff(held, kind, name)).length
     const isOpen = shown.includes(kind)
     const flip = () =>

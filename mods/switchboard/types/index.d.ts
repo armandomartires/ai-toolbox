@@ -20,6 +20,8 @@ declare module 'claude-code' {
       seen: Names
       /** The mods switchboard refused as they loaded in this session. */
       refused: string[]
+      /** Up to three tool names per MCP server, shown under one named only by an id. */
+      hints: Record<string, string>
       /** The pane's sections shown open; the others show their header alone. */
       open: Kind[]
     }

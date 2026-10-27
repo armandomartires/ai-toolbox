@@ -30,9 +30,16 @@ export const asNames = (value: unknown): Names => {
  */
 export const toolSpelling = (server: string) => server.replace(/[^A-Za-z0-9_-]/g, '_')
 
+/**
+ * The desktop app's own servers (`ccd_session`, `ccd_turn`, ...): its task
+ * list, panes and session controls. Never off, listed or refused.
+ */
+export const isProtected = (server: string) => /^ccd_/.test(toolSpelling(server))
+
 /** Whether `name` of `kind` is off; a server matches in either spelling. */
 export const isOff = (off: Names, kind: Kind, name: string) => {
   if (kind === 'mod' && name === SELF) return false
+  if (kind === 'connector' && isProtected(name)) return false
   if (kind === 'connector') return off.connector.some(server => toolSpelling(server) === toolSpelling(name))
 
   return off[kind].includes(name)
@@ -41,6 +48,7 @@ export const isOff = (off: Names, kind: Kind, name: string) => {
 /** Turns `name` off when it is on, and on when it is off; `switchboard` stays on. */
 export const toggle = (off: Names, kind: Kind, name: string): Names => {
   if (kind === 'mod' && name === SELF) return off
+  if (kind === 'connector' && isProtected(name)) return off
   const has = isOff(off, kind, name)
 
   return {
@@ -55,7 +63,9 @@ export const setOff = (off: Names, kind: Kind, name: string, wantOff: boolean) =
 
 /** `seen` with `names` added to `kind`, unchanged (the same object) when none is new. */
 export const addSeen = (seen: Names, kind: Kind, names: readonly string[]): Names => {
-  const fresh = names.filter(name => name !== '' && !seen[kind].includes(name))
+  const fresh = [...new Set(names)].filter(
+    name => name !== '' && !seen[kind].includes(name) && !(kind === 'connector' && isProtected(name)),
+  )
 
   return fresh.length === 0 ? seen : { ...seen, [kind]: [...seen[kind], ...fresh] }
 }
@@ -170,6 +180,7 @@ export const parseArgs = (args: string): Ask => {
     // A kind or name left out opens the pane, where each row has its toggle.
     if (!target || name === '') return words.length > 2 && !target ? { kind: 'usage', why: `say which kind: mod, skill or connector` } : { kind: 'open' }
     if (target === 'mod' && name === SELF) return { kind: 'usage', why: 'switchboard cannot turn itself off' }
+    if (target === 'connector' && isProtected(name)) return { kind: 'usage', why: `${name} is the desktop app's own server and stays on` }
     return { kind: 'set', target, name, wantOff: words[0] === 'off' }
   }
 
@@ -178,10 +189,35 @@ export const parseArgs = (args: string): Ask => {
 
 export const USAGE = 'Usage: /switchboard [list | on|off mod|skill|connector <name>]'
 
+/** A server name that is only an id, as the desktop names the connectors it hosts. */
+export const isIdName = (name: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)
+
+/**
+ * Up to three tool names per server, `batch, guide, update`, from the
+ * context breakdown's MCP tools: what tells apart servers named by an id.
+ */
+export const toolHints = (tools: readonly { name: string; serverName: string }[]) => {
+  const byServer = new Map<string, string[]>()
+  for (const tool of tools) {
+    const short = tool.name.replace(/^mcp__.+?__/, '')
+    const list = byServer.get(tool.serverName) ?? []
+    if (list.length < 3 && !list.includes(short)) byServer.set(tool.serverName, [...list, short])
+  }
+
+  return Object.fromEntries([...byServer].map(([server, names]) => [server, names.join(', ')]))
+}
+
+/** A row's name, with a server's tool hint when it is named only by an id. */
+export const shownName = (kind: Kind, name: string, hints: Readonly<Record<string, string>>) =>
+  kind === 'connector' && isIdName(name) && hints[name] ? `${name.slice(0, 8)}… (${hints[name]})` : name
+
+/** The switch's knob, drawn in text at the end it stands at: right when on. */
+export const switchText = (isOn: boolean) => (isOn ? '━━●' : '●━━')
+
 /** The text `/switchboard list` answers: each kind, what is seen, what is off. */
-export const listText = (off: Names, seen: Names) =>
+export const listText = (off: Names, seen: Names, hints: Readonly<Record<string, string>> = {}) =>
   KINDS.map(kind => {
-    const names = [...new Set([...seen[kind], ...off[kind]])].sort()
-    const rows = names.map(name => `  ${isOff(off, kind, name) ? 'off' : 'on '}  ${name}${kind === 'mod' && name === SELF ? ' (always on)' : ''}`)
+    const names = [...new Set([...seen[kind], ...off[kind]])].filter(name => !(kind === 'connector' && isProtected(name))).sort()
+    const rows = names.map(name => `  ${isOff(off, kind, name) ? 'off' : 'on '}  ${shownName(kind, name, hints)}${kind === 'mod' && name === SELF ? ' (always on)' : ''}`)
     return [`${kind}s (${takesEffect[kind]}):`, ...(rows.length > 0 ? rows : ['  none seen yet'])].join('\n')
   }).join('\n')

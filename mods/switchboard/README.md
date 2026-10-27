@@ -11,11 +11,12 @@ A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or
 
 ## The pane
 
-`/switchboard` opens it. Three sections: **Mods** open, **Skills** and **Connectors** behind their header (press it to open or close), each header with its count and how many are off. Every row has an **On/Off** button: press it to flip that item.
+`/switchboard` opens it. Three sections: **Mods** open, **Skills** and **Connectors** behind their header (press it to open or close), each header with its count and how many are off. Every row ends in a **switch**: a filled button with its knob at the right (`━━●`) when on, an outlined one with its knob at the left (`●━━`) when off. Press it to flip that item.
 
 - **Mods** lists every mod (a plugin with a hooks module) in the folders `CLAUDE_CODE_PLUGIN_DIRS` names, and any of your own that loads after switchboard. A plugin that only ships skills or servers is not listed: it has nothing to refuse. Managed and built-in plugins are not listed or touched. switchboard's own row says *always on*.
 - A mod whose toggle this session cannot apply says so in its row: *off from the next session* (it is running) or *on from the next session* (switchboard refused it at load).
-- **Skills** lists those in the listing; **Connectors** the connected servers.
+- **Skills** lists the skills the session's context lists; **Connectors** the connected servers. A connector the desktop names only by an id shows its first tool names beside it, so you can tell which it is.
+- The desktop app's own servers (`ccd_session`, `ccd_turn`, ...) are not listed and cannot be turned off: the app's task list, panes and session controls run through them.
 
 ## Install
 

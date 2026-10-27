@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { EMPTY, asNames, dropSkills, isOff, listedSkills, offName, parseArgs, pendingNote, pluginDirs, refusal, serverOfTool, toggle } from './model'
+import { EMPTY, addSeen, asNames, isProtected, shownName, switchText, toolHints, dropSkills, isOff, listedSkills, offName, parseArgs, pendingNote, pluginDirs, refusal, serverOfTool, toggle } from './model'
 
 const LISTING = [
   'The following skills are available for use with the Skill tool:',
@@ -81,4 +81,24 @@ test('a mod toggle waits for the next session only when the session differs from
   expect(pendingNote(off, ['agent-watch'], 'agent-watch')).toBeUndefined()
   expect(pendingNote(EMPTY, ['agent-watch'], 'agent-watch')).toBe('on from the next session')
   expect(pendingNote(EMPTY, [], 'agent-watch')).toBeUndefined()
+})
+
+test('a switch draws its knob at the end it stands at', () => {
+  expect(switchText(true)).toBe('━━●')
+  expect(switchText(false)).toBe('●━━')
+})
+
+test('only an id-named server gets a tool hint, of at most three tools', () => {
+  const id = '1a59c906-04da-521d-bda7-7f71b9f9e01c'
+  const hints = toolHints(['a', 'b', 'c', 'd'].map(t => ({ name: `mcp__${id}__${t}`, serverName: id })))
+  expect(hints[id]).toBe('a, b, c')
+  expect(shownName('connector', id, hints)).toBe('1a59c906… (a, b, c)')
+  expect(shownName('connector', 'figma', { figma: 'x' })).toBe('figma')
+})
+
+test('a ccd_ server is protected and never seen', () => {
+  expect(isProtected('ccd_turn')).toBe(true)
+  expect(isProtected('figma')).toBe(false)
+  expect(addSeen(EMPTY, 'connector', ['ccd_turn', 'figma']).connector).toEqual(['figma'])
+  expect(isOff({ ...EMPTY, connector: ['ccd_turn'] }, 'connector', 'ccd_turn')).toBe(false)
 })
