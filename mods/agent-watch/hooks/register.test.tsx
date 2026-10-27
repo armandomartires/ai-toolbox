@@ -1,5 +1,9 @@
 import { expect, mock, test } from 'claude-code/testing'
-import type { AgentInfo, AgentSpawnInput, On } from 'claude-code'
+import type { AgentInfo, AgentSpawnInput, ConfigRow, On } from 'claude-code'
+
+import { TOKENS } from './sigma'
+
+const DARK = TOKENS.dark
 
 const PANE = {
   plugin: 'agent-watch',
@@ -62,15 +66,17 @@ test('the pane shows a spawned agent under Running, then under Completed', async
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
-    expect(await text(/Running  1/)).toBeDefined()
+    expect(await text(/^SUBAGENTS$/)).toBeDefined()
+    expect(await text(/^RUNNING  1$/)).toBeDefined()
     expect(await text(/Explore · Find hooks/)).toBeDefined()
     expect(await text(/12s/)).toBeDefined()
     expect(await text(/None has finished yet/)).toBeDefined()
-    // The icon, in the agent's own color, sits outside the name's Button,
-    // and the name carries the same color.
-    expect((await ui.find({ type: 'Text', text: /●/ }))?.props.color).toBe('suggestion')
-    expect((await ui.find({ type: 'Button', text: /Find hooks/ }))?.text).not.toContain('●')
-    expect((await ui.find({ type: 'Text', text: /Find hooks/ }))?.props.color).toBe('suggestion')
+    // The glyph, the agent's own, sits outside the name's Button, in the
+    // colour of its state: cyan while it runs. The name is text-1.
+    expect((await ui.find({ type: 'Text', text: /■/ }))?.props.color).toBe(DARK.cyan)
+    expect((await ui.find({ type: 'Button', text: /Find hooks/ }))?.text).not.toContain('■')
+    expect((await ui.find({ type: 'Text', text: /Find hooks/ }))?.props.color).toBe(DARK['text-1'])
+    expect((await ui.findAll({ type: 'Text' })).filter(t => t.props.dimColor || (t.props.bold && !t.props.weight)).length).toBe(0)
     expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBe(30)
     await ui.unmount()
   }
@@ -78,13 +84,13 @@ test('the pane shows a spawned agent under Running, then under Completed', async
   // While it runs the icon pulses: solid, then hollow one frame later.
   {
     const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-    const icon = async () => (await ui.find({ type: 'Text', text: /^[●○] $/ }))?.text
+    const icon = async () => (await ui.find({ type: 'Text', text: /^[■□] $/ }))?.text
     const first = await icon()
     await clock.advance(400)
     const second = await icon()
     expect(first).not.toBe(second)
-    expect(['● ', '○ ']).toContain(first)
-    expect(['● ', '○ ']).toContain(second)
+    expect(['■ ', '□ ']).toContain(first)
+    expect(['■ ', '□ ']).toContain(second)
     await ui.unmount()
   }
 
@@ -95,14 +101,15 @@ test('the pane shows a spawned agent under Running, then under Completed', async
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
   expect(await text(/No subagent is running/)).toBeDefined()
-  expect(await text(/Completed  1/)).toBeDefined()
+  expect(await text(/^COMPLETED  1$/)).toBeDefined()
   // Elapsed stops at the end, 12s after the spawn, not 17s.
   expect(await text(/ 12s/)).toBeDefined()
   expect(await text(/ 17s/)).toBeUndefined()
-  // Ended: the icon is solid and still, with its outcome mark.
-  expect(await text(/✓/)).toBeDefined()
+  // Ended: the glyph is solid and still, in text-1; a completed row carries no badge.
+  expect(await text(/FAILED|STOPPED/)).toBeUndefined()
   await clock.advance(400)
-  expect((await ui.find({ type: 'Text', text: /^[●○] $/ }))?.text).toBe('● ')
+  const done = await ui.find({ type: 'Text', text: /^[■□] $/ })
+  expect([done?.text, done?.props.color]).toEqual(['■ ', DARK['text-1']])
   await ui.unmount()
 })
 
@@ -147,19 +154,22 @@ test('the band shows the task list as a bar and the running agents, and nothing 
   for (const surface of ['terminal', 'desktop'] as const) {
     ui = await $.ui.mount({ ...BAND, surface })
     const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
-    expect(await text(/^▰+▱+$/)).toBe('▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱')
-    expect(await text(/1\/3/)).toBeDefined()
+    const on = await ui.find({ type: 'Text', text: /^▰+$/ })
+    expect([on?.text, on?.props.color]).toEqual(['▰▰▰▰▰▰▰', DARK.cyan])
+    expect((await ui.find({ type: 'Text', text: /^▱+$/ }))?.props.color).toBe(DARK.line)
+    expect((await ui.find({ type: 'Text', text: /^1\/3$/ }))?.props.tabular).toBe(true)
+    expect(await text(/ STEPS/)).toBeDefined()
     expect(await text(/Draw the band/)).toBeDefined()
-    expect(await text(/1 running/)).toBeDefined()
-    expect((await ui.find({ type: 'Text', text: /^[●○] $/ }))?.props.color).toBe('suggestion')
+    expect(await text(/1 RUNNING/)).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^[■□] $/ }))?.props.color).toBe(DARK.cyan)
     await ui.unmount()
   }
 
-  // wrap_up ticks every step off; the bar turns green and says so.
+  // wrap_up ticks every step off; the meter turns text-1 and says so.
   await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'done' } as AppTool)
   ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  expect((await ui.find({ text: /^▰+$/ }))?.props.color).toBe('success')
-  expect(await ui.find({ text: /all done/ })).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /^▰+$/ }))?.props.color).toBe(DARK['text-1'])
+  expect(await ui.find({ text: /ALL DONE/ })).toBeDefined()
   await ui.unmount()
 
   // A survey holds the band.
@@ -179,7 +189,7 @@ test('the pane shows what a running agent is doing: its call, its calls, its tok
 
   const caption = async (surface: 'terminal' | 'desktop') => {
     const ui = await $.ui.mount({ ...PANE, surface })
-    const text = (await ui.find({ type: 'Text', text: /^  \d+ calls?/ }))?.text
+    const text = (await ui.find({ type: 'Text', text: /^  \d+ CALLS?/ }))?.text
     await ui.unmount()
     return text
   }
@@ -187,7 +197,7 @@ test('the pane shows what a running agent is doing: its call, its calls, its tok
   expect(await caption('terminal')).toBeUndefined()
   // The engine stub answers a call at once, so one call has ended.
   await $.tool.call({ tool: 'Bash', command: 'ls -la', agentId: 'id-Find hooks' })
-  expect(await caption('terminal')).toBe('  1 call')
+  expect(await caption('terminal')).toBe('  1 CALL')
   await $.turn.complete({
     agentId: 'id-Find hooks',
     reason: 'answer',
@@ -198,7 +208,7 @@ test('the pane shows what a running agent is doing: its call, its calls, its tok
     usage: { input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: 'm1' },
   })
   await clock.advance(1_000)
-  for (const surface of ['terminal', 'desktop'] as const) expect(await caption(surface)).toBe('  1 call · 1.2k tok')
+  for (const surface of ['terminal', 'desktop'] as const) expect(await caption(surface)).toBe('  1 CALL · 1.2k TOK')
 })
 
 test('a failed agent raises one toast, at once on SubagentStop', async ($, on) => {
@@ -214,7 +224,7 @@ test('a failed agent raises one toast, at once on SubagentStop', async ($, on) =
   listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'failed' }]
   await $.classic.SubagentStop(STOP)
   // No clock advance: the stop itself raised it.
-  expect(said.toasts).toEqual(['Explore · Find hooks failed'])
+  expect(said.toasts).toEqual(['EXPLORE · Find hooks · FAILED 00:00:01'])
   await clock.advance(5_000)
   await $.classic.SubagentStop(STOP)
   expect(said.toasts.length).toBe(1)
@@ -234,7 +244,7 @@ test('band buttons open the agent and the pane; the status line counts the runni
   await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
   listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'running' }]
   await clock.advance(1_000)
-  expect(said.statuses).toEqual(['1 agent running'])
+  expect(said.statuses).toEqual(['1 AGENT RUNNING'])
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
@@ -249,13 +259,38 @@ test('band buttons open the agent and the pane; the status line counts the runni
 
   listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'completed' }]
   await $.classic.SubagentStop(STOP)
-  expect(said.statuses).toEqual(['1 agent running', undefined])
+  expect(said.statuses).toEqual(['1 AGENT RUNNING', undefined])
 })
 
-test('/agent-watch opens the pane', async ($, on) => {
+const OUTPUT = (text: string) => ({
+  plugin: 'agent-watch',
+  component: 'CommandOutput',
+  props: { command: 'agent-watch', args: '', text, isErrored: false },
+}) as const
+
+test('/agent-watch opens the pane and draws its counts as a panel, in the host theme', async ($, on) => {
   mock.clock(on)
-  engine(on, { value: [] })
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'light' } as ConfigRow] }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: false })
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
   const { text } = await $.command.run({ command: 'agent-watch', args: '' } as never)
-  expect(text).toBe('Agents pane opened.')
+  expect(text).toBe('Agents pane opened: 1 running, 0 completed, 0 failed or stopped.')
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...OUTPUT(text ?? ""), surface })
+    expect((await ui.find({ type: 'Text', text: /^AGENTS$/ }))?.props.color).toBe(TOKENS.light['text-1'])
+    expect((await ui.find({ type: 'Text', text: /^1$/ }))?.props.color).toBe(TOKENS.light.cyan)
+    expect(await ui.find({ text: /NONE FAILED/ })).toBeDefined()
+    await ui.unmount()
+  }
+  // A row from before a reload is the engine's text.
+  const old = await $.ui.mount({ ...OUTPUT('Agents pane opened.'), surface: 'terminal' })
+  expect((await old.find({ type: 'Text' }))?.text).toBe('engine')
+  await old.unmount()
 })

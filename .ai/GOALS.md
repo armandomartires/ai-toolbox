@@ -419,6 +419,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0187-switchboard-switch.md
 - [x] TASK-0188 — SIGMAorbital for mods: one shared design module, its gate, ADR-0043
   .ai/tasks/TASK-0188-sigmaorbital-mod-design.md
+- [x] TASK-0189 — agent-watch 0.3.0 on SIGMAorbital
+  .ai/tasks/TASK-0189-agent-watch-sigmaorbital.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

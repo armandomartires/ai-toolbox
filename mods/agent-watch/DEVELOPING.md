@@ -4,19 +4,20 @@
 
 ## Modules
 
-- `hooks/model.ts`: pure logic (`groupAgents`, `mergeListed`, `spawnedRow`, `nextHue`, `nested`, `elapsed`, `fit`) the `PALETTE` with `colorOf`, `iconOf`, `outcomeOf`, the task list (`applyPlan`, `progressOf`, `bar`), the activity (`summarizeCall`, `callStarted`, `callEnded`, `tokensOf`, `turnCounted`, `activityLine`) and the alerts (`endedBadly`, `markAlerted`, `alertText`, `runningText`). Tested directly in `model.test.ts`.
-- `hooks/view.tsx`: the `ui.render` pane.
+- `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here. Its `IDENTITY`, `agentState`, `fit`, `elapsed`, `kit` and the command-output cache are used below.
+- `hooks/model.ts`: pure logic (`groupAgents`, `mergeListed`, `spawnedRow`, `nextHue`, `nested`; `elapsed` and `fit` re-exported from `sigma.tsx`), `iconOf` and `outcomeOf`, the task list (`applyPlan`, `progressOf`), the activity (`summarizeCall`, `callStarted`, `callEnded`, `tokensOf`, `turnCounted`, `activityLine`) and the alerts (`endedBadly`, `markAlerted`, `alertText`, `runningText`, `watchText`). Tested directly in `model.test.ts`.
+- `hooks/view.tsx`: the `ui.render` pane, and `renderOutput`, `/agent-watch`'s `CommandOutput` row as a panel.
 - `hooks/band.tsx`: the `AbovePrompt` band (`registerBand`), which passes to the engine while there is nothing to show or a survey holds the band.
-- `hooks/register.tsx`: the hooks: `/agent-watch`, a subagent's activity from its loop's `tool.call` (recorded before `next`, counted in a `finally`, so a deny or a throw still clears it) and its tokens and model from its `turn.complete`, `classic.SubagentStop` refreshing at once, the toasts and the status line from `refresh`, the task list from `tool.call` (`TodoWrite`, `TaskCreate`/`TaskUpdate`, `update_plan` and `wrap_up` under any MCP prefix, main loop only), agent tracking from `agent.spawn`, a subagent's `turn.start` and `turn.complete`, a one-second tick that re-reads `$.agent.list()` while an agent is active or ended less than a minute ago, else every ten seconds, and a 400 ms tick that moves `frame` only while an agent is `running`, so a still pane is not redrawn. Tested through the engine stub in `register.test.tsx`.
+- `hooks/register.tsx`: the hooks: the theme (`syncTheme` at the start, `watchTheme`), `/agent-watch` (its result kept by `remember`), a subagent's activity from its loop's `tool.call` (recorded before `next`, counted in a `finally`, so a deny or a throw still clears it) and its tokens and model from its `turn.complete`, `classic.SubagentStop` refreshing at once, the toasts and the status line from `refresh`, the task list from `tool.call` (`TodoWrite`, `TaskCreate`/`TaskUpdate`, `update_plan` and `wrap_up` under any MCP prefix, main loop only), agent tracking from `agent.spawn`, a subagent's `turn.start` and `turn.complete`, a one-second tick that re-reads `$.agent.list()` while an agent is active or ended less than a minute ago, else every ten seconds, and a 400 ms tick that moves `frame` only while an agent is `running`, so a still pane is not redrawn. Tested through the engine stub in `register.test.tsx`.
 - `types/index.d.ts`: the `$.state` contract.
 
 ## How agents are tracked
 
 `agent.spawn`'s answer opens the row at once, so a spawn shows before the engine lists it; `$.agent.list()` is the truth afterwards. A row the list stops naming is kept, so a finished agent stays under Completed for the session. `endedAt` is set the first time a row's status leaves the active ones, and never moved.
 
-## Colors and icons
+## Glyphs and colours
 
-A row's `hue` is the least-used palette index when the row was first seen, and never changes. The palette is eight theme keys (`suggestion`, `success`, `warning`, `merged`, `error`, `claude`, `planMode`, `autoAccept`): the surfaces draw those in both themes, which a raw color name does not promise. The pulse is the pane re-reading `frame` on each tick: `iconOf` returns the solid or hollow icon by its parity, so a test advances the mock clock by `FRAME_MS` and expects the other form.
+A row's `hue` is the least-used index into `IDENTITY` when the row was first seen, and never changes: the glyph says which agent it is. Its colour is its state, from `agentState`, in SIGMAorbital's exact hex for the theme the host is set to (`ADR-0043`). The pulse is the pane re-reading `frame` on each tick: `iconOf` returns the solid or hollow icon by its parity, so a test advances the mock clock by `FRAME_MS` and expects the other form. A function that receives `$` from another file must be a declaration (`function renderOutput($, e)`), not an arrow: `claude plugin validate` refuses the module otherwise.
 
 ## The task list
 

@@ -16,9 +16,11 @@ import {
   summarizeCall,
   tokensOf,
   turnCounted,
+  watchText,
 } from './model'
 import type { PlanUpdate } from './model'
-import { PANE, TITLE, renderPane } from './view'
+import { remember, syncTheme, watchTheme } from './sigma'
+import { PANE, TITLE, renderOutput, renderPane } from './view'
 import type { AgentRow, Task } from '../types'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
@@ -69,7 +71,11 @@ const refresh = async ($: EngineInterface) => {
 }
 
 export const register: Register = on => {
+  // SIGMAorbital's colours follow the host's theme setting (ADR-0043).
+  watchTheme(on)
+
   on('session.start', async ($, e, next) => {
+    await syncTheme($)
     // The pane first: a session the desktop app hosts through the SDK reports
     // no person at the prompt, yet draws panes, and with no surface to draw
     // it the pane waits undrawn. `/agents` is a name Claude Code ships, so the
@@ -103,8 +109,15 @@ export const register: Register = on => {
 
   on('command.run', { command: 'agent-watch' }, async $ => {
     const { isPlaced } = await $.ui.open({ id: PANE, title: TITLE })
+    const rows = await read($, agents)
+    const out = {
+      isPlaced,
+      running: rows.filter(row => isActive(row.status)).length,
+      completed: rows.filter(row => row.status === 'completed').length,
+      failed: rows.filter(row => row.status === 'failed' || row.status === 'killed').length,
+    }
 
-    return { text: isPlaced ? 'Agents pane opened.' : 'Agents pane is open but this surface does not show panes.' }
+    return { text: remember(watchText(out), out) }
   })
 
   on('agent.spawn', async ($, e, next) => {
@@ -199,5 +212,6 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, renderPane)
+  on('ui.render', { component: 'CommandOutput', props: { command: 'agent-watch' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
   registerBand(on)
 }

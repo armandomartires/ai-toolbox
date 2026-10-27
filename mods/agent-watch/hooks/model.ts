@@ -2,6 +2,10 @@
 import type { AgentInfo } from 'claude-code'
 
 import type { Activity, AgentRow, Task, TaskStatus } from '../types'
+import { IDENTITY, elapsed, fit, hms } from './sigma'
+import type { Status } from './sigma'
+
+export { elapsed, fit }
 
 /** A loop that is not over: it may still run a turn. */
 export const isActive = (status: string) =>
@@ -14,24 +18,11 @@ export const groupAgents = (rows: AgentRow[]) => ({
 })
 
 /**
- * One color and one icon pair per hue: theme keys, so they follow the light
- * and dark themes; the pair is the icon's solid and hollow forms.
+ * How many identities there are; a row's `hue` is an index into SIGMAorbital's
+ * `IDENTITY`, its glyph pair. The glyph says which agent it is, its colour
+ * what state it is in (`agentState`).
  */
-export const PALETTE: readonly { color: string; icon: readonly [string, string] }[] = [
-  { color: 'suggestion', icon: ['●', '○'] },
-  { color: 'success', icon: ['◆', '◇'] },
-  { color: 'warning', icon: ['▲', '△'] },
-  { color: 'merged', icon: ['■', '□'] },
-  { color: 'error', icon: ['★', '☆'] },
-  { color: 'claude', icon: ['⬢', '⬡'] },
-  { color: 'planMode', icon: ['✦', '✧'] },
-  { color: 'autoAccept', icon: ['◉', '◎'] },
-]
-
-/** How many hues the palette has; a hue is an index into it. */
-export const HUES = PALETTE.length
-
-export const colorOf = (hue: number) => PALETTE[hue % HUES]?.color ?? 'text'
+export const HUES = IDENTITY.length
 
 /**
  * The icon a row shows: its own, solid while it runs on even frames and
@@ -39,14 +30,14 @@ export const colorOf = (hue: number) => PALETTE[hue % HUES]?.color ?? 'text'
  * it ended.
  */
 export const iconOf = (hue: number, status: string, frame: number) => {
-  const pair = PALETTE[hue % HUES]?.icon ?? ['●', '○']
+  const pair = IDENTITY[hue % HUES] ?? IDENTITY[0]!
   if (status === 'running') return pair[frame % 2]
   return isActive(status) ? pair[1] : pair[0]
 }
 
-/** The mark after an ended row's name: what became of it. */
-export const outcomeOf = (status: string) =>
-  status === 'completed' ? '✓' : status === 'failed' ? '✗' : status === 'killed' ? '⏹' : ''
+/** The badge after an ended row's name when it did not complete: what became of it. */
+export const outcomeOf = (status: string): { status: Status; word: string } | undefined =>
+  status === 'failed' ? { status: 'critical', word: 'FAILED' } : status === 'killed' ? { status: 'offline', word: 'STOPPED' } : undefined
 
 /** The next hue: the one least used by the rows so far, ties to the lowest. */
 export const nextHue = (rows: AgentRow[]) => {
@@ -113,16 +104,6 @@ export const mergeListed = (rows: AgentRow[], listed: readonly AgentInfo[], at: 
   return next
 }
 
-export const elapsed = (ms: number) => {
-  const s = Math.max(0, Math.round(ms / 1000))
-  if (s < 60) return `${s}s`
-  const m = Math.floor(s / 60)
-  return m < 60 ? `${m}m${String(s % 60).padStart(2, '0')}s` : `${Math.floor(m / 60)}h${m % 60}m`
-}
-
-export const fit = (text: string, columns: number) =>
-  text.length <= columns ? text : `${text.slice(0, Math.max(1, columns - 1))}…`
-
 /** Rows nested under their parents, depth-first; `depth` counts the parents. */
 export const nested = (rows: AgentRow[]): { row: AgentRow; depth: number }[] => {
   const ids = new Set(rows.map(row => row.id))
@@ -186,13 +167,6 @@ export const progressOf = (tasks: Task[]) => ({
   current: tasks.find(task => task.status === 'in_progress')?.text,
 })
 
-/** A bar of `width` cells, `done/total` of it filled. */
-export const bar = (done: number, total: number, width: number) => {
-  const cells = Math.max(1, width)
-  const filled = total > 0 ? Math.round((cells * Math.min(done, total)) / total) : 0
-  return '▰'.repeat(filled) + '▱'.repeat(cells - filled)
-}
-
 /** The argument that names what a tool call does, per tool; none for the rest. */
 const MAIN_ARG: Record<string, string> = {
   Bash: 'command',
@@ -253,8 +227,8 @@ export const activityLine = (row: AgentRow, at: number) => {
     const slow = at - row.activity.since > SLOW_CALL_MS ? ` (${elapsed(at - row.activity.since)})` : ''
     parts.push(`${row.activity.tool}${row.activity.detail ? `: ${row.activity.detail}` : ''}${slow}`)
   }
-  parts.push(`${row.calls} call${row.calls === 1 ? '' : 's'}`)
-  if (row.tokens > 0) parts.push(`${tokensText(row.tokens)} tok`)
+  parts.push(`${row.calls} CALL${row.calls === 1 ? '' : 'S'}`)
+  if (row.tokens > 0) parts.push(`${tokensText(row.tokens)} TOK`)
 
   return parts.join(' · ')
 }
@@ -274,8 +248,15 @@ export const markAlerted = (rows: AgentRow[], ids: Iterable<string>) => {
   return rows.map(row => (set.has(row.id) ? { ...row, isAlerted: true as const } : row))
 }
 
+/** The toast: the agent's type, its task, what became of it, and how long it ran. */
 export const alertText = (row: AgentRow) =>
-  `${row.type} · ${row.description} ${row.status === 'failed' ? 'failed' : 'was stopped'}`
+  `${row.type.toUpperCase()} · ${row.description} · ${row.status === 'failed' ? 'FAILED' : 'STOPPED'} ${hms((row.endedAt ?? row.startedAt) - row.startedAt)}`
 
 /** The status-line entry; none at zero, which clears it. */
-export const runningText = (n: number) => (n === 0 ? undefined : `${n} agent${n === 1 ? '' : 's'} running`)
+export const runningText = (n: number) => (n === 0 ? undefined : `${n} AGENT${n === 1 ? '' : 'S'} RUNNING`)
+
+/** What `/agent-watch` answers, and the counts its panel draws. */
+export type WatchOutput = { isPlaced: boolean; running: number; completed: number; failed: number }
+
+export const watchText = (out: WatchOutput) =>
+  `${out.isPlaced ? 'Agents pane opened' : 'Agents pane is open but this surface does not show panes'}: ${out.running} running, ${out.completed} completed, ${out.failed} failed or stopped.`

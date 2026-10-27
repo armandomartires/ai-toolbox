@@ -16,7 +16,7 @@ export type AgentRow = {
   startedAt: number
   /** Set once the status left the active ones. */
   endedAt?: number
-  /** Its place in the palette, fixed when it was first seen. */
+  /** Its index into SIGMAorbital's IDENTITY glyphs, fixed when it was first seen. */
   hue: number
   /** The model it resolved to, from the spawn's answer. */
   model?: string

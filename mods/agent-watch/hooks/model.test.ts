@@ -6,10 +6,8 @@ import {
   activityLine,
   alertText,
   applyPlan,
-  bar,
   callEnded,
   callStarted,
-  colorOf,
   endedBadly,
   groupAgents,
   HUES,
@@ -86,23 +84,27 @@ test('rows nest under the parent that spawned them', () => {
   ])
 })
 
-test('an agent keeps its own color and icon; the icon pulses only while it runs', () => {
-  expect(colorOf(0)).toBe('suggestion')
-  expect(colorOf(HUES)).toBe(colorOf(0))
-  expect(colorOf(1)).not.toBe(colorOf(0))
+test('an agent keeps its own glyph; it pulses only while it runs, and an unfinished end is a badge', () => {
+  expect(iconOf(HUES, 'completed', 0)).toBe(iconOf(0, 'completed', 0))
+  expect(iconOf(1, 'completed', 0)).not.toBe(iconOf(0, 'completed', 0))
   // Running: solid on an even frame, hollow on an odd one.
-  expect(iconOf(0, 'running', 0)).toBe('●')
-  expect(iconOf(0, 'running', 1)).toBe('○')
-  expect(iconOf(1, 'running', 2)).toBe('◆')
+  expect(iconOf(0, 'running', 0)).toBe('■')
+  expect(iconOf(0, 'running', 1)).toBe('□')
+  expect(iconOf(1, 'running', 2)).toBe('⬢')
   // Waiting to run: hollow and still. Ended: solid and still.
-  expect(iconOf(0, 'pending', 1)).toBe('○')
-  expect(iconOf(0, 'pending', 2)).toBe('○')
-  expect(iconOf(0, 'completed', 1)).toBe('●')
-  expect(iconOf(0, 'failed', 1)).toBe('●')
-  expect([outcomeOf('completed'), outcomeOf('failed'), outcomeOf('killed'), outcomeOf('running')]).toEqual(['✓', '✗', '⏹', ''])
+  expect(iconOf(0, 'pending', 1)).toBe('□')
+  expect(iconOf(0, 'pending', 2)).toBe('□')
+  expect(iconOf(0, 'completed', 1)).toBe('■')
+  expect(iconOf(0, 'failed', 1)).toBe('■')
+  expect([outcomeOf('completed'), outcomeOf('failed'), outcomeOf('killed'), outcomeOf('running')]).toEqual([
+    undefined,
+    { status: 'critical', word: 'FAILED' },
+    { status: 'offline', word: 'STOPPED' },
+    undefined,
+  ])
 })
 
-test('update_plan items, advance, done and start follow the app; the bar fills with them', () => {
+test('update_plan items, advance, done and start follow the app', () => {
   let list = applyPlan([], {
     items: [
       { content: 'a', status: 'in_progress' },
@@ -115,9 +117,6 @@ test('update_plan items, advance, done and start follow the app; the bar fills w
   expect(list.map(task => task.status)).toEqual(['completed', 'in_progress', 'pending'])
   list = applyPlan(list, { done: [2], start: 3 })
   expect(progressOf(list)).toEqual({ done: 2, total: 3, current: 'c' })
-  expect(bar(2, 3, 6)).toBe('▰▰▰▰▱▱')
-  expect(bar(0, 0, 4)).toBe('▱▱▱▱')
-  expect(bar(5, 5, 4)).toBe('▰▰▰▰')
 })
 
 test('a call is summarized by its main argument, and the row counts it', () => {
@@ -130,8 +129,8 @@ test('a call is summarized by its main argument, and the row counts it', () => {
 
   let rows = [row('a', 'running')]
   rows = callStarted(rows, 'a', { tool: 'Bash', detail: 'ls', since: 100 })
-  expect(activityLine(rows[0]!, 1_000)).toBe('Bash: ls · 0 calls')
-  expect(activityLine(rows[0]!, 9_100)).toBe('Bash: ls (9s) · 0 calls')
+  expect(activityLine(rows[0]!, 1_000)).toBe('Bash: ls · 0 CALLS')
+  expect(activityLine(rows[0]!, 9_100)).toBe('Bash: ls (9s) · 0 CALLS')
   rows = callEnded(rows, 'a')
   expect(rows[0]).toMatchObject({ calls: 1, activity: undefined })
   expect(callEnded(rows, 'zz')).toEqual(rows)
@@ -140,8 +139,8 @@ test('a call is summarized by its main argument, and the row counts it', () => {
   expect(tokensOf(undefined)).toBe(0)
   rows = turnCounted(rows, 'a', 1200, 'm1')
   expect(rows[0]).toMatchObject({ tokens: 1200, model: 'm1' })
-  expect(activityLine(rows[0]!, 0)).toBe('1 call · 1.2k tok')
-  expect(activityLine(turnCounted(rows, 'a', 2_000_000)[0]!, 0)).toBe('1 call · 2M tok')
+  expect(activityLine(rows[0]!, 0)).toBe('1 CALL · 1.2k TOK')
+  expect(activityLine(turnCounted(rows, 'a', 2_000_000)[0]!, 0)).toBe('1 CALL · 2M TOK')
   // The fields survive a list merge, and the activity leaves with the status.
   const merged = mergeListed(rows, [{ id: 'a', type: 'Explore', description: 'a', status: 'completed' }], 5)
   expect(merged[0]).toMatchObject({ calls: 1, tokens: 1200, model: 'm1', activity: undefined })
@@ -154,7 +153,7 @@ test('a failed or stopped agent is alerted once', () => {
   expect(endedBadly(before, after).map(one => one.id)).toEqual(['a', 'b', 'd'])
   const marked = markAlerted(after, ['a', 'b', 'd'])
   expect(endedBadly(after, marked)).toEqual([])
-  expect(alertText(row('a', 'failed'))).toBe('Explore · a failed')
-  expect(alertText(row('b', 'killed'))).toBe('Explore · b was stopped')
-  expect([runningText(0), runningText(1), runningText(2)]).toEqual([undefined, '1 agent running', '2 agents running'])
+  expect(alertText({ ...row('a', 'failed'), startedAt: 0, endedAt: 72_000 })).toBe('EXPLORE · a · FAILED 00:01:12')
+  expect(alertText({ ...row('b', 'killed'), startedAt: 0, endedAt: 5_000 })).toBe('EXPLORE · b · STOPPED 00:00:05')
+  expect([runningText(0), runningText(1), runningText(2)]).toEqual([undefined, '1 AGENT RUNNING', '2 AGENTS RUNNING'])
 })
