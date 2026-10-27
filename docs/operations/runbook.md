@@ -390,7 +390,15 @@ when the turn that made it ends, over `\\wsl.localhost` too (observed
 what every session loads, so keep it on `master`.
 
 - **Edit the mod here**, never in a `~/.claude/dev-mods/<session>/` copy,
-  which would load a second plugin of the same name.
+  which would load a second plugin of the same name. A session whose
+  environment was read before the mod existed can still hot-load it: link
+  the mod folder into that session's own mods folder (`ln -s
+  <checkout>/mods/<name> ~/.claude/dev-mods/<session id>/<name>`, after
+  the `plugin-authoring` skill has loaded there) and answer *Turn them on*;
+  a link is watched at the folder it names, and the same name is not also in
+  `CLAUDE_CODE_PLUGIN_DIRS` for that session (`TASK-0181`).
+- **Several mods**: `CLAUDE_CODE_PLUGIN_DIRS` takes them separated by the
+  platform's path-list separator (`:` in WSL, `;` on Windows).
 - **Check it** with `tests/test-mods.sh`. In WSL it picks the Windows
   `claude.exe` when the WSL `claude` is older than 2.1.308, and that CLI reads
   this checkout over `\\wsl.localhost`. `claude update` upgrades either.
