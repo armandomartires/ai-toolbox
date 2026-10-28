@@ -64,7 +64,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     )
     const agentId = member.agentId
     const show = () => void $.ui.view(isViewed || agentId === undefined ? {} : { agentId })
-    const caption = member.isActive ? memberCaption(member, at) : ''
+    const caption = memberCaption(member, at)
 
     return (
       <Box key={`member-${member.key}`} flexDirection="column">

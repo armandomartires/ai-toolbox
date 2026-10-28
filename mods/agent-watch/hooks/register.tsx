@@ -18,8 +18,9 @@ import {
   taskChange,
   tokensOf,
   turnCounted,
+  turnEnded,
+  turnStarted,
   watchText,
-  workflowEnded,
 } from './model'
 import { remember, syncTheme, watchTheme } from './sigma'
 import { PANE, TITLE, renderOutput, renderPane } from './view'
@@ -155,7 +156,12 @@ export const register: Register = on => {
   })
 
   on('turn.start', async ($, e, next) => {
-    if (e.agentId) await refresh($).catch(() => undefined)
+    if (e.agentId) {
+      const id = e.agentId
+      // A subagent its turn ended, woken again: it runs, whatever the list says.
+      await changeAgents($, rows => turnStarted(rows, id)).catch(() => undefined)
+      await refresh($).catch(() => undefined)
+    }
 
     return next(e)
   })
@@ -167,8 +173,9 @@ export const register: Register = on => {
       const tokens = tokensOf(e.usage)
       const model = e.usage?.model
       const at = await $.clock.now()
-      // A Workflow agent's end is its turn's: no list names it.
-      await changeAgents($, rows => workflowEnded(turnCounted(rows, id, tokens, model), id, e.reason, at)).catch(() => undefined)
+      // A subagent's end is its turn's: the list lags, or drops it unsaid,
+      // and names no Workflow agent at all.
+      await changeAgents($, rows => turnEnded(turnCounted(rows, id, tokens, model), id, e.reason, at)).catch(() => undefined)
       await refresh($).catch(() => undefined)
     }
 

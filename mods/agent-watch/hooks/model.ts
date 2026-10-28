@@ -72,6 +72,7 @@ export const spawnedRow = (
     name: known?.name,
     spawnedBy: known?.spawnedBy,
     runId: spawn.runId ?? known?.runId,
+    isTeammate: known?.isTeammate,
     status: 'running',
     startedAt: known?.startedAt ?? at,
     model: spawn.model ?? known?.model,
@@ -86,7 +87,9 @@ export const spawnedRow = (
 /**
  * The rows brought up to date with what `$.agent.list()` answers: a new
  * agent gets a row, a known one its current status, and one that
- * just ended its end time. Rows the list no longer names are kept.
+ * just ended its end time. Rows the list no longer names are kept. A row
+ * its own turn ended stays ended while the list still says it is active:
+ * the list lags, and keeps naming a finished subagent for a while.
  */
 export const mergeListed = (rows: AgentRow[], listed: readonly AgentInfo[], at: number): AgentRow[] => {
   const next = rows.slice()
@@ -94,6 +97,10 @@ export const mergeListed = (rows: AgentRow[], listed: readonly AgentInfo[], at: 
     const i = next.findIndex(row => row.id === info.id)
     const row = next[i]
     const wasActive = row ? isActive(row.status) : true
+    if (row?.isTurnEnded && isActive(info.status)) {
+      next[i] = { ...row, name: info.name ?? row.name, spawnedBy: info.spawnedBy ?? row.spawnedBy }
+      continue
+    }
     const merged: AgentRow = {
       id: info.id,
       parentId: info.parentId ?? row?.parentId,
@@ -102,6 +109,8 @@ export const mergeListed = (rows: AgentRow[], listed: readonly AgentInfo[], at: 
       name: info.name ?? row?.name,
       spawnedBy: info.spawnedBy ?? row?.spawnedBy,
       runId: row?.runId,
+      isTurnEnded: row?.isTurnEnded,
+      isTeammate: info.teammateId !== undefined || row?.isTeammate ? true : undefined,
       status: info.status,
       startedAt: row?.startedAt ?? at,
       endedAt: isActive(info.status) ? undefined : wasActive ? at : row?.endedAt ?? at,
@@ -576,7 +585,11 @@ export const memberTone = (input: SessionInput, agentId: string) => {
   return toneToken(input.tones, MAIN)
 }
 
-/** The caption under a member: its own steps, what it is doing, its settings, or what it waits on. */
+/**
+ * The caption under a member: its own steps, what it is doing, its settings,
+ * or what it waits on. An ended one keeps its calls and tokens, which its
+ * turn's end is the first to report.
+ */
 export const memberCaption = (member: Member, at: number) => {
   const parts: string[] = []
   if (member.waits !== undefined) return member.waits.length > 0 ? `WAITS ON ${member.waits.join(', ')}` : 'QUEUED'
@@ -585,21 +598,37 @@ export const memberCaption = (member: Member, at: number) => {
     const { done, total } = progressOf(row.tasks)
     parts.push(`${done}/${total} STEPS`)
   }
-  if (member.isActive && row && (row.activity || row.calls > 0 || row.tokens > 0)) parts.push(activityLine(row, at))
+  if (row && (row.activity || row.calls > 0 || row.tokens > 0)) parts.push(activityLine(row, at))
   if (member.isActive && member.settings) parts.push(member.settings)
 
   return parts.join(' · ')
 }
 
 /**
- * Ends a Workflow agent from its `turn.complete`: such agents are not in
- * `$.agent.list()`, so nothing else says they ended. `answer` completed it,
- * `aborted` stopped it, a refusal or an error failed it.
+ * Ends a subagent from its own `turn.complete` (B-066): `answer` completed
+ * it, `aborted` stopped it, a refusal or an error failed it. The list is
+ * late to say so, or never does once it drops the agent, and a Workflow's
+ * agents are in no list at all. A teammate is left to the list: its turn
+ * ends in `idle`, waiting for a message, not in an end.
  */
-export const workflowEnded = (rows: AgentRow[], agentId: string, reason: string, at: number) =>
+export const turnEnded = (rows: AgentRow[], agentId: string, reason: string, at: number) =>
   rows.map(row =>
-    row.id === agentId && row.runId !== undefined && isActive(row.status)
-      ? { ...row, status: reason === 'answer' ? 'completed' : reason === 'aborted' ? 'killed' : 'failed', endedAt: at, activity: undefined }
+    row.id === agentId && !row.isTeammate && isActive(row.status)
+      ? {
+          ...row,
+          status: reason === 'answer' ? 'completed' : reason === 'aborted' ? 'killed' : 'failed',
+          endedAt: at,
+          activity: undefined,
+          isTurnEnded: true as const,
+        }
+      : row,
+  )
+
+/** A new turn in an ended subagent's loop (a message woke it): it runs again. */
+export const turnStarted = (rows: AgentRow[], agentId: string) =>
+  rows.map(row =>
+    row.id === agentId && row.isTurnEnded
+      ? { ...row, status: 'running', endedAt: undefined, isTurnEnded: undefined, isAlerted: undefined }
       : row,
   )
 

@@ -5,7 +5,7 @@
 ## Modules
 
 - `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here. Its `IDENTITY`, `agentState`, `fit`, `elapsed`, `kit` and the command-output cache are used below.
-- `hooks/model.ts`: pure logic (`mergeListed`, `spawnedRow`; `elapsed` and `fit` re-exported from `sigma.tsx`), `iconOf` and `outcomeOf`, the sessions (`SESSION_TONES`, `nextTone`, `toneToken`, `assignTones`, `sessionTree`, `memberTone`, `memberCaption`, `ledgerBadge`, `workflowEnded`, `recordRun`), the task list (`taskChange`, `applyPlan`, `progressOf`), the activity (`summarizeCall`, `callStarted`, `callEnded`, `tokensOf`, `turnCounted`, `activityLine`) and the alerts (`endedBadly`, `markAlerted`, `alertText`, `runningText`, `watchText`). Tested directly in `model.test.ts`.
+- `hooks/model.ts`: pure logic (`mergeListed`, `spawnedRow`; `elapsed` and `fit` re-exported from `sigma.tsx`), `iconOf` and `outcomeOf`, the sessions (`SESSION_TONES`, `nextTone`, `toneToken`, `assignTones`, `sessionTree`, `memberTone`, `memberCaption`, `ledgerBadge`, `turnEnded`, `turnStarted`, `recordRun`), the task list (`taskChange`, `applyPlan`, `progressOf`), the activity (`summarizeCall`, `callStarted`, `callEnded`, `tokensOf`, `turnCounted`, `activityLine`) and the alerts (`endedBadly`, `markAlerted`, `alertText`, `runningText`, `watchText`). Tested directly in `model.test.ts`.
 - `hooks/view.tsx`: the `ui.render` pane, and `renderOutput`, `/agent-watch`'s `CommandOutput` row as a panel.
 - `hooks/band.tsx`: the `AbovePrompt` band (`registerBand`), which passes to the engine while there is nothing to show or a survey holds the band.
 - `hooks/register.tsx`: the hooks: the theme (`syncTheme` at the start, `watchTheme`), `/agent-watch` (its result kept by `remember`), a subagent's activity from its loop's `tool.call` (recorded before `next`, counted in a `finally`, so a deny or a throw still clears it) and its tokens and model from its `turn.complete`, `classic.SubagentStop` refreshing at once, the toasts and the status line from `refresh`, every loop's task list from `tool.call` (`taskChange`: the main loop's into `tasks`, a subagent's onto its row), a Workflow call's result naming its run, agent tracking from `agent.spawn` (a Workflow agent opens its run), a subagent's `turn.start` and `turn.complete` (which ends a Workflow agent), each change through `changeAgents` (toasts, then `syncTones`), a one-second tick that re-reads `$.agent.list()` while an agent is active or ended less than a minute ago or the orchestrator holds an open task, else every ten seconds, and a 400 ms tick that moves `frame` only while an agent is `running`, so a still pane is not redrawn. Tested through the engine stub in `register.test.tsx`.
@@ -13,7 +13,7 @@
 
 ## How agents are tracked
 
-`agent.spawn`'s answer opens the row at once, so a spawn shows before the engine lists it; `$.agent.list()` is the truth afterwards. A row the list stops naming is kept, so a finished agent stays under Completed for the session. `endedAt` is set the first time a row's status leaves the active ones, and never moved.
+`agent.spawn`'s answer opens the row at once, so a spawn shows before the engine lists it. A subagent's own `turn.complete` ends it (`turnEnded`, `B-066`): its loop runs one turn, and the list is late to say it ended, or drops it without saying so, which left a nested Explore child drawn running for minutes (`TASK-0193`'s live check). `isTurnEnded` keeps that end while the list still says active; the list's own end word still wins over the turn's. A new `turn.start` in the loop (a message woke it) runs it again (`turnStarted`). A teammate is left to the list, since its turn ends in `idle`. A row the list stops naming is kept, so a finished agent stays under Completed for the session. `endedAt` is set the first time a row's status leaves the active ones, and never moved. Its calls and tokens stay in its caption once it ended, since its turn's end is the first to report its tokens.
 
 ## Sessions, glyphs and colours
 
@@ -27,9 +27,9 @@ A ledger task joins its agent row by `agentId`. The ledger's word wins: a worker
 
 ## Workflow runs
 
-`agent.spawn` carries `workflow.runId` for an agent a Workflow script starts, and the Workflow tool's result carries `runId` and `workflowName`; either may come first, so `recordRun` opens the run and fills its name. No `$.agent.list()` names a Workflow agent, so its own `turn.complete` ends it (`workflowEnded`): `answer` completed, `aborted` stopped, anything else failed. Seen live in the desktop app (`TASK-0193`): both agents of a run ended with it.
+`agent.spawn` carries `workflow.runId` for an agent a Workflow script starts, and the Workflow tool's result carries `runId` and `workflowName`; either may come first, so `recordRun` opens the run and fills its name. No `$.agent.list()` names a Workflow agent, so its own `turn.complete` ends it, as it ends every subagent (`turnEnded`): `answer` completed, `aborted` stopped, anything else failed. Seen live in the desktop app (`TASK-0193`): both agents of a run ended with it.
 
-In the desktop app a subagent has no TodoWrite, TaskCreate or TaskUpdate, so a subagent becomes a session there only by spawning children; its own `STEPS` bar needs a terminal session, where subagents have TodoWrite. A nested subagent's row can stay running after it ended, when the list drops it without reporting its end (`B-066`).
+In the desktop app a subagent has no TodoWrite, TaskCreate or TaskUpdate, so a subagent becomes a session there only by spawning children; its own `STEPS` bar needs a terminal session, where subagents have TodoWrite.
 
 ## The task list
 

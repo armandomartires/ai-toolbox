@@ -239,6 +239,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0192 — switchboard 0.4.0 on SIGMAorbital
 - [x] TASK-0193 — agent-watch 0.4.0: sessions, sub-sessions and their subagents
 - [x] TASK-0194 — task-orchestrator 0.3.0: a spawn auto mode refuses can be retried or handed off
+- [x] TASK-0195 — agent-watch 0.4.1: a subagent ends on its own turn (B-066)
 
 ## Post-S9 (superseded by the promotion above)
 

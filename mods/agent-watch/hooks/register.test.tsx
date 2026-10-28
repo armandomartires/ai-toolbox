@@ -47,6 +47,7 @@ const engine = (on: On, listed: { value: AgentInfo[] }): Said => {
   on('agent.spawn', (_, e) => ({ model: 'm', agentId: `id-${e.description}` }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('turn.complete', (_, e) => ({ text: e.answer }))
+  on('turn.start', () => ({ turnId: 't' }))
 
   return said
 }
@@ -244,6 +245,49 @@ test('no orchestrator run is drawn while its ledger is empty', { plugins: [{ nam
   await ui.unmount()
 })
 
+test('a nested subagent ends on its own turn, whatever the list says after (B-066)', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.agent.spawn({ prompt: 'p', description: 'Split it', subagentType: 'general-purpose' } as AgentSpawnInput)
+  await $.agent.spawn({ prompt: 'p', description: 'Count tests', subagentType: 'Explore', parentAgentId: 'id-Split it' } as AgentSpawnInput)
+  // The list lags: it still names the child running after its turn ended.
+  const running = (id: string, description: string, parentId?: string): AgentInfo => ({ id, type: 'Explore', description, status: 'running', parentId })
+  listed.value = [running('id-Split it', 'Split it'), running('id-Count tests', 'Count tests', 'id-Split it')]
+  await clock.advance(2_000)
+  await $.turn.complete({ agentId: 'id-Count tests', reason: 'answer', answer: '11', durationMs: 1, isAborted: false, turnId: 't1' })
+
+  const childIcon = async () => {
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+    const out = { bar: (await ui.find({ text: /^\d+\/1$/ }))?.text, frames: [] as (string | undefined)[] }
+    out.frames.push((await ui.find({ type: 'Text', text: /^ +[■□] $/ }))?.text?.trim())
+    await ui.unmount()
+    return out
+  }
+  // Ended: the parent session counts it, and its icon is solid and still across frames.
+  await clock.advance(5_000)
+  const first = await childIcon()
+  await clock.advance(400)
+  const second = await childIcon()
+  expect(first.bar).toBe('1/1')
+  expect([first.frames[0], second.frames[0]]).toEqual(['■', '■'])
+
+  // The list then stops naming it: still ended, and its time stopped at its end.
+  listed.value = [running('id-Split it', 'Split it')]
+  await clock.advance(60_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /^1\/1$/ })).toBeDefined()
+  expect(await ui.find({ text: / 2s$/ })).toBeDefined()
+  await ui.unmount()
+
+  // Woken again (a message resumes it): a new turn in its loop runs it again.
+  await $.turn.start({ agentId: 'id-Count tests', prompt: 'again' } as never)
+  const again = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await again.find({ text: /^0\/1$/ })).toBeDefined()
+  await again.unmount()
+})
+
 const BAND = {
   plugin: 'agent-watch',
   component: 'AbovePrompt',
@@ -329,6 +373,7 @@ test('the pane shows what a running agent is doing: its call, its calls, its tok
   // The engine stub answers a call at once, so one call has ended.
   await $.tool.call({ tool: 'Bash', command: 'ls -la', agentId: 'id-Find hooks' })
   expect(await caption('terminal')).toBe('1 CALL')
+  // Its turn's end reports its tokens; the ended row keeps its calls and tokens.
   await $.turn.complete({
     agentId: 'id-Find hooks',
     reason: 'answer',

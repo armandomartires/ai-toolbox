@@ -19,6 +19,10 @@ export type AgentRow = {
   runId?: string
   /** Its `AgentStatus` word; a word the mod does not know is shown as is. */
   status: string
+  /** Set when its own `turn.complete` ended it, so a list that lags does not reopen it. */
+  isTurnEnded?: true
+  /** A teammate: its turn ends in `idle`, not an end, so only the list ends it. */
+  isTeammate?: true
   startedAt: number
   /** Set once the status left the active ones. */
   endedAt?: number

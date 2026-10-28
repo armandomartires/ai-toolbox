@@ -31,7 +31,8 @@ import {
   tokensOf,
   toneToken,
   turnCounted,
-  workflowEnded,
+  turnEnded,
+  turnStarted,
 } from './model'
 
 const row = (id: string, status: string, more: Partial<AgentRow> = {}): AgentRow => ({
@@ -182,16 +183,30 @@ test('a member caption says its own steps, what it is doing, its settings, or wh
   expect(memberCaption({ key: 'w', label: '', status: 'running', isActive: true, row: runner, settings: 'sonnet/high' }, 0)).toBe('1/2 STEPS · 2 CALLS · sonnet/high')
   expect(memberCaption({ key: 'q', label: '', status: 'pending', isActive: true, waits: ['T1'] }, 0)).toBe('WAITS ON T1')
   expect(memberCaption({ key: 'q', label: '', status: 'pending', isActive: true, waits: [] }, 0)).toBe('QUEUED')
-  expect(memberCaption({ key: 'd', label: '', status: 'completed', isActive: false, row: row('d', 'completed', { calls: 3 }) }, 0)).toBe('')
+  expect(memberCaption({ key: 'd', label: '', status: 'completed', isActive: false, row: row('d', 'completed', { calls: 3, tokens: 1200 }) }, 0)).toBe('3 CALLS · 1.2k TOK')
+  expect(memberCaption({ key: 'd', label: '', status: 'completed', isActive: false, row: row('d', 'completed') }, 0)).toBe('')
 })
 
-test('a Workflow agent ends on its turn.complete; a run is recorded once and named by the tool', () => {
-  const rows = [row('w', 'running', { runId: 'wf_1' }), row('x', 'running')]
-  expect(workflowEnded(rows, 'w', 'answer', 9)[0]).toMatchObject({ status: 'completed', endedAt: 9 })
-  expect(workflowEnded(rows, 'w', 'aborted', 9)[0]?.status).toBe('killed')
-  expect(workflowEnded(rows, 'w', 'error', 9)[0]?.status).toBe('failed')
-  // Not a Workflow agent: the list says when it ends.
-  expect(workflowEnded(rows, 'x', 'answer', 9)[1]?.status).toBe('running')
+test('a subagent ends on its turn.complete, a lagging list does not reopen it, a new turn does; a teammate is left to the list', () => {
+  const rows = [row('w', 'running', { runId: 'wf_1' }), row('x', 'running'), row('t', 'running', { isTeammate: true })]
+  expect(turnEnded(rows, 'w', 'answer', 9)[0]).toMatchObject({ status: 'completed', endedAt: 9, isTurnEnded: true })
+  expect(turnEnded(rows, 'w', 'aborted', 9)[0]?.status).toBe('killed')
+  expect(turnEnded(rows, 'w', 'error', 9)[0]?.status).toBe('failed')
+  expect(turnEnded(rows, 'x', 'answer', 9)[1]).toMatchObject({ status: 'completed', endedAt: 9 })
+  expect(turnEnded(rows, 't', 'answer', 9)[2]?.status).toBe('running')
+
+  const ended = turnEnded(rows, 'x', 'answer', 9)
+  // The list still says running: kept ended, end time kept.
+  const lagging = mergeListed(ended, [{ id: 'x', type: 'Explore', description: 'x', status: 'running', name: 'n' }], 20)
+  expect(lagging[1]).toMatchObject({ status: 'completed', endedAt: 9, name: 'n' })
+  // The list's own end word wins over the turn's, the end time stays the turn's.
+  expect(mergeListed(ended, [{ id: 'x', type: 'Explore', description: 'x', status: 'killed' }], 20)[1]).toMatchObject({ status: 'killed', endedAt: 9 })
+  // A new turn runs it again, and the list may then end it.
+  const woken = turnStarted(lagging, 'x')
+  expect(woken[1]).toMatchObject({ status: 'running', endedAt: undefined, isTurnEnded: undefined })
+  expect(mergeListed(woken, [{ id: 'x', type: 'Explore', description: 'x', status: 'running' }], 30)[1]?.status).toBe('running')
+  // A teammate is known from the list's teammateId.
+  expect(mergeListed([], [{ id: 'm', type: 'teammate', description: 'm', status: 'idle', teammateId: 'm@team' }], 1)[0]?.isTeammate).toBe(true)
 
   let runs = recordRun([], { id: 'wf_1', startedAt: 3 })
   expect(runs).toEqual([{ id: 'wf_1', name: 'workflow', ownerId: undefined, startedAt: 3 }])

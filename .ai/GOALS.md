@@ -431,6 +431,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0193-agent-watch-sessions.md
 - [x] TASK-0194 — task-orchestrator 0.3.0: a spawn auto mode refuses can be retried or handed off
   .ai/tasks/TASK-0194-orchestrator-auto-mode-spawn.md
+- [x] TASK-0195 — agent-watch 0.4.1: a subagent ends on its own turn (B-066)
+  .ai/tasks/TASK-0195-agent-watch-turn-end.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
@@ -449,6 +451,4 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - B-064 `task-compass`'s README has no screenshots
   .ai/planning/BACKLOG.md
 - B-065 task-orchestrator's `collect` fails while its tasks run
-  .ai/planning/BACKLOG.md
-- B-066 agent-watch leaves a nested subagent's row running after it ended
   .ai/planning/BACKLOG.md
