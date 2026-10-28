@@ -6,6 +6,7 @@ import {
   applyPlan,
   currentSprint,
   isActive,
+  LINGER_MS,
   parseSprints,
   setStoryStatus,
   STARTER_GOALS,
@@ -29,6 +30,8 @@ const agents = atom({ plugin: 'task-compass', key: 'agents' } as const, [])
 const now = atom({ plugin: 'task-compass', key: 'now' } as const, 0)
 const goalsPath = atom({ plugin: 'task-compass', key: 'goalsPath' } as const, '')
 const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
+// task-orchestrator's ledger, read and never written (types/index.d.ts, the mirror).
+const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 
 const TITLE = 'Compass'
 const GOALS_FILE = 'GOALS.md'
@@ -36,7 +39,6 @@ const STORY_TOOL = 'mcp__task-compass__story'
 const PLAN_TOOL = /(^|__)update_plan$/
 /** The desktop app's end of a turn: it ticks off the plan's last steps. */
 const WRAP_TOOL = /(^|__)wrap_up$/
-const LINGER_MS = 60_000
 
 let goalsMtime = -1
 let goalsAt = ''
@@ -393,8 +395,10 @@ export const register: Register = on => {
     $.clock.every(2_000, () => {
       tick++
       void (async () => {
-        const rows = await read($, agents)
-        const isBusy = rows.some(row => isActive(row.status) || row.endedAt !== undefined)
+        const [rows, orchTasks] = await Promise.all([read($, agents), read($, ledger)])
+        const isBusy =
+          rows.some(row => isActive(row.status) || row.endedAt !== undefined) ||
+          orchTasks.some(task => task.status === 'queued' || task.status === 'running')
         if (isBusy || tick % 5 === 0) await refreshAgents($)
         if (tick % 3 === 0) await loadGoals($)
       })().catch(() => undefined)

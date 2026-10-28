@@ -1,8 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderInput } from 'claude-code'
 
-import type { AgentRow, Sprint, Status } from '../types'
-import { elapsed, fit, isActive, STATUS, STATUSES } from './model'
+import type { Sprint, Status } from '../types'
+import { elapsed, fit, isActive, STATUS, STATUSES, shownRows, subagentRows } from './model'
+import type { SubagentRow } from './model'
 import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, focusOf, isRailRow, RAIL_GUTTER, sprintLabel } from './rails'
 import type { Row } from './rails'
 import { IDENTITY, agentState, color, kit, recall } from './sigma'
@@ -18,6 +19,10 @@ const goalsPath = atom({ plugin: 'task-compass', key: 'goalsPath' } as const, ''
 const openCard = atom({ plugin: 'task-compass', key: 'openCard' } as const, null)
 const railStart = atom({ plugin: 'task-compass', key: 'railStart' } as const, null)
 const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
+// task-orchestrator's run, read and never written (types/index.d.ts, the mirror).
+const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
+const policy = atom({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
+const enabled = atom({ plugin: 'task-orchestrator', key: 'enabled' } as const, false)
 
 export const PANE = 'task-compass'
 const GOALS_FILE = 'GOALS.md'
@@ -110,8 +115,8 @@ export const registerPane = (on: On) => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e)
     const { Box, Button, Text } = ui
-    const { frame, panel } = kit(ui, e.surface)
-    const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled, from] = await Promise.all([
+    const { badge, frame, panel } = kit(ui, e.surface)
+    const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled, from, orchTasks, orchPolicy, orchOn] = await Promise.all([
       read($, sprints),
       read($, focus),
       read($, tasks),
@@ -121,6 +126,9 @@ export const registerPane = (on: On) => {
       read($, openCard),
       read($, railStart),
       read($, source),
+      read($, ledger),
+      read($, policy),
+      read($, enabled),
     ])
     const isTerminal = e.surface === 'terminal'
     const cols = Math.max(COLUMN_MIN, e.props.bodyColumns)
@@ -132,7 +140,8 @@ export const registerPane = (on: On) => {
     const view = carousel(cols, sprintList.length, cur, scrolled)
     const { first, centred, later, columnWidth, cardWidth, inner } = view
     const shown = sprintList.slice(first, first + view.count)
-    const shownAgents = agentRows.slice(-AGENTS_SHOWN)
+    const merged = subagentRows(agentRows, orchTasks, at)
+    const shownAgents = shownRows(merged, AGENTS_SHOWN)
     const room = Math.max(6, rows - (shownAgents.length + 3) - 5)
     const scrollTo = (start: number | null) => () => void update($, railStart, () => start)
 
@@ -303,39 +312,52 @@ export const registerPane = (on: On) => {
     )
 
     // Each subagent's name opens its transcript in the main view; the one in
-    // view goes back to the main conversation.
-    const running = agentRows.filter(row => isActive(row.status)).length
+    // view goes back to the main conversation. A task not started has no
+    // transcript, so its name does nothing.
+    const running = merged.filter(one => one.isActive && one.waits === undefined).length
     const viewing = e.props.view.agentId
-    const depth = (row: AgentRow): number => {
-      const parent = agentRows.find(one => one.id === row.parentId)
-      return parent ? 1 + depth(parent) : 0
-    }
-    const agentRow = (row: AgentRow) => {
-      const isViewed = row.id === viewing
-      const active = isActive(row.status)
-      const indent = '  '.repeat(Math.min(3, depth(row)))
-      const time = elapsed((row.endedAt ?? at) - row.startedAt)
+    const agentRow = (one: SubagentRow) => {
+      const agentId = one.agentId
+      const isViewed = agentId !== undefined && agentId === viewing
+      const indent = '  '.repeat(Math.min(3, one.depth))
+      const time = one.startedAt === undefined ? '' : elapsed((one.endedAt ?? at) - one.startedAt)
+      const tail = one.waits !== undefined ? `WAITS ON ${one.waits.join(', ')}` : (one.settings ?? '')
       const name = fit(
-        `${isViewed ? '▸' : ''}${row.type} · ${row.description}`,
-        Math.max(8, cols - indent.length - time.length - 3),
+        `${isViewed ? '▸' : ''}${one.label}`,
+        Math.max(8, cols - indent.length - time.length - tail.length - (one.badge ? one.badge.word.length + 3 : 0) - 5),
       )
-      const show = () => void $.ui.view(isViewed ? {} : { agentId: row.id })
+      const show = () => {
+        if (agentId === undefined) return
+        void $.ui.view(isViewed ? {} : { agentId })
+      }
+      const index = one.row ? agentRows.indexOf(one.row) : Math.max(0, merged.indexOf(one))
       return (
         <Box flexDirection="row">
           <Box flexShrink={0}>
-            <Text color={color(agentState(row.status).token)}>
-              {`${indent}${agentGlyph(agentRows.indexOf(row), row.status)} `}
+            <Text color={color(agentState(one.status).token)}>
+              {`${indent}${agentGlyph(index, one.status)} `}
             </Text>
           </Box>
-          <Button key={`agent-${row.id}`} plain onPress={show}>
-            <Text color={color(active || isViewed ? 'text-1' : 'text-2')} wrap="truncate-end">{name}</Text>
+          <Button key={`agent-${one.key}`} plain onPress={show}>
+            <Text color={color(one.isActive || isViewed ? 'text-1' : 'text-2')} wrap="truncate-end">{name}</Text>
           </Button>
-          <Box flexShrink={0}>
-            <Text color={color('text-3')} tabular size="caption">{` ${time}`}</Text>
+          <Box flexShrink={0} flexDirection="row">
+            {tail !== '' && <Text color={color('text-3')} size="caption">{` ${tail}`}</Text>}
+            {one.badge !== undefined && <Text> </Text>}
+            {one.badge !== undefined && badge(one.badge.status, one.badge.word)}
+            {time !== '' && <Text color={color('text-3')} tabular size="caption">{` ${time}`}</Text>}
           </Box>
         </Box>
       )
     }
+
+    // While the orchestrator's ledger holds a task, the panel names its policy.
+    const code =
+      orchTasks.length > 0
+        ? `ORCH ${orchPolicy.toUpperCase()}${orchOn ? '' : ' · OFF'} · ${running} running`
+        : merged.length > 0
+          ? `${running} running`
+          : undefined
 
     return (
       <Box flexDirection="column" minHeight={e.props.scroll.bodyRows}>
@@ -366,10 +388,10 @@ export const registerPane = (on: On) => {
 
         <Box marginTop={1} flexDirection="column">
           {panel(
-            { title: 'Subagents', code: agentRows.length > 0 ? `${running} running` : undefined, width: cols },
+            { title: 'Subagents', code, width: cols },
             <Box flexDirection="column">
-              {agentRows.length === 0 && <Text color={color('text-3')}>None running.</Text>}
-              {shownAgents.map(agentRow)}
+              {merged.length === 0 && <Text color={color('text-3')}>None running.</Text>}
+              {shownAgents.map(one => agentRow(one))}
             </Box>,
           )}
         </Box>

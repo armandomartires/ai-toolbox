@@ -5,12 +5,12 @@
 ## Modules
 
 - `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
-- `hooks/model.ts`: pure logic (parse sprints, status table `STATUS` on SIGMAorbital tokens, `setStoryStatus`, `applyPlan`, `guessStory`, `wrap`). Tested directly in `register.test.tsx`.
+- `hooks/model.ts`: pure logic (`subagentRows`, the Subagents panel's merge of agent rows and the orchestrator's ledger; parse sprints, status table `STATUS` on SIGMAorbital tokens, `setStoryStatus`, `applyPlan`, `guessStory`, `wrap`). Tested directly in `register.test.tsx` and `model.test.ts`.
 - `hooks/rails.ts`: pure layout of the pane: `focusOf`, `carousel`, `columnRows` (rows, cards, progress, folding), sprint dates. Tested directly in `rails.test.ts`.
 - `hooks/view.tsx`: the `ui.render` pane, drawing what `rails.ts` lays out, and `renderOutput`, `/compass` and `/goals` drawn as panels from the results `register.tsx` keeps with `remember`.
 - `hooks/plan.ts`: pure reading of a project-workflow `.ai/` layer: `layoutOf`, `parseRoadmap`, `briefStory`, `statusOfRaw`, `planSprints` (open sprints last). Tested directly in `plan.test.ts`.
 - `hooks/register.tsx`: the hooks, the `story` tool, board loading (`<layout root>/GOALS.md`, else a root `GOALS.md` copied there, else the `.ai/` layer, re-reading only the briefs whose mtime or size moved), subagent tracking. It is the only module that knows the source (`source` in `$.state`), and it writes only when the source is `goals`. Its `.ai/` behaviour is tested in `layer.test.tsx`.
-- `types/index.d.ts`: the `$.state` contract.
+- `types/index.d.ts`: the `$.state` contract, and the mirror of task-orchestrator's.
 
 ## The `.ai/` board
 
@@ -29,3 +29,7 @@ Statuses map to fixed `GOALS.md` markers: plain item = backlog, `[ ]` todo, `[>]
 - The story tool is answered from the general `tool.call` hook by comparing `e.tool` with `mcp__task-compass__story`.
 - Cards open on a click on a dot's name, a plain `Button`; the dot stays a `Text` outside it. The open card sits in its column's flow under its story, so the rows below slide down. The tree fills the pane with `minHeight` of `e.props.scroll.bodyRows`, not the viewport's rows.
 - On a desktop the rail is the left edge of a bordered `Box` clipped by a one-cell `overflow="hidden"` Box (`railRun`), and cards are four straight edges (`frame` from `sigma.tsx`); the terminal keeps `│` text.
+
+## Orchestrator tie-in
+
+The Subagents panel follows task-orchestrator's ledger the way agent-watch does (`ADR-0044`): `view.tsx` reads `enabled`, `policy` and `ledger` and never writes them, and `subagentRows` joins each task to its agent by `agentId`. The types are a `// MIRROR of mods/task-orchestrator/types/index.d.ts` block in `types/index.d.ts`, which `scripts/check-mods.py` (rule 8) holds equal to the owner's; `ledgerBadge` and the task-to-row logic are ported from agent-watch, not imported. `shownRows` never cuts a ledger row (`kind: 'task'`): the six-row cap applies only to the unclaimed agents, `6 - tasks` slots, at least none, and an empty ledger leaves the old newest-six of the agents. A running task whose agent failed or was killed takes that outcome as its badge when the ledger word gives none (ported from agent-watch's `outcomeOf`). The tick also refreshes the agents while a task is queued or running. In a test the orchestrator is an inline plugin whose register holds each ledger as a literal (the kit evaluates it without its closure).

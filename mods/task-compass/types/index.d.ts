@@ -50,8 +50,46 @@ export type AgentRow = {
   endedAt?: number
 }
 
+// MIRROR of mods/task-orchestrator/types/index.d.ts, its one owner: the part of
+// its contract task-compass reads, and never writes. Each `Orch<Name>` below is
+// the owner's `<Name>`, every field copied verbatim, so a change there fails
+// the gate (scripts/check-mods.py, rule 8) until this agrees.
+export type OrchPolicy = 'economy' | 'balanced' | 'quality'
+
+export type OrchRole =
+  | 'utility'
+  | 'scout'
+  | 'investigator'
+  | 'documentation'
+  | 'builder'
+  | 'tester'
+  | 'reviewer'
+  | 'planner'
+  | 'debugger'
+  | 'risk-reviewer'
+  | 'frontier-specialist'
+
+export type OrchTaskStatus = 'queued' | 'running' | 'completed' | 'partial' | 'blocked' | 'failed' | 'cancelled'
+
+export type OrchSettings = { model: string; effort: string }
+
+export type OrchTask = {
+  id: string
+  role: OrchRole
+  objective: string
+  deps: string[]
+  status: OrchTaskStatus
+  requested: OrchSettings
+  observed?: OrchSettings & { at: number }
+  agentId?: string
+  createdAt: number
+  startedAt?: number
+  endedAt?: number
+}
+
 declare module 'claude-code' {
   interface PluginState {
+    'task-orchestrator': { enabled: boolean; policy: OrchPolicy; ledger: OrchTask[] }
     'task-compass': {
       sprints: Sprint[]
       focus: Focus | null

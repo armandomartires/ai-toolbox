@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'claude-code/testing'
-import type { AgentSpawnInput, AgentStatus, ConfigRow, On } from 'claude-code'
+import type { AgentSpawnInput, AgentStatus, ConfigRow, On, Register } from 'claude-code'
 
 import { applyPlan, currentSprint, guessStory, parseSprints, setStoryStatus } from './model'
 import { TOKENS } from './sigma'
@@ -57,7 +57,7 @@ type AppTool = never
  * The engine beneath the mod: a .ai/GOALS.md kept in memory in /p, the session's
  * folder unless the test moves it, and one subagent.
  */
-const engine = (on: On, agentStatus: { value: AgentStatus }) => {
+const engine = (on: On, agentStatus: { value: AgentStatus }, more: { id: string; description: string; type: string; status: AgentStatus }[] = []) => {
   const file = { text: GOALS, mtime: 1, cwd: '/p' }
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__task-compass__${e.name}` } }))
@@ -77,7 +77,7 @@ const engine = (on: On, agentStatus: { value: AgentStatus }) => {
     return { value: undefined }
   })
   on('agent.list', () => ({
-    value: [{ id: 'a1', description: 'Find hooks', type: 'Explore', status: agentStatus.value }],
+    value: [{ id: 'a1', description: 'Find hooks', type: 'Explore', status: agentStatus.value }, ...more],
   }))
   on('agent.spawn', () => ({ model: 'm', agentId: 'a1' }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
@@ -433,4 +433,88 @@ test('/compass and /goals draw as panels in the host theme; an unknown row stays
   const old = await $.ui.mount({ ...OUTPUT('goals', 'Compass: 2 sprints, 4 stories loaded from /x.'), surface: 'terminal' })
   expect((await old.find({ type: 'Text' }))?.text).toBe('engine')
   await old.unmount()
+})
+
+// task-orchestrator as the engine holds it: an inline plugin that writes its
+// state. The kit loads an inline register without its closure, so the ledger
+// is a literal inside it.
+const orchestrator: Register = on => {
+  on('session.start', async ($, e, next) => {
+    const task = { requested: { model: 'sonnet', effort: 'medium' }, deps: [] as string[], createdAt: 500 }
+    await $.state.set({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
+    await $.state.set({ plugin: 'task-orchestrator', key: 'enabled' } as const, true)
+    await $.state.set({ plugin: 'task-orchestrator', key: 'ledger' } as const, [
+      { ...task, id: 'T1', role: 'builder', objective: 'Write the model', status: 'running', agentId: 'a1', startedAt: 1_000, observed: { model: 'claude-sonnet-5-5', effort: 'high', at: 1_100 } },
+      { ...task, id: 'T2', role: 'reviewer', objective: 'Review it', status: 'blocked', startedAt: 600, endedAt: 900 },
+      { ...task, id: 'T3', role: 'tester', objective: 'Test it', status: 'queued', deps: ['T1', 'T2'] },
+    ])
+    return next(e)
+  })
+}
+const idleOrchestrator: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.state.set({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
+    return next(e)
+  })
+}
+
+test('the Subagents panel draws the orchestrator ledger inline, one row per worker', { plugins: [{ name: 'task-orchestrator', register: orchestrator }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' }, [{ id: 'a2', description: 'Look around', type: 'Explore', status: 'running' }])
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(4_000)
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
+    expect(await text(/^ORCH BALANCED · 2 RUNNING$/)).toBeDefined()
+    expect(await text(/T1 · builder · Write the model/)).toBeDefined()
+    // Observed settings win over requested; the ledger's word is a badge.
+    expect(await text(/claude-sonnet-5-5\/high/)).toBeDefined()
+    expect(await text(/sonnet\/medium/)).toBeDefined()
+    // The badge sits in the T2 row: some Box holds T2's name and BLOCKED, and no other task's.
+    const boxes = (await ui.findAll({ type: 'Box' })).map(one => JSON.stringify(one))
+    expect(boxes.some(one => one.includes('T2 · reviewer') && one.includes(' BLOCKED') && !one.includes('T1 · builder') && !one.includes('T3 · tester'))).toBe(true)
+    expect(boxes.some(one => one.includes('T1 · builder') && one.includes(' BLOCKED') && !one.includes('T2 · reviewer'))).toBe(false)
+    expect(await text(/WAITS ON T1, T2/)).toBeDefined()
+    // The worker's agent is drawn once, as its task; an unclaimed agent still is.
+    expect((await ui.findAll({ text: /Explore · Find hooks/ })).length).toBe(0)
+    expect(await text(/Explore · Look around/)).toBeDefined()
+    // Only a started task opens a transcript.
+    expect((await ui.find({ type: 'Button', text: /T1 · builder/ }))?.key).toBe('agent-task-T1')
+    await ui.unmount()
+  }
+})
+
+test('with an empty ledger the Subagents panel is as it was', { plugins: [{ name: 'task-orchestrator', register: idleOrchestrator }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /ORCH/ })).toBeUndefined()
+  expect(await ui.find({ text: /^1 RUNNING$/ })).toBeDefined()
+  expect(await ui.find({ text: /Explore · Find hooks/ })).toBeDefined()
+  await ui.unmount()
+})
+
+const offOrchestrator: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.state.set({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
+    await $.state.set({ plugin: 'task-orchestrator', key: 'enabled' } as const, false)
+    await $.state.set({ plugin: 'task-orchestrator', key: 'ledger' } as const, [
+      { id: 'T1', role: 'builder', objective: 'Write', status: 'queued', deps: [], createdAt: 500, requested: { model: 'sonnet', effort: 'medium' } },
+    ])
+    return next(e)
+  })
+}
+
+test('the Subagents code says OFF when task-orchestrator is off', { plugins: [{ name: 'task-orchestrator', register: offOrchestrator }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /^ORCH BALANCED · OFF · 1 RUNNING$/ })).toBeDefined()
+  await ui.unmount()
 })

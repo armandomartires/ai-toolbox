@@ -433,6 +433,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0194-orchestrator-auto-mode-spawn.md
 - [x] TASK-0195 — agent-watch 0.4.1: a subagent ends on its own turn (B-066)
   .ai/tasks/TASK-0195-agent-watch-turn-end.md
+- [x] TASK-0196 — task-compass 0.5.0: the Subagents panel follows the orchestrator
+  .ai/tasks/TASK-0196-compass-orchestrator.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

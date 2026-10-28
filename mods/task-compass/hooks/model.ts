@@ -1,6 +1,6 @@
-import type { Sprint, Status, Story, Task, TaskStatus } from '../types'
+import type { AgentRow, OrchTask, Sprint, Status, Story, Task, TaskStatus } from '../types'
 import { elapsed, fit } from './sigma'
-import type { Token } from './sigma'
+import type { Status as Tone, Token } from './sigma'
 
 export { elapsed, fit }
 
@@ -285,6 +285,118 @@ export const guessStory = (text: string, stories: Story[]): string | undefined =
 
 export const isActive = (status: string) =>
   status === 'running' || status === 'pending' || status === 'waiting'
+
+/** How long an ended subagent or ledger task stays listed. */
+export const LINGER_MS = 60_000
+
+/** One row of the Subagents panel: a ledger task joined to its agent, or an agent no task claims. */
+export type SubagentRow = {
+  key: string
+  /** A ledger task, which the cap never cuts, or an agent no task claims. */
+  kind: 'task' | 'agent'
+  /** The agent whose transcript the name opens; absent for a task not started. */
+  agentId?: string
+  /** `T1 · builder · objective` for a task, `type · description` for an agent. */
+  label: string
+  status: string
+  isActive: boolean
+  startedAt?: number
+  endedAt?: number
+  depth: number
+  /** The joined agent, whose position picks the glyph. */
+  row?: AgentRow
+  /** A ledger word that is not a plain completion, as task-orchestrator colours it. */
+  badge?: { status: Tone; word: string }
+  /** `model/effort`, observed else requested; none while queued. */
+  settings?: string
+  /** The tasks a queued one waits on. */
+  waits?: string[]
+}
+
+/** The badge a ledger word earns, as task-orchestrator's own pane colours it. */
+export const ledgerBadge = (status: OrchTask['status']): { status: Tone; word: string } | undefined =>
+  status === 'partial' || status === 'blocked'
+    ? { status: 'caution', word: status.toUpperCase() }
+    : status === 'failed'
+      ? { status: 'critical', word: 'FAILED' }
+      : status === 'cancelled'
+        ? { status: 'offline', word: 'CANCELLED' }
+        : undefined
+
+/** The badge an agent's own outcome earns, ported from agent-watch's `outcomeOf`. */
+const agentOutcome = (status: string): { status: Tone; word: string } | undefined =>
+  status === 'failed' ? { status: 'critical', word: 'FAILED' } : status === 'killed' ? { status: 'offline', word: 'STOPPED' } : undefined
+
+/** A ledger task that will not run again. */
+const isEnded = (task: OrchTask) => task.status !== 'queued' && task.status !== 'running'
+
+/** A ledger task as a row: its agent's row joined by `agentId`, the ledger's word winning. */
+function taskRow(task: OrchTask, row: AgentRow | undefined): SubagentRow {
+  const settings = task.observed ?? task.requested
+  const status = task.status === 'queued' ? 'pending' : task.status === 'running' ? row?.status ?? 'running' : 'completed'
+
+  return {
+    key: `task-${task.id}`,
+    kind: 'task',
+    agentId: task.agentId,
+    label: `${task.id} · ${task.role} · ${task.objective}`,
+    status,
+    isActive: !isEnded(task),
+    startedAt: task.startedAt,
+    endedAt: task.endedAt,
+    depth: 0,
+    row,
+    badge: ledgerBadge(task.status) ?? (row && task.status !== 'completed' ? agentOutcome(row.status) : undefined),
+    waits: task.status === 'queued' ? task.deps : undefined,
+    settings: task.status === 'queued' ? undefined : `${settings.model}/${settings.effort}`,
+  }
+}
+
+/**
+ * The Subagents panel's rows (ADR-0044): the ledger's tasks first, in ledger
+ * order, each with its agent folded in, then the agents no task claims, as
+ * they were listed. An ended task lingers `LINGER_MS` after it ended; one
+ * with no `endedAt` stays.
+ */
+export function subagentRows(agentRows: readonly AgentRow[], ledger: readonly OrchTask[], at: number): SubagentRow[] {
+  const byId = new Map(agentRows.map(row => [row.id, row]))
+  const claimed = new Set(ledger.flatMap(task => (task.agentId ? [task.agentId] : [])))
+  const depth = (row: AgentRow): number => {
+    const parent = byId.get(row.parentId ?? '')
+    return parent ? 1 + depth(parent) : 0
+  }
+  const tasks = ledger
+    .filter(task => task.endedAt === undefined || at - task.endedAt < LINGER_MS)
+    .map(task => taskRow(task, task.agentId ? byId.get(task.agentId) : undefined))
+  const agents = agentRows
+    .filter(row => !claimed.has(row.id))
+    .map((row): SubagentRow => ({
+      key: row.id,
+      kind: 'agent',
+      agentId: row.id,
+      label: `${row.type} · ${row.description}`,
+      status: row.status,
+      isActive: isActive(row.status),
+      startedAt: row.startedAt,
+      endedAt: row.endedAt,
+      depth: depth(row),
+      row,
+    }))
+
+  return [...tasks, ...agents]
+}
+
+/**
+ * The rows to draw: every ledger task, never cut, then the unclaimed agents
+ * capped to the slots `cap` leaves (the newest kept, at least none).
+ */
+export function shownRows(rows: readonly SubagentRow[], cap: number): SubagentRow[] {
+  const tasks = rows.filter(row => row.kind === 'task')
+  const agents = rows.filter(row => row.kind === 'agent')
+  const slots = Math.max(0, cap - tasks.length)
+
+  return [...tasks, ...(slots === 0 ? [] : agents.slice(-slots))]
+}
 
 /** Words wrapped to `width` columns; a word longer than that is cut. */
 export const wrap = (text: string, width: number): string[] => {
