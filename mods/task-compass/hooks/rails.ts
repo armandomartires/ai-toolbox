@@ -31,6 +31,8 @@ export type Row = {
   bold?: boolean
   dim?: boolean
   card?: Card
+  /** The row is a sprint's fold toggle: the sprint's number, whether it is folded, and the rows it hides. */
+  fold?: { n: number; isFolded: boolean; hidden: number }
 }
 
 export const isRailRow = (row: Row) => row.glyph === '│' && !row.text
@@ -175,13 +177,17 @@ export type ColumnContext = {
   opened: string | null
   inner: number
   nowMs: number
+  /** This sprint is folded: its header, its progress and its toggle are drawn, the rows under them are not. */
+  isFolded?: boolean
 }
 
 /**
  * A sprint's column, top to bottom: its dot, its progress, then its stories
  * with Claude's live tasks under the one being worked on, a run of the rail
  * between dots while there is room. A long column folds its leading done
- * stories into one dot, the open card's rows counted.
+ * stories into one dot, the open card's rows counted. Under the progress line
+ * hangs the sprint's fold toggle (`▾ HIDE`, or `▸ SHOW N` with the N rows it
+ * hides), which a sprint with no stories does not have.
  */
 export const columnRows = (one: Sprint, ctx: ColumnContext): Row[] => {
   const { focusId, isGuess, tasks, inner, nowMs } = ctx
@@ -313,8 +319,17 @@ export const columnRows = (one: Sprint, ctx: ColumnContext): Row[] => {
   // The rows a body takes: one each, and the open card's under its row.
   const height = (rows: Row[]) =>
     rows.reduce((n, row) => n + 1 + (row.card && row.key === ctx.opened ? cardHeight(row.card) : 0), 0)
-  // The header, its progress and the rail under them.
-  const top = [header, progress]
+  // The toggle: a row on the rail under the progress line, its count set below.
+  const toggle: Row = {
+    prefix: '│ ',
+    glyph: '',
+    color: 'line-strong',
+    text: '',
+    fold: { n: one.n, isFolded: ctx.isFolded === true, hidden: 0 },
+  }
+  const hasToggle = one.stories.length > 0
+  // The header, its progress, its toggle and the rail under them.
+  const top = hasToggle ? [header, progress, toggle] : [header, progress]
   const fixed = height(top) + 1
 
   // Leading done stories fold into one dot when the column runs long.
@@ -347,6 +362,12 @@ export const columnRows = (one: Sprint, ctx: ColumnContext): Row[] => {
   const gaps = body.filter((row, i) => i > 0 && !row.prefix).length
   const isSpaced = fixed + height(body) + gaps <= ctx.room
   const spaced = isSpaced ? body.flatMap((row, i) => (i === 0 || row.prefix ? [row] : [rail, row])) : body
+
+  // The rows the sprint's body would draw, which a fold hides; the rail's runs are not counted.
+  const hidden = [...folded, ...stories.flatMap(storyRows)].length
+  toggle.fold = { n: one.n, isFolded: ctx.isFolded === true, hidden }
+  toggle.text = ctx.isFolded ? `▸ SHOW ${hidden}` : '▾ HIDE'
+  if (ctx.isFolded && hasToggle) return top
 
   return [
     ...top,

@@ -28,3 +28,5 @@ The human asked that Compass's subagents panel have the same hierarchy as agent-
 - A change to agent-watch's state contract fails the gate until Compass's mirror agrees.
 - Without agent-watch loaded (its clock is 0), Compass shows what it tracks itself, as a flat list and without tones or sub-sessions.
 - Compass's own agent tracking stays: it powers the fallback and the tick.
+
+- `ADR-0046` (2026-10-28) supersedes `ADR-0044` clause 3 for Compass: its Sessions panel colours by state and shows ownership by containment.

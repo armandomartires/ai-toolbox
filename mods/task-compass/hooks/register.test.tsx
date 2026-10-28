@@ -3,6 +3,7 @@ import type { AgentSpawnInput, AgentStatus, ConfigRow, On, Register } from 'clau
 
 import { applyPlan, currentSprint, guessStory, parseSprints, setStoryStatus } from './model'
 import { TOKENS } from './sigma'
+import { sessionsLayout } from './view'
 
 const DARK = TOKENS.dark
 
@@ -219,7 +220,9 @@ test('the timeline shows sprints side by side with cards, tasks and subagents', 
     } else {
       const edge = before.find(one => one.props.borderStyle === 'single')
       expect(edge?.props).toMatchObject({ position: 'absolute', width: 3, height: cardRows + 2, borderColor: DARK.line })
-      expect(all.find(one => one.props.overflow === 'hidden' && one.props.height === cardRows)?.props.width).toBe(1)
+      // The rail's slot is two cells wide and its line sits on their boundary (`left` 1), where the sprint's glyph is centred.
+      expect(edge?.props.left).toBe(1)
+      expect(all.find(one => one.props.overflow === 'hidden' && one.props.height === cardRows)?.props.width).toBe(2)
     }
     // Another press opens that one instead; pressing it again closes it.
     await ui.press({ key: 'st2.3' })
@@ -239,7 +242,7 @@ test('the timeline shows sprints side by side with cards, tasks and subagents', 
     expect((await ui.find({ type: 'Text', text: / IN REVIEW$/ }))?.props).toMatchObject({ size: 'caption', color: DARK['text-3'] })
     expect((await ui.find({ type: 'Text', text: /^ 12s$/ }))?.props).toMatchObject({ tabular: true, size: 'caption' })
     // Names and labels are cut at the edge, never wrapped onto a second row.
-    expect((await ui.find({ type: 'Text', text: / S2 Timeline/ }))?.props.wrap).toBe('truncate-end')
+    expect((await ui.find({ type: 'Text', text: /S2 Timeline/ }))?.props.wrap).toBe('truncate-end')
     expect((await ui.find({ type: 'Text', text: /Explore · Find hooks/ }))?.props.wrap).toBe('truncate-end')
     // The legend and the subagent.
     expect(await text(/IN REVIEW/)).toBeDefined()
@@ -553,7 +556,8 @@ test('the Sessions panel draws agent-watch\'s tree: this session, the ORCH run, 
   await clock.advance(4_000)
 
   for (const surface of ['terminal', 'desktop'] as const) {
-    const ui = await $.ui.mount({ ...PANE, surface })
+    // Tall enough for every member: the KPI row and the panel fold first, the table's members last.
+    const ui = await $.ui.mount({ ...PANE, surface, props: { ...PANE.props, scroll: { offset: 0, bodyRows: 70 } } })
     const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
     expect(await text(/^SESSIONS$/i)).toBeDefined()
     expect(await text(/^3 RUNNING$/i)).toBeDefined()
@@ -569,14 +573,20 @@ test('the Sessions panel draws agent-watch\'s tree: this session, the ORCH run, 
     expect(await text(/ FAILED$/)).toBeDefined()
     expect(await text(/Explore · Review code/)).toBeDefined()
     // Heads are bold Buttons; a task not started opens nothing.
-    expect((await ui.find({ type: 'Text', text: /^THIS SESSION$/ }))?.props.weight).toBe('bold')
+    expect((await ui.findAll({ type: 'Text', text: /^THIS SESSION$/ })).map(one => one.props.weight)).toContain('bold')
     expect((await ui.find({ type: 'Text', text: /^ORCH BALANCED$/ }))?.props.color).toBe(DARK['text-1'])
-    expect((await ui.find({ type: 'Button', text: /Explore · Scan docs/ }))?.key).toBe('agent-m1')
-    expect((await ui.find({ type: 'Button', text: /T2 · reviewer/ }))?.key).toBe('agent-task-T2')
-    // The orchestrator's head draws its session glyph in its tone.
-    const heads = await ui.findAll({ type: 'Text', text: /[⬢⬡] $/ })
-    expect(heads.map(head => head.props.color)).toContain(DARK.cyan)
-    expect(heads.map(head => head.props.color)).toContain(DARK.violet)
+    // A row is pressed to select it (ADR-0046), so its key is the row's.
+    expect((await ui.find({ type: 'Button', text: /Explore · Scan docs/ }))?.key).toBe('row-m1')
+    expect((await ui.find({ type: 'Button', text: /T2 · reviewer/ }))?.key).toBe('row-task-T2')
+    // Rows are coloured by state, never by session: running cyan, failed red, blocked amber.
+    const glyphs = (await ui.findAll({ type: 'Text', text: /[⬢●◆▲□○■] $/ })).map(head => head.props.color)
+    expect(glyphs).toContain(DARK.cyan)
+    expect(glyphs).toContain(DARK.red)
+    expect(glyphs).toContain(DARK.amber)
+    expect(glyphs).not.toContain(DARK.violet)
+    // A member row carries its state's glyph, so the fixed square is only a done one.
+    const squares = (await ui.findAll({ type: 'Text', text: /■ $/ })).map(head => head.props.color)
+    for (const tone of [DARK.red, DARK.amber, DARK.cyan]) expect(squares).not.toContain(tone)
     await ui.unmount()
   }
 })
@@ -592,7 +602,9 @@ test('the Sessions panel draws the tree as a sunburst: an Svg on the desktop, a 
   const svg = await desktop.find({ type: 'Svg' })
   expect(svg).toBeDefined()
   expect(svg?.props.source).toMatch(/^<svg /)
-  expect(svg?.props.source).toContain(DARK.violet)
+  // Sectors are filled by state: running cyan, failed red, blocked amber; no session colour.
+  for (const token of [DARK.cyan, DARK.red, DARK.amber]) expect(svg?.props.source).toContain(token)
+  expect(svg?.props.source).not.toContain(DARK.violet)
   expect(String(svg?.props.alt)).toMatch(/running/)
   expect(svg?.props.isInteractive).toBe(true)
   expect(await desktop.find({ type: 'Raster' })).toBeUndefined()
@@ -601,16 +613,17 @@ test('the Sessions panel draws the tree as a sunburst: an Svg on the desktop, a 
   const terminal = await $.ui.mount({ ...PANE, surface: 'terminal', props: tall })
   const raster = await terminal.find({ type: 'Raster' })
   expect(raster).toBeDefined()
-  expect(raster?.props).toMatchObject({ columns: 18, rows: 9 })
-  expect(atob(String(raster?.props.cells)).length).toBe(18 * 9 * 12)
+  // 70 rows cap the chart (21 rows, 42 columns: the Sessions toggle takes one line): it was a fixed 18 x 9 before the chart took 80% of the width.
+  expect(raster?.props).toMatchObject({ columns: 42, rows: 21 })
+  expect(atob(String(raster?.props.cells)).length).toBe(42 * 21 * 12)
   expect(await terminal.find({ type: 'Svg' })).toBeUndefined()
   await terminal.unmount()
 
-  // At the default 40 rows the chart is there: the tree's members yield first.
-  const dflt = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  // At the default 40 rows the chart is there: the tree's members yield first, down to the session heads.
+  const dflt = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, scroll: { offset: 0, bodyRows: 40 } } })
   expect(await dflt.find({ type: 'Svg' })).toBeDefined()
   await dflt.unmount()
-  const dfltTerminal = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const dfltTerminal = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, scroll: { offset: 0, bodyRows: 40 } } })
   expect(await dfltTerminal.find({ type: 'Raster' })).toBeDefined()
   await dfltTerminal.unmount()
 
@@ -618,6 +631,187 @@ test('the Sessions panel draws the tree as a sunburst: an Svg on the desktop, a 
   const short = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, scroll: { offset: 0, bodyRows: 30 } } })
   expect(await short.find({ type: 'Svg' })).toBeUndefined()
   await short.unmount()
+})
+
+const TREE = { plugins: [{ name: 'agent-watch', register: watcher }, { name: 'task-orchestrator', register: orchestrator }] }
+const TALL = { ...PANE.props, scroll: { offset: 0, bodyRows: 70 } }
+
+test('pressing a Sessions row selects it, outlines its arc and fills the panel; pressing it again clears it', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(4_000)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop', props: TALL })
+  const source = async () => String((await ui.find({ type: 'Svg' }))?.props.source)
+  // The head row, and the panel's name and path while this session is the one shown.
+  const sessions = async () => (await ui.findAll({ type: 'Text', text: /^THIS SESSION$/ })).length
+  const raised = async () => (await ui.findAll({ type: 'Box' })).filter(one => one.props.backgroundColor === DARK.raised).length
+  // Nothing selected: this session in the panel, no arc outlined.
+  expect(await source()).not.toContain(DARK.white)
+  expect(await sessions()).toBe(3)
+  expect(await raised()).toBe(0)
+  await ui.press({ key: 'row-m1' })
+  expect(await source()).toContain(`stroke="${DARK.white}"`)
+  expect(await ui.find({ type: 'Text', text: /^THIS SESSION \/ Explore · Scan docs$/ })).toBeDefined()
+  expect(await sessions()).toBe(1)
+  // The selected row carries the raised fill.
+  expect(await raised()).toBeGreaterThan(0)
+  await ui.press({ key: 'row-m1' })
+  expect(await source()).not.toContain(DARK.white)
+  expect(await sessions()).toBe(3)
+  expect(await raised()).toBe(0)
+  await ui.unmount()
+})
+
+test('the selected-element panel shows path, state, progress, duration, tokens and children; OPEN TRANSCRIPT opens the transcript', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  const views: unknown[] = []
+  on('ui.view', (_, e) => {
+    views.push(e)
+    return { value: {} }
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  const has = async (pattern: RegExp) => (await ui.findAll({ type: 'Text', text: pattern })).length > 0
+  expect(await has(/^SELECTED$/)).toBe(true)
+  // This session by default: no transcript to open.
+  expect(await ui.find({ key: 'transcript' })).toBeUndefined()
+  await ui.press({ key: 'row-m1' })
+  expect(await has(/^THIS SESSION \/ Explore · Scan docs$/)).toBe(true)
+  expect(await has(/^ RUNNING$/)).toBe(true)
+  expect(await has(/^0\/1$/)).toBe(true)
+  expect(await has(/^· 0%$/)).toBe(true)
+  expect(await has(/^00:00:05$/)).toBe(true)
+  expect(await has(/^1,200$/)).toBe(true)
+  expect(await has(/^—$/)).toBe(true)
+  const open = await ui.find({ type: 'Button', key: 'transcript' })
+  expect(open).toBeDefined()
+  expect(await has(/^OPEN TRANSCRIPT$/)).toBe(true)
+  await ui.press({ key: 'transcript' })
+  expect(views).toEqual([{ agentId: 'm1' }])
+  // A queued task has no transcript to open.
+  await ui.press({ key: 'row-task-T3' })
+  expect(await has(/^ QUEUED$/)).toBe(true)
+  expect(await ui.find({ key: 'transcript' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('the transcript stays reachable when the full panel does not fit: a one-line strip with OPEN TRANSCRIPT', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  const views: unknown[] = []
+  on('ui.view', (_, e) => {
+    views.push(e)
+    return { value: {} }
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+
+  for (const bodyRows of [40, 48]) {
+    views.length = 0
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, scroll: { offset: 0, bodyRows } } })
+    const has = async (pattern: RegExp) => (await ui.findAll({ type: 'Text', text: pattern })).length > 0
+    // This session by default: a strip, no transcript.
+    expect(await has(/^SELECTED$/)).toBe(false)
+    expect(await ui.find({ key: 'transcript' })).toBeUndefined()
+    await ui.press({ key: 'row-m1' })
+    expect(await has(/^Explore · Scan docs$/)).toBe(true)
+    expect(await has(/RUNNING/)).toBe(true)
+    expect(await has(/ · 0\/1 · 1\.2k TOK$/)).toBe(true)
+    expect(await ui.find({ type: 'Button', key: 'transcript' })).toBeDefined()
+    expect(await has(/^OPEN TRANSCRIPT$/)).toBe(true)
+    await ui.press({ key: 'transcript' })
+    expect(views).toEqual([{ agentId: 'm1' }])
+    // Clear the selection for the next pane height.
+    await ui.press({ key: 'row-m1' })
+    await ui.unmount()
+  }
+})
+
+// agent-watch that has m1 gone from a session started in /q: the selected agent leaves the tree.
+const shrinkingWatcher: Register = on => {
+  on('session.start', async ($, e, next) => {
+    const row = { type: 'Explore', calls: 0, tokens: 0 }
+    const rows = [
+      { ...row, id: 'm1', description: 'Scan docs', status: 'running', startedAt: 1_000, calls: 2, tokens: 1_200 },
+      { ...row, id: 'f1', description: 'Review code', status: 'running', startedAt: 2_000 },
+    ]
+    await $.state.set({ plugin: 'agent-watch', key: 'now' } as const, 6_000)
+    await $.state.set({ plugin: 'agent-watch', key: 'agents' } as const, e.cwd === '/q' ? rows.slice(1) : rows)
+    return next(e)
+  })
+}
+
+test('a selection whose key is no longer in the chart falls back to this session', { plugins: [{ name: 'agent-watch', register: shrinkingWatcher }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  const views: unknown[] = []
+  on('ui.view', (_, e) => {
+    views.push(e)
+    return { value: {} }
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const has = async (pattern: RegExp) => (await ui.findAll({ type: 'Text', text: pattern })).length > 0
+  await ui.press({ key: 'row-m1' })
+  expect(await ui.find({ key: 'transcript' })).toBeDefined()
+  // m1 leaves the tree: the strip is about this session again, with nothing to open.
+  await $.session.start({ cwd: '/q', surface: 'terminal', isInteractive: true })
+  await clock.advance(1_000)
+  expect(await has(/Scan docs/)).toBe(false)
+  expect(await ui.find({ key: 'transcript' })).toBeUndefined()
+  expect(await has(/^THIS SESSION$/)).toBe(true)
+  expect(await has(/· \d+\/\d+ · .*TOK$|^SELECTED$/)).toBe(true)
+  await ui.unmount()
+})
+
+test('the KPI row shows the progress, agents, tokens and failed of this session', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  const has = async (pattern: RegExp, color?: string) =>
+    (await ui.findAll({ type: 'Text', text: pattern })).some(one => color === undefined || one.props.color === color)
+  for (const title of [/^PROGRESS$/, /^AGENTS$/, /^TOKENS$/, /^FAILED$/]) expect(await has(title, DARK['text-3'])).toBe(true)
+  // 2 of 6 steps, six agents, this session's 1.2k tokens, one failed (red, with its glyph).
+  expect(await has(/^33$/, DARK['text-1'])).toBe(true)
+  expect(await has(/^ %$/, DARK['text-3'])).toBe(true)
+  expect(await has(/^6$/, DARK['text-1'])).toBe(true)
+  expect(await has(/^1\.2k$/, DARK['text-1'])).toBe(true)
+  expect(await has(/^ TOK$/, DARK['text-3'])).toBe(true)
+  expect(await has(/^1$/, DARK.red)).toBe(true)
+  expect(await has(/^◆ $/, DARK.red)).toBe(true)
+  // The legend: a glyph and a word per state.
+  for (const word of [/^ RUNNING$/, /^ DONE$/, /^ FAILED$/, /^ BLOCKED$/, /^ QUEUED$/, /^ STOPPED$/]) expect(await has(word, DARK['text-3'])).toBe(true)
+  await ui.unmount()
+})
+
+test('the Sessions table colours each row by its state, never by its session', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  const colour = async (pattern: RegExp) => (await ui.findAll({ type: 'Text', text: pattern })).map(one => one.props.color)
+  expect(await colour(/^ BLOCKED$/)).toContain(DARK.amber)
+  expect(await colour(/^ FAILED$/)).toContain(DARK.red)
+  expect(await colour(/^ QUEUED$/)).toContain(DARK['text-3'])
+  expect(await colour(/^ RUNNING$/)).toContain(DARK.cyan)
+  // The STEPS, TIME and TOK columns.
+  expect(await colour(/^2\/6$/)).toContain(DARK['text-1'])
+  expect(await colour(/^1\.2k$/)).toContain(DARK['text-3'])
+  // No Text in the pane is a session tone.
+  const all = (await ui.findAll({ type: 'Text' })).map(one => one.props.color)
+  expect(all).not.toContain(DARK.violet)
+  await ui.unmount()
 })
 
 test('without agent-watch\'s agents the Sessions panel is the flat list', { plugins: [{ name: 'agent-watch', register: emptyWatcher }] }, async ($, on) => {
@@ -692,4 +886,385 @@ test('with agent-watch loaded the tree is drawn though Compass tracks no agent i
   expect(await ui.find({ text: /^THIS SESSION$/ })).toBeDefined()
   expect(await ui.find({ text: /Explore · Scan docs/ })).toBeDefined()
   await ui.unmount()
+})
+
+test('the SELECTED panel is funded before the KPI row', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const shows = async (bodyRows: number) => {
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, scroll: { offset: 0, bodyRows } } })
+    const panel = (await ui.findAll({ type: 'Text', text: /^SELECTED$/ })).length > 0
+    await ui.unmount()
+    return panel
+  }
+  // The panel needs no KPI row's rows ahead of it: it is there at 54, where the KPI row first would have left too little.
+  expect(await shows(54)).toBe(true)
+  expect(await shows(40)).toBe(false)
+})
+
+test('the chart takes 80% of the pane: a Raster of 0.8 x the columns, an Svg in an 80% Box with no size of its own, capped by the room', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(4_000)
+  const pane = (surface: string, bodyColumns: number, bodyRows: number) => $.ui.mount({ ...PANE, surface, props: { ...PANE.props, bodyColumns, scroll: { offset: 0, bodyRows } } })
+
+  for (const [bodyColumns, columns] of [[60, 48], [100, 80]] as const) {
+    const terminal = await pane('terminal', bodyColumns, 200)
+    expect((await terminal.find({ type: 'Raster' }))?.props).toMatchObject({ columns, rows: columns / 2 })
+    await terminal.unmount()
+  }
+  // Short of room the chart shrinks rather than push the table out: still round, fewer columns.
+  const capped = await pane('terminal', 100, 55)
+  const small = (await capped.find({ type: 'Raster' }))?.props as { columns: number; rows: number }
+  expect(small.columns).toBeLessThan(80)
+  expect(small.columns).toBe(small.rows * 2)
+  expect(small.rows).toBeGreaterThanOrEqual(9)
+  await capped.unmount()
+
+  const desktop = await pane('desktop', 100, 200)
+  const svg = await desktop.find({ type: 'Svg' })
+  expect(svg?.props.width).toBeUndefined()
+  expect(svg?.props.height).toBeUndefined()
+  // The markup is drawn at the pane's own width (0.8 x 100 columns x 7px), so the host does not scale it: its fonts keep their size.
+  expect(String(svg?.props.source)).toMatch(/^<svg [^>]*viewBox="0 0 560 560" width="560" height="560"/)
+  const slot = (await desktop.findAll({ type: 'Box' })).find(box => (box.children ?? []).some(child => typeof child === 'object' && (child as { type?: string }).type === 'Svg'))
+  expect(slot?.props.width).toBe('80%')
+  await desktop.unmount()
+  const narrow = await pane('desktop', 60, 200)
+  expect(String((await narrow.find({ type: 'Svg' }))?.props.source)).toMatch(/^<svg [^>]*viewBox="0 0 336 336" width="336" height="336"/)
+  await narrow.unmount()
+  const tight = await pane('desktop', 100, 55)
+  const slotTight = (await tight.findAll({ type: 'Box' })).find(box => (box.children ?? []).some(child => typeof child === 'object' && (child as { type?: string }).type === 'Svg'))
+  expect(typeof slotTight?.props.width).toBe('number')
+  await tight.unmount()
+})
+
+test('the board has a SIGMAorbital title bar like the Sessions panel', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  const titles = (await ui.findAll({ type: 'Text' })).map(one => one.children?.join?.('') ?? one.props.children).filter(text => typeof text === 'string')
+  expect(titles.indexOf('SPRINTS')).toBeGreaterThanOrEqual(0)
+  expect(titles.indexOf('SPRINTS')).toBeLessThan(titles.indexOf('SESSIONS'))
+  await ui.unmount()
+})
+
+test('the table, the SELECTED panel and the strip show CODE · full name, the code in text-3', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  const codes = async (pattern: RegExp) => (await ui.findAll({ type: 'Text', text: pattern })).filter(one => one.props.color === DARK['text-3'])
+  // The table row of m1 carries its code and its full name.
+  expect((await codes(/^A\d\d ·$/)).length).toBeGreaterThan(0)
+  expect((await ui.findAll({ type: 'Text', text: /^Explore · Scan docs$/ })).length).toBeGreaterThan(0)
+  await ui.press({ key: 'row-m1' })
+  // The SELECTED panel adds the code before the name, beside the table's.
+  expect((await codes(/^A\d\d ·$/)).length).toBeGreaterThan(0)
+  expect((await ui.findAll({ type: 'Text', text: /^Explore · Scan docs$/ })).length).toBeGreaterThan(1)
+  await ui.unmount()
+})
+
+test('the SELECTED panel\'s title carries the member\'s state glyph and tone, and a session its hexagon', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  // This session: the hexagon.
+  expect((await ui.findAll({ type: 'Text', text: /^⬢$/ })).length).toBeGreaterThan(0)
+  // A failed member: the failed glyph in red, beside the panel's own title.
+  const before = (await ui.findAll({ type: 'Text', text: /^◆$/ })).length
+  await ui.press({ key: 'row-f2' })
+  const glyphs = await ui.findAll({ type: 'Text', text: /^◆$/ })
+  // The panel adds two: its title's, and its State line's.
+  expect(glyphs.length).toBe(before + 2)
+  expect(glyphs.every(one => one.props.color === DARK.red)).toBe(true)
+  await ui.unmount()
+})
+
+test('at 40 rows and 60 columns the chart, legend, strip, KPI row, tree and board stay within the pane', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  // The accounting itself: every part the layout draws is paid for, whatever the pane's height, width or surface.
+  const tight: number[] = []
+  for (const isTerminal of [true, false]) {
+    for (const cols of [40, 60, 100]) {
+      for (const rows of [30, 40, 46, 60, 120]) {
+        for (const lines of [3, 15]) {
+          const layout = sessionsLayout({ rows, cols, isTerminal, hasTree: true, canChart: true, lines, shrink: budget => ({ lines: Math.min(lines, budget), apply: () => {} }), flatLines: 0 })
+          // Wherever the chart is drawn the parts never exceed the pane, in the tight tier too.
+          if (layout.hasChart) expect(layout.used).toBeLessThanOrEqual(rows)
+          // The tight tier draws the chart at its least size, never under 160 px.
+          if (layout.hasChart && !isTerminal && layout.chartGap === 0) tight.push(layout.chartPx)
+          // The strip's two rows are counted when the panel is not drawn.
+          expect(layout.stripRows).toBe(layout.hasSelected ? 0 : 2)
+          expect(layout.legendRows).toBe(Math.ceil(59 / cols))
+        }
+      }
+    }
+  }
+  expect(tight.length).toBeGreaterThan(0)
+  for (const px of tight) expect(px >= 160 && px < 220).toBe(true)
+  // The pane as rendered agrees: at 60 columns the chart is there at 46 rows, with the strip and no panel, and not at 30.
+  const mount = (bodyRows: number) => $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, bodyColumns: 60, scroll: { offset: 0, bodyRows } } })
+  const tall = await mount(46)
+  const raster = (await tall.find({ type: 'Raster' }))?.props as { columns: number; rows: number }
+  expect(raster.rows).toBeLessThan(46)
+  expect(raster.columns).toBe(raster.rows * 2)
+  expect((await tall.findAll({ type: 'Text', text: /^SELECTED$/ })).length).toBe(0)
+  await tall.unmount()
+  const short = await mount(30)
+  expect(await short.find({ type: 'Raster' })).toBeUndefined()
+  await short.unmount()
+})
+
+// Collapse and expand (TASK-0199): the Sessions list folds under this session's row, each sprint under its progress line; no title bar carries a toggle.
+const LIST = { key: 'toggle-list', hotkey: 's' } as const
+const fold = (n: number) => `fold-s${n}`
+const SHORT = { ...PANE.props, scroll: { offset: 0, bodyRows: 56 } }
+
+/** A Button's label: the text of the Text inside it. */
+const labelOf = async (ui: { find: (q: Record<string, unknown>) => Promise<{ text?: string } | undefined> }, key: string) => (await ui.find({ type: 'Button', key }))?.text
+
+test('a sprint\'s toggle hangs directly under that sprint\'s progress line, as a line-strong Button: `k` on the terminal for the current sprint', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  for (const surface of SURFACES) {
+    const ui = await $.ui.mount({ ...PANE, surface, props: TALL })
+    const all = await ui.findAll({})
+    for (const n of [1, 2, 3]) {
+      const progress = all.findIndex(one => one.type === 'Text' && /^[▰▱]{5} \d+\/\d+/.test(one.text ?? '') && all.findIndex(other => other.key === `s${n}`) < all.indexOf(one) && (n === 3 || all.indexOf(one) < all.findIndex(other => other.key === `s${n + 1}`)))
+      const button = all.findIndex(one => one.key === fold(n))
+      expect(progress).toBeGreaterThan(-1)
+      expect(button).toBeGreaterThan(progress)
+      // Nothing with a label or a press sits between the progress line and the toggle: only the rail's own cells.
+      expect(all.slice(progress + 1, button).filter(one => one.type === 'Button' || (one.type === 'Text' && one.text !== '│' && one.text !== ''))).toEqual([])
+      expect(all[button]?.type).toBe('Button')
+      expect(((await ui.find({ type: 'Button', key: fold(n) }))?.children?.[0] as { props: { color: string } }).props.color).toBe(DARK['line-strong'])
+      expect(await labelOf(ui, fold(n))).toBe('▾ HIDE')
+    }
+    // The hotkey is the terminal's, and the current sprint's (the second) alone.
+    expect((await ui.find({ type: 'Button', key: fold(2) }))?.props.hotkey).toBe(surface === 'terminal' ? 'k' : undefined)
+    expect((await ui.find({ type: 'Button', key: fold(1) }))?.props.hotkey).toBeUndefined()
+    expect((await ui.find({ type: 'Button', key: fold(3) }))?.props.hotkey).toBeUndefined()
+    await ui.unmount()
+  }
+})
+
+test('folding a sprint hides only that sprint\'s rows and counts them; the state is an atom; its rows return to the board\'s room', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  let ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: SHORT })
+  expect(await ui.find({ key: 'st2.1' })).toBeDefined()
+  expect(await ui.find({ key: 'st3.1' })).toBeDefined()
+  // The rows that sprint draws now: its stories, and Claude's live tasks under the one worked on.
+  const hidden = (await ui.findAll({ type: 'Button' })).filter(one => /^(st|t)2[.-]/.test(String(one.key))).length
+  expect(hidden).toBeGreaterThanOrEqual(4)
+  await ui.press({ key: fold(2) })
+  // Sprint 2 shows its header, progress and toggle only; sprints 1 and 3 keep their rows.
+  expect(await ui.find({ key: 'st2.1' })).toBeUndefined()
+  expect(await ui.find({ key: 'st2.4' })).toBeUndefined()
+  expect(await ui.find({ key: 's2' })).toBeDefined()
+  expect(await ui.find({ key: 'st3.1' })).toBeDefined()
+  expect(await labelOf(ui, fold(2))).toBe(`▸ SHOW ${hidden}`)
+  expect(await labelOf(ui, fold(3))).toBe('▾ HIDE')
+  // The atom is not the pane's: a pane mounted afterwards draws it folded.
+  await ui.unmount()
+  ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: SHORT })
+  expect(await labelOf(ui, fold(2))).toBe(`▸ SHOW ${hidden}`)
+  expect(await ui.find({ key: 'st2.1' })).toBeUndefined()
+  await ui.press({ key: fold(2) })
+  expect(await ui.find({ key: 'st2.1' })).toBeDefined()
+  expect(await labelOf(ui, fold(2))).toBe('▾ HIDE')
+  await ui.unmount()
+  // With every sprint on view folded, the board's room is the three rows, and the Sessions panel takes the rest.
+  const base = { rows: 46, cols: 72, isTerminal: true, hasTree: true, canChart: true, lines: 8, shrink: (budget: number) => ({ lines: Math.min(8, budget), apply: () => {} }), flatLines: 0 }
+  const grown = (layout: ReturnType<typeof sessionsLayout>) => layout.chartRows + (layout.hasKpi ? 5 : 0) + (layout.hasSelected ? 9 : 0)
+  const whole = sessionsLayout(base)
+  const folded = sessionsLayout({ ...base, isBoardFolded: true })
+  expect(folded.room).toBe(3)
+  expect(grown(folded)).toBeGreaterThan(grown(whole))
+  expect(folded.used).toBeLessThanOrEqual(46)
+})
+
+test('`k` folds the current sprint: the terminal\'s hotkey sits on its toggle alone', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: SHORT })
+  const hotkeys = (await ui.findAll({ type: 'Button' })).filter(one => one.props.hotkey === 'k').map(one => one.key)
+  expect(hotkeys).toEqual([fold(2)])
+  // `k` is the press of that toggle: it folds the current sprint's rows and no other's.
+  await ui.press({ key: fold(2) })
+  expect(await ui.find({ key: 'st2.1' })).toBeUndefined()
+  expect(await ui.find({ key: 'st3.1' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('the Sessions toggle hangs directly under THIS SESSION\'s row, indented like its members; `s` on the terminal; folded it leaves that row and the toggle', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  const has = async (pattern: RegExp) => (await ui.findAll({ type: 'Text', text: pattern })).length > 0
+  const order = async () => (await ui.findAll({})).filter(one => one.type === 'Button').map(one => one.key)
+  let keys = await order()
+  const main = keys.find(key => String(key).startsWith('row-'))!
+  // The first press of a row is THIS SESSION's; the toggle is the next Button, before any member's row.
+  expect(keys[keys.indexOf(main) + 1]).toBe(LIST.key)
+  expect(keys.indexOf(LIST.key)).toBeLessThan(keys.indexOf('row-m1'))
+  expect((await ui.find({ type: 'Button', key: LIST.key }))?.props.hotkey).toBe('s')
+  expect(((await ui.find({ type: 'Button', key: LIST.key }))?.children?.[0] as { props: { color: string } }).props.color).toBe(DARK['line-strong'])
+  expect(await labelOf(ui, LIST.key)).toBe('▾ HIDE')
+  expect(await has(/^STEPS$/)).toBe(true)
+  await ui.press({ key: LIST.key })
+  // Folded: THIS SESSION's row and the toggle, with the counts; the table's head stays, everything under the toggle goes.
+  keys = await order()
+  expect(keys.filter(key => String(key).startsWith('row-'))).toEqual([main])
+  expect(await ui.find({ key: 'row-m1' })).toBeUndefined()
+  expect(await labelOf(ui, LIST.key)).toMatch(/^▸ SHOW \d+ SESSIONS · \d+ AGENTS$/)
+  expect(await has(/^STEPS$/)).toBe(true)
+  // The rest of the Sessions panel and the board stay.
+  expect(await ui.find({ type: 'Raster' })).toBeDefined()
+  expect(await has(/^PROGRESS$/)).toBe(true)
+  expect(await has(/^SELECTED$/)).toBe(true)
+  expect(await ui.find({ key: 'st2.1' })).toBeDefined()
+  await ui.unmount()
+  // The state is an atom: a pane mounted afterwards draws it folded, and unfolds with the same toggle.
+  const again = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  expect(await labelOf(again, LIST.key)).toMatch(/^▸ SHOW/)
+  await again.press({ key: LIST.key })
+  expect(await again.find({ key: 'row-m1' })).toBeDefined()
+  expect(await labelOf(again, LIST.key)).toBe('▾ HIDE')
+  await again.unmount()
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop', props: TALL })
+  expect((await desktop.find({ type: 'Button', key: LIST.key }))?.props.hotkey).toBeUndefined()
+  await desktop.unmount()
+})
+
+test('collapsing the Sessions list hands its rows to the chart: more chart rows at the same height', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: SHORT })
+  const rowsOf = async () => ((await ui.find({ type: 'Raster' }))?.props as { rows: number }).rows
+  const open = await rowsOf()
+  await ui.press({ key: LIST.key })
+  expect(await rowsOf()).toBeGreaterThan(open)
+  await ui.unmount()
+  // The accounting agrees: a folded list is this session's row, its blank line and the toggle, and the chart gets the rest.
+  const base = { rows: 56, cols: 72, isTerminal: true, hasTree: true, canChart: true, lines: 15, shrink: (budget: number) => ({ lines: Math.min(15, budget), apply: () => {} }), flatLines: 0, hasFold: true }
+  const expanded = sessionsLayout(base)
+  const folded = sessionsLayout({ ...base, isListCollapsed: true })
+  expect(folded.treeLines).toBe(3)
+  expect(folded.chartRows).toBeGreaterThan(expanded.chartRows)
+  expect(folded.used).toBeLessThanOrEqual(56)
+})
+
+test('no title bar carries a toggle: the Sprints and Sessions bars are the panel look, a title, a code and a rule', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  for (const surface of SURFACES) {
+    const ui = await $.ui.mount({ ...PANE, surface, props: TALL })
+    expect(await ui.find({ key: 'toggle-board' })).toBeUndefined()
+    expect(await ui.find({ key: 'toggle-cards' })).toBeUndefined()
+    // A title bar is the Box holding a bold uppercase title: no ▾ or ▸ Button sits beside the title.
+    for (const title of ['SPRINTS', 'SESSIONS']) {
+      const bars = (await ui.findAll({ type: 'Box' })).filter(one => (one.children ?? []).some(child => typeof child === 'object' && (child as { type?: string }).type === 'Text' && ((child as { children?: unknown[] }).children ?? []).join('') === title))
+      expect(bars.length).toBe(1)
+      expect((bars[0]?.children ?? []).filter(child => typeof child === 'object' && (child as { type?: string }).type === 'Button')).toEqual([])
+      expect(bars[0]?.text).not.toMatch(/[▾▸]/)
+    }
+    await ui.unmount()
+  }
+})
+
+test('the rail passes through the glyph\'s centre: on a desktop both are two cells wide, the rail on their boundary; on the terminal both are the first column', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop', props: SHORT })
+  const glyphs = await desktop.findAll({ type: 'Box', key: 'glyph' })
+  const slots = await desktop.findAll({ type: 'Box', key: 'rail' })
+  expect(glyphs.length).toBeGreaterThan(0)
+  expect(slots.length).toBeGreaterThan(0)
+  // Every glyph is centred in two cells, and every rail slot is as wide, its line the bordered Box's left edge at `left` 1.
+  for (const one of glyphs) expect(one.props).toMatchObject({ width: 2, justifyContent: 'center' })
+  for (const one of slots) {
+    expect(one.props.width).toBe(glyphs[0]?.props.width)
+    const line = (one.children ?? []).find(child => typeof child === 'object' && (child as { props?: { borderStyle?: string } }).props?.borderStyle === 'single') as { props: Record<string, unknown> } | undefined
+    expect(line?.props).toMatchObject({ position: 'absolute', left: 1 })
+  }
+  await desktop.unmount()
+  const terminal = await $.ui.mount({ ...PANE, surface: 'terminal', props: SHORT })
+  // The monospaced `│` is one cell in the first column of its row, as the one-cell glyph is: the same column.
+  const rail = (await terminal.findAll({ type: 'Text', text: '│' }))[0]!
+  const glyph = (await terminal.findAll({ type: 'Text', text: '◉' }))[0]!
+  expect([rail.text?.length, glyph.text?.length]).toEqual([1, 1])
+  const box = (await terminal.findAll({ type: 'Box' })).find(one => one.text === '│' && one.props.width === 1)
+  expect(box).toBeDefined()
+  expect((await terminal.findAll({ type: 'Box', key: 'glyph' })).every(one => one.props.width === undefined && one.props.justifyContent === undefined)).toBe(true)
+  await terminal.unmount()
+})
+
+test('the chart is there at the default 40 rows on the desktop and the terminal, with every part paid for', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface, props: PANE.props })
+    expect(await ui.find({ type: surface === 'terminal' ? 'Raster' : 'Svg' })).toBeDefined()
+    await ui.unmount()
+  }
+})
+
+test('the toggle line costs the default pane no chart: the tight tier pays for it with the blank line above THIS SESSION\'s row', () => {
+  // 15 lines of heads and ledger tasks that cannot yield, at the default 40 rows: with the toggle's line they are 16.
+  const base = { rows: 40, cols: 72, isTerminal: true, hasTree: true, canChart: true, lines: 15, shrink: () => ({ lines: 15, apply: () => {} }), flatLines: 0 }
+  const withToggle = sessionsLayout({ ...base, hasFold: true })
+  expect(withToggle.hasChart).toBe(true)
+  expect(withToggle.headGap).toBe(0)
+  expect(withToggle.used).toBeLessThanOrEqual(40)
+  // Without a toggle there is nothing to pay for: the blank line stays.
+  expect(sessionsLayout(base)).toMatchObject({ hasChart: true, headGap: 1 })
+})
+
+test('the layout never takes more rows than the pane has, folded or not, whatever its height, width and surface', () => {
+  for (const isTerminal of [true, false]) {
+    for (const cols of [40, 60, 100]) {
+      for (const rows of [30, 40, 46, 60, 120]) {
+        for (const lines of [3, 15]) {
+          for (const hasFold of [false, true]) {
+            for (const isListCollapsed of hasFold ? [false, true] : [false]) {
+              for (const isBoardFolded of [false, true]) {
+                const layout = sessionsLayout({ rows, cols, isTerminal, hasTree: true, canChart: true, lines, shrink: budget => ({ lines: Math.min(lines, budget), apply: () => {} }), flatLines: 0, hasFold, isListCollapsed, isBoardFolded })
+                // Wherever the chart is drawn the parts never exceed the pane, whatever is folded, the toggle line paid for.
+                if (layout.hasChart) expect(layout.used).toBeLessThanOrEqual(rows)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 })

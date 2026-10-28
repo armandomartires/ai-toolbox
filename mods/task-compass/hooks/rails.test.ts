@@ -59,14 +59,28 @@ test('a sprint shows its progress and whether it ran past its end', () => {
 test('a long column folds its leading done stories, an open card counted', () => {
   const [setup] = parseSprints(GOALS)
   const texts = (ctx: ColumnContext) => columnRows(setup!, ctx).map(row => row.text)
-  // 12 rows: the dot, its progress and five stories spaced by rails. Nothing folds.
-  const closed = texts(context({ room: 12 }))
+  // 13 rows: the dot, its progress, its toggle and five stories spaced by rails. Nothing folds.
+  const closed = texts(context({ room: 13 }))
   expect(closed).toContain('One')
   expect(closed.filter(text => text === '')).toHaveLength(5)
   // Story 1.5's open card takes eight rows of its own, so the same room folds.
-  const opened = texts(context({ room: 12, opened: 'st1.5' }))
+  const opened = texts(context({ room: 13, opened: 'st1.5' }))
   expect(opened).not.toContain('One')
   expect(opened).toContain('4 stories done')
+})
+
+test('a sprint\'s fold toggle hangs under its progress line, counts the rows it hides when folded, and a sprint with no stories has none', () => {
+  const [setup] = parseSprints(GOALS)
+  const open = columnRows(setup!, context())
+  // Header, progress, then the toggle on the rail, the rail's run, and the stories.
+  expect(open.slice(0, 3).map(row => row.text)).toEqual(['S1 Setup', '▰▰▰▰▱ 4/5', '▾ HIDE'])
+  expect(open[2]).toMatchObject({ prefix: '│ ', color: 'line-strong', fold: { n: 1, isFolded: false } })
+  expect(open.map(row => row.text)).toContain('One')
+  // Folded: only those three rows, and the count of the story rows hidden.
+  const folded = columnRows(setup!, context({ isFolded: true }))
+  expect(folded.map(row => row.text)).toEqual(['S1 Setup', '▰▰▰▰▱ 4/5', '▸ SHOW 5'])
+  expect(folded[2]?.fold).toEqual({ n: 1, isFolded: true, hidden: 5 })
+  expect(columnRows({ ...setup!, stories: [] }, context()).some(row => row.fold)).toBe(false)
 })
 
 test('the carousel centres the current sprint until scrolled, within the ends', () => {

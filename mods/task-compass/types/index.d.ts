@@ -174,6 +174,12 @@ declare module 'claude-code' {
       openCard: string | null
       /** The first sprint the carousel shows once the person scrolled it; null follows the current sprint. */
       railStart: number | null
+      /** The key of the Sessions row a press selected (an arc, a session or an agent); null selects none and the panel shows this session. */
+      selected: string | null
+      /** The Sessions hierarchy list is folded to this session's row and its toggle (the chart, KPI row and SELECTED stay). */
+      listCollapsed: boolean
+      /** The numbers of the sprints folded to their header, progress and toggle; the rest show their stories. */
+      foldedSprints: number[]
     }
   }
 }
