@@ -49,7 +49,7 @@ export type Opts = { selected?: string; now?: number }
 const MEMBER_CAP = 160
 const LABEL_MAX = 90
 
-type Kind = 'running' | 'done' | 'failed' | 'blocked' | 'queued' | 'stopped'
+type Kind = 'running' | 'done' | 'failed' | 'blocked' | 'queued' | 'idle' | 'stopped'
 
 /** The state a status and badge stand for: a critical badge fails, caution blocks, offline stops. */
 export const stateKind = (status: string, badge?: { status: string }): Kind =>
@@ -60,13 +60,14 @@ export const stateKind = (status: string, badge?: { status: string }): Kind =>
   : status === 'failed' ? 'failed'
   : status === 'blocked' || status === 'partial' ? 'blocked'
   : status === 'killed' || status === 'stopped' || status === 'cancelled' ? 'stopped'
+  : status === 'idle' ? 'idle'
   : status === 'queued' || isActive(status) ? 'queued'
   : 'done'
 
-const TONE: Record<Kind, Token> = { running: 'cyan', done: 'text-1', failed: 'red', blocked: 'amber', queued: 'text-3', stopped: 'text-3' }
-const GLYPH: Record<Kind, string> = { running: '●', done: '■', failed: '◆', blocked: '▲', queued: '□', stopped: '○' }
+const TONE: Record<Kind, Token> = { running: 'cyan', done: 'text-1', failed: 'red', blocked: 'amber', queued: 'text-3', idle: 'text-3', stopped: 'text-3' }
+const GLYPH: Record<Kind, string> = { running: '●', done: '■', failed: '◆', blocked: '▲', queued: '□', idle: '□', stopped: '○' }
 
-const WORDS: Record<Kind, string> = { running: 'RUNNING', done: 'DONE', failed: 'FAILED', blocked: 'BLOCKED', queued: 'QUEUED', stopped: 'STOPPED' }
+const WORDS: Record<Kind, string> = { running: 'RUNNING', done: 'DONE', failed: 'FAILED', blocked: 'BLOCKED', queued: 'QUEUED', idle: 'IDLE', stopped: 'STOPPED' }
 /** The word of a state, one vocabulary for the chart, the table and the legend: its badge's when it has one (PARTIAL, CANCELLED), else its kind's. */
 export const stateWord = (status: string, badge?: { status?: string; word?: string }): string =>
   (badge?.word ?? WORDS[stateKind(status, badge as { status: string } | undefined)]).toUpperCase()
@@ -164,7 +165,7 @@ const sum = (rolls: Roll[]): Roll => ({
  */
 export const arcs = (tree: readonly SessionNode[], _tones?: Record<string, number>, opts: Opts = {}): Arc[] => {
   const root = nest(tree)
-  if (root === undefined) return [{ key: 'main', depth: 0, start: 0, end: 1, tone: stateTone('completed'), status: 'completed', label: 'THIS SESSION', name: 'THIS SESSION', glyph: stateGlyph('completed'), code: '', kind: 'session', progress: { done: 0, total: 0 }, tokens: 0, duration: 0, selected: opts.selected === 'main' }]
+  if (root === undefined) return [{ key: 'main', depth: 0, start: 0, end: 1, tone: stateTone('idle'), status: 'idle', label: 'THIS SESSION', name: 'THIS SESSION', glyph: stateGlyph('idle'), code: '', kind: 'session', progress: { done: 0, total: 0 }, tokens: 0, duration: 0, selected: opts.selected === 'main' }]
   const all = flatten(root)
   const codes = codesOf(all)
   const total = all.reduce((n, s) => n + s.members.length, 0)

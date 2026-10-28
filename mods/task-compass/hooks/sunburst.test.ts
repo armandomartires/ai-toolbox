@@ -193,7 +193,7 @@ test('an empty tree and a lone empty session draw just the centre disc', () => {
   expect(sectors(svg)).toHaveLength(1)
   const cells = decode(sunburstCells(list, 18, 9, 'dark'))
   expect(cells.some(c => c.code !== 0x20)).toBe(true)
-  expect(new Set(cells.filter(c => c.code !== 0x20).map(c => c.fg))).toEqual(new Set([parseInt(TOKENS.dark['text-1'].slice(1), 16)]))
+  expect(new Set(cells.filter(c => c.code !== 0x20).map(c => c.fg))).toEqual(new Set([parseInt(TOKENS.dark['text-3'].slice(1), 16)]))
 })
 
 test('the SVG has one titled sector per arc, filled by state, with its title rolled up', () => {
@@ -463,7 +463,8 @@ test('braille shows state: red for a critical badge, amber for caution, sparser 
 
 test('the centre disc is never dimmed', () => {
   const { list } = build([row('a1', 'completed')])
-  expect(list[0]!.status).toBe('completed')
+  expect(list[0]!.status).toBe('idle')
+  expect(stateWord('idle')).toBe('IDLE')
   const svg = sunburstSvg(list, 240, 'dark')
   expect(sectors(svg)[0]!).not.toContain('fill-opacity')
   const cells = decode(sunburstCells(build([]).list, 18, 9, 'dark'))

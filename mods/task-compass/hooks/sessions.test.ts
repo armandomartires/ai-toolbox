@@ -111,6 +111,10 @@ test('the tree: this session, its sub-sessions under their owners, each with its
   const plain = sessionTree({ rows: [row('a', 'running')], runs: [], tones: {}, tasks: [{ id: '1', text: 'x', status: 'completed' }, { id: '2', text: 'y', status: 'pending' }], ledger: [] })
   expect(plain.map(node => node.name)).toEqual(['THIS SESSION'])
   expect(plain[0]?.progress).toEqual({ done: 1, total: 2, unit: 'STEPS' })
+  // The session is open while it has no running member: idle, never done.
+  expect(plain[0]?.status).toBe('running')
+  expect(sessionTree({ rows: [row('a', 'completed')], runs: [], tones: {}, tasks: [], ledger: [] })[0]?.status).toBe('idle')
+  expect(sessionTree({ rows: [], runs: [], tones: {}, tasks: [], ledger: [] })[0]?.status).toBe('idle')
   expect(sessionTree({ rows, runs, tones, tasks: [], ledger, isOrchOn: false }).find(node => node.kind === 'orch')?.name).toBe('ORCH BALANCED · OFF')
 })
 

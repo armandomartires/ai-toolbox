@@ -281,7 +281,8 @@ export const sessionTree = (input: SessionInput): SessionNode[] => {
     name: 'THIS SESSION',
     depth: 0,
     isActive: true,
-    status: main.some(member => member.status === 'running') ? 'running' : 'completed',
+    // Open while the session lives: idle between turns, never done.
+    status: main.some(member => member.status === 'running') ? 'running' : 'idle',
     progress: tasks.length > 0 ? stepsOf(tasks) : countOf(main, 'AGENTS'),
     ...split(main),
   })
