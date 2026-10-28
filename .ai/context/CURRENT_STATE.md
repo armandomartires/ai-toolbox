@@ -82,7 +82,7 @@ These are not to be re-litigated without a new ADR:
 
 ## Recent changes
 
-- `TASK-0193`, 2026-10-28: `agent-watch` 0.4.0: sessions and sub-sessions with progress bars, the orchestrator tie-in, gate rule 8 (`ADR-0044`).
+- `TASK-0193`, 2026-10-28: `agent-watch` 0.4.0: sessions and sub-sessions with progress bars, the orchestrator tie-in, gate rule 8 (`ADR-0044`); seen live, raising `B-065` and `B-066`.
 - `TASK-0192`, 2026-10-28: `switchboard` 0.4.0 on SIGMAorbital: one panel, state glyphs, `/switchboard list` as panels.
 - `TASK-0191`, 2026-10-28: `task-orchestrator` 0.2.0 on SIGMAorbital: `/orchestrate` as panels, an uppercase status line.
 - `TASK-0190`, 2026-10-28: `task-compass` 0.4.0 on SIGMAorbital: token statuses, a panel card, `/goals` as a panel.

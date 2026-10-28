@@ -54,7 +54,7 @@ The Agents pane draws a tree of sessions: this session, the orchestrator's run, 
 - [x] tests/test-mods.sh --mod agent-watch and --mod task-orchestrator
 - [x] each new test red-proved against its reverted change; the gate rule against a renamed field
 - [x] claude plugin validate mods/agent-watch
-- [ ] seen live in a desktop session (Explore agents, a Workflow, a delegating subagent, an orchestrated run): pending the human's session, see the execution log
+- [x] seen live in a desktop session (Explore agents, a Workflow, a delegating subagent, an orchestrated run): matched, with one defect and one path not reachable there; see the execution log
 
 ## Risks and rollback
 
@@ -66,7 +66,7 @@ The Agents pane draws a tree of sessions: this session, the orchestrator's run, 
 - `mods/agent-watch/` 0.4.0: a `SESSIONS` panel; `THIS SESSION`, then `ORCH <POLICY>` (the ledger, read-only: tasks in order, queued ones waiting with `WAITS ON`, `BLOCKED`/`PARTIAL`/`FAILED`/`CANCELLED` badges, a `TASKS` bar), `WF <name>` runs (an `AGENTS` bar) and delegating subagents (a `STEPS` or `AGENTS` bar), each `⬢` in a tone of its own; subagents `■` in their owner's tone; the band's icons too. New state `runs`, `tones`; `AgentRow` loses `hue`, gains `name`, `spawnedBy`, `runId`, `tasks`.
 - `scripts/check-mods.py` rule 8 and six cases in `tests/test-check-mods.sh`; `ADR-0044`, with a pointer in `ADR-0043` clause 3; a comment in task-orchestrator's contract and a line in its README, no behaviour change.
 - Deviations: tones live in one `tones` map keyed by session, not on rows, so the orchestrator's run (no row) keeps its tone too; the mirror also carries `objective`, since a dispatched task's `description` is only `T1 builder`.
-- Next: the live check below; if a Workflow agent's `turn.complete` never arrives its row stays running (ADR-0044, Consequences).
+- Next: `B-066`, a nested subagent's row left running; `B-065`, task-orchestrator's `collect` failing while tasks ran; the auto-mode spawn refusal is a task of its own.
 
 ## Execution log
 
@@ -75,3 +75,11 @@ The Agents pane draws a tree of sessions: this session, the orchestrator's run, 
   - Evidence: `tests/test-mods.sh --mod agent-watch` → `PASS agent-watch: 21 pass`; `--mod task-orchestrator` → `21 pass`; `tests/validate.sh` → `validate.sh: OK`; `tests/test-check-mods.sh` → `12/12 passed`; `tsc` (typescript 5.6.3) → 6 errors, all in the band test's mount props and present before; the earlier `register.tsx` overload error is gone.
   - Evidence, red-proofs: source reverted with the new tests kept → 6 fail (the model file does not load; all 5 new register tests fail); the ledger word's badge removed → 2 fail (the tree test, the orchestrator pane test); rule 8 against task-orchestrator's contract with a field renamed, a status added, the ledger's type changed, `agentId` made required, a role added → each fails naming the field.
   - Not done: the live check in a desktop session; it needs the human (a Workflow run needs their opt-in, and only they see the pane).
+- 2026-10-28 · Claude Code (Opus 5.5) · live check in the desktop app, the human watching the pane and confirming each step against a screenshot
+  - Step 1, two Explore agents: two cyan `■` rows under `THIS SESSION`, which itself showed `7/7 STEPS` from the session's plan list.
+  - Step 2, a delegating subagent: in the desktop app a subagent has no TodoWrite, TaskCreate or TaskUpdate, so it kept no list and the `STEPS` path for a subagent could not run there. It spawned an Explore child, so it became a violet `⬢ general-purpose · …` session by the children path, with an `AGENTS` bar.
+  - Step 3, a Workflow (`agent-watch-live-check`, two agents): a green `⬢ WF agen…` session with `2/2 AGENTS`; both rows ended when the run did, so a Workflow agent's `turn.complete` does arrive.
+  - Step 4, task-orchestrator: auto mode's classifier gave no verdict on the orchestrator's own `$.agent.spawn`, twice (T1, then its retry T3), while the model's Agent calls passed; T2 and T4 were cancelled. Out of auto mode, T5 (scout, observed `claude-haiku-5-5/low`) and T6 (reviewer, `claude-sonnet-5-5/high`, waiting on T5) ran and completed. The pane drew a white `⬢ ORCH BA…` session, `6/6 TASKS`, `▲ BLOCKED` on T1 and T3, `○ CANCELLED` on T2 and T4.
+  - Defect (`B-066`): the violet session's Explore child stayed drawn as running at `5m34s` with its caption, long after it ended within its parent's 20s, so the session read `0/1 AGENTS` and the panel `1 RUNNING`. Its tokens were counted, so its `turn.complete` was heard; `$.agent.list()` never reported it ended, and a row the list stops naming keeps its last status.
+  - task-orchestrator (`B-065`): `collect` answered `no tool.call hook answered this call` twice while T5 and T6 ran, then returned both reports once they had ended. The auto-mode refusal went to a separate session.
+  - At a narrow pane the meter, count, unit and time leave a session's name a few characters (`ORCH BA…`, `WF agen…`).

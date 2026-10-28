@@ -446,3 +446,7 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   .ai/planning/BACKLOG.md
 - B-064 `task-compass`'s README has no screenshots
   .ai/planning/BACKLOG.md
+- B-065 task-orchestrator's `collect` fails while its tasks run
+  .ai/planning/BACKLOG.md
+- B-066 agent-watch leaves a nested subagent's row running after it ended
+  .ai/planning/BACKLOG.md

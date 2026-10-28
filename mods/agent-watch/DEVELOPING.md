@@ -27,7 +27,9 @@ A ledger task joins its agent row by `agentId`. The ledger's word wins: a worker
 
 ## Workflow runs
 
-`agent.spawn` carries `workflow.runId` for an agent a Workflow script starts, and the Workflow tool's result carries `runId` and `workflowName`; either may come first, so `recordRun` opens the run and fills its name. No `$.agent.list()` names a Workflow agent, so its own `turn.complete` ends it (`workflowEnded`): `answer` completed, `aborted` stopped, anything else failed.
+`agent.spawn` carries `workflow.runId` for an agent a Workflow script starts, and the Workflow tool's result carries `runId` and `workflowName`; either may come first, so `recordRun` opens the run and fills its name. No `$.agent.list()` names a Workflow agent, so its own `turn.complete` ends it (`workflowEnded`): `answer` completed, `aborted` stopped, anything else failed. Seen live in the desktop app (`TASK-0193`): both agents of a run ended with it.
+
+In the desktop app a subagent has no TodoWrite, TaskCreate or TaskUpdate, so a subagent becomes a session there only by spawning children; its own `STEPS` bar needs a terminal session, where subagents have TodoWrite. A nested subagent's row can stay running after it ended, when the list drops it without reporting its end (`B-066`).
 
 ## The task list
 
