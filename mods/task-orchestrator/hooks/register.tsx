@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { COORDINATOR_PROTOCOL, buildContract, parseReport } from './contract'
+import { COORDINATOR_PROTOCOL, assignmentId, buildContract, parseReport } from './contract'
 import type { Assignment } from './contract'
 import { ENDED, activeCount, addTask, auditRow, blockers, byAgent, byId, isNoVerdict, line, overall, retryTask, runnable, setTask, stallText, stalledBy, startBlocker, summary, WRITE_TOOLS, writeBlocker } from './ledger'
 import type { Ledger, Task } from './ledger'
@@ -249,10 +249,10 @@ const baseOf = async ($: EngineInterface, task: Task): Promise<string | undefine
 
 /** The Agent call that starts a handed-off task, as the coordinator makes it. */
 const handoffCall = (task: Task): string =>
-  `subagent_type "${PLUGIN}:${profileOf(task)}", name "${task.id}", model "${task.requested.model}", effort "${task.requested.effort}", description "${task.description}", prompt: the assignment below, unchanged`
+  `subagent_type "${PLUGIN}:${profileOf(task)}", model "${task.requested.model}", effort "${task.requested.effort}", description "${task.description}", prompt: the assignment below, unchanged`
 
 const handoffReason = (task: Task): string =>
-  `auto mode gave the orchestrator's spawn no verdict, twice: a plugin's spawn has no model request behind it. Start it yourself with the Agent tool (${handoffCall(task)}); the orchestrator adopts that spawn into ${task.id} under the same limits. Or cancel ${task.id}`
+  `auto mode gave the orchestrator's spawn no verdict, twice: a plugin's spawn has no model request behind it. Start it yourself with the Agent tool (${handoffCall(task)}); the orchestrator adopts that spawn into ${task.id} by the prompt's header, under the same limits. Or cancel ${task.id}`
 
 /** A handed-off task's assignment, for the coordinator to pass as the Agent prompt. */
 const handoffText = (task: Task): string[] => (task.handoff && task.status === 'blocked' ? [`assignment for ${task.id} (the Agent call's prompt, unchanged):`, task.prompt] : [])
@@ -570,7 +570,10 @@ export const register: Register = on => {
     }
     // The coordinator's own Agent call for a task auto mode refused the mod: the
     // classifier judged this call; it is adopted into the task's row, unchanged.
-    const held = e.name ? byId(rows, e.name) : undefined
+    // The task is the one its prompt's header names (the desktop's Agent tool
+    // takes no `name`), else the one `name` names.
+    const named = assignmentId(e.prompt) ?? e.name
+    const held = named ? byId(rows, named) : undefined
     if (held?.handoff && held.status === 'blocked') {
       // The exact profile, not only the role: the spawn carries no effort, its profile does.
       if (type !== `${PLUGIN}:${profileOf(held)}`) return { deny: `${held.id} waits for a hand-off as ${PLUGIN}:${profileOf(held)}, not ${type}` }

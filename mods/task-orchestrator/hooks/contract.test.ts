@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { COORDINATOR_PROTOCOL, buildContract, parseReport } from './contract'
+import { COORDINATOR_PROTOCOL, assignmentId, buildContract, parseReport } from './contract'
 import { DEFAULT_LIMITS } from './routing'
 
 test('the contract carries the assignment, its bounds and the stop condition', () => {
@@ -32,6 +32,13 @@ test('the protocol puts a model or effort the person names on every dispatch, ov
   expect(COORDINATOR_PROTOCOL).toContain('Workers are subagents, not sessions')
   expect(COORDINATOR_PROTOCOL).toContain('keep the person\'s task board and task list current yourself')
   expect(COORDINATOR_PROTOCOL).not.toContain('pass model or effort yourself only with a reason')
+})
+
+test('the task id is read from an assignment header, and from nothing else', () => {
+  expect(assignmentId('# Assignment T2 — role builder (implementation)\n\n## Objective')).toBe('T2')
+  expect(assignmentId('  # Assignment review-2 — role reviewer (review)')).toBe('review-2')
+  expect(assignmentId('Please do # Assignment T2 — role builder')).toBeUndefined()
+  expect(assignmentId(undefined)).toBeUndefined()
 })
 
 test('the report parser reads the labelled lines, continuation lines included, and an unknown status', () => {

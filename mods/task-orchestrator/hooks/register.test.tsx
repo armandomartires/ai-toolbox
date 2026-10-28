@@ -237,7 +237,7 @@ test('refused twice, a task waits for the hand-off; its dependant says what it w
   const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find the parser' }))).result)
   expect(world.refused).toEqual(['H1', 'H1'])
   expect(held).toContain('H1 → scout → requested haiku/low → unverified → blocked → auto mode gave the orchestrator\'s spawn no verdict, twice')
-  expect(held).toContain('subagent_type "task-orchestrator:scout", name "H1", model "haiku", effort "low", description "H1 scout"')
+  expect(held).toContain('subagent_type "task-orchestrator:scout", model "haiku", effort "low", description "H1 scout"')
   expect(held).toContain('assignment for H1 (the Agent call\'s prompt, unchanged):\n# Assignment H1 — role scout (lookup)')
 
   // A dependant queues, says what holds it, and collect returns it at once.
@@ -295,12 +295,14 @@ test("a handed-off task at the person's effort names its own profile and is adop
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
   const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'review', objective: 'Review it', model: 'sonnet', effort: 'medium' }))).result)
-  expect(held).toContain('subagent_type "task-orchestrator:reviewer--sonnet-medium", name "H1", model "sonnet", effort "medium"')
+  expect(held).toContain('subagent_type "task-orchestrator:reviewer--sonnet-medium", model "sonnet", effort "medium"')
+  expect(held).not.toContain('name "H1"')
   const prompt = byLine(held, '# Assignment H1')
+  // The desktop's Agent tool takes no name: the prompt's header names the task.
   // The role's own profile carries the table's high effort: refused.
-  const plain = await $.agent.spawn({ prompt, description: 'H1 reviewer', subagentType: 'task-orchestrator:reviewer', model: 'sonnet', name: 'H1' } as AgentSpawnInput)
+  const plain = await $.agent.spawn({ prompt, description: 'H1 reviewer', subagentType: 'task-orchestrator:reviewer', model: 'sonnet' } as AgentSpawnInput)
   expect(plain.deny).toBe('H1 waits for a hand-off as task-orchestrator:reviewer--sonnet-medium, not task-orchestrator:reviewer')
-  const adopted = await $.agent.spawn({ prompt, description: 'H1 reviewer', subagentType: 'task-orchestrator:reviewer--sonnet-medium', model: 'sonnet', name: 'H1' } as AgentSpawnInput)
+  const adopted = await $.agent.spawn({ prompt, description: 'H1 reviewer', subagentType: 'task-orchestrator:reviewer--sonnet-medium', model: 'sonnet' } as AgentSpawnInput)
   expect(adopted.agentId).toBe('agent-1')
   // Fenced as its role: a reviewer is read-only.
   expect((await $.tool.call({ tool: 'Write', file_path: '/p/x', content: 'x', agentId: 'agent-1' })).deny).toContain('read-only')
