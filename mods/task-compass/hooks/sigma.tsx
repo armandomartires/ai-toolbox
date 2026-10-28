@@ -19,14 +19,16 @@
 // - Line, not fill: rules and frames in `line`, controls in `line-strong`.
 //   A fill (`raised`) marks only the active or selected element.
 // - Square: a desktop rounds every Box border, so frames and rules are drawn
-//   as edges clipped from a bordered Box (`rule`, `Panel` with a height).
+//   as edges clipped from a bordered Box (`rule`, `frame`, a bracketed panel).
 // - Titles, labels, buttons and tags uppercase; body text sentence case.
 //   Numbers `tabular`, with a unit in text-3. Identifiers uppercase with
 //   hyphens. `weight`, never the deprecated `bold`.
 //
 // What the host cannot carry, so this file does not try: the four type
 // families (Orbitron, Rajdhani, Share Tech Mono, JetBrains Mono), radius,
-// shadows, the background grid and corner brackets. Motion is a glyph pulse
+// shadows and the background grid. A bracketed panel draws its corner brackets
+// as the border's own edges clipped to a 2-cell and a 1-row arm (`┌ ┐ └ ┘` on a
+// terminal), so each arm lies on the line it sits on. Motion is a glyph pulse
 // only, and only while something runs.
 import type { ConfigValue, ElementTable, EngineInterface, On, RenderChildren, RenderSurface } from 'claude-code'
 
@@ -218,6 +220,9 @@ export const recall = <T,>(text: string): T | undefined => {
 
 type Ui = ElementTable<RenderSurface>
 
+/** One stat block: `value` pre-formatted, `delta` with its sign, `status` the colour of a value out of limits. */
+export type StatBlock = { label: string; value: string; unit?: string; delta?: string; caption?: string; size?: 'md' | 'lg' | 'xl'; status?: Token }
+
 /**
  * The primitives for one drawing: `ui` is what `$.ui.resolve(e)` returned and
  * `surface` the input's, since a terminal and a desktop draw edges apart.
@@ -272,6 +277,67 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
     </Box>
   )
 
+  /**
+   * The design's stat block (Readout): a label in text-3 over a large
+   * tabular value in text-1 with its unit in text-3 after it, an optional
+   * delta under it (green from a `+`, amber from a `-`) and a caption. A
+   * value is coloured only when it is out of limits: pass its `status` token.
+   */
+  const stat = (opts: StatBlock) => (
+    <Box flexDirection="column" flexShrink={1}>
+      {label(opts.label)}
+      <Box flexDirection="row" flexShrink={0}>
+        <Text color={color(opts.status ?? 'text-1')} size={opts.size === 'md' ? 'heading' : 'title'} weight={opts.size === 'xl' ? 'bold' : undefined} tabular>
+          {opts.value}
+        </Text>
+        {opts.unit !== undefined && (
+          <Text color={color('text-3')} size="caption">
+            {` ${opts.unit.toUpperCase()}`}
+          </Text>
+        )}
+      </Box>
+      {opts.delta !== undefined && (
+        <Text color={color(opts.delta.startsWith('+') ? 'green' : opts.delta.startsWith('-') ? 'amber' : 'text-3')} size="caption" tabular>
+          {opts.delta}
+        </Text>
+      )}
+      {opts.caption !== undefined && (
+        <Text color={color('text-3')} size="caption" wrap="truncate-end">
+          {opts.caption.toUpperCase()}
+        </Text>
+      )}
+    </Box>
+  )
+
+  /** A row of equal-width stat blocks, `width` cells in all, a 1-cell vertical divider in `line` between them and none after the last (a row stretches it to the blocks' height). */
+  const stats = (width: number, blocks: StatBlock[]) => {
+    const count = Math.max(1, blocks.length)
+    const each = Math.max(4, Math.floor((width - (count - 1)) / count))
+    // A block's rows: its label and value, and the delta and caption it has.
+    const rows = Math.max(2, ...blocks.map(one => 2 + (one.delta !== undefined ? 1 : 0) + (one.caption !== undefined ? 1 : 0)))
+    const divider = isTerminal ? (
+      <Box flexDirection="column" width={1} flexShrink={0}>
+        {Array.from({ length: rows }, () => (
+          <Text color={color('line')}>│</Text>
+        ))}
+      </Box>
+    ) : (
+      <Box width={1} flexShrink={0} overflow="hidden">
+        <Box position="absolute" top={-1} bottom={-1} left={0} width={3} borderStyle="single" borderColor={color('line')} />
+      </Box>
+    )
+    return (
+      <Box flexDirection="row" width={width}>
+        {blocks.map((one, i) => [
+          i > 0 && divider,
+          <Box width={each} flexShrink={0} paddingLeft={i > 0 ? 1 : 0}>
+            {stat(one)}
+          </Box>,
+        ])}
+      </Box>
+    )
+  }
+
   /** A state: its glyph and word, in its colour. */
   const badge = (status: Status, word = STATUS[status].word) => (
     <Box flexDirection="row" flexShrink={0}>
@@ -294,14 +360,61 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
   }
 
   /**
-   * A panel: an uppercase title in text-1 with an optional code in text-3 at
-   * the right, a rule in `line` under it, then the body. Full borders are
-   * quiet in the design, so a panel draws none; `card` frames it square,
-   * which needs its height.
+   * A straight edge `size` cells long, clipped from a bordered Box. It is
+   * anchored to the panel's `top`/`bottom` and `left`/`right`, so it needs no
+   * height: a Box with both `top` and `bottom` spans them.
    */
-  const panel = (opts: { title: string; code?: string; width: number; card?: { height: number; fill?: Token } }, body: RenderChildren) => {
+  const edge = (clip: Record<string, number>, inner: Record<string, number>, token: Token) => (
+    <Box position="absolute" {...clip} overflow="hidden">
+      <Box position="absolute" {...inner} borderStyle="single" borderColor={color(token)} />
+    </Box>
+  )
+
+  /**
+   * The geometry of a panel's border, shared by its edges and its brackets so
+   * an arm lies exactly on the line it sits on: a horizontal line at `v`
+   * (top or bottom), `len` cells long from `side`, and a vertical line on
+   * `side`, over `rows` (the whole height, or the corner's one row at `v`).
+   */
+  const hLine = (v: 'top' | 'bottom', side: 'left' | 'right', width: number, len: number, token: Token) =>
+    edge({ [v]: 0, [side]: 0, width: len, height: 1 }, { [v]: 0, [side]: -1, width: width + 2, height: 3 }, token)
+  const vLine = (side: 'left' | 'right', v: 'top' | 'bottom' | null, token: Token) =>
+    edge(
+      { ...(v === null ? { top: 0, bottom: 0 } : { [v]: 0, height: 1 }), [side]: 0, width: 1 },
+      { top: -1, bottom: -1, [side]: 0, width: 3 },
+      token,
+    )
+
+  /** The four straight edges of a bracketed panel `width` wide, in `line`, whatever its height. */
+  const edges = (width: number) => [
+    hLine('top', 'left', width, width, 'line'),
+    hLine('bottom', 'left', width, width, 'line'),
+    vLine('left', null, 'line'),
+    vLine('right', null, 'line'),
+  ]
+
+  /** The four corner brackets in text-1: the border's own edges clipped to a 2-cell horizontal and a 1-row vertical arm at each corner. */
+  const brackets = (width: number) =>
+    (['top', 'bottom'] as const).flatMap(v =>
+      (['left', 'right'] as const).flatMap(side => [hLine(v, side, width, 2, 'text-1'), vLine(side, v, 'text-1')]),
+    )
+
+  /** A panel's inner width: its border and padding take two cells each side. */
+  const innerWidth = (width: number) => Math.max(1, width - 4)
+
+  /**
+   * A panel: an uppercase title in text-1 with an optional code in text-3 at
+   * the right, a rule in `line` under it, then the body. `bracketed` is the
+   * design's frame, one per region: the `surface` fill, a square 1px border
+   * in `line` and text-1 corner brackets, drawn without the panel's height.
+   * Without it a panel draws no border; `card` frames it square, which needs its height.
+   */
+  const panel = (
+    opts: { title: string; code?: string; width: number; bracketed?: boolean; card?: { height: number; fill?: Token } },
+    body: RenderChildren,
+  ) => {
     const head = (
-      <Box flexDirection="row" justifyContent="space-between" width={opts.card ? opts.width - 4 : opts.width}>
+      <Box flexDirection="row" justifyContent="space-between" width={opts.card || opts.bracketed ? innerWidth(opts.width) : opts.width}>
         <Text color={color('text-1')} weight="bold" wrap="truncate-end">
           {opts.title.toUpperCase()}
         </Text>
@@ -314,6 +427,35 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
         )}
       </Box>
     )
+    if (opts.bracketed) {
+      // The terminal draws `single` with square corners and the glyphs sit on them (an absolute child is placed inside the border); a desktop rounds it, so there the edges are clipped.
+      const corner = (glyph: string, pos: Record<string, number>) => (
+        <Box position="absolute" {...pos}>
+          <Text color={color('text-1')}>{glyph}</Text>
+        </Box>
+      )
+      return (
+        <Box
+          width={opts.width}
+          flexDirection="column"
+          {...(isTerminal
+            ? { borderStyle: 'single' as const, borderColor: color('line'), paddingX: 1 }
+            : { backgroundColor: color('surface'), paddingX: 2, paddingY: 1 })}
+        >
+          {isTerminal
+            ? [
+                corner('┌', { top: -1, left: -1 }),
+                corner('┐', { top: -1, right: -1 }),
+                corner('└', { bottom: -1, left: -1 }),
+                corner('┘', { bottom: -1, right: -1 }),
+              ]
+            : [...edges(opts.width), ...brackets(opts.width)]}
+          {head}
+          {rule(innerWidth(opts.width))}
+          {body}
+        </Box>
+      )
+    }
     if (!opts.card) {
       return (
         <Box flexDirection="column" width={opts.width}>
@@ -340,5 +482,5 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
     )
   }
 
-  return { rule, frame, label, value, badge, meter, panel }
+  return { rule, frame, label, value, stat, stats, badge, meter, panel, innerWidth }
 }

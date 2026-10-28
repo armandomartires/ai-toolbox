@@ -10,7 +10,7 @@ const PANE = {
   props: {
     title: 'Compass',
     isFocused: false,
-    bodyColumns: 72,
+    bodyColumns: 76,
     placement: 'dock',
     scroll: { offset: 0, bodyRows: 40 },
     view: {},

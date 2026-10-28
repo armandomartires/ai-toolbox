@@ -13,7 +13,7 @@ A mod draws `Box`/`Text`/`Button` trees, not HTML. A colour is a host theme key 
 ## Decision
 
 1. **Exact SIGMAorbital hex, per theme.** The host's theme keys have no cyan and no violet, and their greys are not the design's ramp, so mapping to the nearest key would only approximate the system. The host's `theme` setting picks the theme: any `light` family is Daylight, anything else (or a failed read) is Night ops, the brand theme. A change is followed through `config.set` and a redraw.
-2. **One owner, identical copies.** `mods/_template/hooks/sigma.tsx` owns the tokens, the status vocabulary, the agent identity glyphs, the primitives (`rule`, `frame`, `label`, `value`, `badge`, `meter`, `panel`), the helpers (`fit`, `elapsed`, `hms`) and the command-output cache. Every mod carries a byte-identical copy. Rule 7 of `scripts/check-mods.py` fails a differing copy, and a mod that hooks `ui.render` without one. The surface rules are written once, in the module's header.
+2. **One owner, identical copies.** `mods/_template/hooks/sigma.tsx` owns the tokens, the status vocabulary, the agent identity glyphs, the primitives (`rule`, `frame`, `label`, `value`, `stat`, `stats`, `badge`, `meter`, `panel`), the helpers (`fit`, `elapsed`, `hms`) and the command-output cache. Every mod carries a byte-identical copy. Rule 7 of `scripts/check-mods.py` fails a differing copy, and a mod that hooks `ui.render` without one. The surface rules are written once, in the module's header.
 3. **An agent's glyph is its identity, and its colour is its state.** Running is cyan with the pulse, done is `text-1`, failed is red and stopped is `text-3`. Both pane mods take this from the module. agent-watch is the exception since `ADR-0044`: its colour says which session owns a row.
 4. **Slash-command output draws as panels.** A command keeps its structured result under the exact text it answered (`remember`). Its `CommandOutput` hook draws that result, and draws the plain text for a row it does not know, such as one from before a resume.
 
@@ -26,6 +26,6 @@ A mod draws `Box`/`Text`/`Button` trees, not HTML. A colour is a host theme key 
 ## Consequences
 
 - A custom host theme does not recolour a mod; only the dark/light family is read.
-- The host cannot carry the design's four typefaces, radius, the background grid or corner brackets. Panels are a title, a rule and a body; a card is a square frame.
+- The host cannot carry the design's four typefaces, radius or the background grid. Panels are a title, a rule and a body; a card is a square frame; a `bracketed` panel is the design's region frame (surface fill, a `line` border and `text-1` corner brackets clipped from the border's own edges, `TASK-0199`); `stats` is its Readout row of stat blocks, the host's `title` size standing in for Orbitron.
 - A change to the module is one edit in the template and a copy to every mod, enforced by the gate.
 - The command-output cache lives in the mod's memory, so a reload or a resumed session draws older rows as text.

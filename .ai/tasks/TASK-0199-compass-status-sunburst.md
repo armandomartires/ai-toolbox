@@ -24,7 +24,7 @@ Compass's Sessions panel becomes the reference dashboard in SIGMAorbital: a KPI 
 ## Scope
 
 - In: `sunburst.ts` (equal-parent allocation, roll-up, state tones, progress arcs, centre, labels, selection outline; braille the same); `view.tsx` (KPI row, legend, selected panel, hierarchy table, `selected` atom); `types/index.d.ts`; tests; docs; 0.8.0.
-- In, added by the human during the build: a title bar on the Sprints/Stories board; short codes in the graph (`T1`, `A01`, `S01`) with full names kept in the table, panel and hover; the chart at about 80% of the pane's width; collapse/expand toggles, moved on the human's review to under THIS SESSION's row and under each sprint's progress bar; the sprint rail centred on its circles.
+- In, added by the human during the build: a title bar on the Sprints/Stories board; short codes in the graph (`T1`, `A01`, `S01`) with full names kept in the table, panel and hover; the chart at about 80% of the pane's width, raised after review to 85% and never shrunk for height on the desktop; the Sessions and Sprints panels as SIGMAorbital bracketed frames with the legends inside, and the KPIs as a Readout row, from the shared kit (`sigma.tsx`: `bracketed` panel, `stat`, `stats`; `ADR-0043` amended); collapse/expand toggles, moved on the human's review to under THIS SESSION's row and under each sprint's progress bar; the sprint rail centred on its circles.
 - Out: token-sized geometry; pressing an arc; `sessions.ts` and `sigma.tsx` (shared, gated copies); agent-watch's pane.
 
 ## Likely files
@@ -71,5 +71,10 @@ Next: watch the pane through a real multi-agent run and tune `CELL_PX`/`ROW_PX` 
   - Evidence: `tests/test-mods.sh --mod task-compass` → `PASS task-compass:  128 pass`; `python3 scripts/check-mods.py` → `OK (5 mods)`; `tests/validate.sh` → `validate.sh: OK`.
   - Evidence, red-proof: each new test failed with its hunk reverted (B1: 16 tests against 0.7.0's `sunburst.ts`; B2b: 5 against 0.7.0's `view.tsx`; B3–B7 per hunk); the stroke-floor test failed with `2 * k` (`test-mods.sh: 0 passed, 1 failed`).
   - The human checked the pane live and approved it.
+- 2026-10-28 · Claude Code (Opus 5.5) · follow-up after the live look; builders B8, B9 (Sonnet), coordinator fixes
+  - Changed: the chart drawn at 85% of the pane in explicit pixels (an interactive `Svg`'s frame kept a 150 px default height); the kit's `bracketed` panel, `stat` and `stats` (`sigma.tsx`, five copies; `ADR-0043` amended); the Sessions and Sprints panels bracketed with their legends inside; the KPIs a Readout row with TOK under its value.
+  - Evidence: `tests/test-mods.sh` → `5 passed, 0 failed` (task-compass 130); `python3 scripts/check-mods.py` → `OK (5 mods)`; `tests/validate.sh` → `validate.sh: OK`.
+  - Evidence, red-proof: dropping the Svg's width/height, sharing 0.8, hiding the desktop chart for height, the old KPI card, an unbracketed panel, the legend outside its frame and TOK beside its value each fail their test.
+  - Not verified: the terminal's corner glyphs; only the desktop corners were seen live.
 
 - 2026-10-28 · Claude Code (Opus 5.5) · plan approved after two chat previews; brief and `ADR-0046` written before the code

@@ -39,7 +39,7 @@ const PANE = {
   props: {
     title: 'Compass',
     isFocused: false,
-    bodyColumns: 72,
+    bodyColumns: 76,
     placement: 'dock',
     scroll: { offset: 0, bodyRows: 40 },
     view: {},
@@ -175,8 +175,9 @@ test('the timeline shows sprints side by side with cards, tasks and subagents', 
     expect((await ui.find({ type: 'Button', text: /▸Draw the rails/ }))?.text).not.toContain('◐')
     expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBe(40)
     // No card is open until a dot or its name is pressed.
+    // (The bracketed Sprints and Sessions panels are filled too, but as wide as the pane.)
     const isCard = (one: { type: string; props: Record<string, unknown> }) =>
-      one.type === 'Box' && one.props.backgroundColor !== undefined
+      one.type === 'Box' && one.props.backgroundColor !== undefined && one.props.width !== PANE.props.bodyColumns
     const card = async () => (await ui.findAll({ type: 'Box' })).find(isCard)
     expect(await card()).toBeUndefined()
     await ui.press({ key: 'st2.1' })
@@ -258,8 +259,8 @@ test('earlier and later scroll the sprints like a carousel', async ($, on) => {
   engine(on, { value: 'completed' })
 
   await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
-  // Two of the three sprints fit in 44 cells, the current one (2) first.
-  const ui = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: 44 } })
+  // Two of the three sprints fit in 48 cells (44 inside the Sprints frame), the current one (2) first.
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: 48 } })
   const has = async (pattern: RegExp) => (await ui.find({ text: pattern })) !== undefined
   expect([await has(/S1 Setup/), await has(/S2 Timeline/), await has(/S3 Sharing/)]).toEqual([false, true, true])
   expect(await has(/‹ 1 EARLIER/)).toBe(true)
@@ -318,7 +319,7 @@ test('a subagent row opens its transcript; on the terminal h, l and c steer the 
   await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
   await clock.advance(4_000)
 
-  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, bodyColumns: 44 } })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, bodyColumns: 48 } })
   // The status glyph stays a colored Text; the name is the press.
   expect((await ui.find({ type: 'Button', text: /Explore · Find hooks/ }))?.key).toBe('agent-a1')
   await ui.press({ key: 'agent-a1' })
@@ -329,7 +330,7 @@ test('a subagent row opens its transcript; on the terminal h, l and c steer the 
   const viewing = await $.ui.mount({
     ...PANE,
     surface: 'terminal',
-    props: { ...PANE.props, bodyColumns: 44, view: { agentId: 'a1' } },
+    props: { ...PANE.props, bodyColumns: 48, view: { agentId: 'a1' } },
   })
   expect(await viewing.find({ text: /▸Explore · Find hooks/ })).toBeDefined()
   await viewing.press({ key: 'agent-a1' })
@@ -342,7 +343,7 @@ test('a subagent row opens its transcript; on the terminal h, l and c steer the 
   await viewing.unmount()
 
   // Elsewhere the same controls have none.
-  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: 44 } })
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: 48 } })
   expect((await desktop.find({ key: 'later' }))?.props.hotkey).toBeUndefined()
   await desktop.unmount()
 })
@@ -557,7 +558,7 @@ test('the Sessions panel draws agent-watch\'s tree: this session, the ORCH run, 
 
   for (const surface of ['terminal', 'desktop'] as const) {
     // Tall enough for every member: the KPI row and the panel fold first, the table's members last.
-    const ui = await $.ui.mount({ ...PANE, surface, props: { ...PANE.props, scroll: { offset: 0, bodyRows: 70 } } })
+    const ui = await $.ui.mount({ ...PANE, surface, props: { ...PANE.props, scroll: { offset: 0, bodyRows: 74 } } })
     const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
     expect(await text(/^SESSIONS$/i)).toBeDefined()
     expect(await text(/^3 RUNNING$/i)).toBeDefined()
@@ -597,7 +598,7 @@ test('the Sessions panel draws the tree as a sunburst: an Svg on the desktop, a 
   await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
   await clock.advance(4_000)
 
-  const tall = { ...PANE.props, scroll: { offset: 0, bodyRows: 70 } }
+  const tall = { ...PANE.props, scroll: { offset: 0, bodyRows: 74 } }
   const desktop = await $.ui.mount({ ...PANE, surface: 'desktop', props: tall })
   const svg = await desktop.find({ type: 'Svg' })
   expect(svg).toBeDefined()
@@ -613,9 +614,9 @@ test('the Sessions panel draws the tree as a sunburst: an Svg on the desktop, a 
   const terminal = await $.ui.mount({ ...PANE, surface: 'terminal', props: tall })
   const raster = await terminal.find({ type: 'Raster' })
   expect(raster).toBeDefined()
-  // 70 rows cap the chart (21 rows, 42 columns: the Sessions toggle takes one line): it was a fixed 18 x 9 before the chart took 80% of the width.
-  expect(raster?.props).toMatchObject({ columns: 42, rows: 21 })
-  expect(atob(String(raster?.props.cells)).length).toBe(42 * 21 * 12)
+  // 74 rows (70 before the two bracketed frames took four) cap the chart (22 rows, 44 columns: the Sessions toggle takes one line, the two bracketed frames four rows, and the KPI stat row four with its margin): it was a fixed 18 x 9 before the chart took its share of the width.
+  expect(raster?.props).toMatchObject({ columns: 44, rows: 22 })
+  expect(atob(String(raster?.props.cells)).length).toBe(44 * 22 * 12)
   expect(await terminal.find({ type: 'Svg' })).toBeUndefined()
   await terminal.unmount()
 
@@ -627,14 +628,17 @@ test('the Sessions panel draws the tree as a sunburst: an Svg on the desktop, a 
   expect(await dfltTerminal.find({ type: 'Raster' })).toBeDefined()
   await dfltTerminal.unmount()
 
-  // A pane too short for it leaves the chart out.
+  // A pane too short for it leaves the terminal's chart out; a desktop's is never hidden for height (the pane scrolls).
   const short = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, scroll: { offset: 0, bodyRows: 30 } } })
-  expect(await short.find({ type: 'Svg' })).toBeUndefined()
+  expect(await short.find({ type: 'Svg' })).toBeDefined()
   await short.unmount()
+  const shortTerminal = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, scroll: { offset: 0, bodyRows: 30 } } })
+  expect(await shortTerminal.find({ type: 'Raster' })).toBeUndefined()
+  await shortTerminal.unmount()
 })
 
 const TREE = { plugins: [{ name: 'agent-watch', register: watcher }, { name: 'task-orchestrator', register: orchestrator }] }
-const TALL = { ...PANE.props, scroll: { offset: 0, bodyRows: 70 } }
+const TALL = { ...PANE.props, scroll: { offset: 0, bodyRows: 74 } }
 
 test('pressing a Sessions row selects it, outlines its arc and fills the panel; pressing it again clears it', TREE, async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
@@ -711,7 +715,7 @@ test('the transcript stays reachable when the full panel does not fit: a one-lin
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await clock.advance(4_000)
 
-  for (const bodyRows of [40, 48]) {
+  for (const bodyRows of [40, 44]) {
     views.length = 0
     const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, scroll: { offset: 0, bodyRows } } })
     const has = async (pattern: RegExp) => (await ui.findAll({ type: 'Text', text: pattern })).length > 0
@@ -770,27 +774,95 @@ test('a selection whose key is no longer in the chart falls back to this session
   await ui.unmount()
 })
 
-test('the KPI row shows the progress, agents, tokens and failed of this session', TREE, async ($, on) => {
+test('the KPI row is four stat blocks in one divided row: label, tabular value, unit and caption, no frame or rule of its own', TREE, async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   engine(on, { value: 'running' })
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await clock.advance(4_000)
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
-  const has = async (pattern: RegExp, color?: string) =>
-    (await ui.findAll({ type: 'Text', text: pattern })).some(one => color === undefined || one.props.color === color)
-  for (const title of [/^PROGRESS$/, /^AGENTS$/, /^TOKENS$/, /^FAILED$/]) expect(await has(title, DARK['text-3'])).toBe(true)
-  // 2 of 6 steps, six agents, this session's 1.2k tokens, one failed (red, with its glyph).
-  expect(await has(/^33$/, DARK['text-1'])).toBe(true)
-  expect(await has(/^ %$/, DARK['text-3'])).toBe(true)
-  expect(await has(/^6$/, DARK['text-1'])).toBe(true)
-  expect(await has(/^1\.2k$/, DARK['text-1'])).toBe(true)
-  expect(await has(/^ TOK$/, DARK['text-3'])).toBe(true)
-  expect(await has(/^1$/, DARK.red)).toBe(true)
-  expect(await has(/^◆ $/, DARK.red)).toBe(true)
+  // (The SELECTED panel has its own PROGRESS label, so the stats are found by the value that follows each title.)
+  const texts = await ui.findAll({ type: 'Text' })
+  // 2 of 6 steps, six agents (three running), this session's 1.2k tokens, one failed (the value in red, out of limits; the label is its word).
+  for (const [title, value, ink] of [[/^PROGRESS$/, '33', 'text-1'], [/^AGENTS$/, '6', 'text-1'], [/^TOKENS$/, '1.2k', 'text-1'], [/^FAILED$/, '1', 'red']] as const) {
+    const at = texts.findIndex((one, i) => title.test(one.text ?? '') && texts[i + 1]?.text === value)
+    expect(at).toBeGreaterThan(-1)
+    expect(texts[at]?.props).toMatchObject({ color: DARK['text-3'], size: 'caption' })
+    expect(texts[at + 1]?.props).toMatchObject({ color: DARK[ink], size: 'title', tabular: true })
+  }
+  const has = (pattern: RegExp, color?: string) => texts.some(one => pattern.test(one.text ?? '') && (color === undefined || one.props.color === color))
+  expect(has(/^ %$/, DARK['text-3'])).toBe(true)
+  // TOKENS carries its unit under the value, as a caption, not beside it.
+  const tokens = texts.findIndex((one, i) => /^TOKENS$/.test(one.text ?? '') && texts[i + 1]?.text === '1.2k')
+  expect(texts[tokens + 2]?.text).toBe('TOK')
+  expect(texts[tokens + 2]?.props).toMatchObject({ color: DARK['text-3'], size: 'caption' })
+  expect(has(/^2\/6 STEPS$/, DARK['text-3'])).toBe(true)
+  expect(has(/^\d+ RUNNING$/, DARK['text-3'])).toBe(true)
+  // No ◆ before the failed count: the state is its colour and its word.
+  expect(has(/^◆ $/)).toBe(false)
+  // The only rules are the two panels' title rules (the old cards drew four more); the stats are divided by three `│` columns in `line`.
+  const rules = texts.filter(one => /^─+$/.test(one.text ?? '') && one.props.color === DARK.line)
+  expect(rules.length).toBeLessThanOrEqual(3)
+  expect(texts.filter(one => one.text === '│' && one.props.color === DARK.line).length).toBeGreaterThanOrEqual(9)
   // The legend: a glyph and a word per state.
-  for (const word of [/^ RUNNING$/, /^ DONE$/, /^ FAILED$/, /^ BLOCKED$/, /^ QUEUED$/, /^ STOPPED$/]) expect(await has(word, DARK['text-3'])).toBe(true)
+  for (const word of [/^ RUNNING$/, /^ DONE$/, /^ FAILED$/, /^ BLOCKED$/, /^ QUEUED$/, /^ STOPPED$/]) expect(has(word, DARK['text-3'])).toBe(true)
   await ui.unmount()
+})
+
+test('the Sprints status legend is drawn inside the Sprints panel, as its last row', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(4_000)
+  for (const surface of SURFACES) {
+    const ui = await $.ui.mount({ ...PANE, surface, props: TALL })
+    // The two frames are the Boxes as wide as the pane that are filled (desktop) or bordered (terminal); the first is the Sprints panel.
+    type Node = { type?: string; text?: string; props?: Record<string, unknown>; children?: unknown[] }
+    const frames = (await ui.findAll({ type: 'Box' })).filter(
+      one => one.props.width === PANE.props.bodyColumns && (one.props.backgroundColor !== undefined || one.props.borderStyle === 'single'),
+    )
+    expect(frames.length).toBe(2)
+    const texts = (node: Node): string[] =>
+      (node.children ?? []).flatMap(child => (typeof child === 'object' && child !== null ? [(child as Node).text ?? '', ...texts(child as Node)] : typeof child === 'string' ? [child] : []))
+    const inSprints = texts(frames[0] as Node)
+    const inSessions = texts(frames[1] as Node)
+    for (const word of [' BACKLOG', ' TO DO', ' IN PROGRESS', ' IN REVIEW', ' BLOCKED', ' DONE']) {
+      expect(inSprints).toContain(word)
+    }
+    // (The Sessions legend shares DONE and BLOCKED; the other board states are in the Sprints frame alone.)
+    for (const word of [' BACKLOG', ' TO DO', ' IN PROGRESS', ' IN REVIEW']) expect(inSessions).not.toContain(word)
+    await ui.unmount()
+  }
+})
+
+test('the Sprints and Sessions panels are bracketed frames: four text-1 corners each, and the SELECTED panel and the KPI stats inside add none', TREE, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(4_000)
+
+  // Desktop: each frame is filled with `surface` and has four line edges and four text-1 bracket corners (eight arms), drawn without a height.
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop', props: TALL })
+  const boxes = await desktop.findAll({ type: 'Box' })
+  const framed = boxes.filter(one => one.props.backgroundColor === DARK.surface && one.props.width === PANE.props.bodyColumns)
+  expect(framed.length).toBe(2)
+  for (const one of framed) expect(one.props.height).toBeUndefined()
+  // SELECTED is shown (tall pane) and is not a third frame.
+  expect((await desktop.findAll({ type: 'Text', text: /^SELECTED$/ })).length).toBe(1)
+  const arms = boxes.filter(one => one.props.borderStyle === 'single' && one.props.borderColor === DARK['text-1'])
+  expect(arms.length).toBe(16)
+  await desktop.unmount()
+
+  // Terminal: a `single` line border and the four corner glyphs in text-1, once per frame.
+  const terminal = await $.ui.mount({ ...PANE, surface: 'terminal', props: TALL })
+  for (const glyph of ['┌', '┐', '└', '┘']) {
+    const found = await terminal.findAll({ type: 'Text', text: glyph })
+    expect(found.length).toBe(2)
+    for (const one of found) expect(one.props.color).toBe(DARK['text-1'])
+  }
+  const bordered = (await terminal.findAll({ type: 'Box' })).filter(one => one.props.borderStyle === 'single' && one.props.borderColor === DARK.line && one.props.width === PANE.props.bodyColumns)
+  expect(bordered.length).toBe(2)
+  await terminal.unmount()
 })
 
 test('the Sessions table colours each row by its state, never by its session', TREE, async ($, on) => {
@@ -899,47 +971,45 @@ test('the SELECTED panel is funded before the KPI row', TREE, async ($, on) => {
     await ui.unmount()
     return panel
   }
-  // The panel needs no KPI row's rows ahead of it: it is there at 54, where the KPI row first would have left too little.
-  expect(await shows(54)).toBe(true)
+  // The panel needs no KPI row's rows ahead of it: it is there at 58 (54 before the bracketed frames took four rows), where the KPI row first would have left too little.
+  expect(await shows(58)).toBe(true)
   expect(await shows(40)).toBe(false)
 })
 
-test('the chart takes 80% of the pane: a Raster of 0.8 x the columns, an Svg in an 80% Box with no size of its own, capped by the room', TREE, async ($, on) => {
+test('the chart takes 85% of the pane: a Raster of 0.85 x the columns, an Svg in an 85% Box with no size of its own, never smaller than its slot', TREE, async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   engine(on, { value: 'running' })
   await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
   await clock.advance(4_000)
   const pane = (surface: string, bodyColumns: number, bodyRows: number) => $.ui.mount({ ...PANE, surface, props: { ...PANE.props, bodyColumns, scroll: { offset: 0, bodyRows } } })
 
-  for (const [bodyColumns, columns] of [[60, 48], [100, 80]] as const) {
+  for (const bodyColumns of [60, 100]) {
+    const columns = Math.round(0.85 * bodyColumns)
     const terminal = await pane('terminal', bodyColumns, 200)
-    expect((await terminal.find({ type: 'Raster' }))?.props).toMatchObject({ columns, rows: columns / 2 })
+    expect((await terminal.find({ type: 'Raster' }))?.props).toMatchObject({ columns, rows: Math.floor(columns / 2) })
     await terminal.unmount()
   }
-  // Short of room the chart shrinks rather than push the table out: still round, fewer columns.
+  // Short of room the terminal's chart shrinks rather than push the table out: still round, fewer columns.
   const capped = await pane('terminal', 100, 55)
   const small = (await capped.find({ type: 'Raster' }))?.props as { columns: number; rows: number }
-  expect(small.columns).toBeLessThan(80)
+  expect(small.columns).toBeLessThan(85)
   expect(small.columns).toBe(small.rows * 2)
   expect(small.rows).toBeGreaterThanOrEqual(9)
   await capped.unmount()
 
-  const desktop = await pane('desktop', 100, 200)
-  const svg = await desktop.find({ type: 'Svg' })
-  expect(svg?.props.width).toBeUndefined()
-  expect(svg?.props.height).toBeUndefined()
-  // The markup is drawn at the pane's own width (0.8 x 100 columns x 7px), so the host does not scale it: its fonts keep their size.
-  expect(String(svg?.props.source)).toMatch(/^<svg [^>]*viewBox="0 0 560 560" width="560" height="560"/)
-  const slot = (await desktop.findAll({ type: 'Box' })).find(box => (box.children ?? []).some(child => typeof child === 'object' && (child as { type?: string }).type === 'Svg'))
-  expect(slot?.props.width).toBe('80%')
-  await desktop.unmount()
-  const narrow = await pane('desktop', 60, 200)
-  expect(String((await narrow.find({ type: 'Svg' }))?.props.source)).toMatch(/^<svg [^>]*viewBox="0 0 336 336" width="336" height="336"/)
-  await narrow.unmount()
-  const tight = await pane('desktop', 100, 55)
-  const slotTight = (await tight.findAll({ type: 'Box' })).find(box => (box.children ?? []).some(child => typeof child === 'object' && (child as { type?: string }).type === 'Svg'))
-  expect(typeof slotTight?.props.width).toBe('number')
-  await tight.unmount()
+  // The desktop's chart is 85% of the pane wide at every width and height, given in pixels (an interactive Svg's frame has no size of its own), and drawn at that size: the row budget caps nothing.
+  for (const bodyColumns of [60, 100, 140]) {
+    for (const bodyRows of [40, 70]) {
+      const desktop = await pane('desktop', bodyColumns, bodyRows)
+      const svg = await desktop.find({ type: 'Svg' })
+      expect(svg).toBeDefined()
+      const px = Math.max(220, Math.round(0.85 * bodyColumns * 7.2))
+      expect(svg?.props.width).toBe(px)
+      expect(svg?.props.height).toBe(px)
+      expect(String(svg?.props.source)).toContain(`viewBox="0 0 ${px} ${px}"`)
+      await desktop.unmount()
+    }
+  }
 })
 
 test('the board has a SIGMAorbital title bar like the Sessions panel', TREE, async ($, on) => {
@@ -1002,24 +1072,28 @@ test('at 40 rows and 60 columns the chart, legend, strip, KPI row, tree and boar
         for (const lines of [3, 15]) {
           const layout = sessionsLayout({ rows, cols, isTerminal, hasTree: true, canChart: true, lines, shrink: budget => ({ lines: Math.min(lines, budget), apply: () => {} }), flatLines: 0 })
           // Wherever the chart is drawn the parts never exceed the pane, in the tight tier too.
-          if (layout.hasChart) expect(layout.used).toBeLessThanOrEqual(rows)
-          // The tight tier draws the chart at its least size, never under 160 px.
+          // On a desktop the chart's own rows (85% of the width) may exceed the pane, only when nothing else is left to fold: no KPI row, no panel.
+          if (layout.hasChart) expect(layout.used <= rows || (!isTerminal && !layout.hasKpi && !layout.hasSelected)).toBe(true)
+          // The tight tier never shrinks a desktop's chart: its markup is at least its slot.
           if (layout.hasChart && !isTerminal && layout.chartGap === 0) tight.push(layout.chartPx)
+          if (!isTerminal) expect(layout.hasChart).toBe(true)
+          if (!isTerminal) expect(layout.chartPx).toBe(Math.max(220, Math.round(0.85 * cols * 7.2)))
+          if (!isTerminal) expect(layout.chartWidth).toBe(layout.chartPx)
           // The strip's two rows are counted when the panel is not drawn.
           expect(layout.stripRows).toBe(layout.hasSelected ? 0 : 2)
-          expect(layout.legendRows).toBe(Math.ceil(59 / cols))
+          expect(layout.legendRows).toBe(Math.ceil(59 / (cols - 4)))
         }
       }
     }
   }
   expect(tight.length).toBeGreaterThan(0)
-  for (const px of tight) expect(px >= 160 && px < 220).toBe(true)
+  for (const px of tight) expect(px).toBeGreaterThanOrEqual(220)
   // The pane as rendered agrees: at 60 columns the chart is there at 46 rows, with the strip and no panel, and not at 30.
   const mount = (bodyRows: number) => $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, bodyColumns: 60, scroll: { offset: 0, bodyRows } } })
   const tall = await mount(46)
   const raster = (await tall.find({ type: 'Raster' }))?.props as { columns: number; rows: number }
   expect(raster.rows).toBeLessThan(46)
-  expect(raster.columns).toBe(raster.rows * 2)
+  expect(raster.columns).toBeLessThanOrEqual(raster.rows * 2 + 1)
   expect((await tall.findAll({ type: 'Text', text: /^SELECTED$/ })).length).toBe(0)
   await tall.unmount()
   const short = await mount(30)
@@ -1092,7 +1166,7 @@ test('folding a sprint hides only that sprint\'s rows and counts them; the state
   await ui.unmount()
   // With every sprint on view folded, the board's room is the three rows, and the Sessions panel takes the rest.
   const base = { rows: 46, cols: 72, isTerminal: true, hasTree: true, canChart: true, lines: 8, shrink: (budget: number) => ({ lines: Math.min(8, budget), apply: () => {} }), flatLines: 0 }
-  const grown = (layout: ReturnType<typeof sessionsLayout>) => layout.chartRows + (layout.hasKpi ? 5 : 0) + (layout.hasSelected ? 9 : 0)
+  const grown = (layout: ReturnType<typeof sessionsLayout>) => layout.chartRows + (layout.hasKpi ? 6 : 0) + (layout.hasSelected ? 9 : 0)
   const whole = sessionsLayout(base)
   const folded = sessionsLayout({ ...base, isBoardFolded: true })
   expect(folded.room).toBe(3)
@@ -1259,7 +1333,8 @@ test('the layout never takes more rows than the pane has, folded or not, whateve
               for (const isBoardFolded of [false, true]) {
                 const layout = sessionsLayout({ rows, cols, isTerminal, hasTree: true, canChart: true, lines, shrink: budget => ({ lines: Math.min(lines, budget), apply: () => {} }), flatLines: 0, hasFold, isListCollapsed, isBoardFolded })
                 // Wherever the chart is drawn the parts never exceed the pane, whatever is folded, the toggle line paid for.
-                if (layout.hasChart) expect(layout.used).toBeLessThanOrEqual(rows)
+                // A desktop's chart is never shrunk or hidden for height: its rows may exceed the pane only when no KPI row and no panel is left to fold.
+                if (layout.hasChart) expect(layout.used <= rows || (!isTerminal && !layout.hasKpi && !layout.hasSelected)).toBe(true)
               }
             }
           }
