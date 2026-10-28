@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { escalate, fallback, gate, isBlocked, route } from './router'
-import { DEFAULT_CONFIG, mergeConfig, routesUnder } from './routing'
+import { DEFAULT_CONFIG, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
 import type { Config } from './routing'
 
 const none = { unavailable: [] as string[] }
@@ -87,4 +87,16 @@ test('policies change the table without code, and an override file is merged wit
     'providers.openai.enabled must be true or false',
   ])
   expect(mergeConfig(DEFAULT_CONFIG, 'nope').refused).toEqual(['the override is not a JSON object'])
+})
+
+test("a role's own profile holds the table's settings; other settings get a profile of their own", () => {
+  expect(profileName(DEFAULT_CONFIG, 'builder', 'sonnet', 'medium', false)).toBe('builder')
+  expect(profileName(DEFAULT_CONFIG, 'builder', 'sonnet', 'high', false)).toBe('builder--sonnet-high')
+  expect(profileName(DEFAULT_CONFIG, 'builder', 'sonnet', 'medium', true)).toBe('builder--sonnet-medium-wt')
+  expect(profileName(DEFAULT_CONFIG, 'risk-reviewer', 'claude-sonnet-5-5[1m]', 'high', false)).toBe('risk-reviewer--claude-sonnet-5-5-1m-high')
+  // Under economy the planner's table settings are sonnet/high: that is its own name.
+  expect(profileName({ ...DEFAULT_CONFIG, policy: 'economy' }, 'planner', 'sonnet', 'high', false)).toBe('planner')
+  expect(roleOfProfile('builder')).toBe('builder')
+  expect(roleOfProfile('risk-reviewer--claude-sonnet-5-5-1m-high')).toBe('risk-reviewer')
+  expect(roleOfProfile('general-purpose')).toBeUndefined()
 })

@@ -48,7 +48,13 @@ The model drives the rest through four tools: `dispatch` (a task with id, class,
 | risk-review | risk-reviewer | yes | opus/high |
 | frontier | frontier-specialist | no | fable/high (opt-in) |
 
-A read-only role gets `Read`, `Grep`, `Glob` and `LS` and nothing else, so it has no shell. Every role is denied `Agent`, `Workflow`, `SendMessage`, `TaskStop` and the worktree tools. Each worker ends with a fixed report (Status, Findings, Files, Checks actually run, Evidence, Risks, Next) and is told to list checks it did not run under Next, never under Checks.
+Each role's own profile (`task-orchestrator:builder`) holds the table's settings. A task that asks for another model, effort or isolation runs under a profile of its own, `task-orchestrator:builder--sonnet-high` (`-wt` when isolated), so two builders at medium and high never share one registration.
+
+A read-only role gets `Read`, `Grep`, `Glob` and `LS` and nothing else, so it has no shell. Every role is denied `Agent`, `Workflow`, `SendMessage`, `TaskStop` and the worktree tools. Each worker ends with a fixed report (Status, Findings, Files, Checks actually run, Evidence, Risks, Next) and is told to list checks it did not run under Next, never under Checks. A worker is told not to update the person's task board or task list; the coordinator keeps the [task-compass](../task-compass/README.md) board current.
+
+### When the person names a model or an effort
+
+A prompt such as "assign the tasks to sonnet 5.5 at medium or high effort by your judgement" outranks the table: the coordinator passes `model` on every dispatch and picks each task's `effort` inside the range; the table fills only what the person left open. A host setting that may replace the requested effort, such as `modelSettings.claude-sonnet-5-5.effortLevel`, is named in that dispatch's answer as a `note:`. Workers are subagents: a prompt asking for sessions gets told so, since the mod cannot start a session.
 
 ### Configuring the routing
 
@@ -72,7 +78,7 @@ The choices made with `/orchestrate` (on, policy, opt-ins, providers) are stored
 
 ### In auto permission mode
 
-Auto mode's classifier judges an action against the model request that produced it. A worker the mod spawns itself has no such request, so in a desktop session in auto mode the spawn was refused with "the auto mode classifier gave no verdict for Agent", while the model's own Agent calls ran. The mod then issues the spawn once more, as the refusal asks. Refused again, the task is `blocked` and handed off: `dispatch` and `collect` print the Agent call to make (the role's agent type, the task's id as its name, the model) and the assignment to pass as its prompt. The coordinator's own Agent call is one the classifier evaluates, and the mod adopts it into the task: same id, same limits, same write fence. Nothing about the call is changed and no permission is added; if the classifier refuses the call, the task stays blocked. The adoption is tested against a stub and has not yet been seen in a live session. `ARCHITECTURE.md`, *Observed, not guaranteed*, has the details.
+Auto mode's classifier judges an action against the model request that produced it. A worker the mod spawns itself has no such request, so in a desktop session in auto mode the spawn was refused with "the auto mode classifier gave no verdict for Agent", while the model's own Agent calls ran. The mod then issues the spawn once more, as the refusal asks. Refused again, the task is `blocked` and handed off: `dispatch` and `collect` print the Agent call to make (the task's profile as agent type, the task's id as its name, the model, the effort) and the assignment to pass as its prompt. The coordinator's own Agent call is one the classifier evaluates, and the mod adopts it into the task: same id, same limits, same write fence. Nothing about the call is changed and no permission is added; if the classifier refuses the call, the task stays blocked. The adoption is tested against a stub and has not yet been seen in a live session. `ARCHITECTURE.md`, *Observed, not guaranteed*, has the details.
 
 ## Removal
 

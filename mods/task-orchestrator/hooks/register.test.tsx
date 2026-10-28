@@ -237,7 +237,7 @@ test('refused twice, a task waits for the hand-off; its dependant says what it w
   const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find the parser' }))).result)
   expect(world.refused).toEqual(['H1', 'H1'])
   expect(held).toContain('H1 → scout → requested haiku/low → unverified → blocked → auto mode gave the orchestrator\'s spawn no verdict, twice')
-  expect(held).toContain('subagent_type "task-orchestrator:scout", name "H1", model "haiku", description "H1 scout"')
+  expect(held).toContain('subagent_type "task-orchestrator:scout", name "H1", model "haiku", effort "low", description "H1 scout"')
   expect(held).toContain('assignment for H1 (the Agent call\'s prompt, unchanged):\n# Assignment H1 — role scout (lookup)')
 
   // A dependant queues, says what holds it, and collect returns it at once.
@@ -264,6 +264,47 @@ test('refused twice, a task waits for the hand-off; its dependant says what it w
   await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
   expect(world.refused).toEqual(['H1', 'H1', 'H2', 'H2'])
   expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)).toContain('H2 → scout → requested haiku/low → unverified → blocked → auto mode gave')
+})
+
+test("the person's model and effort: each setting its own profile, the hand-off names it, a host setting that may replace it is said", async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { settings: { modelSettings: { 'claude-sonnet-5-5': { effortLevel: 'high' } } } })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  // Two builders on sonnet, one at the table's medium and one at high, isolated so both run.
+  const medium = String((await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true, model: 'sonnet', effort: 'medium' }))).result)
+  const high = String((await $.tool.call(dispatch({ id: 'B2', class: 'implementation', objective: 'build b', allowedFiles: ['src/b.ts'], isolated: true, model: 'sonnet', effort: 'high' }))).result)
+  expect(world.spawned.map(one => one.type)).toEqual(['task-orchestrator:builder--sonnet-medium-wt', 'task-orchestrator:builder--sonnet-high-wt'])
+  expect(world.registered.find(one => one.name === 'builder--sonnet-medium-wt')).toMatchObject({ model: 'sonnet', effort: 'medium', isolation: 'worktree' })
+  expect(world.registered.find(one => one.name === 'builder--sonnet-high-wt')).toMatchObject({ model: 'sonnet', effort: 'high', isolation: 'worktree' })
+  // The table's own settings keep the role's name, registered at start.
+  expect(world.registered.filter(one => one.name === 'builder').at(-1)).toMatchObject({ model: 'sonnet', effort: 'medium' })
+  expect(world.registered.filter(one => one.name === 'builder')).toHaveLength(1)
+  // The host forces sonnet to high: medium is told, high is not.
+  expect(medium).toContain('note: host setting modelSettings.claude-sonnet-5-5.effortLevel = high may replace the requested effort medium')
+  expect(high).not.toContain('host setting')
+})
+
+test("a handed-off task at the person's effort names its own profile and is adopted only from it", async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { noVerdict: 99 })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'review', objective: 'Review it', model: 'sonnet', effort: 'medium' }))).result)
+  expect(held).toContain('subagent_type "task-orchestrator:reviewer--sonnet-medium", name "H1", model "sonnet", effort "medium"')
+  const prompt = byLine(held, '# Assignment H1')
+  // The role's own profile carries the table's high effort: refused.
+  const plain = await $.agent.spawn({ prompt, description: 'H1 reviewer', subagentType: 'task-orchestrator:reviewer', model: 'sonnet', name: 'H1' } as AgentSpawnInput)
+  expect(plain.deny).toBe('H1 waits for a hand-off as task-orchestrator:reviewer--sonnet-medium, not task-orchestrator:reviewer')
+  const adopted = await $.agent.spawn({ prompt, description: 'H1 reviewer', subagentType: 'task-orchestrator:reviewer--sonnet-medium', model: 'sonnet', name: 'H1' } as AgentSpawnInput)
+  expect(adopted.agentId).toBe('agent-1')
+  // Fenced as its role: a reviewer is read-only.
+  expect((await $.tool.call({ tool: 'Write', file_path: '/p/x', content: 'x', agentId: 'agent-1' })).deny).toContain('read-only')
+  expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)).toContain('H1 → reviewer [agent-1] → requested sonnet/medium')
 })
 
 test('a re-dispatch under the id of a blocked or failed task is a counted retry, refused past the limit', async ($, on) => {

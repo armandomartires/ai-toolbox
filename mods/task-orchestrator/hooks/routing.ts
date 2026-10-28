@@ -247,3 +247,22 @@ export const routesUnder = (config: Config, policy: Policy = config.policy): Rec
   }
   return out
 }
+
+/**
+ * The profile a worker runs under. A role's own name holds the table's
+ * settings under the current policy; any other model, effort or isolation gets
+ * a profile of its own, `<role>--<model>-<effort>[-wt]`, so two tasks of one
+ * role never share a registration whose settings the other one changed.
+ */
+export const profileName = (config: Config, role: Role, model: string, effort: Effort, isolated: boolean): string => {
+  const table = Object.values(routesUnder(config)).find(one => one.role === role)
+  if (!isolated && table && table.model === model && table.effort === effort) return role
+  const slug = model.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'model'
+  return `${role}--${slug}-${effort}${isolated ? '-wt' : ''}`
+}
+
+/** The role a profile name belongs to, or undefined for a name no role owns. */
+export const roleOfProfile = (name: string): Role | undefined => {
+  const role = name.split('--')[0]
+  return (ROLES as readonly string[]).includes(role ?? '') ? (role as Role) : undefined
+}

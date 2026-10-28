@@ -56,3 +56,16 @@ export const overridesText = (overrides: readonly Override[]): string =>
   overrides.length
     ? overrides.map(one => `- ${one.source} ${one.key} = ${one.value}: ${one.effect}`).join('\n')
     : '- none found in settings or environment'
+
+/**
+ * The host settings that may replace the effort a worker on `model` asked for:
+ * each `modelSettings.<id>.effortLevel` whose id is the model, the id the alias
+ * resolved to, or (unresolved) an id naming the alias, with another value.
+ */
+export const effortOverridesFor = (overrides: readonly Override[], model: string, effort: string, resolvedId?: string): Override[] =>
+  overrides.filter(one => {
+    const id = /^modelSettings\.(.+)\.effortLevel$/.exec(one.key)?.[1]
+    if (id === undefined || one.value === effort) return false
+    if (id === model || id === resolvedId) return true
+    return resolvedId === undefined && !model.includes('-') && id.split('-').includes(model)
+  })

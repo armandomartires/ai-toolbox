@@ -5,11 +5,11 @@ import { COORDINATOR_PROTOCOL, buildContract, parseReport } from './contract'
 import type { Assignment } from './contract'
 import { ENDED, activeCount, addTask, auditRow, blockers, byAgent, byId, isNoVerdict, line, overall, retryTask, runnable, setTask, stallText, stalledBy, startBlocker, summary, WRITE_TOOLS, writeBlocker } from './ledger'
 import type { Ledger, Task } from './ledger'
-import { detectOverrides, OVERRIDE_ENV, overridesText } from './overrides'
+import { detectOverrides, effortOverridesFor, OVERRIDE_ENV, overridesText } from './overrides'
 import { enableBlocker, providerById, providersText } from './providers'
 import { gate, isBlocked, route } from './router'
 import type { Decision } from './router'
-import { DEFAULT_CONFIG, EFFORTS, POLICIES, READ_ONLY_TOOLS, ROLE_PROFILES, TASK_CLASSES, WORKER_DENIED_TOOLS, mergeConfig, routesUnder } from './routing'
+import { DEFAULT_CONFIG, EFFORTS, POLICIES, READ_ONLY_TOOLS, ROLE_PROFILES, TASK_CLASSES, WORKER_DENIED_TOOLS, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
 import type { Config, Effort, Policy, Role, TaskClass } from './routing'
 import { remember, syncTheme, watchTheme } from './sigma'
 import { renderOutput, statusLineText } from './view'
@@ -38,8 +38,8 @@ const POLL_MS = 1_000
 
 /** The config in force: defaults, then the override files, then the person's live choices. */
 let config: Config = DEFAULT_CONFIG
-/** What each role's profile was last registered with, so a dispatch re-registers only on a change. */
-const registered = new Map<Role, string>()
+/** What each profile was last registered with, so a dispatch re-registers only on a change. */
+const registered = new Map<string, string>()
 /** Resolved aliases seen from spawns this session, alias → id. */
 const resolved = new Map<string, string>()
 
@@ -114,14 +114,17 @@ const statusLine = async ($: EngineInterface) => {
   $.ui.status(statusLineText(config.policy, activeCount(rows), queued))
 }
 
-/** A role's profile under the settings a dispatch asks for; registered again only when they changed. */
-const ensureProfile = async ($: EngineInterface, role: Role, model: string, effort: Effort, isolated: boolean): Promise<string | undefined> => {
+/** The profile a task runs under (`profileName`): its role's own, or one for its settings. */
+const profileOf = (task: Pick<Task, 'role' | 'requested' | 'isolated'>): string => profileName(config, task.role, task.requested.model, task.requested.effort as Effort, task.isolated)
+
+/** A role's profile under the settings a dispatch asks for, by its name; registered again only when they changed. */
+const ensureProfile = async ($: EngineInterface, name: string, role: Role, model: string, effort: Effort, isolated: boolean): Promise<string | undefined> => {
   const signature = JSON.stringify({ model, effort, isolated })
-  if (registered.get(role) === signature) return undefined
+  if (registered.get(name) === signature) return undefined
   const profile = ROLE_PROFILES[role]
   try {
     await $.agent.register({
-      name: role,
+      name,
       description: profile.description,
       prompt: profile.prompt,
       model,
@@ -131,10 +134,10 @@ const ensureProfile = async ($: EngineInterface, role: Role, model: string, effo
       ...(profile.readOnly ? { tools: [...READ_ONLY_TOOLS] } : {}),
       ...(isolated ? { isolation: 'worktree' as const } : {}),
     })
-    registered.set(role, signature)
+    registered.set(name, signature)
     return undefined
   } catch (error) {
-    return `profile ${role} could not be registered: ${error instanceof Error ? error.message : String(error)}`
+    return `profile ${name} could not be registered: ${error instanceof Error ? error.message : String(error)}`
   }
 }
 
@@ -144,7 +147,7 @@ const registerProfiles = async ($: EngineInterface): Promise<string[]> => {
   for (const taskClass of TASK_CLASSES) {
     const { role, model, effort } = routes[taskClass]
     if (gate(model, effort, config)) continue
-    const problem = await ensureProfile($, role, model, effort, false)
+    const problem = await ensureProfile($, profileName(config, role, model, effort, false), role, model, effort, false)
     if (problem) problems.push(problem)
   }
   return problems
@@ -246,7 +249,7 @@ const baseOf = async ($: EngineInterface, task: Task): Promise<string | undefine
 
 /** The Agent call that starts a handed-off task, as the coordinator makes it. */
 const handoffCall = (task: Task): string =>
-  `subagent_type "${PLUGIN}:${task.role}", name "${task.id}", model "${task.requested.model}", description "${task.description}", prompt: the assignment below, unchanged`
+  `subagent_type "${PLUGIN}:${profileOf(task)}", name "${task.id}", model "${task.requested.model}", effort "${task.requested.effort}", description "${task.description}", prompt: the assignment below, unchanged`
 
 const handoffReason = (task: Task): string =>
   `auto mode gave the orchestrator's spawn no verdict, twice: a plugin's spawn has no model request behind it. Start it yourself with the Agent tool (${handoffCall(task)}); the orchestrator adopts that spawn into ${task.id} under the same limits. Or cancel ${task.id}`
@@ -256,13 +259,14 @@ const handoffText = (task: Task): string[] => (task.handoff && task.status === '
 
 /** Starts one queued task: its contract, its profile, its base revision, the spawn. */
 const start = async ($: EngineInterface, task: Task): Promise<void> => {
-  const problem = await ensureProfile($, task.role, task.requested.model, task.requested.effort as Effort, task.isolated)
+  const name = profileOf(task)
+  const problem = await ensureProfile($, name, task.role, task.requested.model, task.requested.effort as Effort, task.isolated)
   if (problem) return settle($, task, { status: 'blocked', reason: problem, endedAt: await $.clock.now() })
   task = { ...task, prompt: contractOf(await read($, ledger), task) }
   const baseRevision = await baseOf($, task)
   const at = await $.clock.now()
   await update($, ledger, rows => setTask(rows, task.id, { status: 'running', startedAt: at, baseRevision, prompt: task.prompt }))
-  const spawn = () => $.agent.spawn({ subagentType: `${PLUGIN}:${task.role}`, prompt: task.prompt, description: task.description, model: task.requested.model, name: task.id }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }) as { deny: string })
+  const spawn = () => $.agent.spawn({ subagentType: `${PLUGIN}:${name}`, prompt: task.prompt, description: task.description, model: task.requested.model, name: task.id }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }) as { deny: string })
   let ran = await spawn()
   // Auto mode's no-verdict deny asks for the action again once, as-is: the
   // same call through the same check, nothing added to it.
@@ -333,7 +337,7 @@ const answerDispatch = async ($: EngineInterface, input: DispatchInput): Promise
     retries: 0,
     escalations: 0,
     createdAt: await $.clock.now(),
-    notes: decision.notes,
+    notes: [...decision.notes, ...effortOverridesFor(await read($, overrides), decision.model, decision.effort, resolved.get(decision.model)).map(one => `host setting ${one.key} = ${one.value} may replace the requested effort ${decision.effort} (disclosed, not changed)`)],
     prompt: '',
   }
   // Under the id of a task that ended without completing, a dispatch is its next retry.
@@ -557,9 +561,9 @@ export const register: Register = on => {
     if (next.origin.plugin === PLUGIN) return next(e)
     const type = String(e.subagentType ?? '')
     if (!type.startsWith(`${PLUGIN}:`) || e.resume) return next(e)
-    const role = type.slice(PLUGIN.length + 1) as Role
-    const profile = ROLE_PROFILES[role]
-    if (!profile) return next(e)
+    const role = roleOfProfile(type.slice(PLUGIN.length + 1))
+    const profile = role ? ROLE_PROFILES[role] : undefined
+    if (!role || !profile) return next(e)
     if (e.model) {
       const gated = gate(e.model, 'low', config)
       if (gated) return { deny: gated }
@@ -568,7 +572,8 @@ export const register: Register = on => {
     // classifier judged this call; it is adopted into the task's row, unchanged.
     const held = e.name ? byId(rows, e.name) : undefined
     if (held?.handoff && held.status === 'blocked') {
-      if (held.role !== role) return { deny: `${held.id} waits for a hand-off as ${PLUGIN}:${held.role}, not ${type}` }
+      // The exact profile, not only the role: the spawn carries no effort, its profile does.
+      if (type !== `${PLUGIN}:${profileOf(held)}`) return { deny: `${held.id} waits for a hand-off as ${PLUGIN}:${profileOf(held)}, not ${type}` }
       const blocker = startBlocker(rows, { ...held, status: 'queued' }, config.limits)
       if (blocker) return { deny: `${held.id} cannot start now: ${blocker}` }
       const ran = await next(e)

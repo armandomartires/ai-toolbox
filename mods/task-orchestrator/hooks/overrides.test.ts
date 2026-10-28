@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { detectOverrides, overridesText } from './overrides'
+import { detectOverrides, effortOverridesFor, overridesText } from './overrides'
 import { enableBlocker, PROVIDERS, providersText } from './providers'
 import { DEFAULT_CONFIG } from './routing'
 
@@ -30,4 +30,13 @@ test('no external provider is enabled or enableable in this version, and the dis
   expect(text).toContain('openai: disabled, text-only, not-implemented')
   expect(text).toContain('grok: disabled, text-only, not-implemented')
   expect(text).toContain('nothing leaves the session')
+})
+
+test("a modelSettings effort for the worker's model is found when it differs from the requested effort", () => {
+  const found = detectOverrides({ modelSettings: { 'claude-sonnet-5-5': { effortLevel: 'high' }, 'claude-opus-5-5': { effortLevel: 'high' } } }, {})
+  expect(effortOverridesFor(found, 'sonnet', 'medium').map(one => one.key)).toEqual(['modelSettings.claude-sonnet-5-5.effortLevel'])
+  expect(effortOverridesFor(found, 'sonnet', 'medium', 'claude-sonnet-5-5').map(one => one.key)).toEqual(['modelSettings.claude-sonnet-5-5.effortLevel'])
+  expect(effortOverridesFor(found, 'claude-opus-5-5', 'low').map(one => one.key)).toEqual(['modelSettings.claude-opus-5-5.effortLevel'])
+  expect(effortOverridesFor(found, 'sonnet', 'high')).toEqual([])
+  expect(effortOverridesFor(found, 'haiku', 'low')).toEqual([])
 })
