@@ -13,9 +13,11 @@ each directory mods/<dir>/:
   5. hooks/hooks.json parses, and its `modules` is a non-empty list of files
      that exist inside the mod's hooks/ folder;
   6. README.md exists;
-  7. its hooks/sigma.tsx, the SIGMAorbital design module (ADR-0043), is a
-     byte-identical copy of mods/_template/hooks/sigma.tsx, its one owner;
-     and a mod whose hooks draw (`ui.render`) carries one;
+  7. each shared hooks module a mod carries is a byte-identical copy of its
+     one owner, a table (SHARED): hooks/sigma.tsx, the SIGMAorbital design
+     module (ADR-0043), owned by mods/_template; hooks/sessions.ts, the
+     session tree (ADR-0045), owned by mods/agent-watch. A mod whose hooks
+     draw (`ui.render`) carries a sigma.tsx;
   8. a mod that reads another mod's $.state declares that part of the
      owner's contract as a MIRROR (ADR-0044): a comment
      `// MIRROR of mods/<owner>/types/index.d.ts` naming a prefix ("Each
@@ -41,7 +43,12 @@ import re
 import sys
 
 NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-SIGMA_OWNER = os.path.join("mods", "_template", "hooks", "sigma.tsx")
+# Shared hooks modules: file name -> the one copy that owns it (rule 7).
+SHARED = {
+    "sigma.tsx": os.path.join("mods", "_template", "hooks", "sigma.tsx"),
+    "sessions.ts": os.path.join("mods", "agent-watch", "hooks", "sessions.ts"),
+}
+SIGMA_OWNER = SHARED["sigma.tsx"]
 DRAWS = re.compile(r"""['"]ui\.render['"]""")
 
 
@@ -126,21 +133,22 @@ def draws(hooks_dir):
 
 
 def check_sigma(mod, hooks_dir, bad):
-    copy = os.path.join(hooks_dir, "sigma.tsx")
-    if os.path.normpath(copy) == os.path.normpath(SIGMA_OWNER):
-        return
-    owner = read_bytes(SIGMA_OWNER)
-    mine = read_bytes(copy)
-    if mine is None:
-        if draws(hooks_dir):
-            bad.append("%s: draws (ui.render) without hooks/sigma.tsx; "
-                       "cp %s %s" % (mod, SIGMA_OWNER, copy))
-    elif owner is None:
-        bad.append("%s: has hooks/sigma.tsx but its owner %s is missing"
-                   % (mod, SIGMA_OWNER))
-    elif mine != owner:
-        bad.append("%s: hooks/sigma.tsx differs from its owner; change the "
-                   "owner, then cp %s %s" % (mod, SIGMA_OWNER, copy))
+    for name, owner_path in SHARED.items():
+        copy = os.path.join(hooks_dir, name)
+        if os.path.normpath(copy) == os.path.normpath(owner_path):
+            continue
+        owner = read_bytes(owner_path)
+        mine = read_bytes(copy)
+        if mine is None:
+            if name == "sigma.tsx" and draws(hooks_dir):
+                bad.append("%s: draws (ui.render) without hooks/sigma.tsx; "
+                           "cp %s %s" % (mod, owner_path, copy))
+        elif owner is None:
+            bad.append("%s: has hooks/%s but its owner %s is missing"
+                       % (mod, name, owner_path))
+        elif mine != owner:
+            bad.append("%s: hooks/%s differs from its owner; change the "
+                       "owner, then cp %s %s" % (mod, name, owner_path, copy))
 
 
 # ---- rule 8: mirrors of another mod's $.state contract ---------------------

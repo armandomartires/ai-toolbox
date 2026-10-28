@@ -2,10 +2,12 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderInput } from 'claude-code'
 
 import type { Sprint, Status } from '../types'
-import { elapsed, fit, isActive, STATUS, STATUSES, shownRows, subagentRows } from './model'
+import { elapsed, fit, headCaption, isActive, STATUS, STATUSES, shownRows, subagentRows, trimTree } from './model'
 import type { SubagentRow } from './model'
 import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, focusOf, isRailRow, RAIL_GUTTER, sprintLabel } from './rails'
 import type { Row } from './rails'
+import { iconOf, memberCaption, sessionTree, toneToken } from './sessions'
+import type { Member, SessionNode } from './sessions'
 import { IDENTITY, agentState, color, kit, recall } from './sigma'
 
 // The same $.state values register.tsx writes: the engine lists a module's
@@ -19,6 +21,14 @@ const goalsPath = atom({ plugin: 'task-compass', key: 'goalsPath' } as const, ''
 const openCard = atom({ plugin: 'task-compass', key: 'openCard' } as const, null)
 const railStart = atom({ plugin: 'task-compass', key: 'railStart' } as const, null)
 const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
+// agent-watch's tracking, read and never written (types/index.d.ts, the mirror):
+// the Sessions tree draws from it (ADR-0045).
+const watchAgents = atom({ plugin: 'agent-watch', key: 'agents' } as const, [])
+const watchNow = atom({ plugin: 'agent-watch', key: 'now' } as const, 0)
+const watchFrame = atom({ plugin: 'agent-watch', key: 'frame' } as const, 0)
+const watchTasks = atom({ plugin: 'agent-watch', key: 'tasks' } as const, [])
+const watchRuns = atom({ plugin: 'agent-watch', key: 'runs' } as const, [])
+const watchTones = atom({ plugin: 'agent-watch', key: 'tones' } as const, {})
 // task-orchestrator's run, read and never written (types/index.d.ts, the mirror).
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 const policy = atom({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
@@ -27,6 +37,10 @@ const enabled = atom({ plugin: 'task-orchestrator', key: 'enabled' } as const, f
 export const PANE = 'task-compass'
 const GOALS_FILE = 'GOALS.md'
 const AGENTS_SHOWN = 6
+/** The widest a session's meter grows. */
+const BAR_MAX = 12
+/** The lines the Sessions tree may take beyond its session heads and the ledger's tasks. */
+const TREE_LINES = 16
 
 /**
  * A subagent's glyph, as agent-watch draws it: its identity by the order it
@@ -115,8 +129,8 @@ export const registerPane = (on: On) => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e)
     const { Box, Button, Text } = ui
-    const { badge, frame, panel } = kit(ui, e.surface)
-    const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled, from, orchTasks, orchPolicy, orchOn] = await Promise.all([
+    const { badge, frame, label, meter, panel } = kit(ui, e.surface)
+    const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled, from, orchTasks, orchPolicy, orchOn, watched, watchClock, tick, watchList, watchRunList, watchTone] = await Promise.all([
       read($, sprints),
       read($, focus),
       read($, tasks),
@@ -129,6 +143,12 @@ export const registerPane = (on: On) => {
       read($, ledger),
       read($, policy),
       read($, enabled),
+      read($, watchAgents),
+      read($, watchNow),
+      read($, watchFrame),
+      read($, watchTasks),
+      read($, watchRuns),
+      read($, watchTones),
     ])
     const isTerminal = e.surface === 'terminal'
     const cols = Math.max(COLUMN_MIN, e.props.bodyColumns)
@@ -140,9 +160,20 @@ export const registerPane = (on: On) => {
     const view = carousel(cols, sprintList.length, cur, scrolled)
     const { first, centred, later, columnWidth, cardWidth, inner } = view
     const shown = sprintList.slice(first, first + view.count)
+    // The tree draws from agent-watch's tracking, which it announces by
+    // writing its clock on its first refresh; without it (not loaded) the
+    // panel is the flat list of 0.5.0.
+    const isWatching = watchClock > 0
     const merged = subagentRows(agentRows, orchTasks, at)
     const shownAgents = shownRows(merged, AGENTS_SHOWN)
-    const room = Math.max(6, rows - (shownAgents.length + 3) - 5)
+    const hasTree = isWatching
+    const tree = hasTree
+      ? sessionTree({ rows: watched, runs: watchRunList, tones: watchTone, tasks: watchList, ledger: orchTasks, policy: orchPolicy, isOrchOn: orchOn })
+      : []
+    const clock = watchClock > 0 ? watchClock : at
+    const trimmed = trimTree(tree, TREE_LINES, clock)
+    const panelLines = hasTree ? trimmed.lines : shownAgents.length
+    const room = Math.max(6, rows - (panelLines + 3) - 5)
     const scrollTo = (start: number | null) => () => void update($, railStart, () => start)
 
     // A run of the rail, `height` rows tall. The terminal joins `│` cells into
@@ -351,9 +382,97 @@ export const registerPane = (on: On) => {
       )
     }
 
+    // The Sessions tree as agent-watch draws it (ADR-0044): a head per session,
+    // its members indented under it in the session's tone.
+    const treeMember = (member: Member, depth: number, tone: ReturnType<typeof toneToken>) => {
+      const isViewed = member.agentId !== undefined && member.agentId === viewing
+      const indent = '  '.repeat(Math.min(4, depth))
+      const time = member.startedAt === undefined ? '' : elapsed((member.endedAt ?? clock) - member.startedAt)
+      const outcome = member.badge
+      const text = fit(
+        `${isViewed ? '▸' : ''}${member.label}`,
+        Math.max(8, cols - indent.length - time.length - (outcome ? outcome.word.length + 3 : 0) - 4),
+      )
+      const agentId = member.agentId
+      // A task not started has no transcript, so its name does nothing.
+      const show = () => {
+        if (agentId === undefined) return
+        void $.ui.view(isViewed ? {} : { agentId })
+      }
+      const caption = memberCaption(member, clock)
+
+      return (
+        <Box key={`member-${member.key}`} flexDirection="column">
+          <Box flexDirection="row">
+            <Box flexShrink={0}>
+              <Text color={color(tone)}>{`${indent}${iconOf('agent', member.status, tick)} `}</Text>
+            </Box>
+            <Button key={`agent-${member.key}`} plain onPress={show}>
+              <Text color={color(member.isActive || isViewed ? 'text-1' : 'text-2')} wrap="truncate-end">{text}</Text>
+            </Button>
+            <Box flexShrink={0} flexDirection="row">
+              {outcome !== undefined && <Text> </Text>}
+              {outcome !== undefined && badge(outcome.status, outcome.word)}
+              {time !== '' && <Text color={color('text-3')} tabular size="caption">{` ${time}`}</Text>}
+            </Box>
+          </Box>
+          {caption !== '' && (
+            <Text color={color('text-3')} size="caption" wrap="truncate-end">{`${indent}  ${caption}`}</Text>
+          )}
+        </Box>
+      )
+    }
+
+    const sessionHead = (node: SessionNode) => {
+      const tone = toneToken(watchTone, node.key)
+      const indent = '  '.repeat(Math.min(4, node.depth))
+      const { done, total, unit } = node.progress
+      const count = total > 0 ? `${done}/${total}` : ''
+      const width = Math.min(BAR_MAX, Math.max(4, Math.floor(cols / 6)))
+      const time = node.startedAt === undefined ? '' : elapsed((node.endedAt ?? clock) - node.startedAt)
+      const isViewed = node.agentId !== undefined && node.agentId === viewing
+      const space =
+        cols - indent.length - 2 - (total > 0 ? width + count.length + unit.length + 4 : 0) - time.length - (node.badge ? node.badge.word.length + 3 : 0) - 2
+      const name = fit(`${isViewed ? '▸' : ''}${node.name}`, Math.max(8, space))
+      const agentId = node.agentId
+      const show = () => void $.ui.view(agentId === undefined || isViewed ? {} : { agentId })
+      const caption = headCaption(node, clock)
+      const cut = trimmed.shown.get(node.key)
+
+      return (
+        <Box key={`head-${node.key}`} flexDirection="column" marginTop={1}>
+          <Box flexDirection="row">
+            <Box flexShrink={0}>
+              <Text color={color(tone)}>{`${indent}${iconOf('session', node.status, tick)} `}</Text>
+            </Box>
+            <Button key={`session-${node.key}`} plain onPress={show}>
+              <Text color={color(node.isActive || isViewed ? 'text-1' : 'text-2')} weight="bold" wrap="truncate-end">{name}</Text>
+            </Button>
+            <Box flexShrink={0} flexDirection="row" columnGap={1} marginLeft={1}>
+              {node.badge !== undefined && badge(node.badge.status, node.badge.word)}
+              {total > 0 && meter(done, total, width, tone)}
+              {total > 0 && <Text color={color('text-1')} tabular>{count}</Text>}
+              {total > 0 && label(unit)}
+              {time !== '' && <Text color={color('text-3')} tabular size="caption">{time}</Text>}
+            </Box>
+          </Box>
+          {caption !== '' && <Text color={color('text-3')} size="caption" wrap="truncate-end">{`${indent}  ${caption}`}</Text>}
+          {(cut?.members ?? []).map(member => treeMember(member, node.depth + 1, tone))}
+          {cut !== undefined && cut.hidden > 0 && (
+            <Text color={color('text-3')} size="caption">{`${indent}  +${cut.hidden} more`}</Text>
+          )}
+          {node.kind === 'main' && node.running.length + node.completed.length === 0 && tree.length === 1 && (
+            <Text color={color('text-3')}>{`${indent}  No subagent yet.`}</Text>
+          )}
+        </Box>
+      )
+    }
+
     // While the orchestrator's ledger holds a task, the panel names its policy.
-    const code =
-      orchTasks.length > 0
+    const treeRunning = watched.filter(row => row.status === 'running').length
+    const code = hasTree
+      ? `${treeRunning} running`
+      : orchTasks.length > 0
         ? `ORCH ${orchPolicy.toUpperCase()}${orchOn ? '' : ' · OFF'} · ${running} running`
         : merged.length > 0
           ? `${running} running`
@@ -388,11 +507,15 @@ export const registerPane = (on: On) => {
 
         <Box marginTop={1} flexDirection="column">
           {panel(
-            { title: 'Subagents', code, width: cols },
-            <Box flexDirection="column">
-              {merged.length === 0 && <Text color={color('text-3')}>None running.</Text>}
-              {shownAgents.map(one => agentRow(one))}
-            </Box>,
+            { title: 'Sessions', code, width: cols },
+            hasTree ? (
+              <Box flexDirection="column">{tree.map(sessionHead)}</Box>
+            ) : (
+              <Box flexDirection="column">
+                {merged.length === 0 && <Text color={color('text-3')}>None running.</Text>}
+                {shownAgents.map(one => agentRow(one))}
+              </Box>
+            ),
           )}
         </Box>
       </Box>

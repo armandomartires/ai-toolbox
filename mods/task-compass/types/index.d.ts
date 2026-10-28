@@ -50,6 +50,68 @@ export type AgentRow = {
   endedAt?: number
 }
 
+// MIRROR of mods/agent-watch/types/index.d.ts, its one owner: the part of its
+// contract task-compass reads, and never writes. Each `Watch<Name>` below is
+// the owner's `<Name>`, every field copied verbatim, so a change there fails
+// the gate (scripts/check-mods.py, rule 8) until this agrees.
+/** One subagent of the session, as the pane shows it. */
+export type WatchAgentRow = {
+  /** The engine's id, as `$.agent.list()` and the loop's events carry it. */
+  id: string
+  /** The agent whose loop spawned it; absent when the main loop did. */
+  parentId?: string
+  /** The type it was spawned as: `Explore`, `general-purpose`, ... */
+  type: string
+  /** The Agent call's few-word description of its task. */
+  description: string
+  /** What SendMessage addresses it by; a task-orchestrator worker's is its task id. */
+  name?: string
+  /** The plugin whose spawn started it, as `$.agent.list()` says. */
+  spawnedBy?: string
+  /** The Workflow run it belongs to: `agent.spawn`'s `workflow.runId`. */
+  runId?: string
+  /** Its `AgentStatus` word; a word the mod does not know is shown as is. */
+  status: string
+  /** Set when its own `turn.complete` ended it, so a list that lags does not reopen it. */
+  isTurnEnded?: true
+  /** A teammate: its turn ends in `idle`, not an end, so only the list ends it. */
+  isTeammate?: true
+  startedAt: number
+  /** Set once the status left the active ones. */
+  endedAt?: number
+  /** The model it resolved to, from the spawn's answer. */
+  model?: string
+  /** Tool calls that ended in its loop. */
+  calls: number
+  /** Tokens of its turns so far, the four usage counts summed. */
+  tokens: number
+  /** The tool call in flight in its loop, if any. */
+  activity?: WatchActivity
+  /** Its own task list, from the task tools called in its loop. */
+  tasks?: WatchTask[]
+  /** Set once its failure or stop was toasted; on the row, so it survives a hot reload. */
+  isAlerted?: true
+}
+
+/** A tool call in flight: the tool, its main argument cut short, and when it started. */
+export type WatchActivity = { tool: string; detail: string; since: number }
+
+export type WatchTaskStatus = 'pending' | 'in_progress' | 'completed'
+
+/** One step of Claude's live task list, as the band counts it. */
+export type WatchTask = { id: string; text: string; status: WatchTaskStatus }
+
+/** A Workflow tool run: a sub-session whose members are the agents its script starts. */
+export type WatchWorkflowRun = {
+  /** The run's id, `wf_...`. */
+  id: string
+  /** The script's `meta.name`; `workflow` until the tool's result names it. */
+  name: string
+  /** The loop whose Workflow call started it; absent for the main loop. */
+  ownerId?: string
+  startedAt: number
+}
+
 // MIRROR of mods/task-orchestrator/types/index.d.ts, its one owner: the part of
 // its contract task-compass reads, and never writes. Each `Orch<Name>` below is
 // the owner's `<Name>`, every field copied verbatim, so a change there fails
@@ -89,6 +151,14 @@ export type OrchTask = {
 
 declare module 'claude-code' {
   interface PluginState {
+    'agent-watch': {
+      agents: WatchAgentRow[]
+      now: number
+      frame: number
+      tasks: WatchTask[]
+      runs: WatchWorkflowRun[]
+      tones: Record<string, number>
+    }
     'task-orchestrator': { enabled: boolean; policy: OrchPolicy; ledger: OrchTask[] }
     'task-compass': {
       sprints: Sprint[]

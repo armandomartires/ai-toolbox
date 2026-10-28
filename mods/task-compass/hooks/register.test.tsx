@@ -57,7 +57,7 @@ type AppTool = never
  * The engine beneath the mod: a .ai/GOALS.md kept in memory in /p, the session's
  * folder unless the test moves it, and one subagent.
  */
-const engine = (on: On, agentStatus: { value: AgentStatus }, more: { id: string; description: string; type: string; status: AgentStatus }[] = []) => {
+const engine = (on: On, agentStatus: { value: AgentStatus }, more: { id: string; description: string; type: string; status: AgentStatus }[] = [], isEmpty = false) => {
   const file = { text: GOALS, mtime: 1, cwd: '/p' }
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__task-compass__${e.name}` } }))
@@ -77,7 +77,7 @@ const engine = (on: On, agentStatus: { value: AgentStatus }, more: { id: string;
     return { value: undefined }
   })
   on('agent.list', () => ({
-    value: [{ id: 'a1', description: 'Find hooks', type: 'Explore', status: agentStatus.value }, ...more],
+    value: [...(isEmpty ? [] : [{ id: 'a1', description: 'Find hooks', type: 'Explore', status: agentStatus.value }]), ...more],
   }))
   on('agent.spawn', () => ({ model: 'm', agentId: 'a1' }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
@@ -235,7 +235,7 @@ test('the timeline shows sprints side by side with cards, tasks and subagents', 
     const styled = await ui.findAll({ type: 'Text' })
     // (A desktop adds bold beside a semibold weight of its own accord.)
     expect(styled.every(one => one.props.bold === undefined || one.props.weight !== undefined)).toBe(true)
-    expect((await ui.find({ type: 'Text', text: /^SUBAGENTS$/ }))?.props).toMatchObject({ weight: 'bold', color: DARK['text-1'] })
+    expect((await ui.find({ type: 'Text', text: /^SESSIONS$/ }))?.props).toMatchObject({ weight: 'bold', color: DARK['text-1'] })
     expect((await ui.find({ type: 'Text', text: / IN REVIEW$/ }))?.props).toMatchObject({ size: 'caption', color: DARK['text-3'] })
     expect((await ui.find({ type: 'Text', text: /^ 12s$/ }))?.props).toMatchObject({ tabular: true, size: 'caption' })
     // Names and labels are cut at the edge, never wrapped onto a second row.
@@ -516,5 +516,141 @@ test('the Subagents code says OFF when task-orchestrator is off', { plugins: [{ 
   await clock.advance(4_000)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ text: /^ORCH BALANCED · OFF · 1 RUNNING$/ })).toBeDefined()
+  await ui.unmount()
+})
+
+// agent-watch as the engine holds it: an inline plugin that writes its state
+// (the kit loads an inline register without its closure, so every value is a
+// literal inside it), beside task-orchestrator's ledger.
+const watcher: Register = on => {
+  on('session.start', async ($, e, next) => {
+    const row = { type: 'Explore', calls: 0, tokens: 0 }
+    await $.state.set({ plugin: 'agent-watch', key: 'now' } as const, 6_000)
+    await $.state.set({ plugin: 'agent-watch', key: 'frame' } as const, 0)
+    await $.state.set({ plugin: 'agent-watch', key: 'tasks' } as const, [])
+    await $.state.set({ plugin: 'agent-watch', key: 'agents' } as const, [
+      { ...row, id: 'm1', description: 'Scan docs', status: 'running', startedAt: 1_000, calls: 2, tokens: 1_200 },
+      { ...row, id: 'a1', description: 'T1 builder', status: 'running', startedAt: 1_000, spawnedBy: 'task-orchestrator' },
+      { ...row, id: 'f1', description: 'Review code', status: 'running', startedAt: 2_000, runId: 'wf_1' },
+      { ...row, id: 'f2', description: 'Review tests', status: 'failed', startedAt: 2_000, endedAt: 4_000, runId: 'wf_1' },
+    ])
+    await $.state.set({ plugin: 'agent-watch', key: 'runs' } as const, [{ id: 'wf_1', name: 'review', startedAt: 2_000 }])
+    await $.state.set({ plugin: 'agent-watch', key: 'tones' } as const, { orch: 1, 'run:wf_1': 2 })
+    return next(e)
+  })
+}
+const emptyWatcher: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.state.set({ plugin: 'agent-watch', key: 'agents' } as const, [])
+    return next(e)
+  })
+}
+
+test('the Sessions panel draws agent-watch\'s tree: this session, the ORCH run, a Workflow run, a caption', { plugins: [{ name: 'agent-watch', register: watcher }, { name: 'task-orchestrator', register: orchestrator }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(4_000)
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
+    expect(await text(/^SESSIONS$/i)).toBeDefined()
+    expect(await text(/^3 RUNNING$/i)).toBeDefined()
+    expect(await text(/^THIS SESSION$/)).toBeDefined()
+    expect(await text(/^ORCH BALANCED$/)).toBeDefined()
+    expect(await text(/^WF review$/)).toBeDefined()
+    // The orchestrator's tasks are its members; the worker's agent is not drawn twice.
+    expect(await text(/T1 · builder · Write the model/)).toBeDefined()
+    expect(await text(/WAITS ON T1, T2/)).toBeDefined()
+    expect((await ui.findAll({ text: /T1 builder/ })).length).toBe(0)
+    // A member's caption, and a failed member's badge.
+    expect(await text(/2 CALLS · 1\.2k TOK/)).toBeDefined()
+    expect(await text(/ FAILED$/)).toBeDefined()
+    expect(await text(/Explore · Review code/)).toBeDefined()
+    // Heads are bold Buttons; a task not started opens nothing.
+    expect((await ui.find({ type: 'Text', text: /^THIS SESSION$/ }))?.props.weight).toBe('bold')
+    expect((await ui.find({ type: 'Text', text: /^ORCH BALANCED$/ }))?.props.color).toBe(DARK['text-1'])
+    expect((await ui.find({ type: 'Button', text: /Explore · Scan docs/ }))?.key).toBe('agent-m1')
+    expect((await ui.find({ type: 'Button', text: /T2 · reviewer/ }))?.key).toBe('agent-task-T2')
+    // The orchestrator's head draws its session glyph in its tone.
+    const heads = await ui.findAll({ type: 'Text', text: /[⬢⬡] $/ })
+    expect(heads.map(head => head.props.color)).toContain(DARK.cyan)
+    expect(heads.map(head => head.props.color)).toContain(DARK.violet)
+    await ui.unmount()
+  }
+})
+
+test('without agent-watch\'s agents the Sessions panel is the flat list', { plugins: [{ name: 'agent-watch', register: emptyWatcher }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /^SESSIONS$/i })).toBeDefined()
+  expect(await ui.find({ text: /^1 RUNNING$/i })).toBeDefined()
+  expect(await ui.find({ text: /Explore · Find hooks/ })).toBeDefined()
+  expect(await ui.find({ text: /THIS SESSION/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+// agent-watch loaded with nothing tracked yet: its clock is the signal.
+const loadedWatcher: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.state.set({ plugin: 'agent-watch', key: 'now' } as const, 6_000)
+    await $.state.set({ plugin: 'agent-watch', key: 'agents' } as const, [])
+    return next(e)
+  })
+}
+const oneRowWatcher: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.state.set({ plugin: 'agent-watch', key: 'now' } as const, 6_000)
+    await $.state.set({ plugin: 'agent-watch', key: 'agents' } as const, [
+      { id: 'm1', type: 'Explore', description: 'Scan docs', status: 'running', startedAt: 1_000, calls: 0, tokens: 0 },
+    ])
+    return next(e)
+  })
+}
+const queuedOrchestrator: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.state.set({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
+    await $.state.set({ plugin: 'task-orchestrator', key: 'enabled' } as const, true)
+    await $.state.set({ plugin: 'task-orchestrator', key: 'ledger' } as const, [
+      { id: 'T1', role: 'builder', objective: 'Write', status: 'queued', deps: [], createdAt: 500, requested: { model: 'sonnet', effort: 'medium' } },
+    ])
+    return next(e)
+  })
+}
+
+test('with only queued ledger tasks and no agent-watch the Sessions panel is the flat list', { plugins: [{ name: 'task-orchestrator', register: queuedOrchestrator }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'completed' }, [], true)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /^ORCH BALANCED · 0 RUNNING$/ })).toBeDefined()
+  expect(await ui.find({ text: /THIS SESSION/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('with agent-watch loaded and no agent the Sessions panel draws this session', { plugins: [{ name: 'agent-watch', register: loadedWatcher }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /^THIS SESSION$/ })).toBeDefined()
+  expect(await ui.find({ text: /No subagent yet/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('with agent-watch loaded the tree is drawn though Compass tracks no agent itself', { plugins: [{ name: 'agent-watch', register: oneRowWatcher }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' }, [], true)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await clock.advance(4_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /^THIS SESSION$/ })).toBeDefined()
+  expect(await ui.find({ text: /Explore · Scan docs/ })).toBeDefined()
   await ui.unmount()
 })

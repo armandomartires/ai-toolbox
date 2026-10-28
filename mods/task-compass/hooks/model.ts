@@ -1,4 +1,6 @@
 import type { AgentRow, OrchTask, Sprint, Status, Story, Task, TaskStatus } from '../types'
+import { memberCaption } from './sessions'
+import type { Member, SessionNode } from './sessions'
 import { elapsed, fit } from './sigma'
 import type { Status as Tone, Token } from './sigma'
 
@@ -414,4 +416,73 @@ export const wrap = (text: string, width: number): string[] => {
   if (line) lines.push(line)
 
   return lines.length > 0 ? lines : ['']
+}
+
+/**
+ * The caption a session's head draws: an active subagent's own line, without
+ * its steps (the tree shows those as the meter). The view and `trimTree` read
+ * it from here, so the lines counted are the lines drawn.
+ */
+export const headCaption = (node: SessionNode, at: number) =>
+  node.kind === 'agent' && node.row && node.isActive
+    ? memberCaption({ key: node.key, label: '', status: node.status, isActive: true, row: { ...node.row, tasks: undefined } }, at)
+    : ''
+
+/**
+ * The members of each session the tree draws, and the lines it takes. A
+ * session's head and every ledger task are never cut. What is left of `budget`
+ * goes to the other members across all the sessions, running ones first and
+ * ended ones after, each session keeping its order, so a long session cannot
+ * starve the next. A session that lost some says "+N more", a line the budget
+ * pays for, and a lone empty session says "No subagent yet.".
+ */
+export const trimTree = (tree: readonly SessionNode[], budget: number, at: number) => {
+  const cost = (member: Member) => 1 + (memberCaption(member, at) === '' ? 0 : 1)
+  const isKept = (member: Member) => member.taskId !== undefined
+  const lists = new Map(tree.map(node => [node.key, [...node.running, ...node.completed]] as const))
+  const isIdle = (node: SessionNode) => node.kind === 'main' && (lists.get(node.key)?.length ?? 0) === 0 && tree.length === 1
+  let lines = 0
+  for (const node of tree) {
+    lines += 2 + (headCaption(node, at) === '' ? 0 : 1) + (isIdle(node) ? 1 : 0)
+    for (const member of lists.get(node.key) ?? []) if (isKept(member)) lines += cost(member)
+  }
+  const fixed = lines
+  let left = Math.max(0, budget - fixed)
+  const taken = new Map<string, Set<Member>>(tree.map(node => [node.key, new Set<Member>()]))
+  const state = new Map(tree.map(node => [node.key, { isStopped: false, isReserved: false }] as const))
+  // Each pass offers every session its next members in turn; a member that does
+  // not fit stops that session, and the "+N more" line it will need is held back.
+  for (const wantRunning of [true, false]) {
+    for (const node of tree) {
+      const all = (lists.get(node.key) ?? []).filter(member => !isKept(member))
+      const flow = state.get(node.key)!
+      const live = new Set(node.running)
+      all.forEach((member, index) => {
+        if (live.has(member) !== wantRunning || flow.isStopped) return
+        const isLast = index === all.length - 1
+        const need = cost(member) + (!isLast && !flow.isReserved ? 1 : 0) - (isLast && flow.isReserved ? 1 : 0)
+        if (need > left) {
+          flow.isStopped = true
+          return
+        }
+        left -= need
+        lines += cost(member)
+        if (!isLast) flow.isReserved = true
+        else if (flow.isReserved) flow.isReserved = false
+        taken.get(node.key)!.add(member)
+      })
+      // A session with an ended member ahead of an unshown running one is cut there.
+      if (wantRunning && all.some(member => live.has(member) && !taken.get(node.key)!.has(member))) flow.isStopped = true
+    }
+  }
+  const shown = new Map<string, { members: Member[]; hidden: number }>()
+  for (const node of tree) {
+    const own = taken.get(node.key)!
+    const members = (lists.get(node.key) ?? []).filter(member => isKept(member) || own.has(member))
+    const hidden = (lists.get(node.key) ?? []).filter(member => !isKept(member) && !own.has(member)).length
+    if (hidden > 0) lines++
+    shown.set(node.key, { members, hidden })
+  }
+
+  return { shown, lines }
 }

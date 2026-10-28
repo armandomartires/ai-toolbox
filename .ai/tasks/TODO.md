@@ -241,6 +241,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0194 — task-orchestrator 0.3.0: a spawn auto mode refuses can be retried or handed off
 - [x] TASK-0195 — agent-watch 0.4.1: a subagent ends on its own turn (B-066)
 - [x] TASK-0196 — task-compass 0.5.0: the Subagents panel follows the orchestrator
+- [x] TASK-0197 — task-compass 0.6.0: the Sessions tree, from agent-watch
 
 ## Post-S9 (superseded by the promotion above)
 
