@@ -1,6 +1,6 @@
 {
   "name": "task-orchestrator",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Makes the session a lead coordinator: worker profiles with an explicit model and effort per task class, dispatched as real isolated subagents under enforced concurrency, nesting, retry and writer-overlap limits, handed to the coordinator's own Agent call where auto mode cannot judge a plugin's spawn, with requested versus observed settings reported in SIGMAorbital panels.",
   "license": "MIT",
   "types": "./types/index.d.ts"

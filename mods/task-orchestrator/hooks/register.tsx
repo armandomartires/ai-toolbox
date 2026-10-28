@@ -247,9 +247,14 @@ const baseOf = async ($: EngineInterface, task: Task): Promise<string | undefine
   return git && git.exitCode === 0 ? git.stdout.trim() : undefined
 }
 
-/** The Agent call that starts a handed-off task, as the coordinator makes it. */
+/**
+ * The Agent call that starts a handed-off task, as the coordinator makes it:
+ * on the role's own profile, registered at load, since a profile registered
+ * this turn is no Agent type until the next; the call's model, effort and
+ * isolation outrank the profile's.
+ */
 const handoffCall = (task: Task): string =>
-  `subagent_type "${PLUGIN}:${profileOf(task)}", model "${task.requested.model}", effort "${task.requested.effort}", description "${task.description}", prompt: the assignment below, unchanged`
+  `subagent_type "${PLUGIN}:${task.role}", model "${task.requested.model}", effort "${task.requested.effort}"${task.isolated ? ', isolation "worktree"' : ''}, description "${task.description}", prompt: the assignment below, unchanged`
 
 const handoffReason = (task: Task): string =>
   `auto mode gave the orchestrator's spawn no verdict, twice: a plugin's spawn has no model request behind it. Start it yourself with the Agent tool (${handoffCall(task)}); the orchestrator adopts that spawn into ${task.id} by the prompt's header, under the same limits. Or cancel ${task.id}`
@@ -575,8 +580,8 @@ export const register: Register = on => {
     const named = assignmentId(e.prompt) ?? e.name
     const held = named ? byId(rows, named) : undefined
     if (held?.handoff && held.status === 'blocked') {
-      // The exact profile, not only the role: the spawn carries no effort, its profile does.
-      if (type !== `${PLUGIN}:${profileOf(held)}`) return { deny: `${held.id} waits for a hand-off as ${PLUGIN}:${profileOf(held)}, not ${type}` }
+      // The role's own profile (the hand-off's, the effort on the call) or the task's exact one.
+      if (type !== `${PLUGIN}:${held.role}` && type !== `${PLUGIN}:${profileOf(held)}`) return { deny: `${held.id} waits for a hand-off as ${PLUGIN}:${held.role}, not ${type}` }
       const blocker = startBlocker(rows, { ...held, status: 'queued' }, config.limits)
       if (blocker) return { deny: `${held.id} cannot start now: ${blocker}` }
       const ran = await next(e)

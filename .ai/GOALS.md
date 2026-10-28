@@ -447,6 +447,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0201-orchestrator-session-workers.md
 - [x] TASK-0202 — task-orchestrator 0.4.1: adopt a hand-off by its assignment
   .ai/tasks/TASK-0202-orchestrator-adopt-by-assignment.md
+- [ ] TASK-0203 — task-orchestrator 0.4.2: hand off on the role's profile, the effort on the call
+  .ai/tasks/TASK-0203-orchestrator-handoff-on-role-profile.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
