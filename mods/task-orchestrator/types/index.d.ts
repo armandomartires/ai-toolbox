@@ -1,6 +1,8 @@
 // The $.state contract: every $.state key the hooks modules read or write is
 // declared here, under the mod's plugin name. The file exports types only;
 // the unions are owned here and the hooks modules import them.
+// agent-watch reads `ledger`, `policy` and `enabled` and mirrors the types they
+// use; check-mods.py rule 8 fails the gate until a change here is mirrored there.
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 

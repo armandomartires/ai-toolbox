@@ -1,107 +1,217 @@
 import { expect, test } from 'claude-code/testing'
 import type { AgentInfo } from 'claude-code'
 
-import type { AgentRow } from '../types'
+import type { AgentRow, OrchTask } from '../types'
 import {
   activityLine,
+  agentKey,
   alertText,
   applyPlan,
+  assignTones,
   callEnded,
   callStarted,
   endedBadly,
-  groupAgents,
-  HUES,
   iconOf,
+  ledgerBadge,
   markAlerted,
+  memberCaption,
+  memberTone,
   mergeListed,
-  nested,
-  nextHue,
+  nextTone,
+  ORCH,
   outcomeOf,
   progressOf,
+  recordRun,
+  runKey,
   runningText,
+  sessionTree,
   spawnedRow,
   summarizeCall,
+  taskChange,
   tokensOf,
+  toneToken,
   turnCounted,
+  workflowEnded,
 } from './model'
 
-const row = (id: string, status: string, hue = 0, more: Partial<AgentRow> = {}): AgentRow => ({
+const row = (id: string, status: string, more: Partial<AgentRow> = {}): AgentRow => ({
   id,
   type: 'Explore',
   description: id,
   status,
   startedAt: 0,
-  hue,
   calls: 0,
   tokens: 0,
   ...more,
 })
 
-test('agents are grouped into running and completed, newest first', () => {
-  const groups = groupAgents([
-    row('a', 'completed'),
-    row('b', 'running'),
-    row('c', 'pending'),
-    row('d', 'failed'),
-    row('e', 'idle'),
-    row('f', 'killed'),
-    row('g', 'waiting'),
-  ])
-  expect(groups.running.map(one => one.id)).toEqual(['g', 'e', 'c', 'b'])
-  expect(groups.completed.map(one => one.id)).toEqual(['f', 'd', 'a'])
+const task = (id: string, status: OrchTask['status'], more: Partial<OrchTask> = {}): OrchTask => ({
+  id,
+  role: 'builder',
+  objective: `do ${id}`,
+  deps: [],
+  status,
+  requested: { model: 'sonnet', effort: 'medium' },
+  createdAt: 0,
+  ...more,
 })
 
-test('each new agent takes the least used hue', () => {
-  expect(nextHue([])).toBe(0)
-  expect(nextHue([row('a', 'running', 0)])).toBe(1)
-  const full = Array.from({ length: HUES }, (_, i) => row(`a${i}`, 'running', i))
-  expect(nextHue(full)).toBe(0)
-  expect(nextHue([...full, row('b', 'running', 0)])).toBe(1)
-})
-
-test('a spawn opens a running row that keeps its hue when listed', () => {
-  const spawned = spawnedRow([row('a', 'completed', 0)], { id: 'b', type: 'Plan', description: 'plan it' }, 10)
-  expect(spawned[1]).toMatchObject({ id: 'b', status: 'running', startedAt: 10, hue: 1 })
+test('a spawn opens a running row, which a list merge keeps up to date', () => {
+  const spawned = spawnedRow([row('a', 'completed')], { id: 'b', type: 'Plan', description: 'plan it', runId: 'wf_1' }, 10)
+  expect(spawned[1]).toMatchObject({ id: 'b', status: 'running', startedAt: 10, runId: 'wf_1' })
 
   const listed: AgentInfo[] = [
     { id: 'b', type: 'Plan', description: 'plan it', status: 'completed' },
-    { id: 'c', type: 'Explore', description: 'look', status: 'running', parentId: 'b' },
+    { id: 'c', type: 'Explore', description: 'look', status: 'running', parentId: 'b', name: 'T1', spawnedBy: 'task-orchestrator' },
   ]
   const merged = mergeListed(spawned, listed, 25)
-  expect(merged.find(one => one.id === 'b')).toMatchObject({ status: 'completed', startedAt: 10, endedAt: 25, hue: 1 })
-  expect(merged.find(one => one.id === 'c')).toMatchObject({ status: 'running', startedAt: 25, hue: 2, parentId: 'b' })
+  expect(merged.find(one => one.id === 'b')).toMatchObject({ status: 'completed', startedAt: 10, endedAt: 25, runId: 'wf_1' })
+  expect(merged.find(one => one.id === 'c')).toMatchObject({ status: 'running', startedAt: 25, parentId: 'b', name: 'T1', spawnedBy: 'task-orchestrator' })
   // A row the list no longer names stays, and an end time is kept once set.
   expect(mergeListed(merged, [], 99).map(one => one.id)).toEqual(['a', 'b', 'c'])
   expect(mergeListed(merged, [listed[0]!], 99).find(one => one.id === 'b')?.endedAt).toBe(25)
 })
 
-test('rows nest under the parent that spawned them', () => {
-  const tree = nested([row('a', 'running'), row('b', 'running', 0, { parentId: 'a' }), row('c', 'running', 0, { parentId: 'zz' })])
-  expect(tree.map(one => [one.row.id, one.depth])).toEqual([
-    ['a', 0],
-    ['b', 1],
-    ['c', 0],
-  ])
-})
-
-test('an agent keeps its own glyph; it pulses only while it runs, and an unfinished end is a badge', () => {
-  expect(iconOf(HUES, 'completed', 0)).toBe(iconOf(0, 'completed', 0))
-  expect(iconOf(1, 'completed', 0)).not.toBe(iconOf(0, 'completed', 0))
+test('a session and a subagent each have one icon; it pulses only while it runs, and an unfinished end is a badge', () => {
+  expect(iconOf('agent', 'completed', 0)).toBe('■')
+  expect(iconOf('session', 'completed', 0)).toBe('⬢')
   // Running: solid on an even frame, hollow on an odd one.
-  expect(iconOf(0, 'running', 0)).toBe('■')
-  expect(iconOf(0, 'running', 1)).toBe('□')
-  expect(iconOf(1, 'running', 2)).toBe('⬢')
+  expect(iconOf('agent', 'running', 0)).toBe('■')
+  expect(iconOf('agent', 'running', 1)).toBe('□')
+  expect(iconOf('session', 'running', 1)).toBe('⬡')
   // Waiting to run: hollow and still. Ended: solid and still.
-  expect(iconOf(0, 'pending', 1)).toBe('□')
-  expect(iconOf(0, 'pending', 2)).toBe('□')
-  expect(iconOf(0, 'completed', 1)).toBe('■')
-  expect(iconOf(0, 'failed', 1)).toBe('■')
+  expect(iconOf('agent', 'pending', 1)).toBe('□')
+  expect(iconOf('agent', 'pending', 2)).toBe('□')
+  expect(iconOf('agent', 'completed', 1)).toBe('■')
+  expect(iconOf('agent', 'failed', 1)).toBe('■')
   expect([outcomeOf('completed'), outcomeOf('failed'), outcomeOf('killed'), outcomeOf('running')]).toEqual([
     undefined,
     { status: 'critical', word: 'FAILED' },
     { status: 'offline', word: 'STOPPED' },
     undefined,
   ])
+  expect([ledgerBadge('blocked'), ledgerBadge('partial'), ledgerBadge('failed'), ledgerBadge('cancelled'), ledgerBadge('completed')]).toEqual([
+    { status: 'caution', word: 'BLOCKED' },
+    { status: 'caution', word: 'PARTIAL' },
+    { status: 'critical', word: 'FAILED' },
+    { status: 'offline', word: 'CANCELLED' },
+    undefined,
+  ])
+})
+
+test('each new session takes the least used tone, this session holding cyan; none is amber or red', () => {
+  expect(nextTone({})).toBe(1)
+  expect(nextTone({ a: 1 })).toBe(2)
+  expect(nextTone({ a: 1, b: 2, c: 3, d: 4 })).toBe(0)
+  expect(toneToken({}, 'main')).toBe('cyan')
+  expect(toneToken({ x: 1 }, 'x')).toBe('violet')
+  expect(['amber', 'red', 'status-caution', 'status-critical'].some(token => [0, 1, 2, 3, 4].map(i => toneToken({ x: i }, 'x')).includes(token as never))).toBe(false)
+})
+
+test('a run, the orchestrator and a delegating agent become sessions in start order; a worker never does', () => {
+  const rows = [
+    row('lead', 'running', { startedAt: 30, tasks: [{ id: '1', text: 's', status: 'pending' }] }),
+    row('parent', 'running', { startedAt: 40 }),
+    row('kid', 'running', { startedAt: 41, parentId: 'parent' }),
+    row('w1', 'running', { startedAt: 5, tasks: [{ id: '1', text: 's', status: 'pending' }] }),
+    row('plain', 'running', { startedAt: 1 }),
+  ]
+  const tones = assignTones({}, rows, [{ id: 'wf_1', name: 'review', startedAt: 20 }], [task('T1', 'running', { agentId: 'w1', createdAt: 10 })])
+  expect(tones).toEqual({ [ORCH]: 1, [runKey('wf_1')]: 2, [agentKey('lead')]: 3, [agentKey('parent')]: 4 })
+  // Kept once given, and the same object when nothing changed.
+  expect(assignTones(tones, rows, [{ id: 'wf_1', name: 'review', startedAt: 20 }], [task('T1', 'running', { agentId: 'w1' })])).toBe(tones)
+})
+
+test('the tree: this session, its sub-sessions under their owners, each with its members and progress', () => {
+  const rows = [
+    row('a', 'completed', { startedAt: 1, endedAt: 4 }),
+    row('b', 'running', { startedAt: 2 }),
+    row('parent', 'running', { startedAt: 3, type: 'general-purpose', description: 'split it' }),
+    row('kid', 'completed', { startedAt: 4, parentId: 'parent', endedAt: 9 }),
+    row('wfa', 'running', { startedAt: 5, runId: 'wf_1' }),
+    row('wfb', 'failed', { startedAt: 6, runId: 'wf_1', endedAt: 8 }),
+    row('w1', 'running', { startedAt: 7, spawnedBy: 'task-orchestrator' }),
+    row('old', 'failed', { startedAt: 6, spawnedBy: 'task-orchestrator', endedAt: 7 }),
+  ]
+  const runs = [{ id: 'wf_1', name: 'review', ownerId: 'parent', startedAt: 5 }]
+  const ledger = [
+    task('T1', 'running', { agentId: 'w1', observed: { model: 'sonnet', effort: 'high', at: 8 } }),
+    task('T2', 'blocked', { agentId: 'gone', endedAt: 9 }),
+    task('T3', 'queued', { deps: ['T1', 'T2'] }),
+  ]
+  const tones = assignTones({}, rows, runs, ledger)
+  const tree = sessionTree({ rows, runs, tones, tasks: [], ledger, policy: 'balanced', isOrchOn: true })
+  expect(tree.map(node => [node.name, node.depth])).toEqual([
+    ['THIS SESSION', 0],
+    ['general-purpose · split it', 1],
+    ['WF review', 2],
+    ['ORCH BALANCED', 1],
+  ])
+  const [main, parent, run, orch] = tree
+  expect(main?.running.map(m => m.key)).toEqual(['b'])
+  expect(main?.completed.map(m => m.key)).toEqual(['a'])
+  expect(main?.progress).toEqual({ done: 1, total: 2, unit: 'AGENTS' })
+  expect(main?.status).toBe('running')
+  expect(parent?.completed.map(m => m.key)).toEqual(['kid'])
+  expect(parent?.progress).toEqual({ done: 1, total: 1, unit: 'AGENTS' })
+  expect(run?.progress).toEqual({ done: 1, total: 2, unit: 'AGENTS' })
+  expect(run?.completed[0]?.badge).toEqual({ status: 'critical', word: 'FAILED' })
+  // The orchestrator's members are its ledger tasks, in ledger order, then earlier attempts.
+  expect(orch?.progress).toEqual({ done: 1, total: 3, unit: 'TASKS' })
+  expect(orch?.running.map(m => m.label)).toEqual(['T1 · builder · do T1', 'T3 · builder · do T3'])
+  expect(orch?.running[0]).toMatchObject({ agentId: 'w1', status: 'running', settings: 'sonnet/high' })
+  expect(orch?.running[1]).toMatchObject({ agentId: undefined, status: 'pending', waits: ['T1', 'T2'] })
+  expect(orch?.completed.map(m => [m.label, m.badge?.word])).toEqual([
+    ['T2 · builder · do T2', 'BLOCKED'],
+    ['Explore · old', 'FAILED'],
+  ])
+  // A worker's row moved under the orchestrator: it is not also under this session.
+  expect(tree.flatMap(node => [...node.running, ...node.completed]).filter(m => m.agentId === 'w1').length).toBe(1)
+  expect(memberTone({ rows, runs, tones, tasks: [], ledger }, 'w1')).toBe(toneToken(tones, ORCH))
+  expect(memberTone({ rows, runs, tones, tasks: [], ledger }, 'b')).toBe('cyan')
+
+  // This session's own task list is its progress; an empty ledger draws no orchestrator.
+  const plain = sessionTree({ rows: [row('a', 'running')], runs: [], tones: {}, tasks: [{ id: '1', text: 'x', status: 'completed' }, { id: '2', text: 'y', status: 'pending' }], ledger: [] })
+  expect(plain.map(node => node.name)).toEqual(['THIS SESSION'])
+  expect(plain[0]?.progress).toEqual({ done: 1, total: 2, unit: 'STEPS' })
+  expect(sessionTree({ rows, runs, tones, tasks: [], ledger, isOrchOn: false }).find(node => node.kind === 'orch')?.name).toBe('ORCH BALANCED · OFF')
+})
+
+test('a member caption says its own steps, what it is doing, its settings, or what it waits on', () => {
+  const runner = row('w', 'running', { calls: 2, tasks: [{ id: '1', text: 'a', status: 'completed' }, { id: '2', text: 'b', status: 'in_progress' }] })
+  expect(memberCaption({ key: 'w', label: '', status: 'running', isActive: true, row: runner, settings: 'sonnet/high' }, 0)).toBe('1/2 STEPS · 2 CALLS · sonnet/high')
+  expect(memberCaption({ key: 'q', label: '', status: 'pending', isActive: true, waits: ['T1'] }, 0)).toBe('WAITS ON T1')
+  expect(memberCaption({ key: 'q', label: '', status: 'pending', isActive: true, waits: [] }, 0)).toBe('QUEUED')
+  expect(memberCaption({ key: 'd', label: '', status: 'completed', isActive: false, row: row('d', 'completed', { calls: 3 }) }, 0)).toBe('')
+})
+
+test('a Workflow agent ends on its turn.complete; a run is recorded once and named by the tool', () => {
+  const rows = [row('w', 'running', { runId: 'wf_1' }), row('x', 'running')]
+  expect(workflowEnded(rows, 'w', 'answer', 9)[0]).toMatchObject({ status: 'completed', endedAt: 9 })
+  expect(workflowEnded(rows, 'w', 'aborted', 9)[0]?.status).toBe('killed')
+  expect(workflowEnded(rows, 'w', 'error', 9)[0]?.status).toBe('failed')
+  // Not a Workflow agent: the list says when it ends.
+  expect(workflowEnded(rows, 'x', 'answer', 9)[1]?.status).toBe('running')
+
+  let runs = recordRun([], { id: 'wf_1', startedAt: 3 })
+  expect(runs).toEqual([{ id: 'wf_1', name: 'workflow', ownerId: undefined, startedAt: 3 }])
+  runs = recordRun(runs, { id: 'wf_1', name: 'review', ownerId: 'lead', startedAt: 7 })
+  expect(runs).toEqual([{ id: 'wf_1', name: 'review', ownerId: 'lead', startedAt: 3 }])
+})
+
+test('task tools change a loop\'s list: TodoWrite, TaskCreate/TaskUpdate, the plan tools', () => {
+  const todo = taskChange('TodoWrite', { todos: [{ content: 'a', activeForm: 'doing a', status: 'in_progress' }, { content: 'b', status: 'pending' }] }, {})
+  let list = todo!([])
+  expect(list).toEqual([{ id: '1', text: 'doing a', status: 'in_progress' }, { id: '2', text: 'b', status: 'pending' }])
+  list = taskChange('TaskCreate', { subject: 'c' }, { task: { id: '9' } })!(list)
+  list = taskChange('TaskUpdate', { taskId: '9', status: 'completed' }, {})!(list)
+  expect(list[2]).toEqual({ id: '9', text: 'c', status: 'completed' })
+  list = taskChange('TaskUpdate', { taskId: '9', status: 'deleted' }, {})!(list)
+  expect(list.length).toBe(2)
+  expect(taskChange('mcp__x__update_plan', { items: [{ content: 'p', status: 'pending' }] }, {})!(list)).toEqual([{ id: '1', text: 'p', status: 'pending' }])
+  expect(taskChange('mcp__x__wrap_up', {}, {})!(list).every(one => one.status === 'completed')).toBe(true)
+  expect(taskChange('TaskCreate', { subject: 'c' }, {})).toBeUndefined()
+  expect(taskChange('Bash', {}, {})).toBeUndefined()
 })
 
 test('update_plan items, advance, done and start follow the app', () => {

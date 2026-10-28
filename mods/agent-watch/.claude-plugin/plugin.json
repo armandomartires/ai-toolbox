@@ -1,7 +1,7 @@
 {
   "name": "agent-watch",
-  "version": "0.3.0",
-  "description": "An Agents pane beside the chat, in SIGMAorbital: this session's subagents grouped by running and completed, each with its own glyph coloured by its state and pulsing while it works, a line saying what it is doing, a toast when one fails, and a clickable task-progress meter above the prompt.",
+  "version": "0.4.0",
+  "description": "An Agents pane beside the chat, in SIGMAorbital: this session and its sub-sessions (the task-orchestrator run, Workflow runs, delegating subagents) as a tree, each with a progress bar and its own colour, its subagents in that colour and pulsing while they work, what each is doing, a toast when one fails, and a clickable task-progress meter above the prompt.",
   "license": "MIT",
   "types": "./types/index.d.ts"
 }

@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
-# Prove scripts/check-mods.py's rule 7 offline (TASK-0188, ADR-0043): every
-# mods/*/hooks/sigma.tsx is a byte-identical copy of the template's, and a
-# mod whose hooks draw carries one.
+# Prove scripts/check-mods.py's rules 7 and 8 offline. Rule 7 (TASK-0188,
+# ADR-0043): every mods/*/hooks/sigma.tsx is a byte-identical copy of the
+# template's, and a mod whose hooks draw carries one. Rule 8 (TASK-0193,
+# ADR-0044): a mod that reads another mod's $.state mirrors that part of the
+# owner's contract, and the mirror agrees with it.
 #
 # Each case builds a throwaway root with a template and one mod, then runs
 # the check against it. Hermetic: a mktemp directory, no git, no network;
 # tests/validate.sh runs it.
 #
-# WHAT THIS PROVES: the rule passes identical copies and a mod that draws
+# WHAT THIS PROVES: rule 7 passes identical copies and a mod that draws
 # nothing, and fails a differing copy, a drawing mod without one, and a copy
-# without its owner. WHAT IT DOES NOT PROVE: that the module is right; its
-# tests are mods/_template/hooks/sigma.test.tsx, run by tests/test-mods.sh.
+# without its owner; rule 8 passes an agreeing mirror and fails a field the
+# owner lacks or types otherwise, a union that differs, a state key the
+# owner lacks, and another mod's state read with no mirror. WHAT IT DOES
+# NOT PROVE: that the module is right (mods/_template/hooks/sigma.test.tsx),
+# or that a reader handles the owner's values (each mod's own tests, run by
+# tests/test-mods.sh).
 #
 # Usage: tests/test-check-mods.sh [path/to/check-mods.py]
 set -uo pipefail
@@ -66,6 +72,72 @@ run "$r"; check "S5 a test file that draws does not count" "$rc" "$out"
 r="$(root orphan)"; mod "$r" pane; echo "x" > "$r/mods/pane/hooks/sigma.tsx"; rm "$r/mods/_template/hooks/sigma.tsx"
 run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"owner mods/_template/hooks/sigma.tsx is missing"* ]]
 check "S6 a copy without its owner fails" $? "$out"
+
+# owner <root>: a mod "own" whose contract a reader mirrors.
+owner() {
+  mod "$1" own
+  mkdir -p "$1/mods/own/types"
+  cat > "$1/mods/own/types/index.d.ts" <<'EOF'
+export type Status = 'queued' | 'done'
+
+export type Job = {
+  id: string
+  /** When it ended. */
+  endedAt?: number
+  status: Status
+}
+
+declare module 'claude-code' {
+  interface PluginState {
+    'own': {
+      jobs: Job[]
+    }
+  }
+}
+EOF
+}
+# reader <root> <job fields> [status union] [state key line] [comment]:
+# a mod "reader" mirroring own's contract; a fifth argument replaces the
+# MIRROR comment.
+reader() {
+  local note union key
+  note='// MIRROR of mods/own/types/index.d.ts. Each `Own<Name>` is the owner'"'"'s `<Name>`.'
+  [ $# -ge 5 ] && note="$5"
+  union="${3:-}"; [ -n "$union" ] || union="'queued' | 'done'"
+  key="${4:-}"; [ -n "$key" ] || key='jobs: OwnJob[]'
+  mod "$1" reader
+  mkdir -p "$1/mods/reader/types"
+  printf '%s\n' "$note" "export type OwnStatus = $union" "" "export type OwnJob = {" "$2" "}" "" \
+    "declare module 'claude-code' {" "  interface PluginState {" "    'own': {" "      $key" "    }" "  }" "}" \
+    > "$1/mods/reader/types/index.d.ts"
+}
+mirror_root() { local r; r="$(root "$1")"; owner "$r"; echo "$r"; }
+
+r="$(mirror_root agree)"; reader "$r" "  id: string
+  status: OwnStatus"
+run "$r"; check "M1 a mirror that agrees with its owner passes, a subset of fields" "$rc" "$out"
+
+r="$(mirror_root field)"; reader "$r" "  id: string
+  endedAt: number"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"OwnJob.endedAt is ': number', own's Job.endedAt is '?: number'"* ]]
+check "M2 a field typed otherwise than the owner's fails, naming both" $? "$out"
+
+r="$(mirror_root missing-field)"; reader "$r" "  name: string"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"OwnJob.name is not a field of own's Job"* ]]
+check "M3 a field the owner lacks fails" $? "$out"
+
+r="$(mirror_root union)"; reader "$r" "  id: string" "'queued' | 'done' | 'lost'"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"OwnStatus is"*"own's Status is"* ]]
+check "M4 a union that differs from the owner's fails" $? "$out"
+
+r="$(mirror_root key)"; reader "$r" "  id: string" "" "jobs: OwnJob[]
+      paused: boolean"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"reads \$.state 'own'.paused, which mods/own/types/index.d.ts does not declare"* ]]
+check "M5 a state key the owner lacks fails" $? "$out"
+
+r="$(mirror_root unmirrored)"; reader "$r" "  id: string" "" "" "// reads own's jobs"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"declares mods/own's \$.state without a MIRROR comment"* ]]
+check "M6 another mod's state read with no mirror fails" $? "$out"
 
 echo "test-check-mods.sh: $((cases - fails))/$cases passed"
 [ "$fails" -eq 0 ]

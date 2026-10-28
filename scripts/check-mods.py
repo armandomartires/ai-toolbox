@@ -15,11 +15,20 @@ each directory mods/<dir>/:
   6. README.md exists;
   7. its hooks/sigma.tsx, the SIGMAorbital design module (ADR-0043), is a
      byte-identical copy of mods/_template/hooks/sigma.tsx, its one owner;
-     and a mod whose hooks draw (`ui.render`) carries one.
+     and a mod whose hooks draw (`ui.render`) carries one;
+  8. a mod that reads another mod's $.state declares that part of the
+     owner's contract as a MIRROR (ADR-0044): a comment
+     `// MIRROR of mods/<owner>/types/index.d.ts` naming a prefix ("Each
+     `<Prefix><Name>`"), each `<Prefix><Name>` alias agreeing with the
+     owner's `<Name>` (a union or plain type word for word, an object type
+     field by field, a subset allowed), and its `'<owner>'` PluginState
+     block agreeing with the owner's, key by key. A PluginState block for
+     another mod without a mirror fails too.
 
 WHAT THIS PROVES: Claude Code can find the mod's manifest, hooks modules and
 contract, and the registry can index it; every mod draws from one copy of
-the design module. WHAT IT DOES NOT PROVE: that the
+the design module; a mod that reads another's state agrees with that
+state's owner, field by field, as text. WHAT IT DOES NOT PROVE: that the
 modules load, type-check or pass their tests. That needs a `claude` that
 supports mods, which the gate must not require: tests/test-mods.sh runs
 `claude plugin validate` and `claude plugin test`.
@@ -94,6 +103,7 @@ def check(mod, bad):
     if not os.path.isfile(os.path.join(mod, "README.md")):
         bad.append("%s: missing README.md" % mod)
     check_sigma(mod, hooks_dir, bad)
+    check_mirror(mod, bad)
 
 
 def read_bytes(path):
@@ -131,6 +141,149 @@ def check_sigma(mod, hooks_dir, bad):
     elif mine != owner:
         bad.append("%s: hooks/sigma.tsx differs from its owner; change the "
                    "owner, then cp %s %s" % (mod, SIGMA_OWNER, copy))
+
+
+# ---- rule 8: mirrors of another mod's $.state contract ---------------------
+
+MIRROR = re.compile(r"//\s*MIRROR of mods/([a-z0-9-]+)/types/index\.d\.ts")
+PREFIX = re.compile(r"Each\s+`(\w+)<Name>`")
+ALIAS = re.compile(r"^export type (\w+)\s*=\s*", re.M)
+BLOCK = re.compile(r"""^\s*['"]([a-z0-9-]+)['"]\s*:\s*\{""", re.M)
+FIELD = re.compile(r"^\s*([A-Za-z_]\w*)(\??)\s*:\s*(.+?)\s*$")
+
+
+def strip_comments(text):
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    return re.sub(r"//[^\n]*", "", text)
+
+
+def norm(text):
+    text = " ".join(text.split())
+    return text[1:].strip() if text.startswith("|") else text
+
+
+def balanced(text, start):
+    """The text from the `{` at `start` to its closing `}`, both kept."""
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return text[start:]
+
+
+def fields(body):
+    """`{ a: T; b?: U }` (one per line or `;`-separated) as {name: (opt, type)}."""
+    inner = body.strip()[1:-1]
+    out, depth, cur = {}, 0, ""
+    for ch in inner + "\n":
+        if ch in "{([<":
+            depth += 1
+        elif ch in "})]>":
+            depth -= 1
+        if depth == 0 and ch in ";\n":
+            m = FIELD.match(cur)
+            if m:
+                out[m.group(1)] = (m.group(2), norm(m.group(3)))
+            cur = ""
+        else:
+            cur += ch
+    return out
+
+
+def aliases(text):
+    """Every `export type Name = ...` as {name: text}; an object type as its `{...}`."""
+    text = strip_comments(text)
+    out = {}
+    for m in ALIAS.finditer(text):
+        start = m.end()
+        if text[start:start + 1] == "{":
+            out[m.group(1)] = balanced(text, start)
+            continue
+        end = len(text)
+        for stop in (ALIAS, re.compile(r"^declare module", re.M), re.compile(r"\n\s*\n")):
+            nxt = stop.search(text, start)
+            if nxt and nxt.start() < end:
+                end = nxt.start()
+        out[m.group(1)] = norm(text[start:end])
+    return out
+
+
+def state_block(text, plugin):
+    text = strip_comments(text)
+    for m in BLOCK.finditer(text):
+        if m.group(1) == plugin:
+            return fields(balanced(text, m.end() - 1))
+    return None
+
+
+def check_mirror(mod, bad):
+    path = os.path.join(mod, "types", "index.d.ts")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return
+    me = os.path.basename(mod)
+    mirrors = {m.group(1) for m in MIRROR.finditer(text)}
+    for m in BLOCK.finditer(strip_comments(text)):
+        other = m.group(1)
+        if other != me and os.path.isdir(os.path.join("mods", other)) and other not in mirrors:
+            bad.append("%s: declares mods/%s's $.state without a MIRROR comment "
+                       "naming its owner (rule 8)" % (path, other))
+    for owner in sorted(mirrors):
+        owner_path = os.path.join("mods", owner, "types", "index.d.ts")
+        try:
+            with open(owner_path, encoding="utf-8") as fh:
+                owner_text = fh.read()
+        except OSError:
+            bad.append("%s: mirrors %s, which is missing" % (path, owner_path))
+            continue
+        prefix = PREFIX.search(text[text.index("MIRROR of mods/%s" % owner):])
+        if not prefix:
+            bad.append("%s: its MIRROR of %s names no \"Each `<Prefix><Name>`\""
+                       % (path, owner))
+            continue
+        pre = prefix.group(1)
+        unprefix = lambda t: re.sub(r"\b%s([A-Z]\w*)" % pre, r"\1", t)
+        theirs = aliases(owner_text)
+        for name, body in aliases(text).items():
+            if not name.startswith(pre) or name == pre:
+                continue
+            base = name[len(pre):]
+            if base not in theirs:
+                bad.append("%s: %s mirrors %s, which %s does not declare"
+                           % (path, name, base, owner_path))
+            elif body.startswith("{"):
+                have = fields(theirs[base]) if theirs[base].startswith("{") else {}
+                for field, (opt, typ) in fields(body).items():
+                    if field not in have:
+                        bad.append("%s: %s.%s is not a field of %s's %s"
+                                   % (path, name, field, owner, base))
+                    elif have[field] != (opt, unprefix(typ)):
+                        bad.append("%s: %s.%s is %r, %s's %s.%s is %r"
+                                   % (path, name, field, opt + ": " + typ, owner,
+                                      base, field, "".join(have[field][0]) + ": " + have[field][1]))
+            elif unprefix(body) != theirs[base]:
+                bad.append("%s: %s is %r, %s's %s is %r"
+                           % (path, name, body, owner, base, theirs[base]))
+        mine, owned = state_block(text, owner), state_block(owner_text, owner)
+        if mine is None:
+            continue
+        if owned is None:
+            bad.append("%s: mirrors %s's $.state, which %s does not declare"
+                       % (path, owner, owner_path))
+            continue
+        for key, (opt, typ) in mine.items():
+            if key not in owned:
+                bad.append("%s: reads $.state '%s'.%s, which %s does not declare"
+                           % (path, owner, key, owner_path))
+            elif owned[key] != (opt, unprefix(typ)):
+                bad.append("%s: reads $.state '%s'.%s as %r, its owner declares %r"
+                           % (path, owner, key, typ, owned[key][1]))
 
 
 def main():

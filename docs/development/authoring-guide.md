@@ -374,6 +374,11 @@ mod meets:
 - **The engine lists a module's `$.state` reads and writes from atoms
   declared in that file**, so a shared atoms module will not load. Each
   module declares the atoms it uses.
+- **A mod may read another mod's `$.state`, never write it.** It declares
+  the part it reads as a mirror of the owner's contract in its own
+  `types/index.d.ts`; the gate holds the two together (`check-mods.py` rule
+  8, `ADR-0044`). A test loads the owner as an inline plugin, whose
+  `register` the kit evaluates without its closure.
 - **A `tool.call` matcher naming an MCP tool fails `tsc`** ("excessively
   deep") once many MCP tools are connected. Compare `e.tool` in the general
   hook instead.

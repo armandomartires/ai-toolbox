@@ -4,24 +4,26 @@ import type { EngineInterface, Register } from 'claude-code'
 import { registerBand } from './band'
 import {
   alertText,
-  applyPlan,
+  assignTones,
   callEnded,
   callStarted,
   endedBadly,
   isActive,
   markAlerted,
   mergeListed,
+  recordRun,
   runningText,
   spawnedRow,
   summarizeCall,
+  taskChange,
   tokensOf,
   turnCounted,
   watchText,
+  workflowEnded,
 } from './model'
-import type { PlanUpdate } from './model'
 import { remember, syncTheme, watchTheme } from './sigma'
 import { PANE, TITLE, renderOutput, renderPane } from './view'
-import type { AgentRow, Task } from '../types'
+import type { AgentRow } from '../types'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
 // in that same file, so each module declares the atoms it uses.
@@ -29,10 +31,10 @@ const agents = atom({ plugin: 'agent-watch', key: 'agents' } as const, [])
 const now = atom({ plugin: 'agent-watch', key: 'now' } as const, 0)
 const frame = atom({ plugin: 'agent-watch', key: 'frame' } as const, 0)
 const tasks = atom({ plugin: 'agent-watch', key: 'tasks' } as const, [])
-
-/** The desktop app's plan tools, by name under any MCP prefix. */
-const PLAN_TOOL = /(^|__)update_plan$/
-const WRAP_TOOL = /(^|__)wrap_up$/
+const runs = atom({ plugin: 'agent-watch', key: 'runs' } as const, [])
+const tones = atom({ plugin: 'agent-watch', key: 'tones' } as const, {})
+// task-orchestrator's ledger, read and never written (types/index.d.ts, the mirror).
+const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 
 /** How often the pane is brought up to date while an agent is active. */
 const TICK_MS = 1_000
@@ -53,20 +55,33 @@ const syncStatus = async ($: EngineInterface) => {
 }
 
 /**
- * The rows brought up to date with `$.agent.list()`. An agent that just
- * failed or was stopped is toasted once: found inside the updater, which
- * may run twice on a version miss, so the ids are collected in a map.
+ * The rows changed by `change`. An agent that just failed or was stopped is
+ * toasted once: found inside the updater, which may run twice on a version
+ * miss, so the ids are collected in a map. Then each new sub-session gets
+ * its tone.
  */
-const refresh = async ($: EngineInterface) => {
-  const [listed, at] = await Promise.all([$.agent.list(), $.clock.now()])
+const changeAgents = async ($: EngineInterface, change: (rows: AgentRow[]) => AgentRow[]) => {
   const alerts = new Map<string, AgentRow>()
   await update($, agents, rows => {
-    const next = mergeListed(rows, listed, at)
+    const next = change(rows)
     for (const row of endedBadly(rows, next)) alerts.set(row.id, row)
     return markAlerted(next, alerts.keys())
   })
-  await update($, now, () => at)
   for (const row of alerts.values()) $.ui.toast(alertText(row), { timeoutMs: 8_000 })
+  await syncTones($)
+}
+
+/** Each new sub-session's tone: a Workflow run, the orchestrator's run, a delegating agent. */
+const syncTones = async ($: EngineInterface) => {
+  const [rows, all, tasksOfOrch] = await Promise.all([read($, agents), read($, runs), read($, ledger)])
+  await update($, tones, held => assignTones(held, rows, all, tasksOfOrch))
+}
+
+/** The rows brought up to date with `$.agent.list()`. */
+const refresh = async ($: EngineInterface) => {
+  const [listed, at] = await Promise.all([$.agent.list(), $.clock.now()])
+  await changeAgents($, rows => mergeListed(rows, listed, at))
+  await update($, now, () => at)
   await syncStatus($)
 }
 
@@ -88,10 +103,13 @@ export const register: Register = on => {
     $.clock.every(TICK_MS, () => {
       tick++
       void (async () => {
-        const rows = await read($, agents)
-        // Busy: an agent is active, or ended less than a minute ago.
+        const [rows, orchTasks] = await Promise.all([read($, agents), read($, ledger)])
+        // Busy: an agent is active or ended less than a minute ago, or the
+        // orchestrator holds a task that has not ended.
         const at = await $.clock.now()
-        const isBusy = rows.some(row => isActive(row.status) || (row.endedAt ?? 0) > at - 60_000)
+        const isBusy =
+          rows.some(row => isActive(row.status) || (row.endedAt ?? 0) > at - 60_000) ||
+          orchTasks.some(task => task.status === 'queued' || task.status === 'running')
         if (isBusy || tick % 10 === 0) await refresh($)
       })().catch(() => undefined)
     })
@@ -124,8 +142,11 @@ export const register: Register = on => {
     const ran = await next(e)
     if (ran.deny === undefined && ran.agentId) {
       const at = await $.clock.now()
-      const spawn = { id: ran.agentId, parentId: e.parentAgentId, type: e.subagentType, description: e.description, model: ran.model }
-      await update($, agents, rows => spawnedRow(rows, spawn, at))
+      const runId = e.workflow?.runId || undefined
+      const spawn = { id: ran.agentId, parentId: e.parentAgentId, type: e.subagentType, description: e.description, model: ran.model, runId }
+      // A Workflow agent opens its run, which the tool's result names.
+      if (runId) await update($, runs, all => recordRun(all, { id: runId, startedAt: at }))
+      await changeAgents($, rows => spawnedRow(rows, spawn, at))
       await update($, now, () => at)
       await syncStatus($)
     }
@@ -145,7 +166,9 @@ export const register: Register = on => {
       const id = e.agentId
       const tokens = tokensOf(e.usage)
       const model = e.usage?.model
-      await update($, agents, rows => turnCounted(rows, id, tokens, model)).catch(() => undefined)
+      const at = await $.clock.now()
+      // A Workflow agent's end is its turn's: no list names it.
+      await changeAgents($, rows => workflowEnded(turnCounted(rows, id, tokens, model), id, e.reason, at)).catch(() => undefined)
       await refresh($).catch(() => undefined)
     }
 
@@ -159,54 +182,42 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // The main loop's task list: TodoWrite, TaskCreate/TaskUpdate, or the
-  // desktop app's plan tools. One hook for every tool: a matcher would make
-  // TypeScript expand every connected MCP tool's type, past its depth.
+  // Every loop's task list (TodoWrite, TaskCreate/TaskUpdate, or the desktop
+  // app's plan tools): the main loop's is the band's, a subagent's its own,
+  // which makes it a session. A Workflow call's result names its run. One
+  // hook for every tool: a matcher would make TypeScript expand every
+  // connected MCP tool's type, past its depth.
   on('tool.call', async ($, e, next) => {
+    const agentId = e.agentId
     // In a subagent's loop: the call in flight is its activity, and counted
     // once it ended, a deny or a throw included.
-    if (e.agentId) {
-      const id = e.agentId
+    if (agentId) {
       const since = await $.clock.now()
       const { tool, detail } = summarizeCall(String(e.tool), e as unknown as Record<string, unknown>)
-      await update($, agents, rows => callStarted(rows, id, { tool, detail, since })).catch(() => undefined)
-      try {
-        return await next(e)
-      } finally {
-        await update($, agents, rows => callEnded(rows, id)).catch(() => undefined)
-      }
+      await update($, agents, rows => callStarted(rows, agentId, { tool, detail, since })).catch(() => undefined)
     }
-
-    const ran = await next(e)
+    let ran: Awaited<ReturnType<typeof next>>
+    try {
+      ran = await next(e)
+    } finally {
+      if (agentId) await update($, agents, rows => callEnded(rows, agentId)).catch(() => undefined)
+    }
     if (ran.deny !== undefined || ran.isError) return ran
 
     const name = String(e.tool)
-    if (e.tool === 'TodoWrite') {
-      await update($, tasks, () =>
-        e.todos.map((todo, i): Task => ({
-          id: String(i + 1),
-          text: todo.status === 'in_progress' ? todo.activeForm || todo.content : todo.content,
-          status: todo.status,
-        })),
-      )
-    } else if (e.tool === 'TaskCreate') {
-      const id = (ran.result as { task?: { id?: string } } | undefined)?.task?.id
-      if (id) await update($, tasks, list => [...list, { id, text: e.subject, status: 'pending' }])
-    } else if (e.tool === 'TaskUpdate') {
-      await update($, tasks, list =>
-        e.status === 'deleted'
-          ? list.filter(task => task.id !== e.taskId)
-          : list.map(task =>
-              task.id === e.taskId
-                ? { ...task, text: e.subject ?? task.text, status: (e.status as Task['status'] | undefined) ?? task.status }
-                : task,
-            ),
-      )
-    } else if (PLAN_TOOL.test(name)) {
-      await update($, tasks, list => applyPlan(list, e as unknown as PlanUpdate))
-    } else if (WRAP_TOOL.test(name)) {
-      await update($, tasks, list => list.map((task): Task => ({ ...task, status: 'completed' })))
+    if (name === 'Workflow') {
+      const result = ran.result as { runId?: unknown; workflowName?: unknown } | undefined
+      if (typeof result?.runId === 'string' && result.runId) {
+        const run = { id: result.runId, name: typeof result.workflowName === 'string' ? result.workflowName : undefined, ownerId: agentId, startedAt: await $.clock.now() }
+        await update($, runs, all => recordRun(all, run))
+        await syncTones($)
+      }
+      return ran
     }
+    const change = taskChange(name, e as unknown as Record<string, unknown>, ran.result)
+    if (change === undefined) return ran
+    if (agentId) await changeAgents($, rows => rows.map(row => (row.id === agentId ? { ...row, tasks: change(row.tasks ?? []) } : row)))
+    else await update($, tasks, change)
 
     return ran
   })
