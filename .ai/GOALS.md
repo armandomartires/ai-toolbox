@@ -443,6 +443,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0199-compass-status-sunburst.md
 - [x] TASK-0200 — task-orchestrator 0.4.0: honour a model and effort the person names
   .ai/tasks/TASK-0200-orchestrator-named-settings.md
+- [!] TASK-0201 — task-orchestrator 0.5.0: session workers (spike blocked: no start_session here)
+  .ai/tasks/TASK-0201-orchestrator-session-workers.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
