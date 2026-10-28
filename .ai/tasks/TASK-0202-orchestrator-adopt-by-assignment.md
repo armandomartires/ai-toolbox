@@ -39,7 +39,7 @@ A task handed off under auto mode is adopted from the coordinator's Agent call b
 
 - [x] An Agent call with no `name` whose prompt is a held task's assignment is adopted into that task, fenced and limited as it.
 - [x] The hand-off line names type, model, effort and description, not `name`.
-- [ ] Live: the coordinator's Agent calls for T1 and B1 are adopted; Compass draws them under their tasks.
+- [x] Live: the coordinator's Agent calls for T1 and B1 are adopted; Compass draws them under their tasks.
 
 ## Mandatory validations
 
@@ -55,13 +55,15 @@ A task handed off under auto mode is adopted from the coordinator's Agent call b
 ## Outputs / handover
 
 - `mods/task-orchestrator/` 0.4.1: `contract.ts` `assignmentId`; the protocol says the assignment goes unchanged as the prompt; `register.tsx`: the held task is `assignmentId(e.prompt) ?? e.name`, the hand-off line no longer asks for `name`; README, ARCHITECTURE record the live finding.
-- Not verified: the live adoption (third criterion). The session that found the fault loads mods from this checkout and reloads them at the end of its turn, so it is checked on the human's next message against the test tasks left in its ledger.
+- Live (2026-10-28): T1 and B1, retried under their ids, were adopted from the coordinator's Agent calls with no `name`, ran as T1 and B1, and completed; `status` showed `observed claude-haiku-5-5/low` and `observed claude-sonnet-5-5/medium` (the host's `modelSettings.claude-sonnet-5-5.effortLevel = high` did not replace medium).
+- Found live, not fixed here: a per-settings profile (`builder--sonnet-high`, `TASK-0200`) registered in a turn is not an Agent type until the next turn, and a mod reload drops it; so under auto mode a hand-off at other settings than the table's fails in the turn it is printed (`Agent type 'task-orchestrator:builder--sonnet-high' not found`). Not exercised live: the one-writer rule (B1 ended before B2 was dispatched).
 
-Next: the live rerun; record it in this log.
+Next: make a per-settings hand-off startable in its own turn (register variants ahead, or hand off on the role's profile with the effort on the Agent call).
 
 ## Execution log
 
 - 2026-10-28 · Claude Code (Opus 5.5) · the live test found the adoption broken; brief written before the code
 - 2026-10-28 · Claude Code (Opus 5.5) · built
   - Evidence: `tests/test-mods.sh` → `5 passed, 0 failed` (task-orchestrator 33); `tests/validate.sh` → `validate.sh: OK`.
+  - Evidence, live: after the reload, T1 and B1 retried and started by the printed Agent calls → `T1 → scout [a7…] → observed claude-haiku-5-5/low → completed`, `B1 → builder [a7…] → observed claude-sonnet-5-5/medium → completed`; `.pilot-scratch/orch-test/b1.txt` → `orchestrator test$`; B2's call → `Agent type 'task-orchestrator:builder--sonnet-high' not found`.
   - Evidence, red-proof: with the held-task lookup back to `e.name`, the no-name adoption test fails (`Expected: "H1 waits for a hand-off as task-orchestrator:reviewer--sonnet-medium, not task-orchestrator:reviewer"`, `Received: undefined`): `32 pass, 1 fail`; 0.4.0's `contract.ts` and `register.tsx` → `27 pass, 3 fail`.
