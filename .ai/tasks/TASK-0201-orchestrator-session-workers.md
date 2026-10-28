@@ -26,6 +26,7 @@ When the person asks for sessions, a task runs as a Code-tab session they can op
 - **Not offered here.** In session `Orchestrate mod alignment review` (desktop, Remote Control on, `isRemote: true`, auto mode) neither `start_session` nor `hand_off_to_session` is offered, though other tools' descriptions name both. Which sessions get them is unknown; the one session started from another on this account (2026-10-26) had a parent without Remote Control.
 - **A mod sees the app's tool calls.** agent-watch's band follows the app's `update_plan` through a `tool.call` hook, checked live by the human in `TASK-0181`; so a hook on the coordinator's `start_session` and its result is expected to work. Its input schema and result shape are still unseen.
 - **A started session does not inherit the parent's effort.** The 2026-10-26 child ran `claude-opus-5-5` at effort `low` in its parent's folder (no worktree): the coordinator must set model and effort itself, in `start_session` or by `set_session_effort`.
+- **Sidebar nesting is the app's.** The 2026-10-26 child carries `parentSessionId` and `startedBy` and was listed under its parent; the human expects session workers nested under the coordinator's title in the sidebar (2026-10-28). Only `start_session` produces that.
 - **Not tried:** whether the mod's own `$.tool.call` of `get_session` / `list_events` passes auto mode (`ARCHITECTURE.md` expects a plugin's call to get no verdict, as its spawn does).
 
 ## Scope
@@ -50,6 +51,7 @@ When the person asks for sessions, a task runs as a Code-tab session they can op
 - [ ] The coordinator's `start_session` for that task id moves its row to running with the session id; model and effort are those requested.
 - [ ] Two session tasks that write run side by side; the cap and dependencies still hold.
 - [ ] `collect` returns a session task's report, or the calls that fetch it.
+- [ ] Each session worker appears in the desktop sidebar nested under the coordinator's session (the app nests a session `start_session` started; a subagent never appears there, and a mod cannot add a sidebar row).
 - [ ] Live: the human's prompt starts sessions on Sonnet 5.5 at the chosen efforts, shown by `get_session` and `/orchestrate status`.
 
 ## Mandatory validations
