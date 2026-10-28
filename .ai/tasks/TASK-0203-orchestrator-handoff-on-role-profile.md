@@ -40,7 +40,7 @@ A task handed off at other settings than its role's table starts in the turn its
 
 - [x] A hand-off names `task-orchestrator:<role>`, the requested model and effort, and `isolation "worktree"` for an isolated task.
 - [x] A call on the role's own profile or the task's exact profile is adopted; another role's is refused.
-- [ ] Live: B2 starts from its hand-off in the same turn and is observed at sonnet/high; a second writer's call is refused while B2 runs.
+- [x] Live: B2 starts from its hand-off in the same turn and is observed at sonnet/high; a second writer is held while B2 runs (queued at dispatch; the direct-call bypass was not reached, see the log).
 
 ## Mandatory validations
 
@@ -56,13 +56,15 @@ A task handed off at other settings than its role's table starts in the turn its
 ## Outputs / handover
 
 - `mods/task-orchestrator/` 0.4.2: `register.tsx` `handoffCall` names `<role>`, model, effort and `isolation "worktree"` when isolated; the adoption takes the role's own profile or the task's exact one. README and ARCHITECTURE say why, with the probe.
-- Not verified: the live criterion; the mod reloads at the turn's end, so it runs on the human's next message (B2 is still blocked in the session's ledger).
+- Live (2026-10-28): B2, retried at sonnet/high, was handed off on `task-orchestrator:builder` and started from that call in the same turn: `observed claude-sonnet-5-5/high`. B3, a second non-isolated writer dispatched while B2 ran, answered `queued → waits for its turn`. Once B2 ended, B3 was handed off and adopted from the coordinator's call: `observed claude-sonnet-5-5/medium`, completed.
+- Not exercised: a direct Agent call for a queued writer while another writer runs. B2 ended within seconds (its `sleep 45` was refused by the session's Bash rules, and it stopped and reported as told), so B3's call came after B2 had ended.
 
-Next: the live run; record it in this log.
+Next: none for this task.
 
 ## Execution log
 
 - 2026-10-28 · Claude Code (Opus 5.5) · the effort probe run; brief written before the code
 - 2026-10-28 · Claude Code (Opus 5.5) · built
   - Evidence: `tests/test-mods.sh` → `5 passed, 0 failed` (task-orchestrator 33); `tests/validate.sh` → `validate.sh: OK`.
+  - Evidence, live: B2 → `B2 → builder [a7…] → requested sonnet/high → observed claude-sonnet-5-5/high → blocked` (its sleep refused); B3 at dispatch → `queued → waits for its turn`; B3 after B2 → `B3 → builder [a9…] → observed claude-sonnet-5-5/medium → completed`, `.pilot-scratch/orch-test/b3.txt` written.
   - Evidence, red-proof: 0.4.1's `register.tsx` → the hand-off assertion fails (`32 pass, 1 fail`); the adoption check alone back to the exact profile → `Expected: "agent-1"`, `Received: undefined` (`32 pass, 1 fail`).

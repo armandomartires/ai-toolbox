@@ -246,7 +246,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0200 — task-orchestrator 0.4.0: honour a model and effort the person names
 - [ ] TASK-0201 — task-orchestrator 0.5.0: session workers
 - [x] TASK-0202 — task-orchestrator 0.4.1: adopt a hand-off by its assignment
-- [ ] TASK-0203 — task-orchestrator 0.4.2: hand off on the role's profile, the effort on the call
+- [x] TASK-0203 — task-orchestrator 0.4.2: hand off on the role's profile, the effort on the call
 
 ## Post-S9 (superseded by the promotion above)
 
