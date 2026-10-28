@@ -3,9 +3,16 @@ import type { AgentSpawnInput, ConfigRow, On } from 'claude-code'
 
 import { TOKENS } from './sigma'
 
-/** The engine beneath the mod: registrations answered, spawns numbered, settings as given. */
-const engine = (on: On, options: { settings?: unknown; denySpawn?: string } = {}) => {
+const NO_VERDICT = 'The server-side auto mode classifier gave no verdict for Agent: the request that produced this action did not ask for one. Issue the action again once, as-is; if it is denied again, continue with other tasks that don\'t require it and tell the user that auto mode could not evaluate it.'
+
+/**
+ * The engine beneath the mod: registrations answered, spawns numbered, settings
+ * as given. `noVerdict` is how many of the plugin's spawns auto mode refuses
+ * with no verdict, as it did in a desktop session; the model's own pass.
+ */
+const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVerdict?: number } = {}) => {
   const spawned: { type: string; model?: string; name?: string; prompt: string }[] = []
+  const refused: string[] = []
   const registered: Record<string, unknown>[] = []
   const stopped: string[] = []
   const statuses: (string | undefined)[] = []
@@ -27,6 +34,10 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string } = {}
   // comes as AgentSpawnInput. One stub answers both.
   on('agent.spawn', (_, e) => {
     const call = e as unknown as { subagentType?: string; subagent_type?: string; model?: string; name?: string; prompt: string }
+    if (call.subagent_type !== undefined && refused.length < (options.noVerdict ?? 0)) {
+      refused.push(call.name ?? '')
+      return { deny: NO_VERDICT }
+    }
     const got = spawn(call.subagentType ?? call.subagent_type ?? 'general-purpose', call.model, call.name, call.prompt)
     return got ? ({ model: got.model, agentId: got.agentId, result: { agentId: got.agentId, resolvedModel: got.model } } as never) : { deny: `model ${call.model} is not available` }
   })
@@ -50,10 +61,13 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string } = {}
   on('turn.step', async function* (_, e) {
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
   })
-  return { spawned, registered, stopped, statuses }
+  return { spawned, registered, stopped, statuses, refused }
 }
 
 const dispatch = (input: Record<string, unknown>) => ({ tool: 'mcp__task-orchestrator__dispatch', ...input })
+
+/** The text of `answer` from the line starting `from` on. */
+const byLine = (answer: string, from: string) => answer.slice(answer.indexOf(from))
 
 const report = (status: string, next = 'review it') => `Status: ${status}\nFindings: found\nFiles: none\nChecks: none run\nEvidence: the read\nRisks: none\nNext: ${next}`
 
@@ -196,6 +210,86 @@ test('a failed review blocks a done report, a worker profile taken through the A
   const status = await $.tool.call({ tool: 'mcp__task-orchestrator__status' })
   expect(String(status.result)).toContain('task-orchestrator off')
   expect(String(status.result)).toContain('R1 → reviewer')
+})
+
+test('a spawn auto mode gives no verdict is issued again once, then handed to the coordinator\'s own Agent call and adopted', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const once = engine(on, { noVerdict: 1 })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  // Refused once: the second, identical issue starts it.
+  const retried = await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser' }))
+  expect(once.refused).toEqual(['T1'])
+  expect(String(retried.result)).toContain('T1 → scout [agent-1] → requested haiku/low')
+  expect(String(retried.result)).toContain('→ running')
+  expect(once.spawned[0]?.prompt).toContain('# Assignment T1')
+})
+
+test('refused twice, a task waits for the hand-off; its dependant says what it waits on and collect does not wait it out', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { noVerdict: 99 })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find the parser' }))).result)
+  expect(world.refused).toEqual(['H1', 'H1'])
+  expect(held).toContain('H1 → scout → requested haiku/low → unverified → blocked → auto mode gave the orchestrator\'s spawn no verdict, twice')
+  expect(held).toContain('subagent_type "task-orchestrator:scout", name "H1", model "haiku", description "H1 scout"')
+  expect(held).toContain('assignment for H1 (the Agent call\'s prompt, unchanged):\n# Assignment H1 — role scout (lookup)')
+
+  // A dependant queues, says what holds it, and collect returns it at once.
+  const dependant = String((await $.tool.call(dispatch({ id: 'H2', class: 'lookup', objective: 'Read what H1 found', deps: ['H1'] }))).result)
+  expect(dependant).toContain('stalled: waits on H1 (blocked): dispatch H1 again under its id to retry it, or cancel H2')
+  const status = String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)
+  expect(status).toContain('- H2: waits on H1 (blocked): dispatch H1 again under its id to retry it, or cancel H2')
+  const got = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['H2'], timeoutMs: 600_000 })).result)
+  expect(got).toContain('H2 → scout → requested haiku/low → unverified → queued')
+  expect(got).toContain('  stalled: waits on H1 (blocked)')
+
+  // The coordinator's own Agent call of another role is refused; of the role, adopted unchanged.
+  const prompt = byLine(held, '# Assignment H1')
+  const wrong = await $.agent.spawn({ prompt, description: 'H1 scout', subagentType: 'task-orchestrator:builder', name: 'H1' } as AgentSpawnInput)
+  expect(wrong.deny).toBe('H1 waits for a hand-off as task-orchestrator:scout, not task-orchestrator:builder')
+  const adopted = await $.agent.spawn({ prompt, description: 'H1 scout', subagentType: 'task-orchestrator:scout', model: 'haiku', name: 'H1' } as AgentSpawnInput)
+  expect(adopted.agentId).toBe('agent-1')
+  expect(world.spawned[0]).toMatchObject({ type: 'task-orchestrator:scout', model: 'haiku', name: 'H1', prompt })
+  const after = String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)
+  expect(after).toContain('H1 → scout [agent-1] → requested haiku/low → resolved haiku-resolved, effort unverified → running')
+  expect(after).not.toContain('agent-2')
+  // Fenced as any worker, and its end starts the dependant, which is handed off in turn.
+  expect((await $.tool.call({ tool: 'Write', file_path: '/p/x', content: 'x', agentId: 'agent-1' })).deny).toContain('read-only')
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(world.refused).toEqual(['H1', 'H1', 'H2', 'H2'])
+  expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)).toContain('H2 → scout → requested haiku/low → unverified → blocked → auto mode gave')
+})
+
+test('a re-dispatch under the id of a blocked or failed task is a counted retry, refused past the limit', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { denySpawn: 'haiku' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  expect(String((await $.tool.call(dispatch({ id: 'L1', class: 'lookup', objective: 'Find it' }))).result)).toContain('blocked → spawn refused: model haiku is not available')
+  // haiku is now known refused: the retry falls back to sonnet and starts.
+  const first = String((await $.tool.call(dispatch({ id: 'L1', class: 'lookup', objective: 'Find it' }))).result)
+  expect(first).toContain('L1 → scout [agent-1] → requested sonnet/low')
+  expect(first).toContain('note: retry 1 of 2 after blocked')
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('failed', 'look elsewhere'), durationMs: 1, isAborted: false, turnId: 't' })
+  const second = String((await $.tool.call(dispatch({ id: 'L1', class: 'lookup', objective: 'Find it in lib/' }))).result)
+  expect(second).toContain('L1 → scout [agent-2]')
+  expect(second).toContain('note: retry 2 of 2 after failed')
+  expect(world.spawned[1]?.prompt).toContain('Find it in lib/')
+  await $.turn.complete({ agentId: 'agent-2', reason: 'answer', answer: report('failed'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(String((await $.tool.call(dispatch({ id: 'L1', class: 'lookup', objective: 'Find it' }))).result)).toBe('blocked: task L1 has used its 2 retries: stop and report')
+  // A completed task is not dispatched again under its id.
+  await $.tool.call(dispatch({ id: 'C1', class: 'lookup', objective: 'Look' }))
+  await $.turn.complete({ agentId: 'agent-3', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(String((await $.tool.call(dispatch({ id: 'C1', class: 'lookup', objective: 'Look' }))).result)).toBe('blocked: task C1 already exists and is completed; only a blocked, failed, partial task is retried under its id')
+  expect(world.spawned).toHaveLength(3)
 })
 
 test('the policy changes the table and the profiles without touching code, and is stored', async ($, on) => {

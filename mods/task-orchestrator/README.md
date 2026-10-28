@@ -30,7 +30,7 @@ Orchestration starts **off**. `/orchestrate on` turns it on for this project's s
 - `/orchestrate providers [enable|disable <id>]`: the external-provider adapters. None is implemented in this version; enabling one is refused and the data-sharing disclosure is shown.
 - `/orchestrate cancel [<task>|all]`: cancels queued work and stops running workers through `TaskStop`.
 
-The model drives the rest through four tools: `dispatch` (a task with id, class, objective, inputs, allowed files, prohibited areas, deliverables, acceptance, dependencies, and optional role, model, effort and isolation), `collect` (waits for tasks to end and returns their reports), `status` and `cancel`.
+The model drives the rest through four tools: `dispatch` (a task with id, class, objective, inputs, allowed files, prohibited areas, deliverables, acceptance, dependencies, and optional role, model, effort and isolation), `collect` (waits for tasks to end and returns their reports), `status` and `cancel`. A `dispatch` under the id of a task that ended `blocked`, `failed` or `partial` retries it in its place, as retry 1 or 2 of 2; its dependants keep waiting on it. A dependant whose dependency ended without completing stays queued, and `status` and `collect` say which task holds it and how to retry it, rather than leaving it to wait in silence.
 
 ### Worker roles
 
@@ -69,6 +69,10 @@ The choices made with `/orchestrate` (on, policy, opt-ins, providers) are stored
 ## What is enforced and what is observed
 
 `ARCHITECTURE.md` has the full split. In short: limits, nesting, the write fence and the opt-in gates are code; the model and effort of a worker are set on its registered profile and are **requested** until the worker's first model request shows them, when `status` reports them as **observed**; a host setting such as `modelSettings.<model>.effortLevel` or `CLAUDE_CODE_SUBAGENT_MODEL` can change what a worker runs on, and the mod discloses it rather than overriding it. Token and cost totals are not reported: the mod has no telemetry to read.
+
+### In auto permission mode
+
+Auto mode's classifier judges an action against the model request that produced it. A worker the mod spawns itself has no such request, so in a desktop session in auto mode the spawn was refused with "the auto mode classifier gave no verdict for Agent", while the model's own Agent calls ran. The mod then issues the spawn once more, as the refusal asks. Refused again, the task is `blocked` and handed off: `dispatch` and `collect` print the Agent call to make (the role's agent type, the task's id as its name, the model) and the assignment to pass as its prompt. The coordinator's own Agent call is one the classifier evaluates, and the mod adopts it into the task: same id, same limits, same write fence. Nothing about the call is changed and no permission is added; if the classifier refuses the call, the task stays blocked. The adoption is tested against a stub and has not yet been seen in a live session. `ARCHITECTURE.md`, *Observed, not guaranteed*, has the details.
 
 ## Removal
 

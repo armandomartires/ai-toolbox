@@ -97,6 +97,63 @@ export const overall = (ledger: Ledger): { word: 'done' | 'partial' | 'blocked' 
   return { word: 'done', why: `${ledger.length} task(s) completed` }
 }
 
+/**
+ * The deny auto mode gives an action no model request asked for, as a plugin's
+ * spawn is: the engine says to issue it again once, as-is.
+ */
+export const isNoVerdict = (deny: string): boolean => /gave no verdict|did not ask for one/i.test(deny)
+
+/** What a re-dispatch under an existing id may retry: a task that ended without completing. */
+export const RETRYABLE: readonly TaskStatus[] = ['blocked', 'failed', 'partial']
+
+/** Whether `from` reaches `target` through its dependencies. */
+const reaches = (ledger: Ledger, from: string, target: string, seen = new Set<string>()): boolean => {
+  if (from === target) return true
+  if (seen.has(from)) return false
+  seen.add(from)
+  return (byId(ledger, from)?.deps ?? []).some(dep => reaches(ledger, dep, target, seen))
+}
+
+/**
+ * A dispatch: a new task added, or, under the id of a retryable task, that task
+ * queued again in its place as its next retry, its dependants still waiting on it.
+ */
+export const retryTask = (ledger: Ledger, fresh: Task, limits: Limits): { ledger: Ledger; refused?: string } => {
+  const old = byId(ledger, fresh.id)
+  if (!old) return addTask(ledger, fresh)
+  if (!RETRYABLE.includes(old.status)) return { ledger, refused: `task ${fresh.id} already exists and is ${old.status}; only a ${RETRYABLE.join(', ')} task is retried under its id` }
+  const capped = mayRetry(old, limits)
+  if (capped) return { ledger, refused: capped }
+  const missing = fresh.deps.filter(dep => !byId(ledger, dep))
+  if (missing.length) return { ledger, refused: `task ${fresh.id} depends on unknown task(s) ${missing.join(', ')}` }
+  const cycle = fresh.deps.filter(dep => reaches(ledger, dep, fresh.id))
+  if (cycle.length) return { ledger, refused: `task ${fresh.id} may not depend on ${cycle.join(', ')}: it waits on ${fresh.id}` }
+  const retries = old.retries + 1
+  const task: Task = { ...fresh, retries, escalations: old.escalations, createdAt: old.createdAt, notes: [...fresh.notes, `retry ${retries} of ${limits.maxRetries} after ${old.status}`] }
+  // Replaced, not merged: the old row's agent, report, reason and hand-off go.
+  return { ledger: ledger.map(one => (one.id === fresh.id ? task : one)) }
+}
+
+/**
+ * The task a queued one is stuck behind: a dependency, or a dependency's own,
+ * that ended without completing. It starts only once that one is retried and completes.
+ */
+export const stalledBy = (ledger: Ledger, task: Task, seen = new Set<string>()): Task | undefined => {
+  if (task.status !== 'queued') return undefined
+  for (const dep of task.deps.map(id => byId(ledger, id))) {
+    if (!dep || seen.has(dep.id)) continue
+    seen.add(dep.id)
+    if (ENDED.includes(dep.status) && dep.status !== 'completed') return dep
+    const deeper = stalledBy(ledger, dep, seen)
+    if (deeper) return deeper
+  }
+  return undefined
+}
+
+/** What a stalled task says: what it waits on and the two ways out. */
+export const stallText = (task: Task, root: Task): string =>
+  `waits on ${root.id} (${root.status}): dispatch ${root.id} again under its id to retry it, or cancel ${task.id}`
+
 /** Whether a retry or an escalation is still within the limits. */
 export const mayRetry = (task: Task, limits: Limits): string | undefined =>
   task.retries >= limits.maxRetries ? `task ${task.id} has used its ${limits.maxRetries} retries: stop and report` : undefined
@@ -116,7 +173,12 @@ export const line = (task: Task): string => {
 export const summary = (ledger: Ledger): string => (ledger.length ? ledger.map(line).join('\n') : 'No task in the ledger.')
 
 export const blockers = (ledger: Ledger, limits: Limits): string[] =>
-  ledger.filter(task => task.status === 'queued').map(task => `${task.id}: ${startBlocker(ledger, task, limits) ?? 'ready'}`)
+  ledger
+    .filter(task => task.status === 'queued')
+    .map(task => {
+      const root = stalledBy(ledger, task)
+      return `${task.id}: ${root ? stallText(task, root) : (startBlocker(ledger, task, limits) ?? 'ready')}`
+    })
 
 /** A row of the audit trail: no prompt, no report body, no secret. */
 export const auditRow = (task: Task) => ({
@@ -135,6 +197,7 @@ export const auditRow = (task: Task) => ({
   endedAt: task.endedAt,
   files: task.allowedFiles,
   reportStatus: task.report?.status,
+  handoff: task.handoff,
 })
 
 /** Tools whose call writes a file the hook can name. */

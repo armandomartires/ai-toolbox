@@ -429,6 +429,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0192-switchboard-sigmaorbital.md
 - [x] TASK-0193 — agent-watch 0.4.0: sessions, sub-sessions and their subagents
   .ai/tasks/TASK-0193-agent-watch-sessions.md
+- [x] TASK-0194 — task-orchestrator 0.3.0: a spawn auto mode refuses can be retried or handed off
+  .ai/tasks/TASK-0194-orchestrator-auto-mode-spawn.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

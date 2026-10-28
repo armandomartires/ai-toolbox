@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { addTask, mayEscalate, mayRetry, overall, overlap, runnable, setTask, startBlocker, writeBlocker } from './ledger'
+import { addTask, blockers, isNoVerdict, mayEscalate, mayRetry, overall, overlap, retryTask, runnable, setTask, stalledBy, startBlocker, writeBlocker } from './ledger'
 import type { Ledger, Task } from './ledger'
 import { DEFAULT_LIMITS } from './routing'
 
@@ -84,4 +84,48 @@ test('retries and escalations stop at their limits, and the run is done only whe
   expect(overall([task('b', { status: 'completed' }), task('t', { status: 'partial', role: 'tester' })]).word).toBe('partial')
   expect(overall([task('b', { status: 'completed' }), task('r', { status: 'queued' })]).word).toBe('running')
   expect(overall([task('b', { status: 'completed' }), task('r', { status: 'completed' })]).word).toBe('done')
+})
+
+const NO_VERDICT = 'The server-side auto mode classifier gave no verdict for Agent: the request that produced this action did not ask for one. Issue the action again once, as-is; if it is denied again, continue with other tasks that don\'t require it and tell the user that auto mode could not evaluate it.'
+
+test('auto mode\'s no-verdict deny is told from every other refusal', () => {
+  expect(isNoVerdict(NO_VERDICT)).toBe(true)
+  expect(isNoVerdict('model haiku is not available')).toBe(false)
+  expect(isNoVerdict('3 workers are already running')).toBe(false)
+})
+
+test('a re-dispatch under the id of a task that ended without completing is its next retry, within the limit', () => {
+  const ledger: Ledger = [task('T1', { status: 'blocked', reason: 'spawn refused', handoff: true, createdAt: 5 }), task('T2', { deps: ['T1'] })]
+  const again = retryTask(ledger, task('T1', { objective: 'look harder', createdAt: 9 }), DEFAULT_LIMITS)
+  expect(again.refused).toBeUndefined()
+  const row = again.ledger[0]!
+  expect(row).toMatchObject({ id: 'T1', status: 'queued', retries: 1, objective: 'look harder', createdAt: 5 })
+  expect(row.handoff).toBeUndefined()
+  expect(row.reason).toBeUndefined()
+  expect(row.notes).toContain('retry 1 of 2 after blocked')
+  // Its dependant keeps waiting on it, in the same place.
+  expect(again.ledger.map(one => one.id)).toEqual(['T1', 'T2'])
+  expect(runnable(again.ledger, DEFAULT_LIMITS).map(one => one.id)).toEqual(['T1'])
+  for (const status of ['failed', 'partial'] as const) expect(retryTask([task('T1', { status })], task('T1'), DEFAULT_LIMITS).refused).toBeUndefined()
+  for (const status of ['completed', 'cancelled', 'queued', 'running'] as const)
+    expect(retryTask([task('T1', { status })], task('T1'), DEFAULT_LIMITS).refused).toBe(`task T1 already exists and is ${status}; only a blocked, failed, partial task is retried under its id`)
+  expect(retryTask([task('T1', { status: 'failed', retries: 2 })], task('T1'), DEFAULT_LIMITS).refused).toContain('used its 2 retries')
+  // A retry may not wait on itself or on a task that waits on it.
+  expect(retryTask(ledger, task('T1', { deps: ['T2'] }), DEFAULT_LIMITS).refused).toBe('task T1 may not depend on T2: it waits on T1')
+  expect(retryTask(ledger, task('T1', { deps: ['T1'] }), DEFAULT_LIMITS).refused).toContain('may not depend on T1')
+  // A new id is an ordinary add.
+  expect(retryTask(ledger, task('T3'), DEFAULT_LIMITS).ledger.map(one => one.id)).toEqual(['T1', 'T2', 'T3'])
+})
+
+test('a dependant stuck behind a task that ended without completing says so, through every level', () => {
+  const ledger: Ledger = [task('T1', { status: 'blocked' }), task('T2', { deps: ['T1'] }), task('T3', { deps: ['T2'] }), running('T4'), task('T5', { deps: ['T4'] })]
+  expect(stalledBy(ledger, ledger[1]!)?.id).toBe('T1')
+  expect(stalledBy(ledger, ledger[2]!)?.id).toBe('T1')
+  expect(stalledBy(ledger, ledger[4]!)).toBeUndefined()
+  expect(stalledBy(setTask(ledger, 'T1', { status: 'completed' }), ledger[1]!)).toBeUndefined()
+  expect(blockers(ledger, DEFAULT_LIMITS)).toEqual([
+    'T2: waits on T1 (blocked): dispatch T1 again under its id to retry it, or cancel T2',
+    'T3: waits on T1 (blocked): dispatch T1 again under its id to retry it, or cancel T3',
+    'T5: waiting on T4',
+  ])
 })

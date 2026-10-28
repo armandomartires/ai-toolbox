@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { COORDINATOR_PROTOCOL, buildContract, parseReport } from './contract'
 import type { Assignment } from './contract'
-import { ENDED, activeCount, addTask, auditRow, blockers, byAgent, byId, line, overall, runnable, setTask, summary, WRITE_TOOLS, writeBlocker } from './ledger'
+import { ENDED, activeCount, addTask, auditRow, blockers, byAgent, byId, isNoVerdict, line, overall, retryTask, runnable, setTask, stallText, stalledBy, startBlocker, summary, WRITE_TOOLS, writeBlocker } from './ledger'
 import type { Ledger, Task } from './ledger'
 import { detectOverrides, OVERRIDE_ENV, overridesText } from './overrides'
 import { enableBlocker, providerById, providersText } from './providers'
@@ -237,20 +237,38 @@ const contractOf = (rows: Ledger, task: Task): string => {
   return buildContract(task, assignment, config.limits, ROLE_PROFILES[task.role].maxTurns, results)
 }
 
+/** HEAD, for an isolated worker: what its worktree holds. */
+const baseOf = async ($: EngineInterface, task: Task): Promise<string | undefined> => {
+  if (!task.isolated) return undefined
+  const git = await $.process.run(['git', 'rev-parse', 'HEAD']).catch(() => undefined)
+  return git && git.exitCode === 0 ? git.stdout.trim() : undefined
+}
+
+/** The Agent call that starts a handed-off task, as the coordinator makes it. */
+const handoffCall = (task: Task): string =>
+  `subagent_type "${PLUGIN}:${task.role}", name "${task.id}", model "${task.requested.model}", description "${task.description}", prompt: the assignment below, unchanged`
+
+const handoffReason = (task: Task): string =>
+  `auto mode gave the orchestrator's spawn no verdict, twice: a plugin's spawn has no model request behind it. Start it yourself with the Agent tool (${handoffCall(task)}); the orchestrator adopts that spawn into ${task.id} under the same limits. Or cancel ${task.id}`
+
+/** A handed-off task's assignment, for the coordinator to pass as the Agent prompt. */
+const handoffText = (task: Task): string[] => (task.handoff && task.status === 'blocked' ? [`assignment for ${task.id} (the Agent call's prompt, unchanged):`, task.prompt] : [])
+
 /** Starts one queued task: its contract, its profile, its base revision, the spawn. */
 const start = async ($: EngineInterface, task: Task): Promise<void> => {
   const problem = await ensureProfile($, task.role, task.requested.model, task.requested.effort as Effort, task.isolated)
   if (problem) return settle($, task, { status: 'blocked', reason: problem, endedAt: await $.clock.now() })
   task = { ...task, prompt: contractOf(await read($, ledger), task) }
-  let baseRevision: string | undefined
-  if (task.isolated) {
-    const git = await $.process.run(['git', 'rev-parse', 'HEAD']).catch(() => undefined)
-    baseRevision = git && git.exitCode === 0 ? git.stdout.trim() : undefined
-  }
+  const baseRevision = await baseOf($, task)
   const at = await $.clock.now()
   await update($, ledger, rows => setTask(rows, task.id, { status: 'running', startedAt: at, baseRevision, prompt: task.prompt }))
-  const ran = await $.agent.spawn({ subagentType: `${PLUGIN}:${task.role}`, prompt: task.prompt, description: task.description, model: task.requested.model, name: task.id }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }) as { deny: string })
+  const spawn = () => $.agent.spawn({ subagentType: `${PLUGIN}:${task.role}`, prompt: task.prompt, description: task.description, model: task.requested.model, name: task.id }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }) as { deny: string })
+  let ran = await spawn()
+  // Auto mode's no-verdict deny asks for the action again once, as-is: the
+  // same call through the same check, nothing added to it.
+  if (ran.deny !== undefined && isNoVerdict(ran.deny)) ran = await spawn()
   if (ran.deny !== undefined) {
+    if (isNoVerdict(ran.deny)) return settle($, task, { status: 'blocked', handoff: true, reason: handoffReason(task), endedAt: await $.clock.now() })
     if (/model/i.test(ran.deny)) await update($, unavailable, list => (list.includes(task.requested.model) ? list : [...list, task.requested.model]))
     return settle($, task, { status: 'blocked', reason: `spawn refused: ${ran.deny}`, endedAt: await $.clock.now() })
   }
@@ -258,15 +276,22 @@ const start = async ($: EngineInterface, task: Task): Promise<void> => {
   await settle($, task, { agentId: ran.agentId, resolvedModel: ran.model })
 }
 
-/** Starts whatever may run now, one after the other. */
-const tick = async ($: EngineInterface): Promise<void> => {
-  if (!(await read($, enabled))) return
+/** Starts whatever may run now, one after the other; returns the tasks whose start was refused. */
+const tick = async ($: EngineInterface): Promise<Task[]> => {
+  const refused: Task[] = []
+  if (!(await read($, enabled))) return refused
   for (;;) {
     const next = runnable(await read($, ledger), config.limits)[0]
-    if (!next) return
+    if (!next) return refused
     await start($, next)
+    const now = byId(await read($, ledger), next.id)
+    if (now?.status === 'blocked') refused.push(now)
   }
 }
+
+/** Tells the coordinator, in a hidden note, what it did not ask for: a task that ended or could not start. */
+const note = async ($: EngineInterface, text: string) =>
+  $.session.append({ message: { type: 'user', content: [{ type: 'text', text: `[task-orchestrator] ${text}` }] } }).catch(() => undefined)
 
 type DispatchInput = Record<string, unknown>
 
@@ -311,13 +336,16 @@ const answerDispatch = async ($: EngineInterface, input: DispatchInput): Promise
     notes: decision.notes,
     prompt: '',
   }
-  const added = addTask(rows, task)
+  // Under the id of a task that ended without completing, a dispatch is its next retry.
+  const added = retryTask(rows, task, config.limits)
   if (added.refused) return { result: `blocked: ${added.refused}` }
   assignments.set(id, assignment)
   await update($, ledger, () => added.ledger)
   await tick($)
   const now = byId(await read($, ledger), id) ?? task
-  return { result: [line(now), ...now.notes.map(note => `note: ${note}`)].join('\n') }
+  const after = await read($, ledger)
+  const root = stalledBy(after, now)
+  return { result: [line(now), ...now.notes.map(one => `note: ${one}`), ...(root ? [`stalled: ${stallText(now, root)}`] : []), ...handoffText(now)].join('\n') }
 }
 
 const answerCollect = async ($: EngineInterface, input: DispatchInput): Promise<{ result: string }> => {
@@ -327,7 +355,8 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput): Promise<
   const targets = (rows: Ledger) => (ids.length ? rows.filter(task => ids.includes(task.id)) : rows)
   for (;;) {
     const rows = await read($, ledger)
-    const pending = targets(rows).filter(task => !ENDED.includes(task.status))
+    // A task stuck behind one that ended without completing would wait out the timeout.
+    const pending = targets(rows).filter(task => !ENDED.includes(task.status) && !stalledBy(rows, task))
     if (!pending.length || (await $.clock.now()) >= deadline) break
     // A `$` call: the wait is free of the hook's budget, which a plain
     // promise would exhaust after ten seconds.
@@ -344,6 +373,11 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput): Promise<
           line(task),
           ...(task.report ? [`  findings: ${task.report.findings || '-'}`, `  files: ${task.report.files || '-'}`, `  checks run: ${task.report.checks || '-'}`, `  evidence: ${task.report.evidence || '-'}`, `  risks: ${task.report.risks || '-'}`] : []),
           ...(task.status === 'running' ? ['  still running when collect timed out'] : []),
+          ...(() => {
+            const root = stalledBy(rows, task)
+            return root ? [`  stalled: ${stallText(task, root)}`] : []
+          })(),
+          ...handoffText(task),
         ].join('\n'),
       ),
       `run: ${word.word} (${word.why})`,
@@ -526,11 +560,24 @@ export const register: Register = on => {
     const role = type.slice(PLUGIN.length + 1) as Role
     const profile = ROLE_PROFILES[role]
     if (!profile) return next(e)
-    if (activeCount(rows) >= config.limits.maxConcurrent) return { deny: `${config.limits.maxConcurrent} workers are already running; dispatch it through the orchestrator's dispatch tool, which queues it` }
     if (e.model) {
       const gated = gate(e.model, 'low', config)
       if (gated) return { deny: gated }
     }
+    // The coordinator's own Agent call for a task auto mode refused the mod: the
+    // classifier judged this call; it is adopted into the task's row, unchanged.
+    const held = e.name ? byId(rows, e.name) : undefined
+    if (held?.handoff && held.status === 'blocked') {
+      if (held.role !== role) return { deny: `${held.id} waits for a hand-off as ${PLUGIN}:${held.role}, not ${type}` }
+      const blocker = startBlocker(rows, { ...held, status: 'queued' }, config.limits)
+      if (blocker) return { deny: `${held.id} cannot start now: ${blocker}` }
+      const ran = await next(e)
+      if (ran.deny !== undefined || !ran.agentId) return ran
+      const at = await $.clock.now()
+      await settle($, held, { status: 'running', handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, agentId: ran.agentId, resolvedModel: ran.model, baseRevision: await baseOf($, held), notes: [...held.notes, 'started by the coordinator\'s Agent call: auto mode gave the orchestrator\'s spawn no verdict'] })
+      return ran
+    }
+    if (activeCount(rows) >= config.limits.maxConcurrent) return { deny: `${config.limits.maxConcurrent} workers are already running; dispatch it through the orchestrator's dispatch tool, which queues it` }
     const ran = await next(e)
     if (ran.deny !== undefined || !ran.agentId) return ran
     const at = await $.clock.now()
@@ -609,10 +656,8 @@ export const register: Register = on => {
     const reason = e.reason !== 'answer' ? `the worker's turn ended by ${e.reason}` : report.status === 'unknown' ? 'the worker gave no Status line; read its report' : undefined
     await settle($, task, { status, report, reason, endedAt: await $.clock.now() })
     $.ui.toast(`${task.id} · ${task.role.toUpperCase()} · ${status.toUpperCase()}${report.next ? ` · ${report.next}` : ''}`)
-    await $.session
-      .append({ message: { type: 'user', content: [{ type: 'text', text: `[task-orchestrator] ${line(byId(await read($, ledger), task.id) ?? task)}. Call collect for the report.` }] } })
-      .catch(() => undefined)
-    await tick($)
+    await note($, `${line(byId(await read($, ledger), task.id) ?? task)}. Call collect for the report.`)
+    for (const refused of await tick($)) await note($, `${line(refused)}. Call collect for what to do.`)
     return done
   })
 }

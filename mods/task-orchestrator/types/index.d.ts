@@ -79,6 +79,11 @@ export type Task = {
   report?: Report
   /** Why the task is blocked, failed or cancelled when no report says. */
   reason?: string
+  /**
+   * Blocked because auto mode gave the mod's spawn no verdict: it waits for the
+   * coordinator's own Agent call with the role's type and the task's id as name.
+   */
+  handoff?: boolean
   /** Every substitution the router made. */
   notes: string[]
   /** The whole assignment, kept to start a queued task later; never audited. */
