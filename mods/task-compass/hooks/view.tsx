@@ -8,7 +8,8 @@ import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, focusOf, isRa
 import type { Row } from './rails'
 import { iconOf, memberCaption, sessionTree, toneToken } from './sessions'
 import type { Member, SessionNode } from './sessions'
-import { IDENTITY, agentState, color, kit, recall } from './sigma'
+import { IDENTITY, agentState, color, kit, recall, theme } from './sigma'
+import { arcs, chartAgents, chartRunning, sunburstCells, sunburstSvg } from './sunburst'
 
 // The same $.state values register.tsx writes: the engine lists a module's
 // reads and writes from atoms declared in that file.
@@ -41,6 +42,9 @@ const AGENTS_SHOWN = 6
 const BAR_MAX = 12
 /** The lines the Sessions tree may take beyond its session heads and the ledger's tasks. */
 const TREE_LINES = 16
+/** The pane rows an `Svg` sunburst is counted as, and the room left for the rest below which the chart is hidden. */
+const CHART_SVG_ROWS = 9
+const CHART_FLOOR = 6
 
 /**
  * A subagent's glyph, as agent-watch draws it: its identity by the order it
@@ -129,6 +133,8 @@ export const registerPane = (on: On) => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e)
     const { Box, Button, Text } = ui
+    // `Raster` is the terminal's alone and `Svg` the remote surfaces'; each is drawn only on its own.
+    const { Raster, Svg } = ui as unknown as Record<'Raster' | 'Svg', (props: Record<string, unknown>) => never>
     const { badge, frame, label, meter, panel } = kit(ui, e.surface)
     const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled, from, orchTasks, orchPolicy, orchOn, watched, watchClock, tick, watchList, watchRunList, watchTone] = await Promise.all([
       read($, sprints),
@@ -171,9 +177,25 @@ export const registerPane = (on: On) => {
       ? sessionTree({ rows: watched, runs: watchRunList, tones: watchTone, tasks: watchList, ledger: orchTasks, policy: orchPolicy, isOrchOn: orchOn })
       : []
     const clock = watchClock > 0 ? watchClock : at
-    const trimmed = trimTree(tree, TREE_LINES, clock)
+    let trimmed = trimTree(tree, TREE_LINES, clock)
+    // The sunburst above the tree: it draws the untrimmed tree, and is hidden
+    // when the pane would be left under its floor.
+    const chart = hasTree ? arcs(tree, watchTone) : []
+    const chartColumns = Math.max(4, Math.min(18, cols - 2))
+    const chartPx = Math.min(180, cols * 7)
+    const chartRows = isTerminal ? Math.max(2, Math.floor(chartColumns / 2)) : CHART_SVG_ROWS
+    const fits = (lines: number) => rows - (lines + 3) - 5 - (chartRows + 1) >= CHART_FLOOR
+    let hasChart = chart.length > 1 && typeof (isTerminal ? Raster : Svg) === 'function' && fits(trimmed.lines)
+    // The tree's member lines yield ("+N more") before the chart is hidden.
+    if (chart.length > 1 && !hasChart) {
+      const smaller = trimTree(tree, Math.max(8, Math.min(TREE_LINES, rows - 3 - 5 - (chartRows + 1) - CHART_FLOOR)), clock)
+      if (fits(smaller.lines)) {
+        trimmed = smaller
+        hasChart = true
+      }
+    }
     const panelLines = hasTree ? trimmed.lines : shownAgents.length
-    const room = Math.max(6, rows - (panelLines + 3) - 5)
+    const room = Math.max(CHART_FLOOR, rows - (panelLines + 3 + (hasChart ? chartRows + 1 : 0)) - 5)
     const scrollTo = (start: number | null) => () => void update($, railStart, () => start)
 
     // A run of the rail, `height` rows tall. The terminal joins `│` cells into
@@ -509,7 +531,24 @@ export const registerPane = (on: On) => {
           {panel(
             { title: 'Sessions', code, width: cols },
             hasTree ? (
-              <Box flexDirection="column">{tree.map(sessionHead)}</Box>
+              <Box flexDirection="column">
+                {hasChart && (
+                  <Box flexDirection="row" justifyContent="center" marginTop={1}>
+                    {isTerminal ? (
+                      <Raster key="sunburst" columns={chartColumns} rows={chartRows} cells={sunburstCells(chart, chartColumns, chartRows, theme())} />
+                    ) : (
+                      <Svg
+                        source={sunburstSvg(chart, chartPx, theme())}
+                        alt={`Sessions: ${tree.length} sessions, ${chartAgents(chart)} agents, ${chartRunning(chart)} running`}
+                        width={chartPx}
+                        height={chartPx}
+                        isInteractive
+                      />
+                    )}
+                  </Box>
+                )}
+                {tree.map(sessionHead)}
+              </Box>
             ) : (
               <Box flexDirection="column">
                 {merged.length === 0 && <Text color={color('text-3')}>None running.</Text>}

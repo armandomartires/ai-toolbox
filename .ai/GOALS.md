@@ -437,6 +437,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0196-compass-orchestrator.md
 - [x] TASK-0197 — task-compass 0.6.0: the Sessions tree, from agent-watch
   .ai/tasks/TASK-0197-compass-sessions-tree.md
+- [x] TASK-0198 — task-compass 0.7.0: a sunburst of the Sessions tree
+  .ai/tasks/TASK-0198-compass-sunburst.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

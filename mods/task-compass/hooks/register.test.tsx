@@ -581,6 +581,45 @@ test('the Sessions panel draws agent-watch\'s tree: this session, the ORCH run, 
   }
 })
 
+test('the Sessions panel draws the tree as a sunburst: an Svg on the desktop, a Raster of braille on the terminal', { plugins: [{ name: 'agent-watch', register: watcher }, { name: 'task-orchestrator', register: orchestrator }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: 'running' })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(4_000)
+
+  const tall = { ...PANE.props, scroll: { offset: 0, bodyRows: 70 } }
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop', props: tall })
+  const svg = await desktop.find({ type: 'Svg' })
+  expect(svg).toBeDefined()
+  expect(svg?.props.source).toMatch(/^<svg /)
+  expect(svg?.props.source).toContain(DARK.violet)
+  expect(String(svg?.props.alt)).toMatch(/running/)
+  expect(svg?.props.isInteractive).toBe(true)
+  expect(await desktop.find({ type: 'Raster' })).toBeUndefined()
+  await desktop.unmount()
+
+  const terminal = await $.ui.mount({ ...PANE, surface: 'terminal', props: tall })
+  const raster = await terminal.find({ type: 'Raster' })
+  expect(raster).toBeDefined()
+  expect(raster?.props).toMatchObject({ columns: 18, rows: 9 })
+  expect(atob(String(raster?.props.cells)).length).toBe(18 * 9 * 12)
+  expect(await terminal.find({ type: 'Svg' })).toBeUndefined()
+  await terminal.unmount()
+
+  // At the default 40 rows the chart is there: the tree's members yield first.
+  const dflt = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await dflt.find({ type: 'Svg' })).toBeDefined()
+  await dflt.unmount()
+  const dfltTerminal = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await dfltTerminal.find({ type: 'Raster' })).toBeDefined()
+  await dfltTerminal.unmount()
+
+  // A pane too short for it leaves the chart out.
+  const short = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, scroll: { offset: 0, bodyRows: 30 } } })
+  expect(await short.find({ type: 'Svg' })).toBeUndefined()
+  await short.unmount()
+})
+
 test('without agent-watch\'s agents the Sessions panel is the flat list', { plugins: [{ name: 'agent-watch', register: emptyWatcher }] }, async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   engine(on, { value: 'running' })
