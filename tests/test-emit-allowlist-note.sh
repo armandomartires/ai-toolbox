@@ -25,6 +25,7 @@ check "it lists the closer's staging pattern verbatim"      'grep -qxF -- "- \`g
 check "it lists the closer's commit pattern verbatim"       'grep -qxF -- "- \`git commit -m *\`" "$T/closer.md"'
 check "every closer pattern is listed"                      '[ "$(grep -c "^- \`git " "$T/closer.md")" -ge 6 ]'
 check "it says to quote path arguments"                     'grep -q "double quotes" "$T/closer.md"'
+check "it says to run one command per call"                 'grep -q "Run one command per call" "$T/implementer.md"'
 check "a role with test_allow lists those patterns too"     'grep -qxF "$H" "$T/qa-test.md"'
 check "a role without a shell allowlist gets no section"    '! grep -qF "$H" "$T/task-planner.md"'
 check "the section comes after the role body, not before"   '[ "$(grep -n "^# closer" "$T/closer.md" | cut -d: -f1)" -lt "$(grep -nxF "$H" "$T/closer.md" | cut -d: -f1)" ]'

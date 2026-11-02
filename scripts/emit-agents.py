@@ -401,6 +401,11 @@ def allowlist_note(patterns):
             ] + ["- `%s`" % p for p in patterns] + [""] + ([
             "So do not reach for %s: each is denied and costs a round. Read files with "
             "your read tool." % ", ".join("`%s`" % u for u in denied), ""] if denied else []) + [
+            "**Run one command per call** — no `;`, `&&`, `||`, `|` or commands on "
+            "separate lines in one call, and no `echo` between them as a label. OpenCode "
+            "checks every part of a compound command and denies the whole call if one part "
+            "is not listed (`TASK-0209`: `echo \"---NAME-ONLY---\"; git diff --name-only` "
+            "was denied, so the diff never reached the adjudicator).", "",
             "**Write path arguments in double quotes** — `git add -- \".ai/tasks/x.md\"`. "
             "OpenCode 1.18.31 was observed denying the unquoted form of a path starting "
             "with a dot and allowing the quoted one (`TASK-0092` finding 12).", ""]
