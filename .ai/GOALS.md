@@ -393,7 +393,7 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0174-lean-session-start-context.md
 - [x] TASK-0175 — Track unexercised capability as backlog rows, and cap it
   .ai/tasks/TASK-0175-cap-unexercised-capability.md
-- [!] TASK-0176 — Exercise the GitLab tracker and a forge unattended run for real
+- [x] TASK-0176 — Exercise the GitLab tracker and a forge unattended run for real
   .ai/tasks/TASK-0176-exercise-the-gitlab-tracker.md
 - [x] TASK-0177 — Merge claude-mods, and develop mods here from now on
   .ai/tasks/TASK-0177-merge-claude-mods.md
@@ -462,8 +462,6 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
-- B-056 Unexercised: the `gitlab` and `github` work trackers and the unattended run's issue snapshot (`ADR-0037`, `ADR-0038`)
-  .ai/planning/BACKLOG.md
 - B-057 Unexercised: secrets `provision`, and `put` to GitLab and GitHub (`TASK-0156`, `TASK-0157`)
   .ai/planning/BACKLOG.md
 - B-058 Unexercised: an `ansible-ops` guest-level change behind a real PVE snapshot (`TASK-0116`)
@@ -477,4 +475,6 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - B-064 `task-compass`'s README has no screenshots
   .ai/planning/BACKLOG.md
 - B-065 task-orchestrator's `collect` fails while its tasks run
+  .ai/planning/BACKLOG.md
+- B-067 The OpenCode driver journals every tool error as `tool-denied`
   .ai/planning/BACKLOG.md

@@ -101,5 +101,5 @@ The wiki is a separate git repository, `<project>.wiki.git`. Clone it beside the
 **During the run**, the closer updates the snapshot as it would a brief, and commits with `#<id>`. No role runs `glab` or `gh`.
 
 **After the run**, the handover ends with *Forge updates, NOT taken*. Once the push to every remote is confirmed:
-- **Closed issue:** replace its description with the snapshot, post the task report as its closing comment, close it, then remove the snapshot with `git rm` in its own commit. Git keeps it.
+- **Closed issue:** replace its description with the snapshot, post the task report as its closing comment, close it and remove its `status::` label (a closed issue carries none, above), then remove the snapshot with `git rm` in its own commit. Git keeps it.
 - **Parked issue:** post the park reason, set `status::blocked`, and keep the snapshot until the task is re-queued.
