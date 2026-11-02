@@ -598,6 +598,34 @@ class TestVerdictDispatch(Harness):
         self.assertIn("closer refused", self.events("park")[0]["reason"])
 
 
+class TestChangesAndPark(Harness):
+    """TASK-0210: the driver records the working tree; a park matches by namespace."""
+
+    def test_the_change_list_is_recorded_and_handed_to_both_judges(self):
+        self.make_repo()
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        with open(os.path.join(self.repo, ".run", "r1", "evidence.txt")) as fh:
+            lines = [l for l in fh.read().splitlines() if l.startswith("CHANGES ")]
+        self.assertEqual(len(lines), 1, lines)
+        self.assertTrue(lines[0].startswith("CHANGES TASK-0001.a1 PATHS=1 LOG="), lines[0])
+        with open(lines[0].split("LOG=", 1)[1]) as fh:
+            self.assertEqual(fh.read(), " M src/a.txt\n")
+        for role in ("refuter", "adjudicator"):
+            got = self.prompt_inputs(self.invocations(role)[0])
+            self.assertEqual(got.get("changes_line"), lines[0], role)
+
+    def test_a_multi_line_park_reason_parks_without_a_halt(self):
+        self.make_repo()
+        agents = happy()
+        agents["adjudicator"] = [{"text": fence({
+            "verdict": "park", "reasoning": "criterion 5 is unevidenced.\n\nAccept  declined.",
+            "overrides": [], "adhoc_titles": []})}]
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        self.assertEqual(self.events("halt"), [])
+        self.assertEqual(len(self.events("park")), 1)
+        self.assertEqual(self.porcelain(), "")
+
+
 class TestIdentityAndPreconditions(Harness):
     FALLBACK = "Agent task-planner is a subagent, not a primary agent. Falling back to default agent"
 

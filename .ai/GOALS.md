@@ -457,6 +457,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0207-compass-slots-agent-watch.md
 - [x] TASK-0209 — An allowlisted role runs one shell command per call
   .ai/tasks/TASK-0209-one-command-per-call.md
+- [x] TASK-0210 — The OpenCode driver records what changed, and parks by namespace
+  .ai/tasks/TASK-0210-driver-records-the-change.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

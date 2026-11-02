@@ -38,6 +38,12 @@ named it a finding for the human.
    finishes — the gate's own line, verbatim. The `gate-runner` reads the
    evidence file and reports from it; **it never writes it**, whichever of the
    two started the gate.
+3. **Amended 2026-11-02 (`TASK-0210`), the human's "Fix driver, rerun":**
+   a driver with a shell also writes one `CHANGES` line per attempt, after
+   the implementer, naming a log of the verbatim `git status --porcelain`.
+   Like a gate's line it is written by code at the moment, never by an
+   agent, so a criterion about which files changed has evidence. Both
+   `TASK-0176` pilot runs parked a correct change for want of it.
 
 ## Consequences
 - **Both bindings conform as built.** Neither needs code changes; their

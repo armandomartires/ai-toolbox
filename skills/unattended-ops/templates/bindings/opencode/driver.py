@@ -530,6 +530,31 @@ class Driver:
                 report.get("reason") if isinstance(report, dict) else "no parseable return"))
         return report
 
+    def record_changes(self, task, attempt):
+        """After step 6 — the working tree, recorded by the driver (TASK-0210).
+
+        No role can evidence a criterion such as "no other file changes": the
+        adjudicator has no shell, and an implementer's porcelain is a claim
+        (references/evidence.md). The driver has one, so it writes the verbatim
+        porcelain to a log beside the evidence file and one CHANGES line naming
+        it — the shape a gate's evidence line has, written the same way: by
+        code, at the moment, never by an agent. Admissible for which paths
+        changed, never for a figure.
+        """
+        handle = "%s.a%d" % (task["id"], attempt)
+        root = os.path.dirname(self.b.evidence)
+        log = os.path.join(root, "changes", handle + ".txt")
+        os.makedirs(os.path.dirname(log), exist_ok=True)
+        porcelain = self.sh(["git", "status", "--porcelain", "--untracked-files=all"]).stdout
+        with open(log, "w", encoding="utf-8") as fh:
+            fh.write(porcelain)
+        paths = [l[3:] for l in porcelain.splitlines() if len(l) > 3]
+        line = "CHANGES %s PATHS=%d LOG=%s" % (handle, len(paths), log)
+        with open(self.b.evidence, "a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+        self.journal("changes", task=task["id"], attempt=attempt, paths=paths)
+        return line
+
     def run_gate(self, handle, gate):
         """Invoke the one entry point and poll it (references/long-gates.md).
 
@@ -589,15 +614,16 @@ class Driver:
             '"evidence_line": "<verbatim>", "figures": ["<verbatim>"]}]}'), validate=check)
         return report["gates"]
 
-    def step8_refute(self, task, impl, gates):
+    def step8_refute(self, task, impl, gates, changes):
         """Step 8 — a null, empty or unparseable return is refuted: true."""
         try:
             got = self.ask("refuter", prompt(
                 "refuter", "Step 8. Try to refute the claim that task %s is complete. "
-                "Uncertain means refuted: true." % task["id"],
+                "Uncertain means refuted: true. changes_line is the driver's record of "
+                "the working tree; its LOG= file lists every changed path." % task["id"],
                 {"task_file": task["file"], "diff_base": self.git("rev-parse", "--short", "HEAD"),
                  "implementer_report": impl, "evidence_file": self.b.evidence,
-                 "gate_reports": gates["report"]},
+                 "gate_reports": gates["report"], "changes_line": changes},
                 '{"refuted": true | false, "unevidenced_criteria": [], '
                 '"undeclared_changes": [], "breached_invariants": []}'))
         except Mechanical as exc:
@@ -615,7 +641,7 @@ class Driver:
             got["refuted"] = True   # loop.md step 8: true when any list is non-empty
         return got
 
-    def step9_adjudicate(self, task, attempt, impl, gates, refutation):
+    def step9_adjudicate(self, task, attempt, impl, gates, refutation, changes):
         """Step 9 — exactly one verdict; unparseable or out-of-enum -> park."""
         # B-035/TASK-0106: the standard this role applies travels in the
         # prompt, because the role cannot open the skill that owns it.
@@ -626,11 +652,14 @@ class Driver:
             "skills/unattended-ops/references/verdicts.md and "
             "references/evidence.md, which own it. Judge against the task "
             "file's own acceptance criteria, on the evidence file and the "
-            "diff — never on recollection.\n\n"
+            "diff — never on recollection. changes_line is the driver's record of "
+            "the working tree after the implementer: its LOG= file is the diff's "
+            "path list.\n\n"
             "--- BEGIN DECISION STANDARD ---\n%s\n--- END DECISION STANDARD ---"
             % (task["id"], attempt, ATTEMPT_BOUND, decision_standard()),
             {"task_file": task["file"], "implementer_report": impl,
-             "gate_reports": gates["report"], "refutation": refutation},
+             "gate_reports": gates["report"], "refutation": refutation,
+             "evidence_file": self.b.evidence, "changes_line": changes},
             '{"verdict": "accept" | "retry" | "park" | "raise-adhoc" | "halt-run", '
             '"reasoning": "...", "overrides": [{"finding": "...", "reason": "..."}], '
             '"adhoc_titles": ["<title only, no identifier>"], "guidance": "..."}')
@@ -743,11 +772,13 @@ class Driver:
     def step11_park(self, task, reason):
         """Step 11 — park-steward stashes; the driver checks the tree is clean."""
         self.parked.append({"id": task["id"], "reason": reason, "file": task.get("file")})
-        message = (self.b.stash_namespace.replace("<run-id>", self.b.run_id)
-                   .replace("<task-id>", task["id"]) + " " + reason)
+        namespace = (self.b.stash_namespace.replace("<run-id>", self.b.run_id)
+                     .replace("<task-id>", task["id"]))
+        message = namespace + " " + reason
         if not self.porcelain():
             self.journal("park", task=task["id"], reason=reason, stash=None)
             return
+        stashes = len(self.git("stash", "list").splitlines())
         try:
             got = self.ask("park-steward", prompt(
                 "park-steward", "Step 11. Stash every uncommitted change, untracked files "
@@ -756,7 +787,13 @@ class Driver:
                 '"stash_entry": "...", "paths": ["..."]}'))
         except Mechanical as exc:
             got = {"error": str(exc)}
-        if self.porcelain() or message not in self.git("stash", "list"):
+        # A new stash whose subject carries the namespace, not the whole
+        # message: `git stash list` shows a message's first line only, and a
+        # role's shell may reflow whitespace in it (TASK-0210; both pilot
+        # runs of TASK-0176 halted on a clean park this way).
+        listed = self.git("stash", "list").splitlines()
+        if (self.porcelain() or len(listed) != stashes + 1
+                or (namespace + " ") not in listed[0] + " "):
             # return-schemas.md: if the tree cannot be made clean the run
             # cannot safely continue.
             raise Halt("park of %s did not leave a clean tree behind a named stash: %r"
@@ -777,9 +814,10 @@ class Driver:
                                  gates=[g["state"] for g in gates["results"]])
                     return
                 impl = self.step6_implement(task, plan)
+                changes = self.record_changes(task, attempt)
                 gates = self.step7_gates(task, attempt)
-                refutation = self.step8_refute(task, impl, gates)
-                verdict = self.step9_adjudicate(task, attempt, impl, gates, refutation)
+                refutation = self.step8_refute(task, impl, gates, changes)
+                verdict = self.step9_adjudicate(task, attempt, impl, gates, refutation, changes)
                 v = verdict["verdict"]
                 if v == "accept":
                     self.step10_close(task, impl, gates)

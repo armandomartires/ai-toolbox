@@ -46,6 +46,12 @@ without this rule; this is its mechanism.
   verbatim evidence line, and any figure the task's criteria would want. The
   first four come from the evidence line; a figure comes from the log that
   line names, under the three conditions above.
+- **Which paths changed**, from a `CHANGES <handle> PATHS=<n> LOG=<path>`
+  line, which the driver writes after the implementer, where it has a shell,
+  with the verbatim `git status --porcelain` at `LOG=` (`ADR-0025`). It
+  answers a criterion about the file set, such as "no other file changes";
+  it is never a source for a figure, and an agent's own porcelain stays a
+  recollection.
 
 ## What is not admissible, however plausible
 
