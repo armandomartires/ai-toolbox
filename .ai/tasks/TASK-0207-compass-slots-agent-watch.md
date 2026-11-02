@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-02
 - Updated: 2026-11-02
@@ -46,7 +46,7 @@ Stage 2 of two. Compass's pane draws its Sprints board and then what agent-watch
 - [x] With both mods in either load order, Compass's pane shows its board, then agent-watch's meter and Sessions panel (kit tests with stand-ins; removing Compass's `next(e)` fails one).
 - [x] Compass without agent-watch draws its board alone; agent-watch without Compass draws its own pane.
 - [x] Live: the board survives with both mods loaded (the human, terminal, 2026-11-02).
-- [ ] Live: a press on a row of the contributed panel selects it; the meter's progress bar draws in Compass (needs a task list). Not seen; both stay open to the first desktop session.
+- [x] Live: a press on a row of the contributed panel selects it; the meter's progress bar draws in Compass (the human, desktop app, 2026-11-02).
 
 ## Mandatory validations
 
@@ -56,7 +56,7 @@ Stage 2 of two. Compass's pane draws its Sprints board and then what agent-watch
 
 ## Risks and rollback
 
-- Seen live: the engine answers `engine` at the bottom of a `Pane` chain and the two real mods compose (agent-watch innermost). Unseen: presses in the contributed panel, the meter's bar, the reverse load order.
+- Seen live: the engine answers `engine` at the bottom of a `Pane` chain, the two real mods compose (agent-watch innermost), presses and the meter's bar work. Unseen: the reverse load order.
 - Compass's board fills the pane's height, so the contribution sits below it and the pane scrolls.
 - Rollback: git revert the task commit; before landing, nothing on master changes.
 
@@ -69,21 +69,21 @@ Stage 2 of two. Compass's pane draws its Sprints board and then what agent-watch
 | `scripts/check-mods.py`, `tests/test-check-mods.sh` | rule 7's table holds `sigma.tsx` only |
 | `ADR-0048` | accepted; supersedes `ADR-0045` and `ADR-0047` clause 3 |
 
-Next: land on master locally (no push yet); the first desktop session checks a press in the panel and the meter's bar.
+Next: none.
 
 ## Execution log
 
 - 2026-11-02 · Claude Code (Sonnet 5.5) · brief written before the port
-
 - 2026-11-02 · Claude Code (Sonnet 5.5), one sonnet builder, one sonnet reviewer · built; review answered
   - Evidence: `tests/test-mods.sh` → agent-watch `113 pass`, task-compass `54 pass`; `tests/validate.sh` → `validate.sh: OK`; `python3 scripts/check-mods.py` → `OK (5 mods)`.
   - Review R2: no key or hotkey collision (Compass `h c l k`, the panel `s`; prefixes disjoint); one likely cause of `a273657`'s vanished board, inferred from the engine's types: core is the last hook and answers `{ type: 'engine', ref }`, which both hooks embedded.
   - Evidence, red-proof: the guard off in Compass → `Expected: defined`, `Received: undefined` for the board's text (the kit drops the tree), 2 fail; off in agent-watch → `Expected: length 0`, `Received: length 1`, 1 fail; restored → 54 and 113 pass. The earlier stand-in bases (`<Box/>`, `<Text>`) never exercised this.
   - Deviation: Compass's debug line logged `resolved nothing` after a rejection, hiding the cause; fixed as agent-watch's was.
   - Not run in the kit: the pair in a real app; see the live entry below.
-
 - 2026-11-02 · the human, terminal · live run off master
   - Method: from the worktree with `CLAUDE_CODE_PLUGIN_DIRS` unset in the shell and passed as `--settings '{"env":{…}}'`, since `~/.claude/settings.json`'s own value beats a shell variable (a first run loaded the main checkout's 0.8.1 and 0.5.0 and proved nothing; the debug file's `is one plugin` lines name which checkout loaded).
   - Evidence: `--debug-file` → `agent-watch: next(e) resolved object (type engine)` and `task-compass: next(e) resolved object (type Box)`; board intact; `■ 1 RUNNING` and the Sessions panel below it, `A02` RUNNING beside `A01` DONE while an Explore agent ran; the pane scrolled; no render error or skipped tree in the log.
   - Evidence, cost: a steady 60 s with an agent running → 255 pane renders, 27.6 ms average, 77.5 ms maximum (about 12% of one worker); idle about 3 per 10 s.
   - Not seen: a press on the contributed panel's rows (the log records none); the meter's bar (the session had no task-list tool); the reverse load order.
+- 2026-11-02 · the human, desktop app · live check; done
+  - Evidence: a press on a row of the Sessions panel under Compass's board selected it (outlined arc, SELECTED strip) and a second press cleared it; the meter's `▰▱` bar drew in Compass's pane while a task list ran.

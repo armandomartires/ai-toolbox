@@ -25,7 +25,7 @@ A Claude Code mod that keeps an **Agents** pane beside the chat: this session an
 
 ## Not yet verified
 
-Version 0.6.0 (`TASK-0207`) is tested in the mod test kit and was seen in a live terminal session with both mods loaded: the contribution draws in Compass's pane (the meter's glyph and count, then the Sessions panel, following a running agent), the engine answers `engine` at the bottom of a Pane's chain, which both mods drop, and the pane scrolls. Not yet seen: a press on a row of the contributed panel; the meter's progress bar in Compass (it needs a task list); the load order with agent-watch first; and the panel in the desktop app.
+Version 0.6.0 (`TASK-0207`) is tested in the mod test kit and was seen in a live terminal session with both mods loaded: the contribution draws in Compass's pane (the meter's glyph and count, then the Sessions panel, following a running agent), the engine answers `engine` at the bottom of a Pane's chain, which both mods drop, and the pane scrolls. In the desktop app (2026-11-02) the Agents pane draws the panel, a press on a row of the contributed panel selects it and the meter's progress bar draws in Compass. Not yet seen: the load order with agent-watch first.
 
 ## Install
 

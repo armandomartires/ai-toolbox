@@ -453,7 +453,7 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0204-main-session-idle-not-done.md
 - [x] TASK-0206 — agent-watch 0.5.0: it draws the Sessions panel itself
   .ai/tasks/TASK-0206-agent-watch-sessions-panel.md
-- [?] TASK-0207 — task-compass 0.9.0, agent-watch 0.6.0: Compass's pane carries agent-watch's panel and meter
+- [x] TASK-0207 — task-compass 0.9.0, agent-watch 0.6.0: Compass's pane carries agent-watch's panel and meter
   .ai/tasks/TASK-0207-compass-slots-agent-watch.md
 - [x] TASK-0209 — An allowlisted role runs one shell command per call
   .ai/tasks/TASK-0209-one-command-per-call.md
