@@ -110,6 +110,10 @@ declare module 'claude-code' {
       runs: WorkflowRun[]
       /** Each sub-session's tone, an index into SESSION_TONES, fixed when it first became one. */
       tones: Record<string, number>
+      /** The key of the Sessions row a press selected (an arc, a session or an agent); null selects none and the panel shows this session. */
+      selected: string | null
+      /** The Sessions hierarchy list is folded to this session's row and its toggle (the chart, KPI row and selected panel stay). */
+      listCollapsed: boolean
     }
     'task-orchestrator': {
       enabled: boolean

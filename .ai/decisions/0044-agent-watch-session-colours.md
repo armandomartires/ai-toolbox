@@ -29,3 +29,5 @@ The human asked that the Agents pane map sub-sessions and their subagents: every
 - A change to task-orchestrator's `Task`, `Role`, `TaskStatus`, `Settings`, `Policy` or its state keys fails the gate until agent-watch's mirror agrees.
 - Desktop sessions started with `start_session` are not drawn: no engine call lists sessions.
 - A Workflow agent's end is known only from its own `turn.complete`; one that never arrives leaves its row running.
+
+- `ADR-0047` (2026-10-31) supersedes clause 3 for agent-watch's pane: its Sessions panel colours by state, as Compass's does, and the pulsing per-session icon is retired there. The band above the prompt keeps colour by session.

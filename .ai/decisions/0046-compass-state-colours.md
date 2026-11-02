@@ -28,3 +28,5 @@ On 2026-10-28, after testing Compass 0.7.0 with three sub-sessions of three agen
 - Compass and agent-watch now colour the same session tree differently; `sessions.ts`, the shared module, is untouched, and the state tones live in Compass's `sunburst.ts`.
 - A member without its own task list counts as one step (0/1 running, 1/1 ended), so a session's roll-up is its agent count until agents keep steps.
 - Where a session spends its tokens is readable from the table and panel, not the chart.
+
+- `ADR-0047` (2026-10-31): agent-watch's pane now draws the same panel, so clause 1's last sentence ("agent-watch's pane keeps colour by session") and the consequence that the two panes colour the same tree differently no longer hold; its state tones live in agent-watch's `sunburst.ts`.

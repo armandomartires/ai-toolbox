@@ -451,6 +451,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0203-orchestrator-handoff-on-role-profile.md
 - [x] TASK-0204 — agent-watch 0.4.3, task-compass 0.8.1: an open session is idle, never done
   .ai/tasks/TASK-0204-main-session-idle-not-done.md
+- [?] TASK-0206 — agent-watch 0.5.0: it draws the Sessions panel itself
+  .ai/tasks/TASK-0206-agent-watch-sessions-panel.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

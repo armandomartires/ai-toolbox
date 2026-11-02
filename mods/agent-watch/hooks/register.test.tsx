@@ -12,9 +12,9 @@ const PANE = {
   props: {
     title: 'Agents',
     isFocused: false,
-    bodyColumns: 60,
+    bodyColumns: 80,
     placement: 'dock',
-    scroll: { offset: 0, bodyRows: 30 },
+    scroll: { offset: 0, bodyRows: 60 },
     view: {},
   },
 } as const
@@ -71,30 +71,26 @@ test('the pane shows a spawned agent under this session, running, then ended', a
     expect(await text(/^1 RUNNING$/)).toBeDefined()
     expect(await text(/^THIS SESSION$/)).toBeDefined()
     expect(await text(/Explore · Find hooks/)).toBeDefined()
-    expect(await text(/12s/)).toBeDefined()
-    // This session's bar counts its agents while it keeps no task list.
+    expect(await text(/^12s$/)).toBeDefined()
+    // This session counts its agents while it keeps no task list: 0 of 1.
     expect(await text(/^0\/1$/)).toBeDefined()
-    expect(await text(/^AGENTS$/)).toBeDefined()
-    // The session's glyph and the agent's, both in this session's tone; the
-    // agent's sits outside the name's Button. The name is text-1.
-    expect((await ui.find({ type: 'Text', text: /^[⬢⬡] $/ }))?.props.color).toBe(DARK.cyan)
-    expect((await ui.find({ type: 'Text', text: /^ *[■□] $/ }))?.props.color).toBe(DARK.cyan)
-    expect((await ui.find({ type: 'Button', text: /Find hooks/ }))?.text).not.toContain('■')
+    // Rows are coloured by their state, never by session: this session and the agent are running, cyan; the name is text-1.
+    expect((await ui.find({ type: 'Text', text: /^⬢ $/ }))?.props.color).toBe(DARK.cyan)
+    expect((await ui.find({ type: 'Text', text: /^ *● $/ }))?.props.color).toBe(DARK.cyan)
+    expect((await ui.find({ type: 'Button', text: /Find hooks/ }))?.text).not.toContain('●')
     expect((await ui.find({ type: 'Text', text: /Find hooks/ }))?.props.color).toBe(DARK['text-1'])
     expect((await ui.findAll({ type: 'Text' })).filter(t => t.props.dimColor || (t.props.bold && !t.props.weight)).length).toBe(0)
-    expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBe(30)
+    expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBe(60)
     await ui.unmount()
   }
 
-  // While it runs both icons pulse: solid, then hollow one frame later.
+  // Nothing pulses: a frame later the running glyph is the same one.
   {
     const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-    const icon = async () => (await ui.find({ type: 'Text', text: /^ *[■□] $/ }))?.text?.trim()
-    const head = async () => (await ui.find({ type: 'Text', text: /^[⬢⬡] $/ }))?.text?.trim()
-    const [first, firstHead] = [await icon(), await head()]
+    const icon = async () => (await ui.find({ type: 'Text', text: /^ *● $/ }))?.text?.trim()
+    const first = await icon()
     await clock.advance(400)
-    expect(await icon()).not.toBe(first)
-    expect(await head()).not.toBe(firstHead)
+    expect([first, await icon()]).toEqual(['●', '●'])
     await ui.unmount()
   }
 
@@ -106,19 +102,19 @@ test('the pane shows a spawned agent under this session, running, then ended', a
   const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
   expect(await text(/^1\/1$/)).toBeDefined()
   // Elapsed stops at the end, 12s after the spawn, not 17s.
-  expect(await text(/ 12s/)).toBeDefined()
-  expect(await text(/ 17s/)).toBeUndefined()
-  // Ended: the glyph is solid and still, still in its owner's tone; the name
-  // dims to text-2; a completed row carries no badge.
-  expect(await text(/FAILED|STOPPED/)).toBeUndefined()
-  await clock.advance(400)
-  const done = await ui.find({ type: 'Text', text: /^ *[■□] $/ })
-  expect([done?.text?.trim(), done?.props.color]).toEqual(['■', DARK.cyan])
+  expect(await text(/^12s$/)).toBeDefined()
+  expect(await text(/^17s$/)).toBeUndefined()
+  // Ended: the member's glyph is the solid square in text-1 and its name dims to text-2; this session, with nothing running, is idle.
+  // (The legend's glyphs are red and amber, without the trailing space a row's glyph carries.)
+  expect((await ui.findAll({ type: 'Text' })).filter(one => (one.props.color === DARK.red || one.props.color === DARK.amber) && /[◆▲] $/.test(one.text ?? '')).length).toBe(0)
+  const done = await ui.find({ type: 'Text', text: /^ *■ $/ })
+  expect([done?.text?.trim(), done?.props.color]).toEqual(['■', DARK['text-1']])
   expect((await ui.find({ type: 'Text', text: /Find hooks/ }))?.props.color).toBe(DARK['text-2'])
+  expect(await text(/^ IDLE$/)).toBeDefined()
   await ui.unmount()
 })
 
-test('a Workflow run is a sub-session in its own tone; its agents end on their turn', async ($, on) => {
+test('a Workflow run is a sub-session coloured by its state, never a session tone; its agents end on their turn', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   const listed = { value: [] as AgentInfo[] }
   const said = engine(on, listed)
@@ -133,10 +129,12 @@ test('a Workflow run is a sub-session in its own tone; its agents end on their t
   let ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ text: /^WF review-changes$/ })).toBeDefined()
   expect(await ui.find({ text: /^0\/2$/ })).toBeDefined()
-  const heads = await ui.findAll({ type: 'Text', text: /[⬢⬡] $/ })
-  expect(heads.map(head => head.props.color)).toEqual([DARK.cyan, DARK.violet])
-  const icons = await ui.findAll({ type: 'Text', text: /^ *[■□] $/ })
-  expect(icons.map(icon => icon.props.color)).toEqual([DARK.violet, DARK.violet])
+  // Colour is the state, never the session's tone: this session has no running member of its own, so it is idle (text-3); the run and its members run, cyan.
+  const heads = await ui.findAll({ type: 'Text', text: /^ *⬢ $/ })
+  expect(heads.map(head => head.props.color)).toEqual([DARK['text-3'], DARK.cyan])
+  const icons = await ui.findAll({ type: 'Text', text: /^ *[●■□◆▲○] $/ })
+  expect(icons.map(icon => icon.props.color)).toEqual([DARK.cyan, DARK.cyan])
+  expect((await ui.findAll({ type: 'Text' })).some(one => one.props.color === DARK.violet)).toBe(false)
   await ui.unmount()
 
   // No list names a Workflow agent: its turn.complete ends it, and a failure is toasted.
@@ -144,12 +142,13 @@ test('a Workflow run is a sub-session in its own tone; its agents end on their t
   await $.turn.complete({ agentId: 'id-review:perf', reason: 'error', answer: '', durationMs: 1, isAborted: false, turnId: 't2' })
   ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ text: /^2\/2$/ })).toBeDefined()
-  expect(await ui.find({ text: /FAILED/ })).toBeDefined()
+  // The failed agent's state cell, in red.
+  expect((await ui.findAll({ type: 'Text', text: /^ FAILED$/ })).map(one => one.props.color)).toContain(DARK.red)
   expect(said.toasts).toEqual(['GENERAL-PURPOSE · review:perf · FAILED 00:00:01'])
   await ui.unmount()
 })
 
-test('a subagent that keeps its own task list becomes a session with a steps bar, its children in its tone', async ($, on) => {
+test('a subagent that keeps its own task list becomes a session with a steps bar, its running child in the state colour', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   const listed = { value: [] as AgentInfo[] }
   engine(on, listed)
@@ -169,15 +168,16 @@ test('a subagent that keeps its own task list becomes a session with a steps bar
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ text: /^general-purpose · Build it$/ })).toBeDefined()
-  expect(await ui.find({ text: /^1\/2$/ })).toBeDefined()
-  expect(await ui.find({ text: /^STEPS$/ })).toBeDefined()
-  const heads = await ui.findAll({ type: 'Text', text: /[⬢⬡] $/ })
+  // Steps roll up the sum over its members, so the running child's 0/1, not the session's own list (1/2); the row says RUNNING.
+  expect((await ui.findAll({ text: /^0\/1$/ })).length).toBeGreaterThanOrEqual(2)
+  expect(await ui.find({ text: /^ RUNNING$/ })).toBeDefined()
+  const heads = await ui.findAll({ type: 'Text', text: /^ *⬢ $/ })
   expect(heads.map(head => [head.text.trim().length, head.props.color])).toEqual([
+    [1, DARK['text-3']],
     [1, DARK.cyan],
-    [1, DARK.violet],
   ])
-  // The child sits under it, in its tone; this session keeps none of them as members.
-  expect((await ui.find({ type: 'Text', text: /^ *[■□] $/ }))?.props.color).toBe(DARK.violet)
+  // The child sits under it, running, in the state's colour; this session keeps none of them as members.
+  expect((await ui.find({ type: 'Text', text: /^ *● $/ }))?.props.color).toBe(DARK.cyan)
   expect(await ui.find({ text: /No subagent yet/ })).toBeUndefined()
   // The band's task list is the main loop's alone.
   await ui.unmount()
@@ -206,7 +206,7 @@ const idleOrchestrator: Register = on => {
   })
 }
 
-test('the orchestrator run is a sub-session: its ledger tasks, their words, a TASKS bar', { plugins: [{ name: 'task-orchestrator', register: orchestrator }] }, async ($, on) => {
+test('the orchestrator run is a sub-session: its ledger tasks, their words, coloured by state',{ plugins: [{ name: 'task-orchestrator', register: orchestrator }] }, async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   const listed = { value: [] as AgentInfo[] }
   engine(on, listed)
@@ -219,17 +219,19 @@ test('the orchestrator run is a sub-session: its ledger tasks, their words, a TA
     const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
     expect(await text(/^ORCH BALANCED$/)).toBeDefined()
     expect(await text(/^1\/3$/)).toBeDefined()
-    expect(await text(/^TASKS$/)).toBeDefined()
     expect(await text(/T1 · builder · Write the model/)).toBeDefined()
     expect(await text(/claude-sonnet-5-5\/medium/)).toBeDefined()
     expect(await text(/^ BLOCKED$/)).toBeDefined()
     expect(await text(/WAITS ON T1/)).toBeDefined()
-    // The queued task waits hollow; the worker runs in the orchestrator's tone, not under this session.
-    const heads = await ui.findAll({ type: 'Text', text: /[⬢⬡] $/ })
-    expect(heads.map(head => head.props.color)).toEqual([DARK.cyan, DARK.violet])
-    const icons = await ui.findAll({ type: 'Text', text: /^ *[■□] $/ })
-    expect(icons.map(icon => icon.props.color)).toEqual([DARK.violet, DARK.violet, DARK.violet])
-    expect(icons[1]?.text.trim()).toBe('□')
+    // Each task carries its state's glyph and colour: the worker runs (cyan), the blocked one is amber, the queued one waits hollow in text-3; the worker is not also drawn under this session.
+    const heads = await ui.findAll({ type: 'Text', text: /^ *⬢ $/ })
+    expect(heads.map(head => head.props.color)).toEqual([DARK['text-3'], DARK.cyan])
+    const icons = await ui.findAll({ type: 'Text', text: /^ +[●■□◆▲○] $/ })
+    expect(icons.map(icon => [icon.text.trim(), icon.props.color])).toEqual([
+      ['●', DARK.cyan],
+      ['□', DARK['text-3']],
+      ['▲', DARK.amber],
+    ])
     expect((await ui.findAll({ type: 'Text', text: /T1 builder/ })).length).toBe(0)
     await ui.unmount()
   }
@@ -278,7 +280,7 @@ test('a nested subagent ends on its own turn, whatever the list says after (B-06
   await clock.advance(60_000)
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ text: /^1\/1$/ })).toBeDefined()
-  expect(await ui.find({ text: / 2s$/ })).toBeDefined()
+  expect(await ui.find({ text: /^2s$/ })).toBeDefined()
   await ui.unmount()
 
   // Woken again (a message resumes it): a new turn in its loop runs it again.

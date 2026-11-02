@@ -11,6 +11,7 @@ import {
   callEnded,
   callStarted,
   endedBadly,
+  headCaption,
   iconOf,
   ledgerBadge,
   markAlerted,
@@ -30,6 +31,7 @@ import {
   taskChange,
   tokensOf,
   toneToken,
+  trimTree,
   turnCounted,
   turnEnded,
   turnStarted,
@@ -285,4 +287,56 @@ test('a failed or stopped agent is alerted once', () => {
   expect(alertText({ ...row('a', 'failed'), startedAt: 0, endedAt: 72_000 })).toBe('EXPLORE · a · FAILED 00:01:12')
   expect(alertText({ ...row('b', 'killed'), startedAt: 0, endedAt: 5_000 })).toBe('EXPLORE · b · STOPPED 00:00:05')
   expect([runningText(0), runningText(1), runningText(2)]).toEqual([undefined, '1 AGENT RUNNING', '2 AGENTS RUNNING'])
+})
+
+test('a tree too tall for its budget loses members, never a head or a ledger task, and says how many', () => {
+  const rows = Array.from({ length: 6 }, (_, i) => row(`m${i}`, 'completed', { startedAt: i, endedAt: i + 1, description: `m${i}` }))
+  const ledger = [task('T1', 'queued'), task('T2', 'queued')]
+  const tree = sessionTree({ rows, runs: [], tones: { [ORCH]: 1 }, tasks: [], ledger })
+  const { shown, lines } = trimTree(tree, 10, 0)
+  // Two heads at 2 lines and two ledger tasks at 2 (a queued task has a caption): 8 fixed, 2 left: one member and its "+N more".
+  expect(shown.get(ORCH)?.members.map(m => m.key)).toEqual(['task-T1', 'task-T2'])
+  expect(shown.get('main')).toEqual({ members: [expect.objectContaining({ key: 'm5' })], hidden: 5 })
+  expect(lines).toBe(10)
+  // A budget below the fixed lines still draws every head and task.
+  expect(trimTree(tree, 0, 0).shown.get('main')?.hidden).toBe(6)
+  expect(trimTree(tree, 0, 0).shown.get(ORCH)?.members.length).toBe(2)
+})
+
+test('the budget is shared: a long session does not starve a run\'s running member, and "+N more" is paid for', () => {
+  const rows = [
+    ...Array.from({ length: 8 }, (_, i) => row(`m${i}`, 'completed', { startedAt: i, endedAt: i + 1, description: `m${i}` })),
+    row('f1', 'running', { startedAt: 20, runId: 'wf_1', description: 'f1' }),
+  ]
+  const runs = [{ id: 'wf_1', name: 'review', startedAt: 20 }]
+  const tree = sessionTree({ rows, runs, tones: {}, tasks: [], ledger: [] })
+  // Two heads: 4 lines fixed; 6 left. The running member comes first, then ended ones, one line each.
+  const { shown, lines } = trimTree(tree, 10, 0)
+  expect(shown.get(runKey('wf_1'))?.members.map(m => m.key)).toEqual(['f1'])
+  expect(shown.get(runKey('wf_1'))?.hidden).toBe(0)
+  // 6 left, 1 for the running member, 1 held for "+N more": 4 ended members drawn, 4 hidden.
+  expect(shown.get('main')?.members.length).toBe(4)
+  expect(shown.get('main')?.hidden).toBe(4)
+  expect(lines).toBe(10)
+})
+
+test('ledger tasks interleaved with agent members are all kept, and the other members fill what is left', () => {
+  const rows = [row('r1', 'running', { startedAt: 1, spawnedBy: 'task-orchestrator' }), row('e1', 'completed', { startedAt: 1, endedAt: 2, spawnedBy: 'task-orchestrator' })]
+  const ledger = [task('T1', 'queued'), task('T2', 'queued')]
+  const tree = sessionTree({ rows, runs: [], tones: { [ORCH]: 1 }, tasks: [], ledger })
+  const orch = tree.find(node => node.kind === 'orch')!
+  expect(orch.running.map(m => m.taskId)).toEqual(['T1', 'T2', undefined])
+  const roomy = trimTree(tree, 20, 0).shown.get(ORCH)!
+  expect(roomy.members.map(m => m.key)).toEqual(['task-T1', 'task-T2', 'r1', 'e1'])
+  const tight = trimTree(tree, 0, 0).shown.get(ORCH)!
+  expect(tight.members.map(m => m.key)).toEqual(['task-T1', 'task-T2'])
+  expect(tight.hidden).toBe(2)
+})
+
+test('a head is charged a caption line only when it draws one', () => {
+  const tree = sessionTree({ rows: [row('p', 'running', { calls: 3, type: 'general-purpose' })], runs: [], tones: {}, tasks: [], ledger: [] })
+  const lines = trimTree(tree, 99, 0).lines
+  // The main head (2) and the member (1 + its caption line): the member is the only row.
+  expect(lines).toBe(2 + 2)
+  expect(headCaption(tree[0]!, 0)).toBe('')
 })
