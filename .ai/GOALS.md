@@ -461,6 +461,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0210-driver-records-the-change.md
 - [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget
   .ai/tasks/TASK-0212-collect-within-budget.md
+- [x] TASK-0214 — task-orchestrator cancels a handed-off task (B-068)
+  .ai/tasks/TASK-0214-cancel-a-handoff.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
@@ -477,6 +479,4 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - B-064 `task-compass`'s README has no screenshots
   .ai/planning/BACKLOG.md
 - B-067 The OpenCode driver journals every tool error as `tool-denied`
-  .ai/planning/BACKLOG.md
-- B-068 task-orchestrator cannot cancel a handed-off task
   .ai/planning/BACKLOG.md

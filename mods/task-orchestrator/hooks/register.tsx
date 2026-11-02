@@ -398,19 +398,22 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { r
   }
 }
 
+/** A blocked hand-off has ended nothing: it waits for the coordinator's Agent call. */
+const waitsForHandoff = (task: Task): boolean => task.status === 'blocked' && task.handoff === true
+
 const cancelTask = async ($: EngineInterface, task: Task): Promise<string> => {
-  if (ENDED.includes(task.status)) return `${task.id} already ${task.status}`
+  if (ENDED.includes(task.status) && !waitsForHandoff(task)) return `${task.id} already ${task.status}`
   if (task.status === 'running' && task.agentId) {
     const stopped = await $.tool.call({ tool: 'TaskStop', task_id: task.agentId }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }))
     if ('deny' in stopped && stopped.deny !== undefined) return `${task.id}: stop refused (${stopped.deny}); the worker keeps running`
   }
-  await settle($, task, { status: 'cancelled', reason: 'cancelled by the person', endedAt: await $.clock.now() })
+  await settle($, task, { status: 'cancelled', handoff: undefined, reason: 'cancelled by the person', endedAt: await $.clock.now() })
   return `${task.id} cancelled`
 }
 
 const answerCancel = async ($: EngineInterface, which: string): Promise<string> => {
   const rows = await read($, ledger)
-  const chosen = which === 'all' || which === '' ? rows.filter(task => !ENDED.includes(task.status)) : rows.filter(task => task.id === which)
+  const chosen = which === 'all' || which === '' ? rows.filter(task => !ENDED.includes(task.status) || waitsForHandoff(task)) : rows.filter(task => task.id === which)
   if (!chosen.length) return which === 'all' || which === '' ? 'nothing to cancel' : `no task named ${which}`
   const lines: string[] = []
   for (const task of chosen) lines.push(await cancelTask($, task))
@@ -583,6 +586,8 @@ export const register: Register = on => {
     // takes no `name`), else the one `name` names.
     const named = assignmentId(e.prompt) ?? e.name
     const held = named ? byId(rows, named) : undefined
+    // A cancelled hand-off's assignment must not start it after all.
+    if (held?.status === 'cancelled' && assignmentId(e.prompt) === held.id) return { deny: `${held.id} was cancelled: its hand-off no longer stands; dispatch a new task instead` }
     if (held?.handoff && held.status === 'blocked') {
       // The role's own profile (the hand-off's, the effort on the call) or the task's exact one.
       if (type !== `${PLUGIN}:${held.role}` && type !== `${PLUGIN}:${profileOf(held)}`) return { deny: `${held.id} waits for a hand-off as ${PLUGIN}:${held.role}, not ${type}` }

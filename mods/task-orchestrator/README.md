@@ -28,7 +28,7 @@ Orchestration starts **off**. `/orchestrate on` turns it on for this project's s
 - `/orchestrate models`: the alias resolutions seen this session and the models a spawn refused.
 - `/orchestrate opt-in high-effort|frontier [off]`: `xhigh`, `max` and the `fable` alias are refused until opted in.
 - `/orchestrate providers [enable|disable <id>]`: the external-provider adapters. None is implemented in this version; enabling one is refused and the data-sharing disclosure is shown.
-- `/orchestrate cancel [<task>|all]`: cancels queued work and stops running workers through `TaskStop`.
+- `/orchestrate cancel [<task>|all]`: cancels queued work, stops running workers through `TaskStop`, and withdraws a hand-off still waiting for the coordinator's Agent call, which is then refused if made.
 
 The model drives the rest through four tools: `dispatch` (a task with id, class, objective, inputs, allowed files, prohibited areas, deliverables, acceptance, dependencies, and optional role, model, effort and isolation), `collect` (waits for tasks to end and returns their reports; a hook's ten-second budget bills every sleep, so one call waits about eight seconds at most, `collectTimeoutMs` below that, and a task still running says to call again: each ended task also leaves the coordinator a note), `status` and `cancel`. A `dispatch` under the id of a task that ended `blocked`, `failed` or `partial` retries it in its place, as retry 1 or 2 of 2; its dependants keep waiting on it. A dependant whose dependency ended without completing stays queued, and `status` and `collect` say which task holds it and how to retry it, rather than leaving it to wait in silence.
 

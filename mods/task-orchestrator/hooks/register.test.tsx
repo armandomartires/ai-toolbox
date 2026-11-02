@@ -284,6 +284,29 @@ test('refused twice, a task waits for the hand-off; its dependant says what it w
   expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)).toContain('H2 → scout → requested haiku/low → unverified → blocked → auto mode gave')
 })
 
+test('a task waiting for its hand-off is cancelled by id and by all, and its assignment no longer starts it (B-068)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { noVerdict: 99 })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find the parser' }))).result)
+  await $.tool.call(dispatch({ id: 'H3', class: 'lookup', objective: 'Find the lexer' }))
+  expect(held).toContain('→ blocked → auto mode gave')
+
+  // 0.4.3 answered "H1 already blocked", and `all` found nothing to cancel.
+  expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__cancel', id: 'H1' })).result)).toBe('H1 cancelled')
+  expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__cancel', id: 'all' })).result)).toBe('H3 cancelled')
+  const status = String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)
+  expect(status).not.toContain('assignment for H1')
+
+  // The coordinator's Agent call with the cancelled assignment starts nothing.
+  const late = await $.agent.spawn({ prompt: byLine(held, '# Assignment H1'), description: 'H1 scout', subagentType: 'task-orchestrator:scout', model: 'haiku' } as AgentSpawnInput)
+  expect(late.deny).toBe('H1 was cancelled: its hand-off no longer stands; dispatch a new task instead')
+  expect(world.spawned).toHaveLength(0)
+})
+
 test("the person's model and effort: each setting its own profile, the hand-off names it, a host setting that may replace it is said", async ($, on) => {
   mock.clock(on)
   mock.store(on)

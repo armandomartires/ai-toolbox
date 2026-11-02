@@ -1,0 +1,69 @@
+# TASK-0214 — task-orchestrator cancels a handed-off task
+
+## Status
+
+- Status: done
+- Owner: agent (Claude Code)
+- Created: 2026-11-02
+- Updated: 2026-11-02
+- Applies to: `mods/task-orchestrator/` (`hooks/register.tsx`, its test, README), `.ai/planning/BACKLOG.md`
+- Source: `B-068`, raised by `TASK-0212`'s live check (reviewer R1)
+
+## Objective
+
+A task handed off to the coordinator's Agent call is `blocked`, which `cancelTask` counts as ended: `cancel` answers "already blocked", `cancel all` skips it, and a later Agent call with its assignment header is still adopted. Make cancel end the hand-off, and refuse the Agent call that would start it afterwards.
+
+## Inputs
+
+| Artifact | Expected state |
+|----------|----------------|
+| `register.tsx` `cancelTask`, `answerCancel` | skip every `ENDED` status, `blocked` included |
+| `register.tsx` `agent.spawn` | adopts only a `blocked` task with `handoff`; any other `task-orchestrator:` call runs as a new untracked-limits row |
+| `TASK-0212` commit | on this branch, not landed |
+
+## Scope
+
+- In: a blocked hand-off is cancellable by id and by `all`, its `handoff` cleared; an Agent call whose assignment header names a cancelled task is refused; the test; README; version 0.4.4; `B-068` closed.
+- Out: cancelling a `blocked` task that is not a hand-off (it is ended: nothing runs or waits).
+
+## Likely files
+
+- `mods/task-orchestrator/hooks/register.tsx`, `register.test.tsx`, `README.md`, `.claude-plugin/plugin.json`
+
+## Execution plan
+
+1. Test: hand off H1 (auto mode refuses twice), `cancel H1` answers `H1 cancelled`, a second hand-off H3 is cancelled by `all`, and an Agent call with H1's assignment is refused and spawns nothing. Red against 0.4.3.
+2. Fix `cancelTask`, `answerCancel` and the `agent.spawn` adoption.
+3. README, version, `B-068`, `CURRENT_STATE`; gates; one commit.
+
+## Acceptance criteria
+
+- [x] `cancel <id>` and `cancel all` cancel a task waiting for its hand-off.
+- [x] An Agent call carrying a cancelled task's assignment is refused, and nothing is spawned.
+- [x] The new test fails against 0.4.3.
+
+## Mandatory validations
+
+- [x] tests/validate.sh
+- [x] tests/test-mods.sh --mod task-orchestrator
+
+## Risks and rollback
+
+- A coordinator that reuses a cancelled id's assignment text on purpose is refused; it dispatches a new id instead.
+- Rollback: git revert the task commit.
+
+## Outputs / handover
+
+| Artifact | End state |
+|----------|-----------|
+| `task-orchestrator` | 0.4.3 → 0.4.4: `waitsForHandoff` lets `cancelTask` and `cancel all` take a blocked hand-off, clearing `handoff`; `agent.spawn` refuses an assignment that names a cancelled task; README |
+| `B-068` | closed |
+
+Next: land with `TASK-0212`, then republish to the library (still 0.4.2).
+
+## Execution log
+
+- 2026-11-02 · Claude Code (Opus 5.5) · brief written before the change
+- 2026-11-02 · Claude Code (Opus 5.5) · done (landing left to the coordinator)
+  - Evidence: `claude plugin test mods/task-orchestrator` against 0.4.3 → `(fail) a task waiting for its hand-off is cancelled …`, `Expected: "H1 cancelled"`, `Received: "H1 already blocked"`; fixed, `tests/test-mods.sh --mod task-orchestrator` → `PASS task-orchestrator: 35 pass`.
+  - Not seen live: a hand-off needs auto mode to refuse the mod's spawn, which a session cannot arrange on demand.
