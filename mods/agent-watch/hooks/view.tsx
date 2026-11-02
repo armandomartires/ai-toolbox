@@ -2,6 +2,7 @@ import { atom, read } from 'claude-code'
 import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { WatchOutput } from './model'
+import { drawMeter } from './band'
 import { renderSessions } from './panel'
 import { kit, recall } from './sigma'
 
@@ -17,8 +18,19 @@ const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 const policy = atom({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
 const enabled = atom({ plugin: 'task-orchestrator', key: 'enabled' } as const, false)
 
-export const PANE = 'agent-watch'
-export const TITLE = 'Agents'
+/**
+ * The pane Compass owns (ADR-0048): the one place agent-watch names it.
+ * Renaming Compass's pane breaks the slot silently, so a test pins it.
+ */
+export const COMPASS_PANE = 'task-compass'
+
+// What the pane beneath the contribution last resolved to, so a live failure leaves one debug-log line (ADR-0048) and a redraw adds none.
+let lastBelow = ''
+const noteBelow = ($: EngineInterface, said: string) => {
+  if (said === lastBelow) return
+  lastBelow = said
+  $.ui.log(`agent-watch: next(e) ${said}`, { to: 'debug' })
+}
 
 /** The state the Sessions panel is drawn from: the atoms this mod writes and the orchestrator's run it reads. */
 const readState = async ($: EngineInterface) => {
@@ -74,5 +86,45 @@ export function renderOutput($: EngineInterface, e: RenderInput<'CommandOutput'>
       {value(String(out.completed))}
       {out.failed > 0 ? badge('critical', `${out.failed} failed or stopped`) : label('None failed')}
     </Box>,
+  )
+}
+
+/**
+ * Core's own drawing of a component, `{ type: 'engine', ref }`: what `next(e)` resolves to for the innermost hook when no plugin below drew the pane (the engine's types: core is the last hook). Embedded in a tree it nests the engine's frame in the pane's body or fails the tree whole, and the engine then draws its own pane over the board (ADR-0048, clause 3), so it is never embedded.
+ */
+const isEngineElement = (value: unknown) => typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'engine'
+
+/**
+ * agent-watch's part of Compass's pane (ADR-0048): what Compass draws, then
+ * the progress meter, then the Sessions panel. The board's height is unknown
+ * here, so no row is reserved and Compass's pane scrolls. An exported arrow,
+ * passed by reference to `on(...)` in register.tsx as `renderPane` is: the
+ * engine hands it `$` itself. The meter is `drawMeter`, the band's own.
+ */
+export const contributeSessions = async ($: EngineInterface, e: RenderInput<'Pane'>, next: (e: RenderInput<'Pane'>) => Promise<unknown>) => {
+  const state = await readState($)
+  // A rejected next(e) leaves the panel alone: the bottom of a pane's chain is unverified in the real engine, and a throw would cost Compass's board.
+  // The same catch also hides an error thrown by Compass's own handler when
+  // Compass is the hook beneath this one, so the panel draws without the
+  // board; the debug log, not the screen, says so (`$.ui.log` to `debug`).
+  let isRejected = false
+  const resolved = await next(e).catch((error: unknown) => {
+    isRejected = true
+    noteBelow($, `rejected: ${error instanceof Error ? error.message : String(error)}`)
+    return undefined
+  })
+  if (!isRejected) noteBelow($, resolved === undefined ? 'resolved nothing' : `resolved ${typeof resolved}${typeof resolved === 'object' && resolved !== null ? ` (type ${String((resolved as { type?: unknown }).type)})` : ''}`)
+  // Core's own drawing is no part of the board (isEngineElement): it is left out, so the meter and the panel stand alone beneath a pane nobody else draws.
+  const inner = isEngineElement(resolved) ? undefined : resolved
+  const { Box } = $.ui.resolve(e)
+  const meter = await drawMeter($, e)
+  const sessions = await renderSessions($, e, state, 0)
+
+  return (
+    <Box flexDirection="column">
+      {inner as never}
+      {meter}
+      {sessions}
+    </Box>
   )
 }

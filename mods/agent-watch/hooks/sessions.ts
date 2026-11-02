@@ -1,9 +1,8 @@
-// The session tree (ADR-0044, ADR-0045): pure logic, no `$`, one module shared
-// byte for byte by every mod that draws it. Its owner is
-// mods/agent-watch/hooks/sessions.ts; a copy elsewhere fails the gate
-// (scripts/check-mods.py, rule 7). It imports nothing but ./sigma, so the
-// shapes it reads are declared here, structurally: a mod's own row types
-// satisfy them, and fields it does not read are left out.
+// The session tree (ADR-0044, ADR-0045): pure logic, no `$`. agent-watch alone
+// owns it (ADR-0047): another mod that shows sessions reads agent-watch's
+// pane, so no copy of this module exists elsewhere. It imports nothing but
+// ./sigma, so the shapes it reads are declared here, structurally: the mod's
+// own row types satisfy them, and fields it does not read are left out.
 import { IDENTITY, elapsed } from './sigma'
 import type { Status, Token } from './sigma'
 

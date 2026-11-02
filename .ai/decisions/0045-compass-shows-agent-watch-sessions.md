@@ -30,3 +30,5 @@ The human asked that Compass's subagents panel have the same hierarchy as agent-
 - Compass's own agent tracking stays: it powers the fallback and the tick.
 
 - `ADR-0046` (2026-10-28) supersedes `ADR-0044` clause 3 for Compass: its Sessions panel colours by state and shows ownership by containment.
+
+- `ADR-0048` (2026-11-02) supersedes this decision: Compass keeps no Sessions code, copy or mirror, and carries agent-watch's contribution through a slot.

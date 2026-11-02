@@ -24,3 +24,5 @@ On 2026-10-29 the human asked that agent-watch's pane be exactly Compass's Sessi
 - The panel's logic exists twice until stage 2: in agent-watch, and in Compass's `view.tsx` and `sunburst.ts`. A fix to one is not made to the other by the gate; `sessions.ts` alone is held equal.
 - agent-watch's state contract gains two atoms; Compass's mirror names only the fields it reads, so rule 8 still passes.
 - Whether a press in the panel redraws as the mod test kit says is unverified until the human runs it in the desktop app.
+
+- `ADR-0048` (2026-11-02) supersedes clause 3: Compass now slots the panel (stage 2).

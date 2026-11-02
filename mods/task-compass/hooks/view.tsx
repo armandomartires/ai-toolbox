@@ -2,232 +2,36 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderInput } from 'claude-code'
 
 import type { Sprint, Status } from '../types'
-import { elapsed, fit, headCaption, isActive, STATUS, STATUSES, shownRows, subagentRows, trimTree } from './model'
-import type { SubagentRow } from './model'
+import { fit, STATUS, STATUSES } from './model'
 import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, focusOf, isRailRow, RAIL_GUTTER, sprintLabel } from './rails'
 import type { Row } from './rails'
-import { memberCaption, sessionTree, tokensText } from './sessions'
-import type { Member, SessionNode } from './sessions'
-import { IDENTITY, agentState, color, hms, kit, recall, theme } from './sigma'
-import type { Token } from './sigma'
-import { arcs, chartAgents, chartFailed, chartRunning, rollupOf, stateGlyph, stateTone, stateWord, sunburstCells, sunburstSvg } from './sunburst'
+import { color, kit, recall } from './sigma'
 
 // The same $.state values register.tsx writes: the engine lists a module's
 // reads and writes from atoms declared in that file.
 const sprints = atom({ plugin: 'task-compass', key: 'sprints' } as const, [])
 const focus = atom({ plugin: 'task-compass', key: 'focus' } as const, null)
 const tasks = atom({ plugin: 'task-compass', key: 'tasks' } as const, [])
-const agents = atom({ plugin: 'task-compass', key: 'agents' } as const, [])
 const now = atom({ plugin: 'task-compass', key: 'now' } as const, 0)
 const goalsPath = atom({ plugin: 'task-compass', key: 'goalsPath' } as const, '')
 const openCard = atom({ plugin: 'task-compass', key: 'openCard' } as const, null)
 const railStart = atom({ plugin: 'task-compass', key: 'railStart' } as const, null)
 const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
-// The key of the Sessions row a press selected (ADR-0046); null selects none, and the panel shows this session.
-const selected = atom({ plugin: 'task-compass', key: 'selected' } as const, null)
-// Collapse state (all expanded by default): the Sessions hierarchy list under this session, and the sprints folded to their header and progress.
-const listCollapsed = atom({ plugin: 'task-compass', key: 'listCollapsed' } as const, false)
+// The sprints folded to their header and progress (none by default).
 const foldedSprints = atom({ plugin: 'task-compass', key: 'foldedSprints' } as const, [])
-// agent-watch's tracking, read and never written (types/index.d.ts, the mirror):
-// the Sessions tree draws from it (ADR-0045).
-const watchAgents = atom({ plugin: 'agent-watch', key: 'agents' } as const, [])
-const watchNow = atom({ plugin: 'agent-watch', key: 'now' } as const, 0)
-const watchTasks = atom({ plugin: 'agent-watch', key: 'tasks' } as const, [])
-const watchRuns = atom({ plugin: 'agent-watch', key: 'runs' } as const, [])
-const watchTones = atom({ plugin: 'agent-watch', key: 'tones' } as const, {})
-// task-orchestrator's run, read and never written (types/index.d.ts, the mirror).
-const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
-const policy = atom({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
-const enabled = atom({ plugin: 'task-orchestrator', key: 'enabled' } as const, false)
-
 export const PANE = 'task-compass'
 const GOALS_FILE = 'GOALS.md'
-const AGENTS_SHOWN = 6
-/** The hierarchy table's columns, in cells: STATE, STEPS, TIME, TOK. */
-const COL = { state: 11, steps: 7, time: 6, tok: 6 }
-/** The rows the KPI row (a label, a value and a caption, and the margin above) and the selected-element panel take. */
-const KPI_ROWS = 4
-const PANEL_ROWS = 9
-/** The compact strip's rows: its margin and its line. */
-const STRIP_ROWS = 2
-/** The rows a bracketed panel's frame takes: the padding or border above and below its head. */
-const FRAME_ROWS = 2
 /** The cells a bracketed panel's border and padding take across: two each side. */
 const FRAME_COLS = 4
-/** The lines the Sessions tree may take beyond its session heads and the ledger's tasks. */
-const TREE_LINES = 16
-/** The fewest pane rows the sunburst is drawn in (it is hidden below them), and the room left for the board below which it stops growing. */
-const CHART_MIN_ROWS = 9
-const CHART_FLOOR = 6
-/** The tight tier, which keeps the chart on a default-height pane: its least rows (terminal) and the board's floor. A desktop's chart is never shrunk. */
-const CHART_TIGHT_ROWS = 7
-const TIGHT_FLOOR = 2
-/** The board's rows when every sprint shown is folded: its header, its progress and its toggle. */
-const FOLDED_BOARD_ROWS = 3
-/** The Sessions list's lines when folded: this session's margin and row, and the toggle under it. */
-const FOLDED_LIST_LINES = 3
-/** The chart's share of the pane's width. */
-const CHART_SHARE = 0.85
 /**
- * Estimates, not measurements: a desktop pane's column is its code font's advance (`RenderViewport`), about 7.2 px,
- * and a row about 20 px. The `Svg` is given its size in pixels from them: an interactive one is drawn in a frame that,
- * left without a size, keeps a browser's default 150 px height, so the chart came out a quarter of the pane wide.
+ * The rows the board's own parts take around its columns, seven: the title bar (1) and its rule (1), the frame
+ * above and below (2), the carousel's header (1), the legend's `marginTop` (1) and the legend (1). The legend
+ * is about 65 cells, so on a pane under about 69 columns it wraps to a second row, which this does not
+ * count: the pane then scrolls one row. The columns get what is left of the pane (`room`), and fold their done
+ * stories into one dot past it; a pane shorter than this plus `BOARD_FLOOR` scrolls.
  */
-const CELL_PX = 7.2
-const ROW_PX = 20
-/** The `Svg`'s size in pixels is derived from the pane's width, between these. */
-const CHART_PX_MIN = 220
-const CHART_PX_MAX = 1600
-/** The legend's width in cells, glyphs and gaps included, to estimate how many rows it wraps to. */
-const LEGEND_CELLS = 59
-/** The code to show before a name: none for the centre, or when the name already begins with it (a ledger task's id). */
-const shownCode = (code: string, name: string) => (name.startsWith(`${code} ·`) ? '' : code)
-/** The rows a panel's title bar and its rule take. */
-const BOARD_HEAD_ROWS = 2
-
-/**
- * A subagent's glyph, as agent-watch draws it: its identity by the order it
- * was first seen, hollow while it waits and solid otherwise. Its colour is
- * its state (`agentState`).
- */
-const agentGlyph = (index: number, status: string) => {
-  const pair = IDENTITY[index % IDENTITY.length] ?? IDENTITY[0]!
-  return isActive(status) && status !== 'running' ? pair[1] : pair[0]
-}
-
-/** The rows the Sessions panel's parts take, and which of them fit: the one place the pane's height is spent. */
-export type SessionsLayout = {
-  hasChart: boolean
-  hasKpi: boolean
-  hasSelected: boolean
-  /** The compact strip's rows when it is drawn instead of the panel. */
-  stripRows: number
-  legendRows: number
-  chartRows: number
-  /** The margin above the chart: one row, none in the tight tier. */
-  chartGap: number
-  /** The margin above the status legend and above the Sessions panel: one row, none in the tight tier. */
-  margin: number
-  /** The blank line above this session's row: one, none in the tight tier. */
-  headGap: number
-  chartPx: number
-  chartColumns: number
-  /** The `Svg`'s width and height in CSS pixels. */
-  chartWidth: number
-  /** The rows left to the board's columns. */
-  room: number
-  /** The tree's lines, as drawn. */
-  treeLines: number
-  /** Every row the parts above take, the board at `room` included: never more than `rows`. */
-  used: number
-}
-export const sessionsLayout = (input: {
-  rows: number
-  cols: number
-  isTerminal: boolean
-  hasTree: boolean
-  canChart: boolean
-  lines: number
-  shrink: (budget: number) => { lines: number; apply: () => void }
-  flatLines: number
-  /** The Sessions list has this session's toggle line, which the tight tier pays for with the blank line above this session's row. */
-  hasFold?: boolean
-  /** The Sessions hierarchy list is folded to this session's row and its toggle. */
-  isListCollapsed?: boolean
-  /** Every sprint the board shows is folded to its header, progress and toggle. */
-  isBoardFolded?: boolean
-}): SessionsLayout => {
-  const { rows, cols, isTerminal, hasTree } = input
-  const isListCollapsed = hasTree && input.isListCollapsed === true
-  const isBoardFolded = input.isBoardFolded === true
-  // The rows the board's columns need at the least; fewer when every sprint is folded.
-  const floor = isBoardFolded ? FOLDED_BOARD_ROWS : CHART_FLOOR
-  // A folded list is this session's row and the toggle under it, below the table head.
-  const fold = input.hasFold === true ? 1 : 0
-  let lines = isListCollapsed ? FOLDED_LIST_LINES : input.lines + fold
-  // The chart's margin and the legend under it (it wraps in a narrow pane),
-  // and the rows it is drawn in at the least; it grows to its share of the
-  // width from what is left over.
-  // Everything inside the Sessions frame is `cols - FRAME_COLS` wide; the chart is its share of the pane, capped at that.
-  const body = Math.max(1, cols - FRAME_COLS)
-  const legendRows = Math.max(1, Math.ceil(LEGEND_CELLS / body))
-  // Two tiers: the chart as it is meant to look, then a tight one (a smaller least size, no margin above it or above this session's row, a board of its header and counts)
-  // that keeps the chart on a default-height pane before it is hidden.
-  // On a desktop the chart is 85% of the pane wide whatever the height: both tiers reserve its rows, the tight one only drops the margins and the board's floor.
-  const shareCols = Math.min(CHART_SHARE * cols, body)
-  const wantColumns = Math.max(4, Math.round(shareCols))
-  const wantPx = Math.round(shareCols * CELL_PX)
-  const wantRows = isTerminal ? Math.ceil(wantColumns / 2) : Math.max(Math.ceil(CHART_PX_MIN / ROW_PX), Math.ceil(wantPx / ROW_PX))
-  const tiers = [
-    { chartMin: isTerminal ? CHART_MIN_ROWS : wantRows, gap: 1, headGap: 1, margin: 1, floor },
-    { chartMin: isTerminal ? CHART_TIGHT_ROWS : wantRows, gap: 0, headGap: 0, margin: 0, floor: isBoardFolded ? floor : Math.min(floor, TIGHT_FLOOR) },
-  ]
-  let tier = tiers[0]!
-  let chartMin = tier.chartMin
-  let chartBlock = chartMin + tier.gap + legendRows
-  // A braille cell is 2x4 dots and about twice as tall as wide: rows are half the columns for a round chart.
-  const headRows = hasTree ? 1 : 0
-  // The Sprints panel's title bar and rule, the legend and margin above the Sessions panel, and the Sessions panel's own head; and the frames of the two bracketed panels.
-  // The tight tier also drops the margin above the legend and above the Sessions panel (the frames' borders already set them apart).
-  const fixedOf = (one: (typeof tiers)[number]) => 3 + 2 * one.margin + BOARD_HEAD_ROWS + 2 * FRAME_ROWS
-  // The chart's rows, the strip (the least the Selected part takes) and the board's floor are all paid for.
-  const credit = (one: (typeof tiers)[number]) => (fold === 1 && one.headGap === 0 ? 1 : 0)
-  const fits = (n: number, one: (typeof tiers)[number]) => rows - (n - credit(one) + 3 + headRows) - fixedOf(one) - (one.chartMin + one.gap + legendRows) - STRIP_ROWS >= one.floor
-  let hasChart = false
-  // The tree's member lines yield ("+N more") before the chart is hidden, down to the session heads alone; then the tight tier; the chart is hidden last.
-  for (const one of input.canChart ? tiers : []) {
-    if (fits(lines, one)) {
-      hasChart = true
-    } else {
-      const smaller = input.shrink(Math.max(0, Math.min(TREE_LINES, rows - 3 - headRows + credit(one) - fixedOf(one) - (one.chartMin + one.gap + legendRows) - STRIP_ROWS - one.floor) - fold))
-      if (fits(smaller.lines + fold, one)) {
-        smaller.apply()
-        lines = smaller.lines + fold
-        hasChart = true
-      }
-    }
-    if (hasChart) {
-      tier = one
-      break
-    }
-  }
-  // A desktop never hides the chart for height: the tight tier, the tree folded to its heads, and the pane scrolls past what does not fit.
-  if (!hasChart && !isTerminal && input.canChart) {
-    tier = tiers[1]!
-    if (!isListCollapsed) {
-      const smallest = input.shrink(0)
-      smallest.apply()
-      lines = smallest.lines + fold
-    }
-    hasChart = true
-  }
-  chartMin = tier.chartMin
-  chartBlock = chartMin + tier.gap + legendRows
-  const chartGap = tier.gap
-  const floorRows = tier.floor
-  const headGap = 1 - credit(tier)
-  const panelLines = hasTree ? lines - credit(tier) : input.flatLines
-  // The KPI row and the selected-element panel fold before the chart does.
-  const fixedRows = fixedOf(tier)
-  const spare = rows - (panelLines + 3 + headRows) - fixedRows - (hasChart ? chartBlock : 0)
-  // The panel is funded before the KPI row; without room for it a two-row strip (margin and line) keeps the transcript reachable.
-  const hasSelected = hasTree && spare - PANEL_ROWS >= floorRows
-  const stripRows = hasTree && !hasSelected ? STRIP_ROWS : 0
-  const taken = (hasSelected ? PANEL_ROWS : stripRows)
-  const hasKpi = hasTree && spare - taken - KPI_ROWS >= floorRows
-  const slack = Math.max(0, spare - (hasKpi ? KPI_ROWS : 0) - taken - floorRows)
-  // The chart grows from the slack only, so the table and the board keep their room; capped, it shrinks rather than push them out.
-  const cappedRows = hasChart ? Math.max(chartMin, Math.min(wantRows, chartMin + slack)) : 0
-  // The `Svg`'s markup is never smaller than its slot, whatever the height: it is drawn from a generous pixels-per-cell and the host fits it to the slot.
-  const chartPx = Math.max(CHART_PX_MIN, Math.min(CHART_PX_MAX, wantPx))
-  const chartRows = cappedRows
-  const room = isBoardFolded ? floor : Math.max(floorRows, spare - (hasKpi ? KPI_ROWS : 0) - taken - (chartRows - (hasChart ? chartMin : 0)))
-  const chartColumns = Math.min(wantColumns, chartRows * 2)
-  // The `Svg` is given 85% of the pane's width in pixels, and as many tall: its frame has no size of its own.
-  const chartWidth = chartPx
-  const used = fixedRows + panelLines + 3 + headRows + (hasKpi ? KPI_ROWS : 0) + taken + (hasChart ? chartGap + chartRows + legendRows : 0) + room
-  return { hasChart, hasKpi, hasSelected, stripRows, legendRows, chartRows, chartGap, margin: tier.margin, headGap, chartPx, chartColumns, chartWidth, room, treeLines: panelLines, used }
-}
+const BOARD_CHROME_ROWS = 7
+const BOARD_FLOOR = 6
 
 /** What `/compass` answers; what `/goals` answers, a sprint per row. */
 export type CompassOutput = { isPlaced: boolean; sprints: number; stories: number }
@@ -299,101 +103,68 @@ export function renderOutput($: EngineInterface, e: RenderInput<'CommandOutput'>
   )
 }
 
-/** The Compass pane: the sprint carousel, a legend, the subagents. */
+// What the pane beneath this hook last said, so a live failure leaves one debug-log line (ADR-0048, clause 3) and a redraw adds none.
+let lastBelow = ''
+const noteBelow = ($: EngineInterface, said: string) => {
+  if (said === lastBelow) return
+  lastBelow = said
+  $.ui.log(`task-compass: next(e) ${said}`, { to: 'debug' })
+}
+
+/**
+ * Core's own drawing of a component, `{ type: 'engine', ref }`: what `next(e)` resolves to for the innermost hook when no plugin below drew the pane (the engine's types: core is the last hook). Embedded in a tree it nests the engine's frame in the pane's body or fails the tree whole, and the engine then draws its own pane over the board (ADR-0048, clause 3), so it is never embedded.
+ */
+const isEngineElement = (value: unknown) => typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'engine'
+
+/** The Compass pane: the sprint carousel and its legend, then what another mod contributes (ADR-0048). */
 export const registerPane = (on: On) => {
   on('ui.render', { component: 'CommandOutput', props: { command: 'compass' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
   on('ui.render', { component: 'CommandOutput', props: { command: 'goals' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
+    // What another mod contributes to this pane (agent-watch's meter and Sessions panel, ADR-0048): drawn after the board, whichever mod loaded first.
+    // A rejected next(e) is no contribution, and neither is core's own drawing (isEngineElement): a throw here, or an element the engine refuses, would make it draw its own pane in place of the board.
+    let isRejected = false
+    const resolved = await next(e).catch((error: unknown) => {
+      isRejected = true
+      noteBelow($, `rejected: ${error instanceof Error ? error.message : String(error)}`)
+      return undefined
+    })
+    if (!isRejected) noteBelow($, resolved === undefined ? 'resolved nothing' : `resolved ${typeof resolved}${typeof resolved === 'object' && resolved !== null ? ` (type ${String((resolved as { type?: unknown }).type)})` : ''}`)
+    const contributed = isEngineElement(resolved) ? undefined : resolved
     const ui = $.ui.resolve(e)
     const { Box, Button, Text } = ui
-    // `Raster` is the terminal's alone and `Svg` the remote surfaces'; each is drawn only on its own.
-    const { Raster, Svg } = ui as unknown as Record<'Raster' | 'Svg', (props: Record<string, unknown>) => never>
-    const { badge, frame, label, meter, panel, stats, value } = kit(ui, e.surface)
-    const [sprintList, declared, taskList, agentRows, at, where, opened, scrolled, from, orchTasks, orchPolicy, orchOn, watched, watchClock, watchList, watchRunList, watchTone, picked, isListFolded, foldedList] = await Promise.all([
+    const { frame, panel } = kit(ui, e.surface)
+    const [sprintList, declared, taskList, at, where, opened, scrolled, from, foldedList] = await Promise.all([
       read($, sprints),
       read($, focus),
       read($, tasks),
-      read($, agents),
       read($, now),
       read($, goalsPath),
       read($, openCard),
       read($, railStart),
       read($, source),
-      read($, ledger),
-      read($, policy),
-      read($, enabled),
-      read($, watchAgents),
-      read($, watchNow),
-      read($, watchTasks),
-      read($, watchRuns),
-      read($, watchTones),
-      read($, selected),
-      read($, listCollapsed),
       read($, foldedSprints),
     ])
     const isTerminal = e.surface === 'terminal'
     const cols = Math.max(COLUMN_MIN, e.props.bodyColumns)
-    // The pane's own room, which the tree fills: the rails take what the
-    // legend and the subagents leave.
+    // The pane's own room: the columns take what the board's chrome leaves, and
+    // fold their done stories past it. A pane shorter than that scrolls.
     const rows = Math.max(16, e.props.scroll.bodyRows)
+    const room = Math.max(BOARD_FLOOR, rows - BOARD_CHROME_ROWS)
 
     const { cur, focusId, isGuess } = focusOf(sprintList, declared, taskList)
-    // The Sprints and Sessions panels are bracketed frames: what they hold is four cells narrower than the pane.
+    // The Sprints panel is a bracketed frame: what it holds is four cells narrower than the pane.
     const body = Math.max(1, cols - FRAME_COLS)
     const view = carousel(body, sprintList.length, cur, scrolled)
     const { first, centred, later, columnWidth, cardWidth, inner } = view
     const shown = sprintList.slice(first, first + view.count)
     const folds = new Set(foldedList)
-    // Every sprint on view is folded: the board needs no more than their three rows.
-    const isBoardFolded = shown.length > 0 && shown.every(one => folds.has(one.n))
-    // The tree draws from agent-watch's tracking, which it announces by
-    // writing its clock on its first refresh; without it (not loaded) the
-    // panel is the flat list of 0.5.0.
-    const isWatching = watchClock > 0
-    const merged = subagentRows(agentRows, orchTasks, at)
-    const shownAgents = shownRows(merged, AGENTS_SHOWN)
-    const hasTree = isWatching
-    const tree = hasTree
-      ? sessionTree({ rows: watched, runs: watchRunList, tones: watchTone, tasks: watchList, ledger: orchTasks, policy: orchPolicy, isOrchOn: orchOn })
-      : []
-    const clock = watchClock > 0 ? watchClock : at
-    // The main session's toggle hangs under its row, one line, when anything sits below it to fold.
-    const canFold = hasTree && tree.length > 0 && (tree.length > 1 || tree[0]!.running.length + tree[0]!.completed.length > 0)
-    const isListFoldedNow = canFold && isListFolded
-    let trimmed = trimTree(tree, TREE_LINES, clock)
-    // The sunburst above the tree: it draws the untrimmed tree, and is hidden
-    // when the pane would be left under its floor. A selection that no longer
-    // exists (its agent left the tree) selects none.
-    const rootKey = tree[0]?.key ?? 'main'
-    const chart = hasTree ? arcs(tree, watchTone, { selected: picked ?? undefined, now: clock }) : []
-    const byKey = new Map(chart.map(arc => [arc.key, arc] as const))
-    const isPicked = picked !== null && byKey.has(picked)
-    const current = isPicked ? picked : rootKey
-    const chartOpts = { selected: isPicked ? picked : undefined, now: clock }
-    const layout = sessionsLayout({
-      rows,
-      cols,
-      isTerminal,
-      hasTree,
-      canChart: chart.length > 1 && typeof (isTerminal ? Raster : Svg) === 'function',
-      lines: trimmed.lines,
-      shrink: budget => {
-        const smaller = trimTree(tree, budget, clock)
-        return { lines: smaller.lines, apply: () => void (trimmed = smaller) }
-      },
-      hasFold: canFold,
-      flatLines: shownAgents.length,
-      isListCollapsed: isListFoldedNow,
-      isBoardFolded,
-    })
-    const { hasChart, hasKpi, hasSelected, chartGap, margin, headGap, chartPx, chartRows, chartColumns, chartWidth, room } = layout
     // A fold toggle: a plain Button in `line-strong` (`▾ HIDE` open, `▸ SHOW …` folded), with its hotkey on the terminal only.
     const foldButton = (key: string, hotkey: string | undefined, text: string, flip: () => void) => (
       <Button key={key} plain hotkey={isTerminal ? hotkey : undefined} onPress={flip}>
         <Text color={color('line-strong')}>{text}</Text>
       </Button>
     )
-    const flipList = () => void update($, listCollapsed, now => !now)
     const flipSprint = (n: number) => () => void update($, foldedSprints, now => (now.includes(n) ? now.filter(one => one !== n) : [...now, n]))
     // `k` folds the current sprint's rows, the one the carousel centres.
     const currentN = sprintList[cur]?.n
@@ -577,245 +348,6 @@ export const registerPane = (on: On) => {
       </Box>
     )
 
-    // Each subagent's name opens its transcript in the main view; the one in
-    // view goes back to the main conversation. A task not started has no
-    // transcript, so its name does nothing.
-    const running = merged.filter(one => one.isActive && one.waits === undefined).length
-    const viewing = e.props.view.agentId
-    const agentRow = (one: SubagentRow) => {
-      const agentId = one.agentId
-      const isViewed = agentId !== undefined && agentId === viewing
-      const indent = '  '.repeat(Math.min(3, one.depth))
-      const time = one.startedAt === undefined ? '' : elapsed((one.endedAt ?? at) - one.startedAt)
-      const tail = one.waits !== undefined ? `WAITS ON ${one.waits.join(', ')}` : (one.settings ?? '')
-      const name = fit(
-        `${isViewed ? '▸' : ''}${one.label}`,
-        Math.max(8, body - indent.length - time.length - tail.length - (one.badge ? one.badge.word.length + 3 : 0) - 5),
-      )
-      const show = () => {
-        if (agentId === undefined) return
-        void $.ui.view(isViewed ? {} : { agentId })
-      }
-      const index = one.row ? agentRows.indexOf(one.row) : Math.max(0, merged.indexOf(one))
-      return (
-        <Box flexDirection="row">
-          <Box flexShrink={0}>
-            <Text color={color(agentState(one.status).token)}>
-              {`${indent}${agentGlyph(index, one.status)} `}
-            </Text>
-          </Box>
-          <Button key={`agent-${one.key}`} plain onPress={show}>
-            <Text color={color(one.isActive || isViewed ? 'text-1' : 'text-2')} wrap="truncate-end">{name}</Text>
-          </Button>
-          <Box flexShrink={0} flexDirection="row">
-            {tail !== '' && <Text color={color('text-3')} size="caption">{` ${tail}`}</Text>}
-            {one.badge !== undefined && <Text> </Text>}
-            {one.badge !== undefined && badge(one.badge.status, one.badge.word)}
-            {time !== '' && <Text color={color('text-3')} tabular size="caption">{` ${time}`}</Text>}
-          </Box>
-        </Box>
-      )
-    }
-
-    // The Sessions tree as the hierarchy table (ADR-0046): one row per session
-    // and member, indented by depth and coloured by its state. Pressing a row
-    // selects it; pressing the selected row clears it.
-    const lookup = new Map<string, string | undefined>()
-    for (const node of tree) {
-      lookup.set(node.key, node.agentId)
-      for (const member of [...node.running, ...node.completed]) lookup.set(member.key, member.agentId)
-    }
-    const column = (width: number, children: unknown) => (
-      <Box width={width} flexShrink={0} flexDirection="row" justifyContent="flex-end">
-        {children as never}
-      </Box>
-    )
-    const tableRow = (one: { key: string; depth: number; kind: 'session' | 'member'; name: string; agentId?: string; status: string; badge?: { status: string; word: string }; isActive: boolean }) => {
-      const arc = byKey.get(one.key)
-      const tone = stateTone(one.status, one.badge)
-      const isSelected = isPicked && picked === one.key
-      const isViewed = one.agentId !== undefined && one.agentId === viewing
-      const indent = '  '.repeat(Math.min(4, one.depth))
-      const fixed = COL.state + COL.steps + COL.time + COL.tok + 4
-      const code = shownCode(arc?.code ?? '', one.name)
-      const name = fit(`${isViewed ? '▸' : ''}${one.name}`, Math.max(8, body - indent.length - 2 - fixed - 1 - (code === '' ? 0 : code.length + 3)))
-      const fill = isSelected ? { backgroundColor: color('raised') } : {}
-      const press = () => void update($, selected, now => (now === one.key ? null : one.key))
-      const steps = arc !== undefined && arc.progress.total > 0 ? `${arc.progress.done}/${arc.progress.total}` : ''
-      const time = arc !== undefined && arc.duration > 0 ? elapsed(arc.duration) : ''
-      const tokens = arc !== undefined && arc.tokens > 0 ? tokensText(arc.tokens) : ''
-      return (
-        <Box flexDirection="row" columnGap={1} {...fill}>
-          <Box flexShrink={0}>
-            <Text color={color(tone)} {...fill}>{`${indent}${one.kind === 'session' ? '⬢' : stateGlyph(one.status, one.badge)} `}</Text>
-          </Box>
-          {code !== '' && (
-            <Box flexShrink={0}>
-              <Text color={color('text-3')} {...fill}>{`${code} ·`}</Text>
-            </Box>
-          )}
-          <Box flexGrow={1} flexShrink={1}>
-            <Button key={`row-${one.key}`} plain onPress={press}>
-              <Text color={color(one.isActive || isViewed || isSelected ? 'text-1' : 'text-2')} weight={one.kind === 'session' ? 'bold' : undefined} wrap="truncate-end" {...fill}>{name}</Text>
-            </Button>
-          </Box>
-          {column(
-            COL.state,
-            <>
-              <Text color={color(tone)} {...fill}>{stateGlyph(one.status, one.badge)}</Text>
-              <Text color={color(tone)} size="caption" {...fill}>{` ${stateWord(one.status, one.badge)}`}</Text>
-            </>,
-          )}
-          {column(COL.steps, <Text color={color('text-1')} tabular {...fill}>{steps}</Text>)}
-          {column(COL.time, <Text color={color('text-3')} tabular size="caption" {...fill}>{time}</Text>)}
-          {column(COL.tok, <Text color={color('text-3')} tabular size="caption" {...fill}>{tokens}</Text>)}
-        </Box>
-      )
-    }
-
-    const treeMember = (member: Member, depth: number) => {
-      const caption = memberCaption(member, clock)
-      const indent = '  '.repeat(Math.min(4, depth))
-      return (
-        <Box key={`member-${member.key}`} flexDirection="column">
-          {tableRow({ key: member.key, depth, kind: 'member', name: member.label, agentId: member.agentId, status: member.status, badge: member.badge, isActive: member.isActive })}
-          {caption !== '' && <Text color={color('text-3')} size="caption" wrap="truncate-end">{`${indent}  ${caption}`}</Text>}
-        </Box>
-      )
-    }
-
-    const sessionHead = (node: SessionNode) => {
-      const indent = '  '.repeat(Math.min(4, node.depth))
-      const caption = headCaption(node, clock)
-      const cut = trimmed.shown.get(node.key)
-      // This session's toggle, directly under its row and indented like its members; folded, it is all that stays under it.
-      const fold = node === tree[0] && canFold && (
-        <Box marginLeft={2 * Math.min(4, node.depth + 1)}>
-          {foldButton('toggle-list', 's', isListFoldedNow ? `▸ SHOW ${tree.length} SESSIONS · ${chartAgents(chart)} AGENTS` : '▾ HIDE', flipList)}
-        </Box>
-      )
-
-      return (
-        <Box key={`head-${node.key}`} flexDirection="column" marginTop={node === tree[0] ? headGap : 1}>
-          {tableRow({ key: node.key, depth: node.depth, kind: 'session', name: node.name, agentId: node.agentId, status: node.status, badge: node.badge, isActive: node.isActive })}
-          {fold}
-          {!isListFoldedNow && caption !== '' && <Text color={color('text-3')} size="caption" wrap="truncate-end">{`${indent}  ${caption}`}</Text>}
-          {!isListFoldedNow && (cut?.members ?? []).map(member => treeMember(member, node.depth + 1))}
-          {!isListFoldedNow && cut !== undefined && cut.hidden > 0 && (
-            <Text color={color('text-3')} size="caption">{`${indent}  +${cut.hidden} more`}</Text>
-          )}
-          {node.kind === 'main' && node.running.length + node.completed.length === 0 && tree.length === 1 && (
-            <Text color={color('text-3')}>{`${indent}  No subagent yet.`}</Text>
-          )}
-        </Box>
-      )
-    }
-
-    // The KPI row: this session's progress, the agents, its tokens, the failed.
-    const main = rollupOf(chart, rootKey)
-    const failed = chartFailed(chart)
-    // Four stat blocks in one divided row across the frame: a value is coloured only when out of limits (a failure).
-    const percent = main !== undefined && main.total > 0 ? Math.round((main.done / main.total) * 100) : 0
-    const kpiRow = (
-      <Box marginTop={1}>
-        {stats(body, [
-          { label: 'Progress', value: String(percent), unit: '%', caption: `${main?.done ?? 0}/${main?.total ?? 0} steps` },
-          { label: 'Agents', value: String(chartAgents(chart)), caption: `${chartRunning(chart)} running` },
-          // The unit under the value, as the other blocks' captions sit, not beside it.
-          { label: 'Tokens', value: tokensText(main?.tokens ?? 0), caption: 'TOK' },
-          { label: 'Failed', value: String(failed), status: failed > 0 ? 'red' : undefined },
-        ])}
-      </Box>
-    )
-
-    // The legend under the chart: each state's glyph and word.
-    const legend = (
-      <Box flexDirection="row" flexWrap="wrap" columnGap={2} justifyContent="center">
-        {(['running', 'completed', 'failed', 'blocked', 'queued', 'stopped'] as const).map(status => (
-          <Box flexDirection="row">
-            <Text color={color(stateTone(status))} size="caption">{stateGlyph(status)}</Text>
-            <Text color={color('text-3')} size="caption">{` ${stateWord(status)}`}</Text>
-          </Box>
-        ))}
-      </Box>
-    )
-
-    // The selected element, or this session: the row pressed. Only an agent
-    // that has a transcript can open it.
-    const one = rollupOf(chart, current)
-    const oneArc = byKey.get(current)
-    const oneAgent = lookup.get(current)
-    const isOneViewed = oneAgent !== undefined && oneAgent === viewing
-    const openOne = () => void $.ui.view(isOneViewed ? {} : { agentId: oneAgent })
-    const selectedPanel =
-      one === undefined || oneArc === undefined
-        ? null
-        : panel(
-            { title: 'Selected', width: body },
-            <Box flexDirection="column">
-              <Box flexDirection="row" columnGap={1}>
-                <Text color={color(one.tone)}>{oneArc.kind === 'session' ? '⬢' : one.glyph}</Text>
-                {shownCode(one.code, one.name) !== '' && <Text color={color('text-3')}>{`${one.code} ·`}</Text>}
-                <Text color={color('text-1')} weight="semibold" wrap="truncate-end">{one.name}</Text>
-              </Box>
-              <Text color={color('text-3')} size="caption" wrap="truncate-end">{one.path}</Text>
-              <Box flexDirection="row" columnGap={1}>
-                {label('State')}
-                <Text color={color(one.tone)}>{one.glyph}</Text>
-                <Text color={color(one.tone)} size="caption">{` ${stateWord(one.status, oneArc.badge)}`}</Text>
-              </Box>
-              <Box flexDirection="row" columnGap={1}>
-                {label('Progress')}
-                {meter(one.done, one.total, 12, one.tone as Token)}
-                {value(`${one.done}/${one.total}`, 'STEPS')}
-                <Text color={color('text-3')} size="caption" tabular>{`· ${one.total > 0 ? Math.round((one.done / one.total) * 100) : 0}%`}</Text>
-              </Box>
-              <Box flexDirection="row" columnGap={2}>
-                <Box flexDirection="row" columnGap={1}>{label('Duration')}{value(hms(one.duration))}</Box>
-                <Box flexDirection="row" columnGap={1}>{label('Tokens')}{value(one.tokens.toLocaleString('en-US'), 'TOK')}</Box>
-                <Box flexDirection="row" columnGap={1}>{label('Children')}{value(one.children > 0 ? String(one.children) : '—')}</Box>
-              </Box>
-              {oneAgent !== undefined && (
-                <Button key="transcript" plain onPress={openOne}>
-                  <Text color={color('text-1')} weight="semibold">{isOneViewed ? 'CLOSE TRANSCRIPT' : 'OPEN TRANSCRIPT'}</Text>
-                </Button>
-              )}
-            </Box>,
-          )
-
-    // The compact strip when the full panel does not fit: the selection in one line, and its transcript.
-    const selectedStrip =
-      one === undefined || oneArc === undefined
-        ? null
-        : (
-            <Box flexDirection="row" columnGap={1} marginTop={1}>
-              <Text color={color(one.tone)}>{oneArc.kind === 'session' ? '⬢' : one.glyph}</Text>
-              {shownCode(one.code, one.name) !== '' && <Text color={color('text-3')}>{`${one.code} ·`}</Text>}
-              <Box flexShrink={1}>
-                <Text color={color('text-1')} weight="semibold" wrap="truncate-end">{one.name}</Text>
-              </Box>
-              <Box flexShrink={0} flexDirection="row">
-                <Text color={color(one.tone)} size="caption">{`· ${one.glyph} ${stateWord(one.status, oneArc.badge)}`}</Text>
-                <Text color={color('text-3')} size="caption" tabular>{` · ${one.done}/${one.total} · ${tokensText(one.tokens)} TOK`}</Text>
-              </Box>
-              {oneAgent !== undefined && (
-                <Button key="transcript" plain onPress={openOne}>
-                  <Text color={color('text-1')} weight="semibold">{isOneViewed ? 'CLOSE TRANSCRIPT' : 'OPEN TRANSCRIPT'}</Text>
-                </Button>
-              )}
-            </Box>
-          )
-
-    // While the orchestrator's ledger holds a task, the panel names its policy.
-    const treeRunning = watched.filter(row => row.status === 'running').length
-    const code = hasTree
-      ? `${treeRunning} running`
-      : orchTasks.length > 0
-        ? `ORCH ${orchPolicy.toUpperCase()}${orchOn ? '' : ' · OFF'} · ${running} running`
-        : merged.length > 0
-          ? `${running} running`
-          : undefined
-
     return (
       <Box flexDirection="column" minHeight={e.props.scroll.bodyRows}>
         {panel(
@@ -837,7 +369,7 @@ export const registerPane = (on: On) => {
               {columns}
             </Box>
             {/* The status legend belongs to the board: inside its frame, wrapped to the frame's inner width. */}
-            <Box marginTop={margin} flexDirection="row" flexWrap="wrap" columnGap={2}>
+            <Box marginTop={1} flexDirection="row" flexWrap="wrap" columnGap={2}>
               {STATUSES.map(status => (
                 <Box flexDirection="row">
                   <Text color={color(STATUS[status].color)} size="caption">{STATUS[status].glyph}</Text>
@@ -848,50 +380,7 @@ export const registerPane = (on: On) => {
           </Box>,
         )}
 
-        <Box marginTop={margin} flexDirection="column">
-          {panel(
-            { title: 'Sessions', code, width: cols, bracketed: true },
-            hasTree ? (
-              <Box flexDirection="column">
-                {hasKpi && kpiRow}
-                {hasChart && (
-                  <Box flexDirection="column" marginTop={chartGap}>
-                    <Box flexDirection="row" justifyContent="center">
-                      {isTerminal ? (
-                        <Raster key="sunburst" columns={chartColumns} rows={Math.floor(chartColumns / 2)} cells={sunburstCells(chart, chartColumns, Math.floor(chartColumns / 2), theme(), chartOpts)} />
-                      ) : (
-                        <Box>
-                          <Svg
-                            source={sunburstSvg(chart, chartPx, theme(), chartOpts)}
-                            width={chartWidth}
-                            height={chartWidth}
-                            alt={`Sessions: ${tree.length} sessions, ${chartAgents(chart)} agents, ${chartRunning(chart)} running`}
-                            isInteractive
-                          />
-                        </Box>
-                      )}
-                    </Box>
-                    {legend}
-                  </Box>
-                )}
-                {hasSelected ? selectedPanel !== null && <Box flexDirection="column" marginTop={1}>{selectedPanel}</Box> : selectedStrip}
-                <Box flexDirection="row" columnGap={1}>
-                  <Box flexGrow={1} flexShrink={1}>{label('Session')}</Box>
-                  {column(COL.state, label('State'))}
-                  {column(COL.steps, label('Steps'))}
-                  {column(COL.time, label('Time'))}
-                  {column(COL.tok, label('Tok'))}
-                </Box>
-                {(isListFoldedNow ? tree.slice(0, 1) : tree).map(sessionHead)}
-              </Box>
-            ) : (
-              <Box flexDirection="column">
-                {merged.length === 0 && <Text color={color('text-3')}>None running.</Text>}
-                {shownAgents.map(one => agentRow(one))}
-              </Box>
-            ),
-          )}
-        </Box>
+        {contributed as never}
       </Box>
     )
   })

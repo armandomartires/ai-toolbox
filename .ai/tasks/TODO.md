@@ -249,6 +249,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0203 — task-orchestrator 0.4.2: hand off on the role's profile, the effort on the call
 - [x] TASK-0204 — agent-watch 0.4.3, task-compass 0.8.1: an open session is idle, never done
 - [?] TASK-0206 — agent-watch 0.5.0: it draws the Sessions panel itself (stage 1 of 2; Compass is stage 2)
+- [?] TASK-0207 — task-compass 0.9.0, agent-watch 0.6.0: Compass's pane carries agent-watch's panel and meter (stage 2 of 2)
 
 ## Post-S9 (superseded by the promotion above)
 

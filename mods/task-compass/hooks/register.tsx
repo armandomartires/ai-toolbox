@@ -1,12 +1,10 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { AgentRow, Source, Sprint, Status, Task } from '../types'
+import type { Source, Sprint, Status, Task } from '../types'
 import {
   applyPlan,
   currentSprint,
-  isActive,
-  LINGER_MS,
   parseSprints,
   setStoryStatus,
   STARTER_GOALS,
@@ -26,12 +24,9 @@ import type { CompassOutput, GoalsOutput } from './view'
 const sprints = atom({ plugin: 'task-compass', key: 'sprints' } as const, [])
 const focus = atom({ plugin: 'task-compass', key: 'focus' } as const, null)
 const tasks = atom({ plugin: 'task-compass', key: 'tasks' } as const, [])
-const agents = atom({ plugin: 'task-compass', key: 'agents' } as const, [])
 const now = atom({ plugin: 'task-compass', key: 'now' } as const, 0)
 const goalsPath = atom({ plugin: 'task-compass', key: 'goalsPath' } as const, '')
 const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
-// task-orchestrator's ledger, read and never written (types/index.d.ts, the mirror).
-const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 
 const TITLE = 'Compass'
 const GOALS_FILE = 'GOALS.md'
@@ -333,31 +328,9 @@ async function goalsOutput($: EngineInterface, from: string, text: string) {
   return { text: list.length > 0 ? remember(text, out) : text }
 }
 
-const refreshAgents = async ($: EngineInterface) => {
-  const [listed, at] = await Promise.all([$.agent.list(), $.clock.now()])
-  await update($, agents, rows => {
-    const known = new Map(rows.map(row => [row.id, row]))
-    for (const info of listed) {
-      const row = known.get(info.id)
-      const wasActive = row ? isActive(row.status) : true
-      known.set(info.id, {
-        id: info.id,
-        parentId: info.parentId,
-        type: info.type,
-        description: info.description || row?.description || '',
-        status: info.status,
-        startedAt: row?.startedAt ?? at,
-        endedAt: isActive(info.status)
-          ? undefined
-          : wasActive
-            ? at
-            : row?.endedAt ?? at,
-      })
-    }
-    return [...known.values()].filter(
-      row => row.endedAt === undefined || at - row.endedAt < LINGER_MS,
-    )
-  })
+/** The clock the board's sprint dates are read against. */
+const refreshNow = async ($: EngineInterface) => {
+  const at = await $.clock.now()
   await update($, now, () => at)
 }
 
@@ -377,7 +350,7 @@ export const register: Register = on => {
     await syncTheme($)
     await $.command.register({
       name: 'compass',
-      description: 'Open the Compass pane: sprints, stories, live tasks, running subagents',
+      description: 'Open the Compass pane: sprints, stories and the live task list',
     })
     await $.command.register({
       name: 'goals',
@@ -389,17 +362,13 @@ export const register: Register = on => {
     // A resumed or reloaded session would send the description it recorded.
     $.ui.invalidate('tool.describe')
     // The clock the sprint dates are read against, before the first tick.
-    await refreshAgents($).catch(() => undefined)
+    await refreshNow($).catch(() => undefined)
 
     let tick = 0
     $.clock.every(2_000, () => {
       tick++
       void (async () => {
-        const [rows, orchTasks] = await Promise.all([read($, agents), read($, ledger)])
-        const isBusy =
-          rows.some(row => isActive(row.status) || row.endedAt !== undefined) ||
-          orchTasks.some(task => task.status === 'queued' || task.status === 'running')
-        if (isBusy || tick % 5 === 0) await refreshAgents($)
+        if (tick % 5 === 0) await refreshNow($)
         if (tick % 3 === 0) await loadGoals($)
       })().catch(() => undefined)
     })
@@ -477,35 +446,8 @@ export const register: Register = on => {
 
   on('turn.start', async ($, e, next) => {
     if (!e.agentId) await loadGoals($).catch(() => undefined)
-    else await refreshAgents($).catch(() => undefined)
 
     return next(e)
-  })
-
-  on('turn.complete', async ($, e, next) => {
-    const done = await next(e)
-    if (e.agentId) await refreshAgents($).catch(() => undefined)
-
-    return done
-  })
-
-  on('agent.spawn', async ($, e, next) => {
-    const ran = await next(e)
-    if (ran.deny === undefined && ran.agentId) {
-      const at = await $.clock.now()
-      const row: AgentRow = {
-        id: ran.agentId,
-        parentId: e.parentAgentId,
-        type: e.subagentType || 'agent',
-        description: e.description,
-        status: 'running',
-        startedAt: at,
-      }
-      await update($, agents, rows => [...rows.filter(one => one.id !== row.id), row])
-      await update($, now, () => at)
-    }
-
-    return ran
   })
 
   // One tool.call hook for every tool: a matcher naming the story tool makes

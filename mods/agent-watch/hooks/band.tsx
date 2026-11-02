@@ -1,9 +1,9 @@
 import { atom, read } from 'claude-code'
-import type { On } from 'claude-code'
+import type { EngineInterface, On, RenderInput } from 'claude-code'
 
 import { fit, iconOf, memberTone, progressOf } from './model'
 import { color, kit } from './sigma'
-import { PANE, TITLE } from './view'
+import { PANE, TITLE } from './names'
 
 // The same $.state values register.tsx writes: the engine lists a module's
 // reads and writes from atoms declared in that file.
@@ -19,13 +19,15 @@ const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 const BAR_MAX = 20
 
 /**
- * The band above the prompt: a meter of the task list's progress, cyan while
- * it tracks and text-1 once done, the step in progress, and the glyph of
- * each running agent, pulsing, in the tone of the session that owns it. Nothing while there is no task list and no
- * agent runs, or while a survey holds the band.
+ * The meter and the running agents' glyphs: a meter of the task list's
+ * progress, cyan while it tracks and text-1 once done, the step in progress,
+ * and the glyph of each running agent, pulsing, in the tone of the session
+ * that owns it. The one drawing both the band above the prompt and the
+ * contribution to Compass's pane call (ADR-0048); undefined while there is no
+ * task list and no agent runs. A declaration: the engine follows `$` past an
+ * import only into one.
  */
-export const registerBand = (on: On) =>
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'> | RenderInput<'Pane'>) {
   const [list, rows, tick, all, held, orchTasks] = await Promise.all([
     read($, tasks),
     read($, agents),
@@ -36,9 +38,9 @@ export const registerBand = (on: On) =>
   ])
   const running = rows.filter(row => row.status === 'running')
   const { done, total, current } = progressOf(list)
-  if (e.props.hasSurvey || (total === 0 && running.length === 0)) return next(e)
+  if (total === 0 && running.length === 0) return undefined
 
-  const ui = $.ui.resolve(e)
+  const ui = $.ui.resolve(e as RenderInput<'AbovePrompt'>)
   const { Box, Button, Text } = ui
   const { label, meter, value } = kit(ui, e.surface)
   const cols = Math.max(20, e.props.bodyColumns)
@@ -79,4 +81,12 @@ export const registerBand = (on: On) =>
       )}
     </Box>
   )
-})
+}
+
+/** The band above the prompt: `drawMeter`, or what the engine draws while a survey holds the band. */
+export const registerBand = (on: On) =>
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey) return next(e)
+
+    return (await drawMeter($, e)) ?? next(e)
+  })

@@ -40,6 +40,12 @@ const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
   on('tool.describe', (_, e) => ({ description: e.description }))
   on('ui.invalidate', () => ({ value: undefined }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
+  // The test kit's base hook for the pane, which Compass's `next(e)` reaches: it draws nothing.
+  on('ui.render', { component: 'Pane', requestId: 'task-compass' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return <Box />
+  })
   on('session.cwd', () => ({ value: '/q' }))
   on('fs.stat', (_, e) => {
     const file = files.get(e.path)
@@ -69,7 +75,6 @@ const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
     put(e.path, e.text)
     return { value: undefined }
   })
-  on('agent.list', () => ({ value: [] }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('tool.call', () => ({ result: {} }))
 

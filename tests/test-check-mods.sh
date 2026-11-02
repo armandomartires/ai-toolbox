@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Prove scripts/check-mods.py's rules 7 and 8 offline. Rule 7 (TASK-0188,
 # ADR-0043): every mods/*/hooks/sigma.tsx is a byte-identical copy of the
-# template's, and a mod whose hooks draw carries one; hooks/sessions.ts is a
-# copy of agent-watch's (TASK-0197, ADR-0045). Rule 8 (TASK-0193,
+# template's, and a mod whose hooks draw carries one; the table held
+# hooks/sessions.ts too until ADR-0048 (TASK-0207). Rule 8 (TASK-0193,
 # ADR-0044): a mod that reads another mod's $.state mirrors that part of the
 # owner's contract, and the mirror agrees with it.
 #
@@ -11,8 +11,8 @@
 # tests/validate.sh runs it.
 #
 # WHAT THIS PROVES: rule 7 passes identical copies and a mod that draws
-# nothing, and fails a differing copy, a drawing mod without one, and a copy
-# without its owner; rule 8 passes an agreeing mirror and fails a field the
+# nothing, fails a differing copy, a drawing mod without one, and a copy
+# without its owner, and ignores a file outside its table (S7); rule 8 passes an agreeing mirror and fails a field the
 # owner lacks or types otherwise, a union that differs, a state key the
 # owner lacks, and another mod's state read with no mirror. WHAT IT DOES
 # NOT PROVE: that the module is right (mods/_template/hooks/sigma.test.tsx),
@@ -74,19 +74,10 @@ r="$(root orphan)"; mod "$r" pane; echo "x" > "$r/mods/pane/hooks/sigma.tsx"; rm
 run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"owner mods/_template/hooks/sigma.tsx is missing"* ]]
 check "S6 a copy without its owner fails" $? "$out"
 
-# Rule 7's table also owns hooks/sessions.ts (ADR-0045), by mods/agent-watch.
-r="$(root sess-same)"; mod "$r" agent-watch; echo "export const tree = 1" > "$r/mods/agent-watch/hooks/sessions.ts"
-mod "$r" pane; cp "$r/mods/agent-watch/hooks/sessions.ts" "$r/mods/pane/hooks/"
-run "$r"; check "S7 an identical sessions.ts copy passes" "$rc" "$out"
-
-r="$(root sess-differs)"; mod "$r" agent-watch; echo "export const tree = 1" > "$r/mods/agent-watch/hooks/sessions.ts"
+# A file outside rule 7's table is not checked (ADR-0048 dropped hooks/sessions.ts from it).
+r="$(root sess-free)"; mod "$r" agent-watch; echo "export const tree = 1" > "$r/mods/agent-watch/hooks/sessions.ts"
 mod "$r" pane; echo "export const tree = 2" > "$r/mods/pane/hooks/sessions.ts"
-run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane: hooks/sessions.ts differs from its owner"* ]]
-check "S8 a drifted sessions.ts copy fails, naming the mod" $? "$out"
-
-r="$(root sess-orphan)"; mod "$r" pane; echo "x" > "$r/mods/pane/hooks/sessions.ts"
-run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"owner mods/agent-watch/hooks/sessions.ts is missing"* ]]
-check "S9 a sessions.ts copy without its owner fails" $? "$out"
+run "$r"; check "S7 a sessions.ts that differs between mods passes: it is no shared module" "$rc" "$out"
 
 # owner <root>: a mod "own" whose contract a reader mirrors.
 owner() {

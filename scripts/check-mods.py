@@ -15,9 +15,8 @@ each directory mods/<dir>/:
   6. README.md exists;
   7. each shared hooks module a mod carries is a byte-identical copy of its
      one owner, a table (SHARED): hooks/sigma.tsx, the SIGMAorbital design
-     module (ADR-0043), owned by mods/_template; hooks/sessions.ts, the
-     session tree (ADR-0045), owned by mods/agent-watch. A mod whose hooks
-     draw (`ui.render`) carries a sigma.tsx;
+     module (ADR-0043), owned by mods/_template. A mod whose hooks draw
+     (`ui.render`) carries a sigma.tsx;
   8. a mod that reads another mod's $.state declares that part of the
      owner's contract as a MIRROR (ADR-0044): a comment
      `// MIRROR of mods/<owner>/types/index.d.ts` naming a prefix ("Each
@@ -46,7 +45,6 @@ NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # Shared hooks modules: file name -> the one copy that owns it (rule 7).
 SHARED = {
     "sigma.tsx": os.path.join("mods", "_template", "hooks", "sigma.tsx"),
-    "sessions.ts": os.path.join("mods", "agent-watch", "hooks", "sessions.ts"),
 }
 SIGMA_OWNER = SHARED["sigma.tsx"]
 DRAWS = re.compile(r"""['"]ui\.render['"]""")

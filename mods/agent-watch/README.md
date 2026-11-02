@@ -16,6 +16,7 @@ A Claude Code mod that keeps an **Agents** pane beside the chat: this session an
 - **Colour is state**: running cyan, done `text-1`, failed red `◆`, blocked or partial amber `▲`, queued `text-3` outlined, stopped or cancelled `text-3` `○`. Ownership is shown by containment. The pane has no colour per session and no pulsing session icon.
 - **Under a running row**, what it is doing: its own steps if it keeps a list (`1/2 STEPS`), the tool call in flight with its main argument (`Bash: ls -la`, with its elapsed time once it runs past five seconds), how many calls it has made, and its tokens so far (`3 CALLS · 1.2k TOK`). An ended row keeps its calls and tokens.
 - **A pane too short** folds the KPI row and the SELECTED panel before the chart, and member rows into `+N more`.
+- **In Compass's pane**: when [task-compass](../task-compass/README.md) is loaded too, this mod adds its contribution below Compass's Sprints board (`ADR-0048`): the progress meter (the band's own, drawn only while a task list exists or an agent runs), then the Sessions panel. No row is reserved, so Compass's pane scrolls. Nothing here turns that off alone: turn the whole mod off (for example with the [switchboard](../switchboard/README.md) mod) or do not install it; Compass then shows its board alone.
 - Not drawn: desktop sessions started from this one with `start_session`; no engine call lists sessions.
 - **A toast** when a subagent fails or is stopped, once, within a second of its end: `EXPLORE · Find hooks · FAILED 00:01:12`.
 - **The status line** under the prompt says `2 AGENTS RUNNING` while any does.
@@ -24,7 +25,7 @@ A Claude Code mod that keeps an **Agents** pane beside the chat: this session an
 
 ## Not yet verified
 
-Version 0.5.0 (`TASK-0206`) is tested in the mod test kit, not run on a real desktop. Unconfirmed: how the panel draws and scrolls in the live Agents pane, and whether a row press in it redraws as the tests say.
+Version 0.6.0 (`TASK-0207`) is tested in the mod test kit and was seen in a live terminal session with both mods loaded: the contribution draws in Compass's pane (the meter's glyph and count, then the Sessions panel, following a running agent), the engine answers `engine` at the bottom of a Pane's chain, which both mods drop, and the pane scrolls. Not yet seen: a press on a row of the contributed panel; the meter's progress bar in Compass (it needs a task list); the load order with agent-watch first; and the panel in the desktop app.
 
 ## Install
 
