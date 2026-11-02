@@ -459,6 +459,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0209-one-command-per-call.md
 - [x] TASK-0210 — The OpenCode driver records what changed, and parks by namespace
   .ai/tasks/TASK-0210-driver-records-the-change.md
+- [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget
+  .ai/tasks/TASK-0212-collect-within-budget.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
@@ -474,7 +476,7 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   .ai/planning/BACKLOG.md
 - B-064 `task-compass`'s README has no screenshots
   .ai/planning/BACKLOG.md
-- B-065 task-orchestrator's `collect` fails while its tasks run
-  .ai/planning/BACKLOG.md
 - B-067 The OpenCode driver journals every tool error as `tool-denied`
+  .ai/planning/BACKLOG.md
+- B-068 task-orchestrator cannot cancel a handed-off task
   .ai/planning/BACKLOG.md

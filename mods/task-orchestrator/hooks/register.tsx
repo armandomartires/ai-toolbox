@@ -35,6 +35,8 @@ const STORE_AUDIT = `${PLUGIN}:audit`
 const AUDIT_ROWS = 200
 const CONFIG_FILE = `.claude/${PLUGIN}.json`
 const POLL_MS = 1_000
+/** What collect leaves of its hook's budget for the answer after the last sleep. */
+const ANSWER_MARGIN_MS = 1_500
 
 /** The config in force: defaults, then the override files, then the person's live choices. */
 let config: Config = DEFAULT_CONFIG
@@ -357,19 +359,21 @@ const answerDispatch = async ($: EngineInterface, input: DispatchInput): Promise
   return { result: [line(now), ...now.notes.map(one => `note: ${one}`), ...(root ? [`stalled: ${stallText(now, root)}`] : []), ...handoffText(now)].join('\n') }
 }
 
-const answerCollect = async ($: EngineInterface, input: DispatchInput): Promise<{ result: string }> => {
+const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { remainingMs: number; signal: AbortSignal }): Promise<{ result: string }> => {
   const ids = strings(input.ids)
   const timeoutMs = typeof input.timeoutMs === 'number' && input.timeoutMs > 0 ? Math.min(input.timeoutMs, config.limits.collectTimeoutMs) : config.limits.collectTimeoutMs
-  const deadline = (await $.clock.now()) + timeoutMs
+  // Every `$.clock.sleep` is billed to the hook's ten-second budget, the one
+  // `$` call that is: past it the hook is skipped and the call goes unanswered
+  // (B-065). So the wait ends while the budget still holds the answer.
+  const deadline = (await $.clock.now()) + Math.max(0, Math.min(timeoutMs, wait.remainingMs - ANSWER_MARGIN_MS))
   const targets = (rows: Ledger) => (ids.length ? rows.filter(task => ids.includes(task.id)) : rows)
   for (;;) {
     const rows = await read($, ledger)
     // A task stuck behind one that ended without completing would wait out the timeout.
     const pending = targets(rows).filter(task => !ENDED.includes(task.status) && !stalledBy(rows, task))
-    if (!pending.length || (await $.clock.now()) >= deadline) break
-    // A `$` call: the wait is free of the hook's budget, which a plain
-    // promise would exhaust after ten seconds.
-    await $.clock.sleep(POLL_MS)
+    const now = await $.clock.now()
+    if (!pending.length || now >= deadline) break
+    await $.clock.sleep(Math.min(POLL_MS, deadline - now), { signal: wait.signal })
   }
   const rows = await read($, ledger)
   const chosen = targets(rows)
@@ -381,7 +385,7 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput): Promise<
         [
           line(task),
           ...(task.report ? [`  findings: ${task.report.findings || '-'}`, `  files: ${task.report.files || '-'}`, `  checks run: ${task.report.checks || '-'}`, `  evidence: ${task.report.evidence || '-'}`, `  risks: ${task.report.risks || '-'}`] : []),
-          ...(task.status === 'running' ? ['  still running when collect timed out'] : []),
+          ...(task.status === 'running' ? ['  still running: call collect again, or wait for its note'] : []),
           ...(() => {
             const root = stalledBy(rows, task)
             return root ? [`  stalled: ${stallText(task, root)}`] : []
@@ -480,7 +484,7 @@ export const register: Register = on => {
       })
       await $.tool.register({
         name: 'collect',
-        description: 'Wait for the named tasks (or every open one) to end, up to a timeout, and return their reports: status, findings, files, checks actually run, evidence, risks, next action. Call it after dispatching, instead of polling.',
+        description: 'Wait for the named tasks (or every open one) to end, up to a timeout and never past about eight seconds (a hook\'s budget), and return their reports: status, findings, files, checks actually run, evidence, risks, next action. A task still running says so: call collect again, or wait for the note each ended task leaves.',
         inputSchema: { type: 'object', properties: { ids: { type: 'array', items: { type: 'string' } }, timeoutMs: { type: 'number' } } },
         isDeferred: false,
       })
@@ -627,7 +631,7 @@ export const register: Register = on => {
   on('tool.call', async ($, e, next) => {
     const name = String(e.tool)
     if (name === TOOL.dispatch) return answerDispatch($, e as unknown as DispatchInput)
-    if (name === TOOL.collect) return answerCollect($, e as unknown as DispatchInput)
+    if (name === TOOL.collect) return answerCollect($, e as unknown as DispatchInput, { remainingMs: next.budget.remainingMs, signal: next.signal })
     if (name === TOOL.status) return { result: await statusText($) }
     if (name === TOOL.cancel) return { result: await answerCancel($, String((e as unknown as DispatchInput).id ?? 'all')) }
     if (e.agentId && (await read($, enabled))) {

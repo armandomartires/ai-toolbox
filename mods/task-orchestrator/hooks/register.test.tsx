@@ -105,6 +105,24 @@ test('dispatch routes, registers the profile with model and effort, spawns a rea
   expect(String(got.result)).toContain('run: done')
 })
 
+// Its own time limit outlasts the hook's ten-second budget, so an overrun shows as one.
+test('collect on a running task answers inside its hook budget, which every sleep is billed to (B-065)', { timeoutMs: 20_000 }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser' }))
+
+  // Asked to wait ten minutes, it stops before ten seconds of sleep and says
+  // so; 0.4.2 slept on, overran, and the call reached nothing that answers it.
+  const pending = $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['T1'], timeoutMs: 600_000 })
+  await clock.advance(12_000)
+  const got = String((await pending).result)
+  expect(got).toContain('T1 → scout')
+  expect(got).toContain('still running: call collect again')
+})
+
 test('overrides are disclosed, a gated effort is refused, and an unavailable model falls back visibly', async ($, on) => {
   mock.clock(on)
   mock.store(on)

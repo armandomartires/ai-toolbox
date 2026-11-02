@@ -252,6 +252,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [?] TASK-0207 — task-compass 0.9.0, agent-watch 0.6.0: Compass's pane carries agent-watch's panel and meter (stage 2 of 2)
 - [x] TASK-0209 — An allowlisted role runs one shell command per call
 - [x] TASK-0210 — The OpenCode driver records what changed, and parks by namespace
+- [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget
 
 ## Post-S9 (superseded by the promotion above)
 
