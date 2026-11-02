@@ -5,7 +5,7 @@
 - Status: blocked
 - Owner: agent (Claude Code)
 - Created: 2026-10-28
-- Updated: 2026-10-28
+- Updated: 2026-11-02
 - Applies to: `mods/task-orchestrator/` (0.4.0 → 0.5.0)
 - Source: the human's review request of 2026-10-28 ("…assigning the tasks to sub sessions running sonnet 5.5 in medium or high effort…"); their answer that "sub sessions" means real Code-tab sessions; the approved plan; "Yes, spike next"
 - Blocked on: a desktop session that offers the app's `start_session` tool (step 1)
@@ -28,6 +28,15 @@ When the person asks for sessions, a task runs as a Code-tab session they can op
 - **A started session does not inherit the parent's effort.** The 2026-10-26 child ran `claude-opus-5-5` at effort `low` in its parent's folder (no worktree): the coordinator must set model and effort itself, in `start_session` or by `set_session_effort`.
 - **Sidebar nesting is the app's.** The 2026-10-26 child carries `parentSessionId` and `startedBy` and was listed under its parent; the human expects session workers nested under the coordinator's title in the sidebar (2026-10-28). Only `start_session` produces that.
 - **Not tried:** whether the mod's own `$.tool.call` of `get_session` / `list_events` passes auto mode (`ARCHITECTURE.md` expects a plugin's call to get no verdict, as its spawn does).
+
+## Spike findings (2026-11-02): the `spawn_task` route
+
+- **Still not offered here.** Session `Agent-watch mod sync with Compass` (desktop, Remote Control on, `isRemote: true`, auto mode, Opus 5.5 high) has no `start_session`.
+- **`spawn_task` nests a child.** The app's `spawn_task` raised a chip; once the human clicked it, the child (`Test session for the sidebar screenshot`) was listed under its parent in the sidebar. `get_session` on it: `parentSessionId` = the parent, `detached: false`, its own worktree and branch (`claude/<name>`), no `startedBy` and no `name`, so `list_sessions` with `linked: true` does not list it.
+- **It inherits neither model nor effort.** The child ran `claude-haiku-5-5` at `high` under an Opus 5.5 parent. `set_session_model` and `set_session_effort` exist here, but go silent only for a session this one started with `start_session`, so on this route they may prompt.
+- **Each child needs the human's click.** `spawn_task` returns a `task_id`, not a session id; the click arrives as a notice, so a coordinator finds the child by `parentSessionId` and title. A worker never starts unattended on this route.
+- **Its subagents stay its own.** A child is a full session in its own process: its mods and subagents run there, and this session's agent-watch cannot see them. The parent's panel could show the child as a node only.
+- **The human's choice, 2026-11-02:** wait for `start_session`; this route is not built.
 
 ## Scope
 
@@ -72,3 +81,4 @@ When the person asks for sessions, a task runs as a Code-tab session they can op
 ## Execution log
 
 - 2026-10-28 · Claude Code (Opus 5.5) · spike step 1 started; `start_session` not offered in this session; the findings above recorded from the session list and `TASK-0181`; paused
+- 2026-11-02 · Claude Code (Opus 5.5) · `start_session` still not offered; one `spawn_task` child started by the human and read with `get_session`; the `spawn_task` findings recorded; the human chose to wait for `start_session`; still blocked
