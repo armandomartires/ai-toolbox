@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-10-31
-- Updated: 2026-10-31
+- Updated: 2026-11-02
 - Applies to: `mods/agent-watch/` (0.4.3 → 0.5.0)
 - Source: the human, 2026-10-31: "just work on the agent-watch section", then Compass "only after it is completed and validated"
 
@@ -41,7 +41,7 @@ agent-watch's own pane draws the Sessions panel the human sees in Compass today 
 
 - [x] agent-watch's pane draws the KPI row, sunburst, selected panel and table, by state colour (`panel.test.tsx`).
 - [x] Nothing under `mods/task-compass/` or `scripts/check-mods.py` changes.
-- [ ] Live: the Agents pane shows the panel in the desktop app (the human; the `Unexercised:` backlog is at its cap of 3, so the task stays in review until then).
+- [x] Live: the Agents pane shows the panel in the desktop app (the human, 2026-11-02).
 
 ## Mandatory validations
 
@@ -51,7 +51,7 @@ agent-watch's own pane draws the Sessions panel the human sees in Compass today 
 
 ## Risks and rollback
 
-- Proven only in the mod test kit; the real pane's drawing, scrolling and presses are unverified.
+- Seen in the desktop app's Agents pane; presses are `TASK-0207`'s check.
 - The panel's logic exists twice (agent-watch and Compass) until stage 2.
 - Rollback: git revert the task commit.
 
@@ -63,7 +63,7 @@ agent-watch's own pane draws the Sessions panel the human sees in Compass today 
 | `ADR-0047` | accepted: agent-watch draws the panel itself; Compass untouched until stage 2; notes on `ADR-0044`, `ADR-0046` |
 | `mods/task-compass/`, `scripts/check-mods.py` | unchanged; rules 7 and 8 still pass |
 
-Next: the human looks at the Agents pane in the desktop app; then stage 2, Compass showing agent-watch's panel, as its own task and ADR.
+Next: none; stage 2 is `TASK-0207`.
 
 ## Execution log
 
@@ -74,3 +74,5 @@ Next: the human looks at the Agents pane in the desktop app; then stage 2, Compa
   - Review R1: no code defect; three false doc lines (DEVELOPING.md:8 and :14, the plugin.json description and the registry line it generates) and a wrong clause number in the README, all fixed; `sessions.ts` equals Compass's copy (`cmp`).
   - Left as is: `reservedRows` stays a parameter of the panel's layout, passed 0 by the pane, for stage 2; a press on a row hidden behind a chart's `+N more` selects nothing, as in Compass.
   - Not run: the panel in the desktop app.
+- 2026-11-02 · the human, desktop app · live check; done
+  - Evidence: `/agent-watch` → `Agents pane opened: 0 running, 2 completed, 0 failed or stopped.`; the pane drew the KPI row (`PROGRESS 100 %`, `AGENTS 2`, `TOKENS 3.5M`, `FAILED 0`), the sunburst, SELECTED and the `SESSION STATE STEPS TIME TOK` table (`THIS SESSION` IDLE, `S01` with `B1` and `R2` DONE), in state colours.
