@@ -472,3 +472,141 @@ test('/agent-watch opens the pane and draws its counts as a panel, in the host t
   expect((await old.find({ type: 'Text' }))?.text).toBe('engine')
   await old.unmount()
 })
+
+// ---- Background tasks (ADR-0049) ------------------------------------------
+
+/** The engine's answers to the background-task tools: Bash opens one when asked to, Monitor always, TaskStop names what it stopped. */
+const backgroundTools = (on: On) => {
+  on('tool.call', (_, e) => {
+    const call = e as unknown as Record<string, unknown>
+    if (call.tool === 'Bash') return { result: call.run_in_background ? { stdout: '', stderr: '', interrupted: false, backgroundTaskId: String(call.description) === 'Run the driver' ? 'b1' : 'b2' } : { stdout: '', stderr: '', interrupted: false } }
+    if (call.tool === 'Monitor') return { result: { taskId: 'm1', timeoutMs: 300_000 } }
+    if (call.tool === 'TaskStop') return { result: { message: 'stopped', task_id: call.task_id, task_type: 'local_bash' } }
+    return { result: {} }
+  })
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+  on('classic.Stop', () => ({}))
+}
+
+const notice = (id: string, status: string, summary: string) =>
+  `<task-notification>\n<task-id>${id}</task-id>\n<status>${status}</status>\n<summary>${summary}</summary>\n</task-notification>`
+
+test('a background command is a running row with no agent, and its notification ends it with its exit code', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  backgroundTools(on)
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.tool.call({ tool: 'Bash', command: 'python3 .unattended/driver.py run', description: 'Run the driver', run_in_background: true })
+  // A foreground command opens nothing.
+  await $.tool.call({ tool: 'Bash', command: 'ls', description: 'List files' })
+  await clock.advance(95_000)
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
+    expect(await text(/^1 RUNNING$/)).toBeDefined()
+    expect(await text(/shell · Run the driver/)).toBeDefined()
+    expect(await text(/List files/)).toBeUndefined()
+    expect(await text(/\$ python3 \.unattended\/driver\.py run/)).toBeDefined()
+    expect(await text(/^B01 ·$/)).toBeDefined()
+    expect(await text(/^1m35s$/)).toBeDefined()
+    // Running is cyan, and the AGENTS block still counts no agent.
+    expect((await ui.find({ type: 'Text', text: /^ *● $/ }))?.props.color).toBe(DARK.cyan)
+    expect(await text(/No subagent yet/)).toBeUndefined()
+    await ui.unmount()
+  }
+
+  await $.prompt.submit({ text: notice('b1', 'failed', 'Background command "Run the driver" failed with exit code 2'), origin: { kind: 'task-notification' } } as never)
+  await clock.advance(10_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
+  expect(await text(/^0 RUNNING$/)).toBeDefined()
+  expect(await text(/EXIT 2/)).toBeDefined()
+  // Its time stopped at the notification.
+  expect(await text(/^1m35s$/)).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /^ *◆ $/ }))?.props.color).toBe(DARK.red)
+  await ui.unmount()
+})
+
+test('a prompt that is not a task notification ends nothing', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  backgroundTools(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Bash', command: 'sleep 600', description: 'Run the driver', run_in_background: true })
+  await $.prompt.submit({ text: notice('b1', 'completed', 'done (exit code 0)'), origin: { kind: 'composer' } } as never)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ text: /^1 RUNNING$/ }))?.text).toBeDefined()
+  await ui.unmount()
+})
+
+test('TaskStop stops a background task; a monitor is a row too', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  backgroundTools(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Bash', command: 'sleep 600', description: 'Sleep', run_in_background: true })
+  await $.tool.call({ tool: 'Monitor', description: 'Watch the log', command: 'tail -f log', timeout_ms: 300_000 } as never)
+  {
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+    expect((await ui.find({ text: /^2 RUNNING$/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /monitor · Watch the log/ }))?.text).toBeDefined()
+    await ui.unmount()
+  }
+  await $.tool.call({ tool: 'TaskStop', task_id: 'b2' } as never)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ text: /^1 RUNNING$/ }))?.text).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /^ *○ $/ }))?.props.color).toBe(DARK['text-3'])
+  await ui.unmount()
+})
+
+test("Stop's in-flight list adds an untracked shell, never a subagent, and ends a task it no longer names", async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  backgroundTools(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Bash', command: 'sleep 600', description: 'Run the driver', run_in_background: true })
+  const stop = { stop_hook_active: false, session_id: 's', transcript_path: '/t', cwd: '/p' }
+  await $.classic.Stop({
+    ...stop,
+    background_tasks: [
+      { id: 'b1', type: 'shell', status: 'running', description: 'Run the driver' },
+      { id: 'b9', type: 'shell', status: 'running', description: 'Build the site', command: 'make site' },
+      { id: 'a9', type: 'subagent', status: 'running', description: 'Find hooks', agent_type: 'Explore' },
+    ],
+  } as never)
+  {
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+    expect((await ui.find({ text: /^2 RUNNING$/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /shell · Build the site/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /Find hooks/ }))?.text).toBeUndefined()
+    await ui.unmount()
+  }
+  await $.classic.Stop({ ...stop, background_tasks: [{ id: 'b9', type: 'shell', status: 'running', description: 'Build the site' }] } as never)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ text: /^1 RUNNING$/ }))?.text).toBeDefined()
+  await ui.unmount()
+})
+
+test("a subagent's background command sits under it and ends with it when it dies with the agent", async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  on('tool.call', (_, e) => ({ result: (e as unknown as Record<string, unknown>).tool === 'Bash' ? { stdout: '', stderr: '', interrupted: false, backgroundTaskId: 'b7', backgroundEndsWithFinalResponse: true } : {} }))
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  await $.tool.call({ tool: 'Bash', command: 'sleep 600', description: 'Tail the log', run_in_background: true, agentId: 'id-Find hooks' })
+  {
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+    expect((await ui.find({ text: /^2 RUNNING$/ }))?.text).toBeDefined()
+    await ui.unmount()
+  }
+  await $.turn.complete({ agentId: 'id-Find hooks', reason: 'answer', answer: 'done', durationMs: 1, isAborted: false, turnId: 't1' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ text: /^0 RUNNING$/ }))?.text).toBeDefined()
+  expect((await ui.find({ text: /shell · Tail the log/ }))?.text).toBeDefined()
+  // Stopped with its owner (○), not done: it never finished.
+  expect((await ui.find({ type: 'Text', text: /^ *○ $/ }))?.props.color).toBe(DARK['text-3'])
+  expect((await ui.find({ type: 'Text', text: /^ *■ $/ }))?.text).toBeDefined()
+  await ui.unmount()
+})

@@ -5,12 +5,18 @@ import { registerBand } from './band'
 import {
   alertText,
   assignTones,
+  backgroundAdded,
+  backgroundEnded,
+  backgroundOwnerEnded,
+  backgroundReconciled,
+  backgroundStarted,
   callEnded,
   callStarted,
   endedBadly,
   isActive,
   markAlerted,
   mergeListed,
+  notificationOf,
   recordRun,
   runningText,
   spawnedRow,
@@ -26,6 +32,7 @@ import { remember, syncTheme, watchTheme } from './sigma'
 import { PANE, TITLE } from './names'
 import { COMPASS_PANE, contributeSessions, renderOutput, renderPane } from './view'
 import type { AgentRow } from '../types'
+import type { InFlight } from './model'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
 // in that same file, so each module declares the atoms it uses.
@@ -35,6 +42,7 @@ const frame = atom({ plugin: 'agent-watch', key: 'frame' } as const, 0)
 const tasks = atom({ plugin: 'agent-watch', key: 'tasks' } as const, [])
 const runs = atom({ plugin: 'agent-watch', key: 'runs' } as const, [])
 const tones = atom({ plugin: 'agent-watch', key: 'tones' } as const, {})
+const background = atom({ plugin: 'agent-watch', key: 'background' } as const, [])
 // task-orchestrator's ledger, read and never written (types/index.d.ts, the mirror).
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 
@@ -42,6 +50,14 @@ const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 const TICK_MS = 1_000
 /** How often a running agent's icon pulses. */
 export const FRAME_MS = 400
+
+/** The background tasks brought up to date with the engine's in-flight list, when the event carries one (ADR-0049). */
+const reconcile = async ($: EngineInterface, inFlight: readonly InFlight[] | undefined) => {
+  if (!Array.isArray(inFlight)) return
+  const at = await $.clock.now()
+  await update($, background, list => backgroundReconciled(list, inFlight, at))
+  await update($, now, () => at)
+}
 
 /** The status-line text last set, so the entry is written only when it changes. */
 let lastStatus: string | undefined
@@ -105,13 +121,15 @@ export const register: Register = on => {
     $.clock.every(TICK_MS, () => {
       tick++
       void (async () => {
-        const [rows, orchTasks] = await Promise.all([read($, agents), read($, ledger)])
-        // Busy: an agent is active or ended less than a minute ago, or the
-        // orchestrator holds a task that has not ended.
+        const [rows, orchTasks, bg] = await Promise.all([read($, agents), read($, ledger), read($, background)])
+        // Busy: an agent is active or ended less than a minute ago, the
+        // orchestrator holds a task that has not ended, or a background task
+        // runs (its elapsed time moves).
         const at = await $.clock.now()
         const isBusy =
           rows.some(row => isActive(row.status) || (row.endedAt ?? 0) > at - 60_000) ||
-          orchTasks.some(task => task.status === 'queued' || task.status === 'running')
+          orchTasks.some(task => task.status === 'queued' || task.status === 'running') ||
+          bg.some(task => task.status === 'running')
         if (isBusy || tick % 10 === 0) await refresh($)
       })().catch(() => undefined)
     })
@@ -177,15 +195,40 @@ export const register: Register = on => {
       // A subagent's end is its turn's: the list lags, or drops it unsaid,
       // and names no Workflow agent at all.
       await changeAgents($, rows => turnEnded(turnCounted(rows, id, tokens, model), id, e.reason, at)).catch(() => undefined)
+      // Its background commands that die with its final answer end with it.
+      await update($, background, list => backgroundOwnerEnded(list, id, at)).catch(() => undefined)
       await refresh($).catch(() => undefined)
     }
 
     return done
   })
 
-  // The moment a subagent stops, before the one-second tick would see it.
+  // The moment a subagent stops, before the one-second tick would see it;
+  // its in-flight list is the session's background work.
   on('classic.SubagentStop', async ($, e, next) => {
     await refresh($).catch(() => undefined)
+    await reconcile($, e.background_tasks).catch(() => undefined)
+
+    return next(e)
+  })
+
+  // The main loop's turn ended: the engine hands over the background work
+  // still in flight, which ends a task that is no longer in it (ADR-0049).
+  on('classic.Stop', async ($, e, next) => {
+    await reconcile($, e.background_tasks).catch(() => undefined)
+
+    return next(e)
+  })
+
+  // A background task's notification names it and how it ended.
+  on('prompt.submit', async ($, e, next) => {
+    if (e.origin?.kind === 'task-notification') {
+      const said = notificationOf(e.text)
+      if (said !== undefined) {
+        const at = await $.clock.now()
+        await update($, background, list => backgroundEnded(list, said.id, said.word, said.exitCode, at)).catch(() => undefined)
+      }
+    }
 
     return next(e)
   })
@@ -213,6 +256,20 @@ export const register: Register = on => {
     if (ran.deny !== undefined || ran.isError) return ran
 
     const name = String(e.tool)
+    // A background shell or monitor opened (its result names its id), or stopped.
+    const opened = backgroundStarted(name, e as unknown as Record<string, unknown>, ran.result, agentId, await $.clock.now())
+    if (opened !== undefined) {
+      await update($, background, list => backgroundAdded(list, opened))
+      return ran
+    }
+    if (name === 'TaskStop') {
+      const stopped = (ran.result as { task_id?: unknown } | undefined)?.task_id
+      if (typeof stopped === 'string' && stopped) {
+        const at = await $.clock.now()
+        await update($, background, list => backgroundEnded(list, stopped, 'killed', undefined, at))
+      }
+      return ran
+    }
     if (name === 'Workflow') {
       const result = ran.result as { runId?: unknown; workflowName?: unknown } | undefined
       if (typeof result?.runId === 'string' && result.runId) {

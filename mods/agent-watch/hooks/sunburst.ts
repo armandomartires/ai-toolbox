@@ -21,7 +21,7 @@ export type Arc = {
   label: string
   /** The bare name, without the state word. */
   name: string
-  /** The short code the graph shows in its sector: a ledger task's id (`T1`), an agent `A01`, a sub-session `S01`, a "+N" arc `+N`; empty for the centre. */
+  /** The short code the graph shows in its sector: a ledger task's id (`T1`), an agent `A01`, a background task `B01`, a sub-session `S01`, a "+N" arc `+N`; empty for the centre. */
   code: string
   /** The glyph of its state (`stateGlyph`). */
   glyph: string
@@ -38,8 +38,10 @@ export type Arc = {
   selected?: boolean
   /** A session arc that is itself a delegating agent: it counts among the agents like a member. */
   agent?: boolean
-  /** The "+N" arc of a capped session: how many members it stands for, and how many of them run or failed. */
-  hidden?: { count: number; running: number; failed: number }
+  /** A member that is a background task (ADR-0049): not an agent. */
+  background?: true
+  /** The "+N" arc of a capped session: how many members it stands for, how many of them run or failed, and how many of those are background tasks. */
+  hidden?: { count: number; running: number; failed: number; background: number; backgroundRunning: number }
 }
 
 /** What `arcs` and the drawings take beyond the tree: the selected arc's key, and the clock a running span ends at. */
@@ -78,7 +80,7 @@ export const stateTone = (status: string, badge?: { status: string }): Token => 
 /** The glyph a state carries beside its word. */
 export const stateGlyph = (status: string, badge?: { status: string }): string => GLYPH[stateKind(status, badge)]
 
-type Struct = { node: SessionNode; members: Member[]; hidden: Member[]; kids: Struct[]; moreRunning: number; moreFailed: number }
+type Struct = { node: SessionNode; members: Member[]; hidden: Member[]; kids: Struct[]; moreRunning: number; moreFailed: number; moreBackground: number; moreBackgroundRunning: number }
 type Roll = { done: number; total: number; tokens: number; duration: number }
 
 /** A stable order: ledger tasks by id, then agents by start; a status change moves none. */
@@ -99,7 +101,7 @@ const nest = (tree: readonly SessionNode[]): Struct | undefined => {
   let at = 0
   const take = (): Struct => {
     const node = tree[at++]!
-    const out: Struct = { node, members: stable([...node.running, ...node.completed]), hidden: [], kids: [], moreRunning: 0, moreFailed: 0 }
+    const out: Struct = { node, members: stable([...node.running, ...node.completed]), hidden: [], kids: [], moreRunning: 0, moreFailed: 0, moreBackground: 0, moreBackgroundRunning: 0 }
     while (at < tree.length && tree[at]!.depth > node.depth) out.kids.push(take())
     // Sub-sessions by start then key, so one ending or another starting moves no arc.
     out.kids.sort((a, b) => (a.node.startedAt ?? Infinity) - (b.node.startedAt ?? Infinity) || a.node.key.localeCompare(b.node.key))
@@ -115,8 +117,8 @@ const two = (n: number) => String(n).padStart(2, '0')
 /**
  * The graph's short codes, fixed before any cap hides a member so that a
  * status or token change, or an agent ending, moves none: a ledger task keeps
- * its id; any other member is `A01`, `A02`… by start (then key) within its own
- * session; a sub-session is `S01`, `S02`… by start (then key) across the tree.
+ * its id; a background task is `B01`, `B02`… and any other member `A01`,
+ * `A02`… by start (then key) within its own session; a sub-session is `S01`, `S02`… by start (then key) across the tree.
  */
 const codesOf = (all: Struct[]): Map<string, string> => {
   const codes = new Map<string, string>()
@@ -124,7 +126,9 @@ const codesOf = (all: Struct[]): Map<string, string> => {
     (a.startedAt ?? Infinity) - (b.startedAt ?? Infinity) || a.key.localeCompare(b.key)
   for (const s of all) {
     let at = 0
-    for (const m of s.members.filter(m => m.taskId === undefined).sort(byStart)) codes.set(m.key, `A${two(++at)}`)
+    for (const m of s.members.filter(m => m.taskId === undefined && m.background === undefined).sort(byStart)) codes.set(m.key, `A${two(++at)}`)
+    let bg = 0
+    for (const m of s.members.filter(m => m.background !== undefined).sort(byStart)) codes.set(m.key, `B${two(++bg)}`)
     for (const m of s.members) if (m.taskId !== undefined) codes.set(m.key, m.taskId)
   }
   let at = 0
@@ -176,6 +180,8 @@ export const arcs = (tree: readonly SessionNode[], opts: Opts = {}): Arc[] => {
       s.hidden = s.members.filter(m => !keep.has(m))
       s.moreRunning = s.hidden.filter(m => m.status === 'running').length
       s.moreFailed = s.hidden.filter(m => stateKind(m.status, m.badge) === 'failed').length
+      s.moreBackground = s.hidden.filter(m => m.background !== undefined).length
+      s.moreBackgroundRunning = s.hidden.filter(m => m.background !== undefined && m.status === 'running').length
       s.members = s.members.filter(m => keep.has(m))
     }
   }
@@ -244,6 +250,7 @@ export const arcs = (tree: readonly SessionNode[], opts: Opts = {}): Arc[] => {
         kind: 'member',
         parent: key,
         badge: member.badge,
+        ...(member.background !== undefined ? { background: true as const } : {}),
         progress: { done: m.done, total: m.total },
         tokens: m.tokens,
         duration: m.duration,
@@ -255,7 +262,7 @@ export const arcs = (tree: readonly SessionNode[], opts: Opts = {}): Arc[] => {
       const h = sum(s.hidden.map(m => memberRoll(m, opts.now)))
       const status = s.moreFailed > 0 ? 'failed' : s.moreRunning > 0 ? 'running' : 'completed'
       const moreKey = `${key}+more`
-      out.push({ key: moreKey, depth: s.node.depth + 1, start: from + at * share, end: from + (at + 1) * share, tone: stateTone(status), status, label: `+${s.hidden.length} more`, name: `+${s.hidden.length} MORE`, code: `+${s.hidden.length}`, glyph: stateGlyph(status), kind: 'member', parent: key, progress: { done: h.done, total: h.total }, tokens: h.tokens, duration: h.duration, selected: opts.selected === moreKey, hidden: { count: s.hidden.length, running: s.moreRunning, failed: s.moreFailed } })
+      out.push({ key: moreKey, depth: s.node.depth + 1, start: from + at * share, end: from + (at + 1) * share, tone: stateTone(status), status, label: `+${s.hidden.length} more`, name: `+${s.hidden.length} MORE`, code: `+${s.hidden.length}`, glyph: stateGlyph(status), kind: 'member', parent: key, progress: { done: h.done, total: h.total }, tokens: h.tokens, duration: h.duration, selected: opts.selected === moreKey, hidden: { count: s.hidden.length, running: s.moreRunning, failed: s.moreFailed, background: s.moreBackground, backgroundRunning: s.moreBackgroundRunning } })
       at++
     }
     for (const kid of s.kids) {
@@ -286,10 +293,25 @@ const n = (value: number) => (Math.round(value * 100) / 100).toString()
 
 const rings = (list: readonly Arc[]) => Math.max(0, ...list.map(arc => arc.depth))
 
-/** The agents the arcs stand for, a capped session's "+N" arc counting its hidden members and not itself. */
-export const chartAgents = (list: readonly Arc[]) => list.reduce((sum, arc) => sum + (arc.kind !== 'member' ? (arc.agent ? 1 : 0) : arc.hidden ? arc.hidden.count : 1), 0)
+/** The agents the arcs stand for, a capped session's "+N" arc counting its hidden members and not itself; a background task is no agent. */
+export const chartAgents = (list: readonly Arc[]) =>
+  list.reduce((sum, arc) => sum + (arc.kind !== 'member' ? (arc.agent ? 1 : 0) : arc.hidden ? arc.hidden.count - arc.hidden.background : arc.background ? 0 : 1), 0)
 /** How many of them run now, hidden ones included. */
-export const chartRunning = (list: readonly Arc[]) => list.reduce((sum, arc) => sum + (arc.kind !== 'member' ? 0 : arc.hidden ? arc.hidden.running : arc.status === 'running' ? 1 : 0), 0)
+export const chartRunning = (list: readonly Arc[]) =>
+  list.reduce((sum, arc) => sum + (arc.kind !== 'member' ? 0 : arc.hidden ? arc.hidden.running - arc.hidden.backgroundRunning : !arc.background && arc.status === 'running' ? 1 : 0), 0)
+/** The background tasks the arcs stand for, and how many of them run, hidden ones included (ADR-0049). */
+export const chartBackground = (list: readonly Arc[]) =>
+  list.reduce(
+    (sum, arc) =>
+      arc.kind !== 'member'
+        ? sum
+        : arc.hidden
+          ? { total: sum.total + arc.hidden.background, running: sum.running + arc.hidden.backgroundRunning }
+          : arc.background
+            ? { total: sum.total + 1, running: sum.running + (arc.status === 'running' ? 1 : 0) }
+            : sum,
+    { total: 0, running: 0 },
+  )
 
 /** How many of them failed, hidden ones included. */
 export const chartFailed = (list: readonly Arc[]) => list.reduce((sum, arc) => sum + (arc.kind !== 'member' ? (arc.agent && stateKind(arc.status, arc.badge) === 'failed' ? 1 : 0) : arc.hidden ? arc.hidden.failed : stateKind(arc.status, arc.badge) === 'failed' ? 1 : 0), 0)

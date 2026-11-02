@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, RenderInput } from 'claude-code'
 
-import type { AgentRow, OrchPolicy, OrchTask, Task, WorkflowRun } from '../types'
+import type { AgentRow, BackgroundTask, OrchPolicy, OrchTask, Task, WorkflowRun } from '../types'
 import { elapsed, fit, headCaption, trimTree } from './model'
 import { memberCaption, sessionTree, tokensText } from './sessions'
 import type { Member, SessionNode } from './sessions'
@@ -185,6 +185,8 @@ export type SessionsState = {
   ledger: OrchTask[]
   policy: OrchPolicy
   isOrchOn: boolean
+  /** The background shells and monitors (ADR-0049); none when the pane did not read them. */
+  background?: BackgroundTask[]
 }
 
 /**
@@ -208,7 +210,7 @@ export async function renderSessions($: EngineInterface, e: RenderInput<'Pane'>,
   const viewing = e.props.view.agentId
   const clock = state.now
 
-  const tree = sessionTree({ rows: state.agents, runs: state.runs, tones: state.tones, tasks: state.tasks, ledger: state.ledger, policy: state.policy, isOrchOn: state.isOrchOn })
+  const tree = sessionTree({ rows: state.agents, runs: state.runs, tones: state.tones, tasks: state.tasks, ledger: state.ledger, policy: state.policy, isOrchOn: state.isOrchOn, background: state.background })
   // This session's toggle hangs under its row, one line, when anything sits below it to fold.
   const canFold = tree.length > 0 && (tree.length > 1 || tree[0]!.running.length + tree[0]!.completed.length > 0)
   const isListFoldedNow = canFold && isListFolded
@@ -433,7 +435,8 @@ export async function renderSessions($: EngineInterface, e: RenderInput<'Pane'>,
           </Box>
         )
 
-  const running = state.agents.filter(row => row.status === 'running').length
+  // What runs: the agents, and the background tasks (ADR-0049), so a long background command never reads as 0 RUNNING.
+  const running = state.agents.filter(row => row.status === 'running').length + (state.background ?? []).filter(task => task.status === 'running').length
 
   return panel(
     { title: 'Sessions', code: `${running} running`, width: cols, bracketed: true },

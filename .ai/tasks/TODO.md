@@ -250,6 +250,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0204 — agent-watch 0.4.3, task-compass 0.8.1: an open session is idle, never done
 - [x] TASK-0206 — agent-watch 0.5.0: it draws the Sessions panel itself (stage 1 of 2; Compass is stage 2)
 - [x] TASK-0207 — task-compass 0.9.0, agent-watch 0.6.0: Compass's pane carries agent-watch's panel and meter (stage 2 of 2)
+- [x] TASK-0208 — agent-watch 0.7.0: the Sessions panel shows background tasks
 - [x] TASK-0209 — An allowlisted role runs one shell command per call
 - [x] TASK-0210 — The OpenCode driver records what changed, and parks by namespace
 - [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget

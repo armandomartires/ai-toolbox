@@ -62,7 +62,7 @@ const COMPASS_SECOND = { name: 'task-compass', tier: 'append', register: compass
 const BARE_FIRST = { name: 'task-compass', tier: 'prepend', register: compassWithoutNext } as const
 
 /** The engine beneath the mods: a list of agents the test moves. */
-const engine = (on: On, listed: { value: AgentInfo[] }, base: boolean | 'engine' = true) => {
+const engine = (on: On, listed: { value: AgentInfo[] }, base: boolean | 'engine' = true, tool: (call: Record<string, unknown>) => unknown = () => ({})) => {
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.view', () => ({ value: {} }))
@@ -74,7 +74,7 @@ const engine = (on: On, listed: { value: AgentInfo[] }, base: boolean | 'engine'
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('turn.complete', (_, e) => ({ text: e.answer }))
   on('turn.start', () => ({ turnId: 't' }))
-  on('tool.call', () => ({ result: {} }))
+  on('tool.call', (_, e) => ({ result: tool(e as unknown as Record<string, unknown>) }) as never)
   // What the engine draws for a pane no plugin answers: the bottom of the chain.
   // Without it the kit throws there, as the real engine might (unverified).
   if (!base) return
@@ -91,10 +91,10 @@ const engine = (on: On, listed: { value: AgentInfo[] }, base: boolean | 'engine'
 }
 
 /** A session with one running agent, tracked through agent-watch's own hooks. */
-const populate = async ($: EngineInterface, on: On, base: boolean | 'engine' = true, { plan = false, agent = true } = {}) => {
+const populate = async ($: EngineInterface, on: On, base: boolean | 'engine' = true, { plan = false, agent = true, tool = undefined as ((call: Record<string, unknown>) => unknown) | undefined } = {}) => {
   const clock = mock.clock(on, { now: 1_000 })
   const listed = { value: [] as AgentInfo[] }
-  engine(on, listed, base)
+  engine(on, listed, base, tool)
   await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
   if (plan) {
     await $.tool.call({
@@ -250,5 +250,15 @@ test("core's own drawing beneath agent-watch's hook (type engine) is left out: t
   expect(await has(ui, /^SESSIONS$/)).toBe(true)
   expect(await ui.findAll({ type: 'engine' })).toHaveLength(0)
   expect(logged).toContain('agent-watch: next(e) resolved object (type engine)')
+  await ui.unmount()
+})
+
+test("a background command shows in Compass's pane too, counted running (ADR-0049)", { plugins: [COMPASS_FIRST] }, async ($, on) => {
+  await populate($, on, true, { agent: false, tool: call => (call.run_in_background ? { stdout: '', stderr: '', interrupted: false, backgroundTaskId: 'b1' } : {}) })
+  await $.tool.call({ tool: 'Bash', command: 'python3 .unattended/driver.py', description: 'Run the driver', run_in_background: true })
+  const ui = await $.ui.mount(mountProps('task-compass', 'terminal', 'task-compass'))
+  expect(await has(ui, /^BOARD$/)).toBe(true)
+  expect(await has(ui, /shell · Run the driver/)).toBe(true)
+  expect(await has(ui, /^1 RUNNING$/)).toBe(true)
   await ui.unmount()
 })

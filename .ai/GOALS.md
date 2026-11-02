@@ -455,6 +455,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0206-agent-watch-sessions-panel.md
 - [x] TASK-0207 — task-compass 0.9.0, agent-watch 0.6.0: Compass's pane carries agent-watch's panel and meter
   .ai/tasks/TASK-0207-compass-slots-agent-watch.md
+- [x] TASK-0208 — agent-watch 0.7.0: the Sessions panel shows background tasks
+  .ai/tasks/TASK-0208-agent-watch-background-tasks.md
 - [x] TASK-0209 — An allowlisted role runs one shell command per call
   .ai/tasks/TASK-0209-one-command-per-call.md
 - [x] TASK-0210 — The OpenCode driver records what changed, and parks by namespace

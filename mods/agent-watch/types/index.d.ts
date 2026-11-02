@@ -59,6 +59,28 @@ export type WorkflowRun = {
   startedAt: number
 }
 
+/** The state of a background task: the notification's words, `killed` for a stop. */
+export type BackgroundStatus = 'running' | 'completed' | 'failed' | 'killed'
+
+/** A background shell or monitor of a loop (ADR-0049): a member of the session that owns that loop. */
+export type BackgroundTask = {
+  /** The engine's task id: Bash's `backgroundTaskId`, Monitor's `taskId`. */
+  id: string
+  kind: 'shell' | 'monitor'
+  /** The call's description, else its command cut short. */
+  description: string
+  command?: string
+  /** The subagent whose loop started it; absent for the main loop. */
+  ownerId?: string
+  /** It dies with its owner's final answer, so no notification can follow. */
+  endsWithOwner?: true
+  status: BackgroundStatus
+  /** The exit code its notification named, when it did. */
+  exitCode?: number
+  startedAt: number
+  endedAt?: number
+}
+
 // MIRROR of mods/task-orchestrator/types/index.d.ts, its one owner: the part of
 // its contract agent-watch reads, and never writes. Each `Orch<Name>` below is
 // the owner's `<Name>`, every field copied verbatim, so a change there fails
@@ -108,6 +130,8 @@ declare module 'claude-code' {
       tasks: Task[]
       /** The Workflow runs of the session, oldest first. */
       runs: WorkflowRun[]
+      /** The session's background shells and monitors, oldest first. */
+      background: BackgroundTask[]
       /** Each sub-session's tone, an index into SESSION_TONES, fixed when it first became one. */
       tones: Record<string, number>
       /** The key of the Sessions row a press selected (an arc, a session or an agent); null selects none and the panel shows this session. */

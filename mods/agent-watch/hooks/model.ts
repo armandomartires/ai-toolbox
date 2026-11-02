@@ -1,7 +1,7 @@
 // Pure logic: no `$`, so a test calls it directly.
 import type { AgentInfo } from 'claude-code'
 
-import type { Activity, AgentRow, OrchTask, Task, TaskStatus, WorkflowRun } from '../types'
+import type { Activity, AgentRow, BackgroundStatus, BackgroundTask, OrchTask, Task, TaskStatus, WorkflowRun } from '../types'
 import { elapsed, fit, hms } from './sigma'
 import { ORCH, SESSION_TONES, agentKey, isActive, isOrchWorker, memberCaption, runKey, workersOf } from './sessions'
 import type { Member, SessionNode } from './sessions'
@@ -386,3 +386,106 @@ export const trimTree = (tree: readonly SessionNode[], budget: number, at: numbe
 
   return { shown, lines }
 }
+
+// ---- Background tasks (ADR-0049) -----------------------------------------
+//
+// A loop's background shell or monitor: opened from the tool's result, which
+// names its id, and ended by its notification, a TaskStop, its owner's end
+// when it dies with it, or `classic.Stop`'s in-flight list no longer naming it.
+
+/** The tool result that opens a background task, if the call opened one: Bash's `backgroundTaskId`, Monitor's `taskId`. */
+export const backgroundStarted = (
+  tool: string,
+  args: Record<string, unknown>,
+  result: unknown,
+  ownerId: string | undefined,
+  at: number,
+): BackgroundTask | undefined => {
+  const out = (result ?? {}) as Record<string, unknown>
+  const text = (value: unknown) => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '')
+  if (tool === 'Bash' && typeof out.backgroundTaskId === 'string' && out.backgroundTaskId) {
+    const command = text(args.command)
+    // A command moved to the background at its timeout started that long ago.
+    const late = typeof out.timedOutAfterMs === 'number' ? out.timedOutAfterMs : 0
+    return {
+      id: out.backgroundTaskId,
+      kind: 'shell',
+      description: text(args.description) || fit(command, 60),
+      command: command || undefined,
+      ownerId,
+      ...(out.backgroundEndsWithFinalResponse === true ? { endsWithOwner: true as const } : {}),
+      status: 'running',
+      startedAt: at - late,
+    }
+  }
+  if (tool === 'Monitor' && typeof out.taskId === 'string' && out.taskId) {
+    const ws = args.ws as { url?: unknown } | undefined
+    const command = text(args.command) || text(ws?.url)
+    return { id: out.taskId, kind: 'monitor', description: text(args.description) || fit(command, 60), command: command || undefined, ownerId, status: 'running', startedAt: at }
+  }
+
+  return undefined
+}
+
+/** A task recorded: a new one appended, a known one (an earlier reconcile) keeping its earlier start. */
+export const backgroundAdded = (list: BackgroundTask[], task: BackgroundTask): BackgroundTask[] => {
+  const known = list.find(one => one.id === task.id)
+  if (known === undefined) return [...list, task]
+  return list.map(one => (one.id === task.id ? { ...task, startedAt: Math.min(known.startedAt, task.startedAt) } : one))
+}
+
+/** A notification's or a stop's word as a state: a non-zero exit fails a task, whatever word came with it. */
+const backgroundWord = (word: string, exitCode: number | undefined): BackgroundStatus =>
+  word === 'killed' || word === 'stopped' ? 'killed' : word === 'failed' || (exitCode !== undefined && exitCode !== 0) ? 'failed' : 'completed'
+
+/**
+ * A known task ended: its state and exit code set, its end kept from the first
+ * time it ended. A task the in-flight list ended without a word takes the
+ * notification's when that arrives after.
+ */
+export const backgroundEnded = (list: BackgroundTask[], id: string, word: string, exitCode: number | undefined, at: number): BackgroundTask[] =>
+  list.map(one =>
+    one.id === id
+      ? { ...one, status: backgroundWord(word, exitCode), exitCode: exitCode ?? one.exitCode, endedAt: one.endedAt ?? at }
+      : one,
+  )
+
+/**
+ * What a task notification's text names: its task, its status, and the exit
+ * code its summary gives (`... completed (exit code 1)`). None for a text that
+ * names no task.
+ */
+export const notificationOf = (text: string): { id: string; word: string; exitCode?: number } | undefined => {
+  const id = /<task-id>\s*([^<\s]+)\s*<\/task-id>/.exec(text)?.[1]
+  if (id === undefined) return undefined
+  const word = /<status>\s*([^<\s]+)\s*<\/status>/.exec(text)?.[1]?.toLowerCase() ?? 'completed'
+  const code = /exit code[:\s]+(-?\d+)/i.exec(text)?.[1]
+
+  return { id, word, exitCode: code === undefined ? undefined : Number(code) }
+}
+
+/** One entry of the engine's in-flight list (`classic.Stop`'s `background_tasks`), the fields read. */
+export type InFlight = { id: string; type: string; description?: string; command?: string }
+
+/**
+ * The tasks brought up to date with the engine's in-flight list: a shell or
+ * monitor it names that is not tracked is added, running from now; a tracked
+ * running one it no longer names has ended, `completed` until its notification
+ * says otherwise. Subagents and workflows are left out: they are agents and runs.
+ */
+export const backgroundReconciled = (list: BackgroundTask[], inFlight: readonly InFlight[], at: number): BackgroundTask[] => {
+  const kinds = inFlight.filter(one => one.type === 'shell' || one.type === 'monitor')
+  const named = new Set(inFlight.map(one => one.id))
+  let next = list.map(one => (one.status === 'running' && !named.has(one.id) ? { ...one, status: 'completed' as const, endedAt: at } : one))
+  for (const one of kinds) {
+    if (next.some(known => known.id === one.id)) continue
+    const command = one.command?.replace(/\s+/g, ' ').trim()
+    next = [...next, { id: one.id, kind: one.type as 'shell' | 'monitor', description: one.description || fit(command ?? '', 60), command, status: 'running', startedAt: at }]
+  }
+
+  return next
+}
+
+/** A subagent ended: the running tasks that die with its final answer are stopped. */
+export const backgroundOwnerEnded = (list: BackgroundTask[], ownerId: string, at: number): BackgroundTask[] =>
+  list.map(one => (one.ownerId === ownerId && one.endsWithOwner && one.status === 'running' ? { ...one, status: 'killed' as const, endedAt: at } : one))

@@ -3,7 +3,7 @@
 // pane, so no copy of this module exists elsewhere. It imports nothing but
 // ./sigma, so the shapes it reads are declared here, structurally: the mod's
 // own row types satisfy them, and fields it does not read are left out.
-import { IDENTITY, elapsed } from './sigma'
+import { IDENTITY, elapsed, fit } from './sigma'
 import type { Status, Token } from './sigma'
 
 /** A tool call in flight. */
@@ -27,6 +27,19 @@ export type AgentRow = {
   tokens: number
   activity?: Activity
   tasks?: Task[]
+}
+
+/** A background shell or monitor (ADR-0049), the fields the tree reads. */
+export type BackgroundTask = {
+  id: string
+  kind: string
+  description: string
+  command?: string
+  ownerId?: string
+  status: string
+  exitCode?: number
+  startedAt: number
+  endedAt?: number
 }
 
 /** A Workflow run. */
@@ -151,6 +164,8 @@ export type Member = {
   waits?: string[]
   /** An orchestrated worker's model/effort: observed, else requested. */
   settings?: string
+  /** The background task this member is (ADR-0049): set for one, never for an agent. */
+  background?: BackgroundTask
 }
 
 export type SessionKind = 'main' | 'orch' | 'run' | 'agent'
@@ -182,6 +197,8 @@ export type SessionInput = {
   ledger: readonly OrchTask[]
   policy?: OrchPolicy
   isOrchOn?: boolean
+  /** The background shells and monitors of every loop. */
+  background?: readonly BackgroundTask[]
 }
 
 /** The badge a ledger word earns, as task-orchestrator's own pane colours it. */
@@ -226,11 +243,23 @@ const taskMember = (task: OrchTask, row: AgentRow | undefined): Member => {
   }
 }
 
-const countOf = (members: Member[], unit: Progress['unit']): Progress => ({
-  done: members.filter(member => !member.isActive).length,
-  total: members.length,
-  unit,
+/** A background task as a member of the session that owns its loop. */
+const backgroundMember = (task: BackgroundTask): Member => ({
+  key: `bg-${task.id}`,
+  label: `${task.kind} · ${task.description}`,
+  status: task.status,
+  isActive: task.status === 'running',
+  startedAt: task.startedAt,
+  endedAt: task.endedAt,
+  badge: outcomeOf(task.status),
+  background: task,
 })
+
+/** A session's agents, done of all; its background tasks are not agents. */
+const countOf = (all: Member[], unit: Progress['unit']): Progress => {
+  const members = all.filter(member => member.background === undefined)
+  return { done: members.filter(member => !member.isActive).length, total: members.length, unit }
+}
 
 const stepsOf = (tasks: Task[]): Progress => ({ done: progressOf(tasks).done, total: tasks.length, unit: 'STEPS' })
 
@@ -271,6 +300,7 @@ export const sessionTree = (input: SessionInput): SessionNode[] => {
     if (isSessionRow(row) || (hasOrch && workers.has(row.id))) continue
     add(ownerOf(row), agentMember(row))
   }
+  for (const task of input.background ?? []) add(ownerOfLoop(task.ownerId), backgroundMember(task))
 
   const nodes: (SessionNode & { parent?: string })[] = []
   const main = members.get(MAIN) ?? []
@@ -378,6 +408,13 @@ export const memberTone = (input: SessionInput, agentId: string) => {
 export const memberCaption = (member: Member, at: number) => {
   const parts: string[] = []
   if (member.waits !== undefined) return member.waits.length > 0 ? `WAITS ON ${member.waits.join(', ')}` : 'QUEUED'
+  const task = member.background
+  if (task !== undefined) {
+    // The command when the description does not already say it, and the exit code once known.
+    if (task.command && fit(task.command, 60) !== task.description) parts.push(`$ ${task.command}`)
+    if (task.exitCode !== undefined) parts.push(`EXIT ${task.exitCode}`)
+    return parts.join(' · ')
+  }
   const row = member.row
   if (row?.tasks && row.tasks.length > 0) {
     const { done, total } = progressOf(row.tasks)

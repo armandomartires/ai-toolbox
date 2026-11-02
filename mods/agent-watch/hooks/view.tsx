@@ -13,6 +13,7 @@ const now = atom({ plugin: 'agent-watch', key: 'now' } as const, 0)
 const tasks = atom({ plugin: 'agent-watch', key: 'tasks' } as const, [])
 const runs = atom({ plugin: 'agent-watch', key: 'runs' } as const, [])
 const tones = atom({ plugin: 'agent-watch', key: 'tones' } as const, {})
+const background = atom({ plugin: 'agent-watch', key: 'background' } as const, [])
 // task-orchestrator's run, read and never written (types/index.d.ts, the mirror).
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 const policy = atom({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
@@ -34,7 +35,7 @@ const noteBelow = ($: EngineInterface, said: string) => {
 
 /** The state the Sessions panel is drawn from: the atoms this mod writes and the orchestrator's run it reads. */
 const readState = async ($: EngineInterface) => {
-  const [rows, at, list, all, held, orchTasks, orchPolicy, orchOn] = await Promise.all([
+  const [rows, at, list, all, held, orchTasks, orchPolicy, orchOn, bg] = await Promise.all([
     read($, agents),
     read($, now),
     read($, tasks),
@@ -43,9 +44,10 @@ const readState = async ($: EngineInterface) => {
     read($, ledger),
     read($, policy),
     read($, enabled),
+    read($, background),
   ])
 
-  return { agents: rows, now: at, tasks: list, runs: all, tones: held, ledger: orchTasks, policy: orchPolicy, isOrchOn: orchOn }
+  return { agents: rows, now: at, tasks: list, runs: all, tones: held, ledger: orchTasks, policy: orchPolicy, isOrchOn: orchOn, background: bg }
 }
 
 /**
