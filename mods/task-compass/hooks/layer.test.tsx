@@ -104,7 +104,7 @@ test('a project-workflow project shows its open sprints, centred and current', a
     expect(await text(/S089 Owner Step Tiers/)).toBeDefined()
     // Every open sprint is current; the closed ones are one scroll away.
     expect((await ui.findAll({ type: 'Text', text: '◉' })).length).toBe(3)
-    expect(await text(/‹ 85 EARLIER/)).toBeDefined()
+    expect(await text(/‹ 85 PREV/)).toBeDefined()
     expect(await text(/Site To Site Tunnel/)).toBeDefined()
     expect(await text(/late/)).toBeUndefined()
     await ui.unmount()

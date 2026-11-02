@@ -326,7 +326,7 @@ export const registerPane = (on: On) => {
       <Box flexDirection="row" justifyContent="space-between">
         {first > 0 ? (
           <Button key="earlier" plain hotkey={isTerminal ? 'h' : undefined} onPress={scrollTo(first - 1)}>
-            <Text color={color('text-2')}>{`‹ ${first} EARLIER`}</Text>
+            <Text color={color('text-2')}>{`‹ ${first} PREV`}</Text>
           </Button>
         ) : (
           <Text> </Text>
@@ -340,7 +340,7 @@ export const registerPane = (on: On) => {
         )}
         {later > 0 ? (
           <Button key="later" plain hotkey={isTerminal ? 'l' : undefined} onPress={scrollTo(first + 1)}>
-            <Text color={color('text-2')}>{`${later} LATER ›`}</Text>
+            <Text color={color('text-2')}>{`${later} NEXT ›`}</Text>
           </Button>
         ) : (
           <Text> </Text>

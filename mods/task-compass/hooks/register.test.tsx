@@ -161,7 +161,7 @@ test('the timeline shows sprints side by side with cards and tasks', async ($, o
     expect(await text(/S1 Setup/)).toBeDefined()
     expect(await text(/S2 Timeline/)).toBeDefined()
     expect(await text(/S3 Sharing/)).toBeDefined()
-    expect(await text(/SPRINT 2 OF 3/)).toBeDefined()
+    expect(await text(/^S2\/3$/)).toBeDefined()
     // The story in progress carries Claude's live tasks under it.
     expect(await text(/▸Draw the rails/)).toBeDefined()
     expect(await text(/1 task done/)).toBeDefined()
@@ -260,13 +260,13 @@ test('earlier and later scroll the sprints like a carousel', async ($, on) => {
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: 48 } })
   const has = async (pattern: RegExp) => (await ui.find({ text: pattern })) !== undefined
   expect([await has(/S1 Setup/), await has(/S2 Timeline/), await has(/S3 Sharing/)]).toEqual([false, true, true])
-  expect(await has(/‹ 1 EARLIER/)).toBe(true)
-  expect(await has(/LATER ›/)).toBe(false)
+  expect(await has(/‹ 1 PREV/)).toBe(true)
+  expect(await has(/NEXT ›/)).toBe(false)
 
   await ui.press({ key: 'earlier' })
   expect([await has(/S1 Setup/), await has(/S2 Timeline/), await has(/S3 Sharing/)]).toEqual([true, true, false])
-  expect(await has(/1 LATER ›/)).toBe(true)
-  expect(await has(/EARLIER/)).toBe(false)
+  expect(await has(/1 NEXT ›/)).toBe(true)
+  expect(await has(/PREV/)).toBe(false)
 
   // Away from the current sprint, the middle label goes back to it.
   await ui.press({ key: 'current' })

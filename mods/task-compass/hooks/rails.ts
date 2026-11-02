@@ -117,12 +117,12 @@ export const sprintEnd = (sprint: Sprint): string | undefined => {
 export const sprintLabel = (sprint: Sprint) => sprint.label ?? `S${sprint.n}`
 
 /**
- * The carousel's caption: `Sprint 2 of 5`, or for a `.ai/` board the open
+ * The carousel's caption: `S2/5`, or for a `.ai/` board the open
  * sprints and how many there are, `S087–S089 open · 88 sprints`.
  */
 export const boardTitle = (sprints: Sprint[], cur: number) => {
   const open = sprints.filter(sprint => sprint.isOpen)
-  if (open.length === 0) return `Sprint ${cur + 1} of ${sprints.length}`
+  if (open.length === 0) return `S${cur + 1}/${sprints.length}`
   const plural = sprints.length === 1 ? '' : 's'
   // A run of numbers reads as a range; open sprints apart are listed.
   const isRun = open.every((sprint, i) => i === 0 || sprint.n === open[i - 1]!.n + 1)

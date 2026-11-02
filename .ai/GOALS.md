@@ -461,6 +461,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0209-one-command-per-call.md
 - [x] TASK-0210 — The OpenCode driver records what changed, and parks by namespace
   .ai/tasks/TASK-0210-driver-records-the-change.md
+- [x] TASK-0211 — task-compass 0.9.1: shorter carousel labels
+  .ai/tasks/TASK-0211-compass-short-nav-labels.md
 - [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget
   .ai/tasks/TASK-0212-collect-within-budget.md
 - [x] TASK-0214 — task-orchestrator cancels a handed-off task (B-068)

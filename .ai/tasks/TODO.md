@@ -253,6 +253,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0208 — agent-watch 0.7.0: the Sessions panel shows background tasks
 - [x] TASK-0209 — An allowlisted role runs one shell command per call
 - [x] TASK-0210 — The OpenCode driver records what changed, and parks by namespace
+- [x] TASK-0211 — task-compass 0.9.1: shorter carousel labels
 - [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget
 - [x] TASK-0214 — task-orchestrator cancels a handed-off task (B-068)
 
