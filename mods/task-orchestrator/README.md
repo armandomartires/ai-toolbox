@@ -6,7 +6,7 @@ Workers are subagents, not sessions: each gets its own context and tools, runs i
 
 ## Install
 
-Published to the organization plugin library (0.4.2, 2026-10-28; claude.ai ran no security scan on it):
+Published to the organization plugin library (0.4.4, 2026-11-02; claude.ai ran no security scan on it):
 
 ```
 /plugin install task-orchestrator@claudeai-organization-library
