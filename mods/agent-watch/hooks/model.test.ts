@@ -340,3 +340,37 @@ test('a head is charged a caption line only when it draws one', () => {
   expect(lines).toBe(2 + 2)
   expect(headCaption(tree[0]!, 0)).toBe('')
 })
+
+test('a session with a running or queued member is never done, in its own row or this session\'s', () => {
+  // A sub-session whose own row ended while its child still runs.
+  const rows = [row('lead', 'completed', { startedAt: 1, endedAt: 5, type: 'general-purpose' }), row('kid', 'running', { startedAt: 2, parentId: 'lead' })]
+  const tones = assignTones({}, rows, [], [])
+  const open = sessionTree({ rows, runs: [], tones, tasks: [], ledger: [] })
+  const lead = open.find(node => node.kind === 'agent')
+  expect(lead?.running.map(m => m.key)).toEqual(['kid'])
+  expect(lead).toMatchObject({ status: 'running', isActive: true, endedAt: undefined })
+  expect(open[0]?.status).not.toBe('completed')
+
+  // The same with a background shell that runs after its agent ended.
+  const bg = [{ id: 'b1', kind: 'shell', description: 'build', ownerId: 'lead', status: 'running', startedAt: 3 }]
+  const shell = sessionTree({ rows: [rows[0]!], runs: [], tones, tasks: [], ledger: [], background: bg })
+  expect(shell.find(node => node.kind === 'agent')).toMatchObject({ status: 'running', isActive: true })
+
+  // A child sub-session that is itself active but has no members of its own still keeps its parent open.
+  const nested = [rows[0]!, row('kid', 'running', { startedAt: 2, parentId: 'lead', type: 'general-purpose' }), row('grandkid', 'completed', { startedAt: 3, endedAt: 4, parentId: 'kid' })]
+  const bare = sessionTree({ rows: nested, runs: [], tones: assignTones({}, nested, [], []), tasks: [], ledger: [] })
+  expect(bare.find(node => node.agentId === 'kid')).toMatchObject({ isActive: true, running: [] })
+  expect(bare.find(node => node.agentId === 'lead')).toMatchObject({ status: 'pending', isActive: true, endedAt: undefined })
+
+  // Once its members end it is done again.
+  const ended = sessionTree({ rows: [rows[0]!, row('kid', 'completed', { startedAt: 2, parentId: 'lead', endedAt: 4 })], runs: [], tones, tasks: [], ledger: [] })
+  expect(ended.find(node => node.kind === 'agent')).toMatchObject({ status: 'completed', isActive: false })
+
+  // A ledger run with a running or queued task is live, and this session is never done around it.
+  const ledger = [task('T1', 'completed'), task('T2', 'running', { agentId: 'w2' }), task('T3', 'queued', { deps: ['T2'] })]
+  const tree = sessionTree({ rows: [], runs: [], tones: {}, tasks: [{ id: '1', text: 'x', status: 'completed' }], ledger })
+  expect(tree.find(node => node.kind === 'orch')).toMatchObject({ isActive: true, status: 'running' })
+  expect(tree[0]?.status).not.toBe('completed')
+  const waiting = sessionTree({ rows: [], runs: [], tones: {}, tasks: [], ledger: [task('T1', 'completed'), task('T3', 'queued', { deps: ['T1'] })] })
+  expect(waiting.find(node => node.kind === 'orch')).toMatchObject({ isActive: true, status: 'pending' })
+})

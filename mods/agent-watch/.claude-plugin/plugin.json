@@ -1,7 +1,7 @@
 {
   "name": "agent-watch",
-  "version": "0.7.0",
-  "description": "An Agents pane beside the chat, in SIGMAorbital: the Sessions panel (KPI row, status sunburst, selected-element panel and hierarchy table) of this session and its sub-sessions (the task-orchestrator run, Workflow runs, delegating subagents) with their background shells and monitors, with its progress meter also added below Compass's board when Compass is loaded, a toast when an agent fails, and a clickable task-progress meter above the prompt.",
+  "version": "0.8.0",
+  "description": "An Agents pane beside the chat, in SIGMAorbital: the Sessions panel (KPI row, status sunburst, selected-element panel and hierarchy table) of this session and its sub-sessions (the task-orchestrator run, Workflow runs, delegating subagents) with their background shells and monitors, with its progress meter also added below Compass's board when Compass is loaded, a toast when an agent fails, and a clickable meter above the prompt that follows the task-orchestrator run (a mark per task, n/m TASKS, the running task, what is queued), or the task list's progress when no run is open.",
   "license": "MIT",
   "types": "./types/index.d.ts"
 }

@@ -372,6 +372,16 @@ export const sessionTree = (input: SessionInput): SessionNode[] => {
     })
   }
 
+  // A session with a member that runs or waits, or a sub-session that is open, is never done: an ended agent's row can outlive its members.
+  const isOpen = (node: SessionNode & { parent?: string }, depth = 0): boolean =>
+    node.running.length > 0 || (depth < 32 && nodes.some(child => child !== node && child.parent === node.key && (child.isActive || isOpen(child, depth + 1))))
+  for (const node of nodes) {
+    if (node.kind === 'main' || node.badge !== undefined || isActive(node.status) || !isOpen(node)) continue
+    node.status = node.running.some(member => member.status === 'running') ? 'running' : 'pending'
+    node.isActive = true
+    node.endedAt = undefined
+  }
+
   // Depth-first from this session; a session whose owner is missing nests under it.
   const keys = new Set(nodes.map(node => node.key))
   const childrenOf = (key: string) =>

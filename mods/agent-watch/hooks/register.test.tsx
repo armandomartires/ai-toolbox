@@ -342,8 +342,16 @@ test('the band shows the task list as a bar and the running agents, and nothing 
     await ui.unmount()
   }
 
-  // wrap_up ticks every step off; the meter turns text-1 and says so.
+  // wrap_up ticks every step off, but an agent still runs: not done.
   await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'done' } as AppTool)
+  ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.find({ text: /ALL DONE/ })).toBeUndefined()
+  expect(await ui.find({ text: /1 RUNNING/ })).toBeDefined()
+  await ui.unmount()
+
+  // Once nothing runs the meter turns text-1 and says so.
+  listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'completed' }]
+  await $.classic.SubagentStop(STOP)
   ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect((await ui.find({ type: 'Text', text: /^▰+$/ }))?.props.color).toBe(DARK['text-1'])
   expect(await ui.find({ text: /ALL DONE/ })).toBeDefined()
@@ -353,6 +361,188 @@ test('the band shows the task list as a bar and the running agents, and nothing 
   ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, hasSurvey: true }, surface: 'terminal' })
   expect((await ui.find({ type: 'Text' }))?.text).toBe('engine')
   await ui.unmount()
+})
+
+// The run of the brief: 4 of 7 tasks ended, T3 running, T4 and R3 queued behind it.
+const midRun: Register = on => {
+  on('session.start', async ($, e, next) => {
+    const task = { requested: { model: 'sonnet', effort: 'medium' }, deps: [] as string[], createdAt: 500 }
+    await $.state.set({ plugin: 'task-orchestrator', key: 'ledger' } as const, [
+      { ...task, id: 'T1', role: 'builder', objective: 'Write the model', status: 'completed', startedAt: 600, endedAt: 700 },
+      { ...task, id: 'T2', role: 'reviewer', objective: 'Review it', status: 'completed', startedAt: 700, endedAt: 800 },
+      { ...task, id: 'R1', role: 'tester', objective: 'Test it', status: 'completed', startedAt: 800, endedAt: 900 },
+      { ...task, id: 'R2', role: 'reviewer', objective: 'Review the tests', status: 'completed', startedAt: 900, endedAt: 950 },
+      { ...task, id: 'T3', role: 'builder', objective: 'Draw the band above the prompt', status: 'running', agentId: 'id-T3 builder', startedAt: 1_000 },
+      { ...task, id: 'T4', role: 'tester', objective: 'Test the band', status: 'queued', deps: ['T3'] },
+      { ...task, id: 'R3', role: 'reviewer', objective: 'Review the band', status: 'queued', deps: ['T3'] },
+    ])
+    return next(e)
+  })
+}
+const mixedRun: Register = on => {
+  on('session.start', async ($, e, next) => {
+    const task = { requested: { model: 'sonnet', effort: 'medium' }, deps: [] as string[], createdAt: 500 }
+    await $.state.set({ plugin: 'task-orchestrator', key: 'ledger' } as const, [
+      { ...task, id: 'T1', role: 'builder', objective: 'Write the model', status: 'completed', startedAt: 600, endedAt: 700 },
+      { ...task, id: 'T2', role: 'reviewer', objective: 'Review it', status: 'failed', startedAt: 700, endedAt: 800 },
+      { ...task, id: 'T3', role: 'tester', objective: 'Test it', status: 'blocked', startedAt: 800, endedAt: 900 },
+      { ...task, id: 'T4', role: 'reviewer', objective: 'Review the tests', status: 'cancelled', endedAt: 950 },
+      { ...task, id: 'T5', role: 'builder', objective: 'Fix it', status: 'completed', startedAt: 900, endedAt: 990 },
+      { ...task, id: 'T6', role: 'builder', objective: 'Draw the band above the prompt', status: 'running', agentId: 'id-T6 builder', startedAt: 1_000 },
+      { ...task, id: 'T7', role: 'tester', objective: 'Test the band', status: 'queued', deps: ['T6'] },
+    ])
+    return next(e)
+  })
+}
+const doneRun: Register = on => {
+  on('session.start', async ($, e, next) => {
+    const task = { requested: { model: 'sonnet', effort: 'medium' }, deps: [] as string[], createdAt: 500 }
+    await $.state.set({ plugin: 'task-orchestrator', key: 'ledger' } as const, [
+      { ...task, id: 'T1', role: 'builder', objective: 'Write the model', status: 'completed', startedAt: 600, endedAt: 700 },
+      { ...task, id: 'T2', role: 'reviewer', objective: 'Review it', status: 'failed', startedAt: 700, endedAt: 800 },
+    ])
+    return next(e)
+  })
+}
+
+/** The band's texts, left to right, and the width they take with at most one cell between its parts. */
+const bandTexts = async (ui: { findAll: (q: { type: string }) => Promise<{ text: string }[]> }) => {
+  const parts = (await ui.findAll({ type: 'Text' })).map(part => part.text)
+  return { joined: parts.join(' '), width: parts.join('').length + 4 }
+}
+
+test('with an open run the band follows the ledger: marks, n/m TASKS, the running task, what is queued', { plugins: [{ name: 'task-orchestrator', register: midRun }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  const said = engine(on, { value: [] })
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  // The app's task list is ticked off at every turn end: the band must not read it.
+  await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: [{ content: 'Plan', status: 'in_progress' }] } as AppTool)
+  await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'done' } as AppTool)
+  await clock.advance(5_000)
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: 110 }, surface })
+    const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
+    expect(await text(/^4\/7$/)).toBeDefined()
+    expect(await text(/^ TASKS$/)).toBeDefined()
+    expect(await text(/T3 · builder · Draw the band above the prompt/)).toBeDefined()
+    expect(await text(/^5s$/)).toBeDefined()
+    expect(await text(/^2 QUEUED · WAIT ON T3$/)).toBeDefined()
+    expect(await ui.find({ text: /ALL DONE|STEPS|\d+ running/ })).toBeUndefined()
+    // One mark per task in the Sessions panel's own glyphs and colours; the running one is the legend's cyan ●.
+    const marks = await ui.findAll({ type: 'Text', text: /^[●■□◆▲○]$/ })
+    expect(marks.map(mark => [mark.text, mark.props.color])).toEqual([
+      ['■', DARK['text-1']], ['■', DARK['text-1']], ['■', DARK['text-1']], ['■', DARK['text-1']],
+      ['●', DARK.cyan],
+      ['□', DARK['text-3']], ['□', DARK['text-3']],
+    ])
+    // The running mark opens its agent's transcript; the task text opens the pane.
+    const opens = said.opens.length
+    await ui.press({ key: 'band-agent-id-T3 builder' })
+    expect(said.views).toContainEqual({ agentId: 'id-T3 builder' })
+    await ui.press({ key: 'band-step' })
+    expect(said.opens.length).toBe(opens + 1)
+    await ui.unmount()
+  }
+})
+
+test('with failed, blocked and cancelled tasks the band counts every ended one and draws each in the panel glyph and colour', { plugins: [{ name: 'task-orchestrator', register: mixedRun }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  on('tool.call', () => ({ result: {} }))
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(5_000)
+  const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: 110 }, surface: 'terminal' })
+  // Done, failed, blocked and cancelled all ended: 5 of 7.
+  expect(await ui.find({ text: /^5\/7$/ })).toBeDefined()
+  expect(await ui.find({ text: /^ TASKS$/ })).toBeDefined()
+  expect(await ui.find({ text: /ALL DONE/ })).toBeUndefined()
+  expect(await ui.find({ text: /T6 · builder/ })).toBeDefined()
+  const marks = await ui.findAll({ type: 'Text', text: /^[●■□◆▲○]$/ })
+  expect(marks.map(mark => [mark.text, mark.props.color])).toEqual([
+    ['■', DARK['text-1']], ['◆', DARK.red], ['▲', DARK.amber], ['○', DARK['text-3']], ['■', DARK['text-1']],
+    ['●', DARK.cyan],
+    ['□', DARK['text-3']],
+  ])
+  await ui.unmount()
+})
+
+test('a run that is not open leaves the band as the task list draws it', { plugins: [{ name: 'task-orchestrator', register: doneRun }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  // Every task ended and no task list: the band is the engine's.
+  let ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect((await ui.find({ type: 'Text' }))?.text).toBe('engine')
+  await ui.unmount()
+
+  await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: [{ content: 'Draw the band', status: 'in_progress' }, { content: 'Test it', status: 'pending' }] } as AppTool)
+  ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.find({ text: /^0\/2$/ })).toBeDefined()
+  expect(await ui.find({ text: / STEPS/ })).toBeDefined()
+  expect(await ui.find({ text: /TASKS/ })).toBeUndefined()
+  expect(await ui.find({ text: /Draw the band/ })).toBeDefined()
+  await ui.unmount()
+  await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'done' } as AppTool)
+  ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.find({ text: /ALL DONE/ })).toBeDefined()
+  await ui.unmount()
+
+  // The same list with an agent running is not done, and the agent's glyph and count stay as they were.
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'running' }]
+  await clock.advance(1_000)
+  ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.find({ text: /ALL DONE/ })).toBeUndefined()
+  expect(await ui.find({ text: /1 RUNNING/ })).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /^[■□] $/ }))?.props.color).toBe(DARK.cyan)
+  await ui.unmount()
+})
+
+test('the band never wraps: the objective is cut first, then WAIT ON, then the queue', { plugins: [{ name: 'task-orchestrator', register: midRun }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  on('tool.call', () => ({ result: {} }))
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(5_000)
+
+  const at = async (columns: number) => {
+    const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: columns }, surface: 'terminal' })
+    const out = await bandTexts(ui)
+    await ui.unmount()
+    return { ...out, columns }
+  }
+  const wide = await at(100)
+  expect(wide.joined).toContain('T3 · builder · Draw the band above the prompt')
+  expect(wide.joined).toContain('2 QUEUED · WAIT ON T3')
+
+  // Objective first: the head stays, the objective is cut, the queue and its wait stay.
+  const cut = await at(70)
+  expect(cut.joined).toContain('T3 · builder · ')
+  expect(cut.joined).toMatch(/…/)
+  expect(cut.joined).not.toContain('above the prompt')
+  expect(cut.joined).toContain('WAIT ON T3')
+  // Then the wait goes, the queue stays.
+  const noWait = await at(50)
+  expect(noWait.joined).not.toContain('WAIT ON')
+  expect(noWait.joined).toContain('2 QUEUED')
+  expect(noWait.joined).toContain('T3 · builder')
+  // Then the queue.
+  const none = await at(40)
+  expect(none.joined).not.toContain('QUEUED')
+  expect(none.joined).toContain('T3 · builder')
+  for (const one of [wide, cut, noWait, none]) expect(one.width).toBeLessThanOrEqual(Math.max(20, one.columns))
 })
 
 test('the pane shows what a running agent is doing: its call, its calls, its tokens', async ($, on) => {
