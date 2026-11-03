@@ -37,6 +37,12 @@ The band above the prompt says what the Sessions panel says: while a task-orches
 
 - `mods/agent-watch/hooks/{band.tsx,sessions.ts,sigma.tsx}`, their tests, `README.md`, `DEVELOPING.md`, `.claude-plugin/plugin.json`
 
+## Execution plan
+
+1. An isolated builder: `band.tsx` reads the ledger while a run is open; `sessions.ts` keeps a session with open members from DONE; tests red-proved; 0.8.0.
+2. Review; fix the findings; the coordinator runs the suite and `check-mods.py`.
+3. The human looks at the band live.
+
 ## Acceptance criteria
 
 - [x] With a run of 7 tasks, 4 done, 1 running, 2 queued: the band reads `4/7 TASKS`, names the running task, says `2 QUEUED`, and not `ALL DONE`, whatever the task list says
@@ -58,7 +64,11 @@ The band above the prompt says what the Sessions panel says: while a task-orches
 
 ## Outputs / handover
 
-(filled at close)
+| Artifact | End state |
+|----------|-----------|
+| `mods/agent-watch/` | 0.7.0 → 0.8.0: `band.tsx` follows the ledger (marks, `n/m TASKS`, the running task, `N QUEUED · WAIT ON`), `sessions.ts` never DONE with an open member, README |
+
+Next: the live look at the band in the desktop app (`TASK-0216` found the library's task-compass 0.8.0 hid the panel).
 
 ## Execution log
 

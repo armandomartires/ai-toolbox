@@ -13,6 +13,12 @@
 
 In Compass's pane the Sessions frame never touches the Sprints frame, and on the desktop the Sessions panel always shows its KPI row and selected panel.
 
+## Inputs
+
+| Artifact | Expected state |
+|----------|----------------|
+| `mods/agent-watch/` 0.8.0 | `view.tsx` `contributeSessions` draws board, meter, panel with no margin; `panel.tsx` `sessionsLayout` folds the KPI row and selected panel for height on every surface |
+
 ## Findings (2026-11-03)
 
 - **The gap was the meter's.** `contributeSessions` drew the board, the meter, then the Sessions frame with no margin; the meter row was the only separation, and it is absent while there is no task list and nothing runs.
@@ -22,6 +28,16 @@ In Compass's pane the Sessions frame never touches the Sprints frame, and on the
 
 - In: one blank row above agent-watch's part of Compass's pane, whichever mod drew first; a desktop never folds the KPI row or the selected panel for height (its pane scrolls, as for the chart). On the desktop, `AGENT-WATCH 0.8.1` under the Sessions table, so the person sees which copy draws. Tests, README, 0.8.1.
 - Out: the terminal's layout (it still folds to fit); resizing panels (proposed separately).
+
+## Likely files
+
+- `mods/agent-watch/hooks/{view.tsx,panel.tsx}`, their tests, `README.md`, `.claude-plugin/plugin.json`
+
+## Execution plan
+
+1. A margin above the contribution; a desktop never folds the KPI row or the selected panel; a version line under the table.
+2. Tests, red-proved against 0.8.0; `tests/test-mods.sh --mod agent-watch`; `check-mods.py`; 0.8.1.
+3. The human looks at Compass's pane live.
 
 ## Acceptance criteria
 
@@ -40,6 +56,14 @@ In Compass's pane the Sessions frame never touches the Sprints frame, and on the
 
 - A short desktop pane scrolls further, since nothing folds for height there.
 - Rollback: git revert the task commit.
+
+## Outputs / handover
+
+| Artifact | End state |
+|----------|-----------|
+| `mods/agent-watch/` | 0.8.0 → 0.8.1: one blank row above its part of Compass's pane; the desktop keeps the KPI row and selected panel; `AGENT-WATCH <version>` under the table |
+
+Next: remove the library's duplicate task-compass 0.8.0, restart the app, look at Compass's pane.
 
 ## Execution log
 

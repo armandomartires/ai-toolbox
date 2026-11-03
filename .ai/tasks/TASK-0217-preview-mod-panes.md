@@ -13,6 +13,13 @@
 
 A pane being developed can be seen at once, at several sizes and on both surfaces, without the desktop app; and a session that does load the mod loads the repo's current code.
 
+## Inputs
+
+| Artifact | Expected state |
+|----------|----------------|
+| the test kit (`claude plugin test`) | mounts a pane at any size and surface; `ui.drawn()` is the tree; no files, console output dropped, a failure message printed whole |
+| `~/.claude/dev-mods/<session>/agent-watch` | a junction into this checkout, running code older than its source |
+
 ## Findings (2026-11-03)
 
 - **Two copies of one mod.** The desktop app drew the organization library's task-compass 0.8.0 over the 0.9.1 named in `CLAUDE_CODE_PLUGIN_DIRS`, while `claude plugin list` reported the opposite; 0.8.0 draws its own Sessions panel and hides agent-watch's, so agent-watch's fixes never showed in Compass's pane.
@@ -23,6 +30,16 @@ A pane being developed can be seen at once, at several sizes and on both surface
 
 - In: `scripts/preview-mods.py` (scenes in a scratch copy, trees out through the failure message, `build/preview/index.html`, `--serve` with rebuild on save and page reload); `scripts/preview/index.html` (Box as flexbox, cells to px per surface, Text tokens, Button, `Svg`, `Raster` cells); scenes for agent-watch (its pane at four sizes, Compass's pane with a board stand-in) and task-compass (the repo's own `.ai/GOALS.md`, four sizes); `scripts/dev-mods.py` (copy, not link; mirror; `--watch`); `COMPASS <version>` after the board's legend on the desktop, 0.9.2; runbook.
 - Out: a pixel-exact copy of the desktop's styling; the combined pane with the real Compass and agent-watch together (the kit loads an inline plugin without its imports); removing the library's duplicate task-compass (the human's).
+
+## Likely files
+
+- `scripts/preview-mods.py`, `scripts/preview/index.html`, `scripts/dev-mods.py`, `mods/*/preview/`, `mods/task-compass/hooks/view.tsx`, `docs/operations/runbook.md`
+
+## Execution plan
+
+1. Probe the kit: console output, failure-message length, `$.fs`.
+2. The build script and page; scenes for both mods; serve with rebuild on save.
+3. The copy script; Compass's version line; the runbook.
 
 ## Acceptance criteria
 
@@ -44,6 +61,16 @@ A pane being developed can be seen at once, at several sizes and on both surface
 - The page approximates the surfaces; a layout it shows right can still differ in the app.
 - The failure-message channel depends on the kit printing a failure whole.
 - Rollback: git revert the task commit.
+
+## Outputs / handover
+
+| Artifact | End state |
+|----------|-----------|
+| `scripts/preview-mods.py`, `scripts/preview/index.html` | build and serve `build/preview/index.html` from `mods/*/preview/*.scene.tsx` |
+| `scripts/dev-mods.py` | copies mods into a session's dev-mods folder as files |
+| `mods/task-compass/` | 0.9.1 → 0.9.2: `COMPASS <version>` after the legend on the desktop |
+
+Next: a mod change is previewed before its live look (`TASK-0218` makes this the workflow).
 
 ## Execution log
 

@@ -21,22 +21,10 @@ When the person asks for sessions, a task runs as a Code-tab session they can op
 | `mods/task-orchestrator/` 0.4.0 | workers are subagents only; the protocol says so; the auto-mode hand-off pattern (`handoffCall`, adoption in the `agent.spawn` hook) |
 | the desktop app's `start_session`, `get_session`, `set_session_effort`, `list_events` | model-callable tools; no engine call starts or lists sessions |
 
-## Spike findings (2026-10-28)
+## Spike findings (2026-10-28 and 2026-11-02)
 
-- **Not offered here.** In session `Orchestrate mod alignment review` (desktop, Remote Control on, `isRemote: true`, auto mode) neither `start_session` nor `hand_off_to_session` is offered, though other tools' descriptions name both. Which sessions get them is unknown; the one session started from another on this account (2026-10-26) had a parent without Remote Control.
-- **A mod sees the app's tool calls.** agent-watch's band follows the app's `update_plan` through a `tool.call` hook, checked live by the human in `TASK-0181`; so a hook on the coordinator's `start_session` and its result is expected to work. Its input schema and result shape are still unseen.
-- **A started session does not inherit the parent's effort.** The 2026-10-26 child ran `claude-opus-5-5` at effort `low` in its parent's folder (no worktree): the coordinator must set model and effort itself, in `start_session` or by `set_session_effort`.
-- **Sidebar nesting is the app's.** The 2026-10-26 child carries `parentSessionId` and `startedBy` and was listed under its parent; the human expects session workers nested under the coordinator's title in the sidebar (2026-10-28). Only `start_session` produces that.
-- **Not tried:** whether the mod's own `$.tool.call` of `get_session` / `list_events` passes auto mode (`ARCHITECTURE.md` expects a plugin's call to get no verdict, as its spawn does).
-
-## Spike findings (2026-11-02): the `spawn_task` route
-
-- **Still not offered here.** Session `Agent-watch mod sync with Compass` (desktop, Remote Control on, `isRemote: true`, auto mode, Opus 5.5 high) has no `start_session`.
-- **`spawn_task` nests a child.** The app's `spawn_task` raised a chip; once the human clicked it, the child (`Test session for the sidebar screenshot`) was listed under its parent in the sidebar. `get_session` on it: `parentSessionId` = the parent, `detached: false`, its own worktree and branch (`claude/<name>`), no `startedBy` and no `name`, so `list_sessions` with `linked: true` does not list it.
-- **It inherits neither model nor effort.** The child ran `claude-haiku-5-5` at `high` under an Opus 5.5 parent. `set_session_model` and `set_session_effort` exist here, but go silent only for a session this one started with `start_session`, so on this route they may prompt.
-- **Each child needs the human's click.** `spawn_task` returns a `task_id`, not a session id; the click arrives as a notice, so a coordinator finds the child by `parentSessionId` and title. A worker never starts unattended on this route.
-- **Its subagents stay its own.** A child is a full session in its own process: its mods and subagents run there, and this session's agent-watch cannot see them. The parent's panel could show the child as a node only.
-- **The human's choice, 2026-11-02:** wait for `start_session`; this route is not built.
+- **Not offered** in two sessions (desktop, Remote Control, `isRemote: true`, auto mode); a `tool.call` hook does see the app's calls (`TASK-0181`); a started session inherits neither model nor effort (a 2026-10-26 child ran Opus at `low`); the app nests a child under its parent in the sidebar.
+- **The `spawn_task` route**: nests the child (`parentSessionId`), needs the human's click per child, inherits neither model nor effort, is not listed as linked, and its subagents stay its own. The human chose to wait for `start_session`; not built.
 
 ## Spike findings (2026-11-03): `start_session`, step 1
 
