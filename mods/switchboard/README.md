@@ -11,8 +11,9 @@ A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or
 
 ## The pane
 
-`/switchboard` opens it, a SIGMAorbital panel (`ADR-0043`) whose colours follow your theme setting. Three sections: **Mods** open, **Skills** and **Connectors** behind their header (press it to open or close), each header with its count and how many are off. Every row starts with its state, a cyan `●` when on and a grey `○` when off, and ends in a **switch**: a filled button with its knob at the right (`━━●`) when on, an outlined one with its knob at the left (`●━━`) when off. Press it to flip that item.
+`/switchboard` opens it, a SIGMAorbital panel (`ADR-0043`) whose colours follow your theme setting. Three sections: **Mods** open, **Skills** and **Connectors** behind their header (press it to open or close), each header with its count and how many are off. Every row is SIGMAorbital's **Toggle**: a square switch, then the name in capitals and its state word. On, the track and knob are bright with the knob at the right (`[ ■]`, ON). Off, they are grey with the knob at the left (`[■ ]`, OFF). Press anywhere on the row to flip that item. switchboard's own row is a dimmed toggle that reads ALWAYS ON.
 
+- **Topics.** Inside Mods and Skills, rows sit under topic sub-headers: an uppercase grey label, its count (with `n OFF` when some are off) and a rule. A mod's topic is the `category` of its `.claude-plugin/plugin.json` (`planning`, `observability`); a mod with none is under **OTHER**. A skill's topic is the plugin before the `:` of `plugin:skill` (`legal` for `legal:brief`); a skill with no plugin is under **STANDALONE**. Topics are alphabetical with OTHER and STANDALONE last, rows alphabetical inside. Press a topic's header to collapse or expand it; topics start open. Connectors stay one flat list, and toggling stays per row.
 - **Mods** lists every mod (a plugin with a hooks module) in the folders `CLAUDE_CODE_PLUGIN_DIRS` names, and any of your own that loads after switchboard. A plugin that only ships skills or servers is not listed: it has nothing to refuse. Managed and built-in plugins are not listed or touched. switchboard's own row says *ALWAYS ON*.
 - A mod whose toggle this session cannot apply says so in its row, in amber with `▲`: *off from the next session* (it is running) or *on from the next session* (switchboard refused it at load).
 - **Skills** lists the skills the session's context lists; **Connectors** the connected servers. A connector the desktop names only by an id shows its first tool names beside it, so you can tell which it is.
@@ -29,5 +30,5 @@ Mods need Claude Code 2.1.308 or later. Once published to the organization plugi
 ## Commands
 
 - `/switchboard` opens the pane (or lists, on a surface without panes); so does a command missing its kind or name, such as `/switchboard on`.
-- `/switchboard list` lists each kind, on or off, drawn as a panel per kind.
+- `/switchboard list` lists each kind, on or off, drawn as a panel per kind, with a topic line before each group of mods and skills.
 - `/switchboard off skill loop`, `/switchboard on connector claude.ai Gmail`, `/switchboard off mod agent-watch`: one item. `mcp` and `server` also name a connector; `plugin` a mod.

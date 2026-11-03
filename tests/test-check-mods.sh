@@ -145,5 +145,20 @@ r="$(mirror_root unmirrored)"; reader "$r" "  id: string" "" "" "// reads own's 
 run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"declares mods/own's \$.state without a MIRROR comment"* ]]
 check "M6 another mod's state read with no mirror fails" $? "$out"
 
+# A manifest's optional category: kebab-case passes; an empty, upper-case or non-string one fails.
+for c in '"category": "task-planning"'; do
+  r="$(root cat-ok)"; mod "$r" pane
+  printf '{"name": "pane", "description": "A mod.", %s}\n' "$c" > "$r/mods/pane/.claude-plugin/plugin.json"
+  run "$r"; check "C1 a kebab-case category passes" "$rc" "$out"
+done
+i=1
+for c in '"category": ""' '"category": "Planning"' '"category": "two words"' '"category": 3'; do
+  i=$((i + 1))
+  r="$(root "cat-bad$i")"; mod "$r" pane
+  printf '{"name": "pane", "description": "A mod.", %s}\n' "$c" > "$r/mods/pane/.claude-plugin/plugin.json"
+  run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"plugin.json category"*"lowercase kebab-case"* ]]
+  check "C$i a bad category fails ($c)" $? "$out"
+done
+
 echo "test-check-mods.sh: $((cases - fails))/$cases passed"
 [ "$fails" -eq 0 ]

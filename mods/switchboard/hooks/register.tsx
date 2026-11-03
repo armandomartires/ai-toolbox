@@ -14,6 +14,7 @@ import { PANE, TITLE, renderOutput, renderPane } from './view'
 // in that same file, so each module declares the atoms it uses.
 const seen = atom({ plugin: 'switchboard', key: 'seen' } as const, { mod: [], skill: [], connector: [] })
 const hints = atom({ plugin: 'switchboard', key: 'hints' } as const, {})
+const topics = atom({ plugin: 'switchboard', key: 'topics' } as const, {})
 
 export const register: Register = on => {
   registerMods(on)
@@ -40,8 +41,8 @@ export const register: Register = on => {
     if (ask.kind === 'usage') return { text: `${ask.why}. ${USAGE}` }
     if (ask.kind === 'list') {
       await refreshInventory($)
-      const [held, known, named] = [await syncOff($), await read($, seen), await read($, hints)]
-      return { text: remember(listText(held, known, named), listData(held, known, named)) }
+      const [held, known, named, grouped] = [await syncOff($), await read($, seen), await read($, hints), await read($, topics)]
+      return { text: remember(listText(held, known, named, grouped), listData(held, known, named, grouped)) }
     }
     if (ask.kind === 'set') {
       await saveOff($, ask.target, ask.name, ask.wantOff)
@@ -51,7 +52,7 @@ export const register: Register = on => {
     await refreshInventory($)
     const { isPlaced } = await $.ui.open({ id: PANE, title: TITLE })
 
-    return { text: isPlaced ? 'Switchboard opened.' : `This surface shows no panes.\n${listText(await loadOff($), await read($, seen), await read($, hints))}` }
+    return { text: isPlaced ? 'Switchboard opened.' : `This surface shows no panes.\n${listText(await loadOff($), await read($, seen), await read($, hints), await read($, topics))}` }
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, renderPane)

@@ -339,6 +339,7 @@ column; `tests/test-mods.sh` runs `claude plugin validate` and
 |---------|------|-------|
 | `.claude-plugin/plugin.json` | Required, a JSON object. `name` is lowercase kebab-case and matches the directory. | **yes** |
 | `description` in `plugin.json` | Required, one line: it is the registry row and the plugin library's listing. | **yes** |
+| `category` in `plugin.json` | Optional: the mod's topic, a lowercase kebab-case word such as `planning` or `observability`. switchboard groups its pane's Mods by it; a mod with none is listed under Other. | **yes**: if present, non-empty kebab-case |
 | `hooks/hooks.json` | Required. `modules` lists the hooks modules, each a file in `hooks/`. | **yes** |
 | `types` in `plugin.json` | The `$.state` contract, `types/index.d.ts` by convention. Every `$.state` key a module uses is declared there, and it exports types only. | the file exists; **its content is checked by `plugin validate` only** |
 | `README.md` | Required: the user-facing spec and install line. | **yes** |

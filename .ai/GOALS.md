@@ -475,8 +475,10 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0217-preview-mod-panes.md
 - [?] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
   .ai/tasks/TASK-0219-mod-preview-refined.md
-- [?] TASK-0218 — One workflow for developing mods, with a chart and a skill
+- [x] TASK-0218 — One workflow for developing mods, with a chart and a skill
   .ai/tasks/TASK-0218-mod-development-workflow.md
+- [x] TASK-0220 — switchboard 0.5.0: mods and skills grouped by topic, in SIGMAorbital
+  .ai/tasks/TASK-0220-switchboard-topic-groups.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

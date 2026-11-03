@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { EMPTY, addSeen, asNames, isProtected, shownName, switchText, toolHints, dropSkills, isOff, listedSkills, offName, parseArgs, pendingNote, pluginDirs, refusal, serverOfTool, toggle } from './model'
+import { EMPTY, STANDALONE, addSeen, groupRows, listData, listText, modTopic, skillTopic, asNames, isProtected, shownName, toolHints, dropSkills, isOff, listedSkills, offName, parseArgs, pendingNote, pluginDirs, refusal, serverOfTool, toggle } from './model'
 
 const LISTING = [
   'The following skills are available for use with the Skill tool:',
@@ -83,10 +83,6 @@ test('a mod toggle waits for the next session only when the session differs from
   expect(pendingNote(EMPTY, [], 'agent-watch')).toBeUndefined()
 })
 
-test('a switch draws its knob at the end it stands at', () => {
-  expect(switchText(true)).toBe('━━●')
-  expect(switchText(false)).toBe('●━━')
-})
 
 test('only an id-named server gets a tool hint, of at most three tools', () => {
   const id = '1a59c906-04da-521d-bda7-7f71b9f9e01c'
@@ -101,4 +97,57 @@ test('a ccd_ server is protected and never seen', () => {
   expect(isProtected('figma')).toBe(false)
   expect(addSeen(EMPTY, 'connector', ['ccd_turn', 'figma']).connector).toEqual(['figma'])
   expect(isOff({ ...EMPTY, connector: ['ccd_turn'] }, 'connector', 'ccd_turn')).toBe(false)
+})
+
+test('a skill is grouped by its plugin prefix; one with none is standalone', () => {
+  expect(skillTopic('legal:brief')).toBe('legal')
+  expect(skillTopic('sales:call:prep')).toBe('sales')
+  expect(skillTopic('loop')).toBe(STANDALONE)
+  expect(skillTopic(':odd')).toBe(STANDALONE)
+})
+
+test('mods group by category, Other last, rows alphabetical; switchboard sits in its own group', () => {
+  const topics = { 'task-compass': 'planning', 'agent-watch': 'observability', 'task-orchestrator': 'planning', switchboard: 'configuration' }
+  const groups = groupRows('mod', ['task-orchestrator', 'zeta', 'switchboard', 'task-compass', 'agent-watch'], topics)
+  expect(groups).toEqual([
+    { topic: 'configuration', names: ['switchboard'] },
+    { topic: 'observability', names: ['agent-watch'] },
+    { topic: 'planning', names: ['task-compass', 'task-orchestrator'] },
+    { topic: 'Other', names: ['zeta'] },
+  ])
+  // With no manifest read for it, switchboard still has its own group.
+  expect(modTopic('switchboard', {})).toBe('configuration')
+  expect(modTopic('x', {})).toBe('Other')
+})
+
+test('skills group by prefix with Standalone last; connectors stay one flat group', () => {
+  expect(groupRows('skill', ['review', 'sales:call-prep', 'legal:brief', 'legal:review-contract', 'loop'])).toEqual([
+    { topic: 'legal', names: ['legal:brief', 'legal:review-contract'] },
+    { topic: 'sales', names: ['sales:call-prep'] },
+    { topic: 'Standalone', names: ['loop', 'review'] },
+  ])
+  expect(groupRows('connector', ['figma', 'alpha'])).toEqual([{ topic: '', names: ['alpha', 'figma'] }])
+  expect(groupRows('mod', [])).toEqual([])
+})
+
+test('the list answers the same groups as text and as data', () => {
+  const seen = { mod: ['agent-watch', 'zeta'], skill: ['legal:brief', 'loop'], connector: ['figma'] }
+  const off = { ...EMPTY, mod: ['zeta'] }
+  const topics = { 'agent-watch': 'observability' }
+  const text = listText(off, seen, {}, topics)
+  expect(text).toContain('  observability:\n    on   agent-watch')
+  expect(text).toContain('  other:\n    off  zeta')
+  expect(text).toContain('  legal:\n    on   legal:brief')
+  expect(text).toContain('  standalone:\n    on   loop')
+  expect(text).toContain('connectors (')
+  expect(text).toContain('\n  on   figma')
+  const data = listData(off, seen, {}, topics)
+  expect(data[0]?.groups.map(group => group.topic)).toEqual(['observability', 'Other'])
+  expect(data[0]?.rows.map(row => row.name)).toEqual(['agent-watch', 'zeta'])
+  expect(data[2]?.groups).toEqual([{ topic: '', rows: [{ name: 'figma', isOn: true, isSelf: false }] }])
+})
+
+test('topics group without case: Legal and legal share one group, a category of other joins Other', () => {
+  expect(groupRows('skill', ['Legal:a', 'legal:b'])).toEqual([{ topic: 'legal', names: ['Legal:a', 'legal:b'] }])
+  expect(groupRows('mod', ['x', 'y'], { x: 'other' })).toEqual([{ topic: 'Other', names: ['x', 'y'] }])
 })

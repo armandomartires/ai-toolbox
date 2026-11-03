@@ -13,6 +13,8 @@ each directory mods/<dir>/:
   5. hooks/hooks.json parses, and its `modules` is a non-empty list of files
      that exist inside the mod's hooks/ folder;
   6. README.md exists;
+     (`category`, if a manifest has one, is a non-empty lowercase kebab-case
+     string: the topic switchboard groups the mod under; rule 2b)
   7. each shared hooks module a mod carries is a byte-identical copy of its
      one owner, a table (SHARED): hooks/sigma.tsx, the SIGMAorbital design
      module (ADR-0043), owned by mods/_template. A mod whose hooks draw
@@ -89,6 +91,11 @@ def check(mod, bad):
         elif "\n" in desc:
             bad.append("%s: plugin.json description must be one line, so the "
                        "registry renders it into one cell" % mod)
+        if "category" in manifest:
+            cat = manifest["category"]
+            if not isinstance(cat, str) or not NAME.match(cat):
+                bad.append("%s: plugin.json category %r must be a non-empty "
+                           "lowercase kebab-case string" % (mod, cat))
         types = manifest.get("types")
         if types is not None and not (isinstance(types, str)
                                       and inside(mod, types)):

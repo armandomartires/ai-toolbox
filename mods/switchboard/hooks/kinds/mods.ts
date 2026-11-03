@@ -1,11 +1,13 @@
 import { atom, update } from 'claude-code'
 import type { On } from 'claude-code'
 
+import { readManifest } from '../inventory'
 import { addSeen, refusal } from '../model'
 import { loadOff } from '../store'
 
 const seen = atom({ plugin: 'switchboard', key: 'seen' } as const, { mod: [], skill: [], connector: [] })
 const refused = atom({ plugin: 'switchboard', key: 'refused' } as const, [])
+const topics = atom({ plugin: 'switchboard', key: 'topics' } as const, {})
 
 /**
  * Mods and other plugins: an off one's hooks module is refused as it is
@@ -21,6 +23,9 @@ export const registerMods = (on: On) => {
     // A managed plugin is the administrator's, never this switch's.
     if (e.tier !== 'user') return next(e)
     await update($, seen, held => addSeen(held, 'mod', [e.name])).catch(() => undefined)
+    // Its topic is the `category` its manifest declares, read at the plugin's root.
+    const category = (await readManifest($, e.root).catch(() => undefined))?.category
+    if (category !== undefined) await update($, topics, held => ({ ...held, [e.name]: category })).catch(() => undefined)
     const refuse = refusal(await loadOff($), e.name)
     if (refuse !== undefined) {
       await update($, refused, list => (list.includes(e.name) ? list : [...list, e.name])).catch(() => undefined)

@@ -1,6 +1,7 @@
 {
   "name": "task-compass",
   "version": "0.9.2",
+  "category": "planning",
   "description": "A Compass pane beside the chat, in SIGMAorbital: the project's sprints side by side, from .ai/GOALS.md or a project-workflow .ai/ plan, and the story Claude is on with its live tasks; other plugins, agent-watch's sessions panel among them, may add to the pane below the board.",
   "license": "MIT",
   "types": "./types/index.d.ts"

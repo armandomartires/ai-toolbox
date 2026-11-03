@@ -2,6 +2,10 @@
 
 One paragraph for the person who installs it: what the mod shows or does, on which surfaces (terminal, desktop), and what it needs.
 
+## Manifest
+
+`.claude-plugin/plugin.json` carries `name`, `version`, `description` and `types`, and may carry `category`: the mod's topic as one lowercase kebab-case word (`planning`, `observability`, `my-topic`). switchboard groups the Mods in its pane by it, and a mod without one falls under Other. `scripts/check-mods.py` rejects an empty or non-kebab-case value.
+
 ## Install
 
 Mods need Claude Code 2.1.308 or later. Once published to the organization plugin library:

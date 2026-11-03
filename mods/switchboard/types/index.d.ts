@@ -24,6 +24,10 @@ declare module 'claude-code' {
       hints: Record<string, string>
       /** The pane's sections shown open; the others show their header alone. */
       open: Kind[]
+      /** Each mod's topic: the `category` of its plugin.json. A mod with none is not listed and falls under Other. */
+      topics: Record<string, string>
+      /** The pane's collapsed groups, each `<kind>:<topic>` (`mod:planning`); a group not listed shows its rows. */
+      closedGroups: string[]
     }
   }
 }

@@ -228,7 +228,7 @@ export type StatBlock = { label: string; value: string; unit?: string; delta?: s
  * `surface` the input's, since a terminal and a desktop draw edges apart.
  */
 export const kit = (ui: Ui, surface: RenderSurface) => {
-  const { Box, Text } = ui
+  const { Box, Button, Text } = ui
   const isTerminal = surface === 'terminal'
 
   /** A straight horizontal line, `width` cells, in `line` unless told. */
@@ -482,5 +482,53 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
     )
   }
 
-  return { rule, frame, label, value, stat, stats, badge, meter, panel, innerWidth }
+  /**
+   * The design's Toggle, a square on/off switch: its track with the knob at
+   * the end it stands at, the label uppercase, then the state word (ON or
+   * OFF) in text-3. On: track and knob in text-1. Off: in line-strong. With
+   * no `onPress` it is disabled: all of it in text-3, and not pressable.
+   *
+   * A `plain` Button holding Text, since only a Button takes a press and it
+   * holds only strings and Text; the track is drawn in glyphs, so it stays
+   * square on a desktop, which rounds a bordered Box. One press anywhere on
+   * it flips it. Its `label` names the control and its state for a reader.
+   */
+  const toggle = (opts: { key: string; label: string; isOn: boolean; onPress?: () => void; onText?: string; offText?: string }) => {
+    const isDisabled = opts.onPress === undefined
+    const word = (opts.isOn ? (opts.onText ?? 'on') : (opts.offText ?? 'off')).toUpperCase()
+    const track = color(isDisabled ? 'text-3' : opts.isOn ? 'text-1' : 'line-strong')
+    const knob = (
+      <Text color={track} mono>
+        {opts.isOn ? '[ ■]' : '[■ ]'}
+      </Text>
+    )
+    const name = (
+      <Text color={color(isDisabled ? 'text-3' : 'text-1')} weight="semibold" wrap="truncate-end">
+        {` ${opts.label.toUpperCase()}`}
+      </Text>
+    )
+    const state = (
+      <Text color={color('text-3')} size="caption">
+        {`  ${word}`}
+      </Text>
+    )
+    if (isDisabled) {
+      return (
+        <Box flexDirection="row">
+          {knob}
+          {name}
+          {state}
+        </Box>
+      )
+    }
+    return (
+      <Button key={opts.key} label={`${opts.label.toUpperCase()} ${word}`} plain onPress={opts.onPress}>
+        {knob}
+        {name}
+        {state}
+      </Button>
+    )
+  }
+
+  return { rule, frame, label, value, stat, stats, badge, meter, panel, toggle, innerWidth }
 }

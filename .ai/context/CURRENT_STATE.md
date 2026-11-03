@@ -103,6 +103,7 @@ These are not to be re-litigated without a new ADR:
 - `TASK-0216`, 2026-11-03: `agent-watch` 0.8.1: a blank row under Compass's board; the desktop keeps the KPI row.
 - `TASK-0217`, 2026-11-03: `scripts/preview-mods.py` previews mod panes in a browser; `scripts/dev-mods.py` copies mods into a session; `task-compass` 0.9.2.
 - `TASK-0219`, 2026-11-03: the mod preview draws each surface by its rules, redraws on a size or a press from the page, keeps snapshots per drawing, and shares fixtures with the tests.
+- `TASK-0220`, 2026-11-03: `switchboard` 0.5.0: Mods grouped by `plugin.json` `category`, Skills by plugin prefix, each group collapsible; gate rule on `category`.
 - `TASK-0193`, 2026-10-28: `agent-watch` 0.4.0: sessions and sub-sessions with progress bars, the orchestrator tie-in, gate rule 8 (`ADR-0044`); seen live, raising `B-065` and `B-066`.
 - `TASK-0192`, 2026-10-28: `switchboard` 0.4.0 on SIGMAorbital: one panel, state glyphs, `/switchboard list` as panels.
 - `TASK-0191`, 2026-10-28: `task-orchestrator` 0.2.0 on SIGMAorbital: `/orchestrate` as panels, an uppercase status line.

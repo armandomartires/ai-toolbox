@@ -7,6 +7,13 @@ export const KINDS: readonly Kind[] = ['mod', 'skill', 'connector']
 
 export const EMPTY: Names = { mod: [], skill: [], connector: [] }
 
+/** The topic a mod without a `category` falls under, and a skill without a plugin prefix. */
+export const OTHER = 'Other'
+export const STANDALONE = 'Standalone'
+
+/** The category switchboard's own manifest declares; used when no manifest was read for it. */
+export const SELF_TOPIC = 'configuration'
+
 /** The `$.store` key holding one project's toggles. */
 export const storeKey = (root: string) => `off:${root}`
 
@@ -211,26 +218,90 @@ export const toolHints = (tools: readonly { name: string; serverName: string }[]
 export const shownName = (kind: Kind, name: string, hints: Readonly<Record<string, string>>) =>
   kind === 'connector' && isIdName(name) && hints[name] ? `${name.slice(0, 8)}… (${hints[name]})` : name
 
-/** The switch's knob, drawn in text at the end it stands at: right when on. */
-export const switchText = (isOn: boolean) => (isOn ? '━━●' : '●━━')
 
-/** What `/switchboard list` answers, as its panel draws it: per kind, each name and whether it is on. */
-export type ListOutput = { kind: Kind; takesEffect: string; rows: { name: string; isOn: boolean; isSelf: boolean }[] }[]
+/** The topic a skill is grouped under: the plugin before the `:` of `plugin:skill`; `Standalone` when it has none. */
+export const skillTopic = (name: string) => {
+  const at = name.indexOf(':')
 
-export const listData = (off: Names, seen: Names, hints: Readonly<Record<string, string>> = {}): ListOutput =>
-  KINDS.map(kind => ({
-    kind,
-    takesEffect: takesEffect[kind],
-    rows: [...new Set([...seen[kind], ...off[kind]])]
-      .filter(name => !(kind === 'connector' && isProtected(name)))
-      .sort()
-      .map(name => ({ name: shownName(kind, name, hints), isOn: !isOff(off, kind, name), isSelf: kind === 'mod' && name === SELF })),
-  }))
+  return at > 0 ? name.slice(0, at) : STANDALONE
+}
 
-/** The text `/switchboard list` answers: each kind, what is seen, what is off. */
-export const listText = (off: Names, seen: Names, hints: Readonly<Record<string, string>> = {}) =>
+/** The topic a mod is grouped under: its manifest's `category`; `Other` when none was read. */
+export const modTopic = (name: string, topics: Readonly<Record<string, string>>) =>
+  topics[name] ?? (name === SELF ? SELF_TOPIC : OTHER)
+
+/** One topic of a section and the names under it. A connector has no topic: its group's is ''. */
+export type Group = { topic: string; names: string[] }
+
+/**
+ * `names` of `kind` grouped by topic: mods by `category`, skills by plugin
+ * prefix, connectors in one group with no topic. Topics are alphabetical with
+ * `Other` and `Standalone` last; names alphabetical within a topic.
+ */
+export const groupRows = (kind: Kind, names: readonly string[], topics: Readonly<Record<string, string>> = {}): Group[] => {
+  const sorted = [...names].sort((a, b) => a.localeCompare(b))
+  if (kind === 'connector') return [{ topic: '', names: sorted }]
+  // Topics compare without case, so `Legal:` and `legal:` share a group and a
+  // manifest's `other` joins Other rather than drawing a second OTHER.
+  const norm = (topic: string) => {
+    const lower = topic.toLowerCase()
+    return lower === OTHER.toLowerCase() ? OTHER : lower === STANDALONE.toLowerCase() ? STANDALONE : lower
+  }
+  const byTopic = new Map<string, string[]>()
+  for (const name of sorted) {
+    const topic = norm(kind === 'mod' ? modTopic(name, topics) : skillTopic(name))
+    byTopic.set(topic, [...(byTopic.get(topic) ?? []), name])
+  }
+  const last = (topic: string) => (topic === OTHER || topic === STANDALONE ? 1 : 0)
+
+  return [...byTopic]
+    .sort(([a], [b]) => last(a) - last(b) || a.localeCompare(b))
+    .map(([topic, grouped]) => ({ topic, names: grouped }))
+}
+
+/** The key under which a group's collapsed state is kept: `mod:planning`. */
+export const groupKey = (kind: Kind, topic: string) => `${kind}:${topic}`
+
+/** What `/switchboard list` answers, as its panel draws it: per kind, each name and whether it is on, grouped by topic. */
+export type ListRow = { name: string; isOn: boolean; isSelf: boolean }
+export type ListOutput = { kind: Kind; takesEffect: string; rows: ListRow[]; groups: { topic: string; rows: ListRow[] }[] }[]
+
+const namesOf = (off: Names, seen: Names, kind: Kind) =>
+  [...new Set([...seen[kind], ...off[kind]])].filter(name => !(kind === 'connector' && isProtected(name)))
+
+export const listData = (
+  off: Names,
+  seen: Names,
+  hints: Readonly<Record<string, string>> = {},
+  topics: Readonly<Record<string, string>> = {},
+): ListOutput =>
   KINDS.map(kind => {
-    const names = [...new Set([...seen[kind], ...off[kind]])].filter(name => !(kind === 'connector' && isProtected(name))).sort()
-    const rows = names.map(name => `  ${isOff(off, kind, name) ? 'off' : 'on '}  ${shownName(kind, name, hints)}${kind === 'mod' && name === SELF ? ' (always on)' : ''}`)
-    return [`${kind}s (${takesEffect[kind]}):`, ...(rows.length > 0 ? rows : ['  none seen yet'])].join('\n')
+    const rowOf = (name: string): ListRow => ({
+      name: shownName(kind, name, hints),
+      isOn: !isOff(off, kind, name),
+      isSelf: kind === 'mod' && name === SELF,
+    })
+    const groups = groupRows(kind, namesOf(off, seen, kind), topics).map(group => ({ topic: group.topic, rows: group.names.map(rowOf) }))
+
+    return { kind, takesEffect: takesEffect[kind], rows: groups.flatMap(group => group.rows), groups }
+  })
+
+/** The text `/switchboard list` answers: each kind, then each topic, what is seen, what is off. */
+export const listText = (
+  off: Names,
+  seen: Names,
+  hints: Readonly<Record<string, string>> = {},
+  topics: Readonly<Record<string, string>> = {},
+) =>
+  KINDS.map(kind => {
+    const names = namesOf(off, seen, kind)
+    const rowText = (name: string, indent: string) =>
+      `${indent}${isOff(off, kind, name) ? 'off' : 'on '}  ${shownName(kind, name, hints)}${kind === 'mod' && name === SELF ? ' (always on)' : ''}`
+    const lines = groupRows(kind, names, topics).flatMap(group =>
+      group.topic === ''
+        ? group.names.map(name => rowText(name, '  '))
+        : [`  ${group.topic.toLowerCase()}:`, ...group.names.map(name => rowText(name, '    '))],
+    )
+
+    return [`${kind}s (${takesEffect[kind]}):`, ...(lines.length > 0 ? lines : ['  none seen yet'])].join('\n')
   }).join('\n')

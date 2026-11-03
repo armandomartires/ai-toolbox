@@ -46,7 +46,7 @@ const engine = (on: On, root: { value: string }) => {
     value: {
       context: {
         breakdown: {
-          skills: { skillFrontmatter: [{ name: 'deploy' }, { name: 'review' }] },
+          skills: { skillFrontmatter: [{ name: 'deploy' }, { name: 'review' }, { name: 'legal:brief' }] },
           mcpTools: ['batch', 'guide', 'update', 'read'].map(tool => ({ name: `mcp__${ID}__${tool}`, serverName: ID })),
         },
       },
@@ -54,17 +54,19 @@ const engine = (on: On, root: { value: string }) => {
   }))
   // One plugin folder, `/mods`, holding two mods with hooks and one plugin without.
   const files: Record<string, string> = {
-    '/mods/agent-watch/.claude-plugin/plugin.json': '{"name":"agent-watch"}',
+    '/mods/agent-watch/.claude-plugin/plugin.json': '{"name":"agent-watch","category":"observability"}',
     '/mods/agent-watch/hooks/hooks.json': '{}',
-    '/mods/task-compass/.claude-plugin/plugin.json': '{"name":"task-compass"}',
+    '/mods/task-compass/.claude-plugin/plugin.json': '{"name":"task-compass","category":"planning"}',
     '/mods/task-compass/hooks/hooks.json': '{}',
     '/mods/skills-only/.claude-plugin/plugin.json': '{"name":"skills-only"}',
   }
   mock.env(on, { CLAUDE_CODE_PLUGIN_DIRS: '/mods' })
-  on('fs.exists', (_, e) => ({ value: e.path in files }))
-  on('fs.read', (_, e) => (e.path in files ? { value: files[e.path] as string } : { deny: 'ENOENT' }))
+  // The Windows CLI hands a path over as `C:\mods\...`; the fixtures are POSIX.
+  const posix = (path: string) => path.replace(/^[A-Za-z]:/, '').replaceAll(String.fromCharCode(92), '/')
+  on('fs.exists', (_, e) => ({ value: posix(e.path) in files }))
+  on('fs.read', (_, e) => (posix(e.path) in files ? { value: files[posix(e.path)] as string } : { deny: 'ENOENT' }))
   on('fs.list', (_, e) =>
-    e.path === '/mods' ? { value: ['agent-watch', 'task-compass', 'skills-only'].map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) } : { value: [] },
+    posix(e.path) === '/mods' ? { value: ['agent-watch', 'task-compass', 'skills-only'].map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) } : { value: [] },
   )
   on('tool.call', (_, e) => {
     ran.push(String(e.tool))
@@ -169,29 +171,33 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
     const ui = await $.ui.mount({ ...PANE, surface })
     expect((await ui.find({ text: /MODS  3/ }))?.text).toBeDefined()
     expect((await ui.find({ type: 'Text', text: /^SWITCHBOARD$/ }))?.props.color).toBe(DARK['text-1'])
-    expect((await ui.find({ text: /^agent-watch$/ }))?.text).toBeDefined()
-    expect((await ui.find({ text: /^task-compass$/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /^ AGENT-WATCH$/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /^ TASK-COMPASS$/ }))?.text).toBeDefined()
     expect(await ui.find({ text: /skills-only/ })).toBeUndefined()
-    expect((await ui.find({ text: /^ALWAYS ON$/ }))?.text).toBeDefined()
-    // On is nominal: a cyan glyph beside a text-1 name.
-    expect((await ui.find({ type: 'Text', text: /^agent-watch$/ }))?.props.color).toBe(DARK['text-1'])
-    expect((await ui.findAll({ type: 'Text', text: /^● $/ }))[0]?.props.color).toBe(DARK.cyan)
+    expect((await ui.find({ text: /^  ALWAYS ON$/ }))?.text).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^ SWITCHBOARD$/ }))?.props.color).toBe(DARK['text-3'])
+    // SIGMAorbital's Toggle: a square track, text-1 while on, the name uppercase, then ON in text-3.
+    const on = await ui.find({ type: 'Button', key: 'mod-agent-watch' })
+    expect(on?.props.label).toBe('AGENT-WATCH ON')
+    expect(on?.props.plain).toBe(true)
+    expect(on?.props.variant).toBeUndefined()
+    // switchboard's own disabled track is text-3; an enabled one is text-1.
+    const tracks = (await ui.findAll({ type: 'Text', text: /^\[ ■\]$/ })).map(one => one.props.color)
+    expect(tracks).toContain(DARK['text-1'])
+    expect(tracks).toContain(DARK['text-3'])
+    expect((await ui.find({ type: 'Text', text: /^ AGENT-WATCH$/ }))?.props.color).toBe(DARK['text-1'])
+    expect((await ui.findAll({ type: 'Text', text: /^  ON$/ }))[0]?.props.color).toBe(DARK['text-3'])
     expect((await ui.findAll({ type: 'Text' })).filter(one => one.props.dimColor || (one.props.bold && !one.props.weight)).length).toBe(0)
-    // A switch: a filled Button named On, its knob at the right.
-    const on = await ui.find({ type: 'Button', text: /^━━●$/ })
-    expect(on?.props.label).toBe('On')
-    expect(on?.props.variant).toBe('primary')
     await ui.unmount()
   }
 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   await ui.press({ key: 'mod-agent-watch' })
-  expect((await ui.find({ text: /MODS  3 · 1 OFF/ }))?.text).toBeDefined()
-  // Off is offline: a text-3 ring and name.
-  expect((await ui.find({ type: 'Text', text: /^agent-watch$/ }))?.props.color).toBe(DARK['text-3'])
-  const switched = await ui.find({ type: 'Button', text: /^●━━$/ })
-  expect(switched?.props.label).toBe('Off')
-  expect(switched?.props.variant).toBe('secondary')
+  expect((await ui.find({ text: /MODS  3 · ○ 1 OFF/ }))?.text).toBeDefined()
+  // Off: the knob at the left, track in line-strong, the word OFF.
+  const switched = await ui.find({ type: 'Button', key: 'mod-agent-watch' })
+  expect(switched?.props.label).toBe('AGENT-WATCH OFF')
+  expect((await ui.find({ type: 'Text', text: /^\[■ \]$/ }))?.props.color).toBe(DARK['line-strong'])
   expect((await ui.find({ type: 'Text', text: /^ off from the next session$/ }))?.props.color).toBe(DARK.amber)
   await ui.press({ key: 'mod-agent-watch' })
   expect(await ui.find({ type: 'Text', text: /^ (on|off) from the next session$/ })).toBeUndefined()
@@ -205,14 +211,47 @@ test('skills and connectors open from their header; a toggle there acts next tur
   await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect((await ui.find({ text: /SKILLS  3/ }))?.text).toBeDefined()
-  expect(await ui.find({ text: /^loop$/ })).toBeUndefined()
+  expect((await ui.find({ text: /SKILLS  4/ }))?.text).toBeDefined()
+  expect(await ui.find({ text: /^ LOOP$/ })).toBeUndefined()
   await ui.press({ key: 'section-skill' })
-  expect((await ui.find({ text: /^loop$/ }))?.text).toBeDefined()
+  expect((await ui.find({ text: /^ LOOP$/ }))?.text).toBeDefined()
   await ui.press({ key: 'skill-loop' })
   expect((await $.tool.call({ tool: 'Skill', skill: 'loop' })).deny).toContain('turned off')
   await ui.press({ key: 'section-connector' })
-  expect((await ui.find({ text: /^figma$/ }))?.text).toBeDefined()
+  expect((await ui.find({ text: /^ FIGMA$/ }))?.text).toBeDefined()
+  await ui.unmount()
+})
+
+test('mods and skills sit under topic sub-headers, in text-3, with their counts; a press collapses one', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  await start($)
+  await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  // Mods: each manifest's category, switchboard under its own, none under OTHER.
+  for (const topic of ['CONFIGURATION', 'OBSERVABILITY', 'PLANNING']) {
+    expect((await ui.find({ type: 'Text', text: new RegExp(`^▾ ${topic}$`) }))?.props.color).toBe(DARK['text-3'])
+  }
+  expect((await ui.find({ type: 'Text', text: /^1$/ }))?.props.tabular).toBe(true)
+  expect(await ui.find({ text: /OTHER/ })).toBeUndefined()
+  const topics = (await ui.findAll({ type: 'Text', text: /^▾ [A-Z]+$/ })).map(one => one.text)
+  expect(topics).toEqual(['▾ CONFIGURATION', '▾ OBSERVABILITY', '▾ PLANNING'])
+
+  // Skills: by plugin prefix, with STANDALONE last.
+  await ui.press({ key: 'section-skill' })
+  const skillTopics = (await ui.findAll({ type: 'Text', text: /^▾ (LEGAL|STANDALONE)$/ })).map(one => one.text)
+  expect(skillTopics).toEqual(['▾ LEGAL', '▾ STANDALONE'])
+  expect((await ui.find({ text: /^ LEGAL:BRIEF$/ }))?.text).toBeDefined()
+
+  // A press on a group header hides its rows; another shows them again.
+  await ui.press({ key: 'group-mod:observability' })
+  expect((await ui.find({ type: 'Text', text: /^▸ OBSERVABILITY$/ }))?.text).toBeDefined()
+  expect(await ui.find({ text: /^ AGENT-WATCH$/ })).toBeUndefined()
+  expect((await ui.find({ text: /^ TASK-COMPASS$/ }))?.text).toBeDefined()
+  await ui.press({ key: 'group-mod:observability' })
+  expect((await ui.find({ text: /^ AGENT-WATCH$/ }))?.text).toBeDefined()
+  expect((await ui.findAll({ type: 'Text' })).filter(one => one.props.dimColor || (one.props.bold && !one.props.weight)).length).toBe(0)
   await ui.unmount()
 })
 
@@ -262,7 +301,7 @@ test('/switchboard list draws a panel per kind in the host theme; an unknown row
   await start($)
   await off($, 'off mod agent-watch')
   const { text } = await off($, 'list')
-  // The text the model reads is unchanged.
+  // The text the model reads still names each row's state; since 0.5.0 its rows sit under topic lines.
   expect(text).toContain('off  agent-watch')
   const LIGHT = TOKENS.light
 
