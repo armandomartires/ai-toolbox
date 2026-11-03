@@ -1,6 +1,6 @@
 # ADR-0041 — Delegation is routed and fenced by a mod; external providers stay a design
 
-**Status**: accepted
+**Status**: accepted. **Clause 5 amended 2026-11-03 by `ADR-0050`** (proposed; its clause 4 is the human's call): a task the person asks to run as a session is one, `runAs: "session"`; every other worker stays a subagent. The text below is left as written.
 **Date**: 2026-10-27
 **Task**: `TASK-0183`
 

@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { addTask, blockers, isNoVerdict, mayEscalate, mayRetry, overall, overlap, retryTask, runnable, setTask, stalledBy, startBlocker, writeBlocker } from './ledger'
+import { activeWriters, addTask, blockers, handoffRoot, isNoVerdict, mayEscalate, mayRetry, overall, overlap, retryTask, runnable, setTask, stalledBy, startBlocker, writeBlocker } from './ledger'
 import type { Ledger, Task } from './ledger'
 import { DEFAULT_LIMITS } from './routing'
 
@@ -35,6 +35,12 @@ test('at most three workers run; the fourth waits and starts once one ends', () 
   // runnable hands out only as many as the free slots.
   const many = [running('T1'), running('T2'), task('T3'), task('T4')]
   expect(runnable(many, DEFAULT_LIMITS).map(one => one.id)).toEqual(['T3'])
+})
+
+test('a queued session task reserves no slot when sessions may not be handed off', () => {
+  const ledger: Ledger = [running('T1'), running('T2'), task('S1', { runAs: 'session' }), task('T4')]
+  expect(runnable(ledger, DEFAULT_LIMITS).map(one => one.id)).toEqual(['S1'])
+  expect(runnable(ledger, DEFAULT_LIMITS, false).map(one => one.id)).toEqual(['T4'])
 })
 
 test('dependencies serialize work and a failed dependency blocks its dependants', () => {
@@ -128,4 +134,32 @@ test('a dependant stuck behind a task that ended without completing says so, thr
     'T3: waits on T1 (blocked): dispatch T1 again under its id to retry it, or cancel T3',
     'T5: waiting on T4',
   ])
+})
+
+test('a session writer has no write fence and no one-writer rule: two share a checkout, and a subagent writer is not held by them', () => {
+  const session = (id: string, patch: Partial<Task> = {}) => task(id, { role: 'builder', isWriter: true, runAs: 'session', status: 'running', ...patch })
+  const ledger: Ledger = [session('S1'), session('S2')]
+  expect(activeWriters(ledger)).toEqual([])
+  // A third session writer, and a subagent writer, start beside them; the cap still counts them.
+  expect(startBlocker(ledger, session('S3', { status: 'queued' }), DEFAULT_LIMITS)).toBeUndefined()
+  expect(startBlocker(ledger, task('B1', { role: 'builder', isWriter: true, status: 'queued' }), DEFAULT_LIMITS)).toBeUndefined()
+  expect(startBlocker([...ledger, session('S3')], session('S4', { status: 'queued' }), DEFAULT_LIMITS)).toBe('3 workers already running')
+  // A subagent writer's own writes are not blocked by a session's claim on the checkout.
+  expect(writeBlocker([...ledger, task('B1', { role: 'builder', isWriter: true, status: 'running' })], task('B1', { role: 'builder', isWriter: true, status: 'running' }), '/p/a.ts', '/p')).toBeUndefined()
+})
+
+test('a queued task behind a session task handed off is waiting on its start_session call, not stalled and not failed-behind', () => {
+  const handed = task('T1', { runAs: 'session', role: 'reviewer', status: 'blocked', handoff: true })
+  const behind = task('D1', { deps: ['T1'] })
+  const ledger: Ledger = [handed, behind]
+  expect(stalledBy(ledger, behind)).toBeUndefined()
+  expect(handoffRoot(ledger, behind)?.id).toBe('T1')
+  expect(startBlocker(ledger, behind, DEFAULT_LIMITS)).toBe('waiting on T1 (handed off, awaiting start_session)')
+  expect(blockers(ledger, DEFAULT_LIMITS)).toEqual(['D1: waits on T1 (handed off): its start_session call is not made yet; make the call its hand-off names, or cancel D1'])
+  // Through a second dependant too.
+  const deeper = task('D2', { deps: ['D1'] })
+  expect(handoffRoot([...ledger, deeper], deeper)?.id).toBe('T1')
+  // A subagent hand-off, or a session that failed, stays a stall to retry.
+  expect(stalledBy([task('H1', { status: 'blocked', handoff: true }), task('D3', { deps: ['H1'] })], task('D3', { deps: ['H1'] }))?.id).toBe('H1')
+  expect(stalledBy([task('T2', { runAs: 'session', status: 'failed' }), task('D4', { deps: ['T2'] })], task('D4', { deps: ['T2'] }))?.id).toBe('T2')
 })

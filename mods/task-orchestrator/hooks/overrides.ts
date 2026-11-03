@@ -21,7 +21,7 @@ export const detectOverrides = (settings: unknown, env: Readonly<Record<string, 
     if (isRecord(settings.modelSettings)) {
       for (const [model, value] of Object.entries(settings.modelSettings)) {
         if (isRecord(value) && value.effortLevel !== undefined)
-          out.push({ source: 'settings', key: `modelSettings.${model}.effortLevel`, value: String(value.effortLevel), effect: `may replace the routed effort of a worker on ${model}` })
+          out.push({ source: 'settings', key: `modelSettings.${model}.effortLevel`, value: String(value.effortLevel), effect: `set for ${model}; disclosed, not a prediction: a worker's own profile effort has outranked it` })
       }
     }
     if (isRecord(settings.env)) {
@@ -56,6 +56,22 @@ export const overridesText = (overrides: readonly Override[]): string =>
   overrides.length
     ? overrides.map(one => `- ${one.source} ${one.key} = ${one.value}: ${one.effect}`).join('\n')
     : '- none found in settings or environment'
+
+/** Prefix of the note a task carries when its observed effort is not the requested one. */
+export const MISMATCH = 'effort mismatch'
+
+/**
+ * The note for a worker whose observed effort differs from the requested one: both named, and the host
+ * `modelSettings` effort set for its model that likely caused it (one whose value is the observed effort first).
+ * Undefined when they are equal.
+ */
+export const effortMismatchNote = (overrides: readonly Override[], model: string, requested: string, observed: string, observedId?: string): string | undefined => {
+  if (observed === requested) return undefined
+  const found = effortOverridesFor(overrides, model, requested, observedId)
+  const likely = found.filter(one => one.value === observed)
+  const cause = (likely.length ? likely : found).map(one => `${one.key} = ${one.value}`)
+  return `${MISMATCH}: requested ${requested}, observed ${observed}${cause.length ? `; host setting ${cause.join(', ')} is set for this model and likely caused it` : ''}`
+}
 
 /**
  * The host settings that may replace the effort a worker on `model` asked for:

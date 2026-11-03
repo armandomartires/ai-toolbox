@@ -1,8 +1,8 @@
 # task-orchestrator
 
-Turns the session into a lead coordinator. While it is on, the main conversation plans and divides the work and delegates the substantive parts to **real, isolated subagents** through a `dispatch` tool: each worker runs under a registered profile whose **model and effort come from a routing table** keyed by task class, inside limits the mod enforces in code (three concurrent workers, no nesting, one non-isolated writer at a time, writes only inside allowed files, two retries and one escalation per task). The worker's report comes back through `collect`; `status` shows every task with its **requested** model and effort beside what the runtime **observed**, and the host's overrides that may alter them. Claude Code only, 2.1.308 or later; terminal and desktop.
+Turns the session into a lead coordinator. While it is on, the main conversation plans and divides the work and delegates the substantive parts to **real, isolated subagents** (or, when the person asks for sessions, to Code-tab sessions) through a `dispatch` tool: each worker runs under a registered profile whose **model and effort come from a routing table** keyed by task class, inside limits the mod enforces in code (three concurrent workers, no nesting, one non-isolated writer at a time, writes only inside allowed files, two retries and one escalation per task). The worker's report comes back through `collect`; `status` shows every task with its **requested** model and effort beside what the runtime **observed**, and the host's overrides that may alter them. Claude Code only, 2.1.308 or later; terminal and desktop.
 
-Workers are subagents, not sessions: each gets its own context and tools, runs in the background and answers once. You can open a worker's transcript from the tasks list, but it is not a conversation of its own. With [agent-watch](../agent-watch/README.md) installed, its Agents pane draws the run as an `ORCH` sub-session: each task, queued ones included, with its state and a `TASKS` bar.
+Workers are subagents by default: each gets its own context and tools, runs in the background and answers once. You can open a worker's transcript from the tasks list, but it is not a conversation of its own. A task the person asks to run as a session is different: a Code-tab session the person can open and talk to (see *Session workers*). With [agent-watch](../agent-watch/README.md) installed, its Agents pane draws the run as an `ORCH` sub-session: each task, queued ones included, with its state and a `TASKS` bar.
 
 ## Install
 
@@ -11,6 +11,8 @@ Published to the organization plugin library (0.4.4, 2026-11-02; claude.ai ran n
 ```
 /plugin install task-orchestrator@claudeai-organization-library
 ```
+
+The library copy is 0.4.4 and has no session workers; 0.5.0 runs from this checkout until it is republished.
 
 From this checkout, add the folder to `CLAUDE_CODE_PLUGIN_DIRS` in `~/.claude/settings.json` (runbook, *Loading a mod in development*).
 
@@ -28,9 +30,9 @@ Orchestration starts **off**. `/orchestrate on` turns it on for this project's s
 - `/orchestrate models`: the alias resolutions seen this session and the models a spawn refused.
 - `/orchestrate opt-in high-effort|frontier [off]`: `xhigh`, `max` and the `fable` alias are refused until opted in.
 - `/orchestrate providers [enable|disable <id>]`: the external-provider adapters. None is implemented in this version; enabling one is refused and the data-sharing disclosure is shown.
-- `/orchestrate cancel [<task>|all]`: cancels queued work, stops running workers through `TaskStop`, and withdraws a hand-off still waiting for the coordinator's Agent call, which is then refused if made.
+- `/orchestrate cancel [<task>|all]`: cancels queued work, stops running workers through `TaskStop` (a running session through `stop_session`), and withdraws a hand-off still waiting for the coordinator's Agent or `start_session` call, which is then refused if made.
 
-The model drives the rest through four tools: `dispatch` (a task with id, class, objective, inputs, allowed files, prohibited areas, deliverables, acceptance, dependencies, and optional role, model, effort and isolation), `collect` (waits for tasks to end and returns their reports; a hook's ten-second budget bills every sleep, so one call waits about eight seconds at most, `collectTimeoutMs` below that, and a task still running says to call again: each ended task also leaves the coordinator a note), `status` and `cancel`. A `dispatch` under the id of a task that ended `blocked`, `failed` or `partial` retries it in its place, as retry 1 or 2 of 2; its dependants keep waiting on it. A dependant whose dependency ended without completing stays queued, and `status` and `collect` say which task holds it and how to retry it, rather than leaving it to wait in silence.
+The model drives the rest through four tools: `dispatch` (a task with id, class, objective, inputs, allowed files, prohibited areas, deliverables, acceptance, dependencies, and optional role, model, effort, isolation and `runAs`), `collect` (waits for tasks to end and returns their reports; a hook's ten-second budget bills every sleep, so one call waits about eight seconds at most, `collectTimeoutMs` below that, and a task still running says to call again: each ended task also leaves the coordinator a note), `status` and `cancel`. A `dispatch` under the id of a task that ended `blocked`, `failed` or `partial` retries it in its place, as retry 1 or 2 of 2; its dependants keep waiting on it. A dependant whose dependency ended without completing stays queued, and `status` and `collect` say which task holds it and how to retry it, rather than leaving it to wait in silence.
 
 ### Worker roles
 
@@ -52,9 +54,23 @@ Each role's own profile (`task-orchestrator:builder`) holds the table's settings
 
 A read-only role gets `Read`, `Grep`, `Glob` and `LS` and nothing else, so it has no shell. Every role is denied `Agent`, `Workflow`, `SendMessage`, `TaskStop` and the worktree tools. Each worker ends with a fixed report (Status, Findings, Files, Checks actually run, Evidence, Risks, Next) and is told to list checks it did not run under Next, never under Checks. A worker is told not to update the person's task board or task list; the coordinator keeps the [task-compass](../task-compass/README.md) board current.
 
+### Session workers
+
+A task runs as a session only when the person asks for sessions ("run them as sub sessions"). The coordinator then dispatches it with `runAs: "session"`; the default is `subagent`, and every other task stays one. A session is a Code-tab session the person can open and talk to. It runs in its own worktree, and its parent is the coordinator (`parentSessionId`).
+
+- **The dispatch spawns nothing.** Its answer is a hand-off line naming the `start_session` call the coordinator makes: `initiation` "user_asked", `context` "fresh", `name` the task's id, the requested model and effort, `use_worktree` true, `wake_when_done` true, a `background` of over 80 characters, and the assignment as `prompt`, unchanged. The assignment starts with its header, `# Assignment <id> — role …`.
+- **Refused above the coordinator.** A model above the coordinator's family, or an effort above its effort, is refused at dispatch with the reason. The app would start the session lower without saying so. The coordinator's effort is read from its own model requests, so until one has been seen the effort check is skipped.
+- **Adopted from that call.** The mod matches the coordinator's `start_session` to the task by the assignment header. The call must carry the hand-off's model, its effort and `use_worktree` true; otherwise it is denied with the difference and nothing is sent to the app. A call that passes moves the task to running with the session id the mod reads from the result (`local_<uuid>`). An `Agent` call carrying a session task's header is denied. `status` shows that id in the row's brackets. A refused call leaves the task blocked, with the app's words, until a call that passes. A result with no session id leaves it handed off, and `status` says the id was not found.
+- **Only on a turn the person started.** The app starts a session only on a prompt the person typed. The mod hands a session task off only from a call made inside such a turn (the prompt's origin is the composer or the bridge; an `sdk` prompt is not the person's), and forgets the turn when the coordinator's own turn ends. A session task whose dependencies end on any other turn, or when a worker ends, waits as "waiting for the person's turn". The next prompt the person sends hands it off, with its hand-off line attached. This is the mod's own gate; whether the app accepts the call is the app's. The mod raises no proposal card for it: the coordinator asks the person to say go.
+- **The limits that hold.** A session counts toward the concurrency cap, and a handed-off one holds its slot. It also counts toward dependencies, retries, escalation and the model and effort gates. The write fence and the one-writer rule do not apply to it: it is its own process in its own worktree, and its work lands by rebase onto `master` (ADR-0023). Its prompt carries the allowed files, but the mod does not enforce them for a session.
+- **Permissions.** A session takes the coordinator's permission mode, since the hand-off names none.
+- **collect** reads a running session through the app: `get_session` for whether it is still running, then, once it has ended, `list_events` for its last message. That message is the report, parsed as a worker's is, and it is quoted data from another session. If the events cannot be parsed, the task ends `partial` and says no report was read. A session that ends inside `collect` starts its dependants as a subagent's end does. A task behind a session still waiting for its `start_session` call is reported as waiting for it, not as stalled. The model and effort `get_session` states are recorded as observed (a pattern match, not yet seen on a live answer). If the app refuses either read, `collect` prints the two calls for the coordinator to make and stops waiting on that task.
+
+Not yet run live: two session workers side by side, a session started from a hand-off that waited for the person's turn, and the mod's own reads under auto mode. `ARCHITECTURE.md`, *Observed, not guaranteed*, says what was seen.
+
 ### When the person names a model or an effort
 
-A prompt such as "assign the tasks to sonnet 5.5 at medium or high effort by your judgement" outranks the table: the coordinator passes `model` on every dispatch and picks each task's `effort` inside the range; the table fills only what the person left open. A host setting that may replace the requested effort, such as `modelSettings.claude-sonnet-5-5.effortLevel`, is named in that dispatch's answer as a `note:`. Workers are subagents: a prompt asking for sessions gets told so, since the mod cannot start a session.
+A prompt such as "assign the tasks to sonnet 5.5 at medium or high effort by your judgement" outranks the table: the coordinator passes `model` on every dispatch and picks each task's `effort` inside the range; the table fills only what the person left open. Dispatch says nothing of a host effort setting such as `modelSettings.claude-sonnet-5-5.effortLevel`; if a worker's observed effort differs from the requested one, its line in `status` and `collect` carries an `effort mismatch` note naming both and the host setting for that model that likely caused it. A prompt asking for sessions makes the coordinator dispatch with `runAs: "session"`; the mod still starts no session itself.
 
 ### Configuring the routing
 
@@ -74,7 +90,7 @@ The choices made with `/orchestrate` (on, policy, opt-ins, providers) are stored
 
 ## What is enforced and what is observed
 
-`ARCHITECTURE.md` has the full split. In short: limits, nesting, the write fence and the opt-in gates are code; the model and effort of a worker are set on its registered profile and are **requested** until the worker's first model request shows them, when `status` reports them as **observed**; a host setting such as `modelSettings.<model>.effortLevel` or `CLAUDE_CODE_SUBAGENT_MODEL` can change what a worker runs on, and the mod discloses it rather than overriding it. Token and cost totals are not reported: the mod has no telemetry to read.
+`ARCHITECTURE.md` has the full split. In short: limits, nesting, the write fence and the opt-in gates are code; the model and effort of a worker are set on its registered profile and are **requested** until the worker's first model request shows them, when `status` reports them as **observed**; a host setting such as `modelSettings.<model>.effortLevel` or `CLAUDE_CODE_SUBAGENT_MODEL` is listed by `status` as disclosed (not a prediction), and a mismatch between requested and observed effort is noted on the task; the mod never overrides either. Token and cost totals are not reported: the mod has no telemetry to read.
 
 ### In auto permission mode
 

@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { detectOverrides, effortOverridesFor, overridesText } from './overrides'
+import { detectOverrides, effortMismatchNote, effortOverridesFor, overridesText } from './overrides'
 import { enableBlocker, PROVIDERS, providersText } from './providers'
 import { DEFAULT_CONFIG } from './routing'
 
@@ -39,4 +39,17 @@ test("a modelSettings effort for the worker's model is found when it differs fro
   expect(effortOverridesFor(found, 'claude-opus-5-5', 'low').map(one => one.key)).toEqual(['modelSettings.claude-opus-5-5.effortLevel'])
   expect(effortOverridesFor(found, 'sonnet', 'high')).toEqual([])
   expect(effortOverridesFor(found, 'haiku', 'low')).toEqual([])
+})
+
+test('an effort mismatch note names requested and observed, and the host setting for that model that likely caused it; none when equal', () => {
+  const found = detectOverrides({ modelSettings: { 'claude-sonnet-5-5': { effortLevel: 'xhigh' }, 'claude-opus-5-5': { effortLevel: 'low' } } }, {})
+  expect(effortMismatchNote(found, 'sonnet', 'medium', 'xhigh', 'claude-sonnet-5-5')).toBe(
+    'effort mismatch: requested medium, observed xhigh; host setting modelSettings.claude-sonnet-5-5.effortLevel = xhigh is set for this model and likely caused it',
+  )
+  // Equal: no note, set host setting or not.
+  expect(effortMismatchNote(found, 'sonnet', 'xhigh', 'xhigh', 'claude-sonnet-5-5')).toBeUndefined()
+  // A mismatch with no setting for that model names none.
+  expect(effortMismatchNote(found, 'haiku', 'medium', 'high', 'claude-haiku-4-5')).toBe('effort mismatch: requested medium, observed high')
+  expect(overridesText(found)).toContain('disclosed, not a prediction')
+  expect(overridesText(found)).not.toContain('may replace')
 })
