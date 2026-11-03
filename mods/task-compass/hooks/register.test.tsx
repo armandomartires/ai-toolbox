@@ -3,6 +3,7 @@ import type { ConfigRow, On } from 'claude-code'
 
 import { applyPlan, currentSprint, guessStory, parseSprints, setStoryStatus } from './model'
 import { TOKENS } from './sigma'
+import { VERSION } from './view'
 
 const DARK = TOKENS.dark
 
@@ -633,4 +634,16 @@ test('the board is alone in its pane: it fills the pane\'s rows, draws at any he
       await ui.unmount()
     }
   }
+})
+
+test('a desktop prints the version after the legend; a terminal does not', async ($, on) => {
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  expect(VERSION).toMatch(/^\d+\.\d+\.\d+$/)
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await desktop.find({ text: `COMPASS ${VERSION}` })).toBeDefined()
+  await desktop.unmount()
+  const terminal = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await terminal.find({ text: /^COMPASS / })).toBeUndefined()
+  await terminal.unmount()
 })

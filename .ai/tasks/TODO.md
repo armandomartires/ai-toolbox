@@ -258,6 +258,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0214 — task-orchestrator cancels a handed-off task (B-068)
 - [ ] TASK-0215 — agent-watch 0.8.0: the band follows the run
 - [ ] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
+- [ ] TASK-0217 — Preview mod panes in a browser; copy mods into a session
 
 ## Post-S9 (superseded by the promotion above)
 

@@ -397,6 +397,20 @@ what every session loads, so keep it on `master`.
   the `plugin-authoring` skill has loaded there) and answer *Turn them on*;
   a link is watched at the folder it names, and the same name is not also in
   `CLAUDE_CODE_PLUGIN_DIRS` for that session (`TASK-0181`).
+- **A link may not reload.** On 2026-11-03 (`TASK-0217`) a junction from a
+  session's dev-mods folder into a Windows checkout kept running code hours
+  old after several edits. Copy instead: `python3 scripts/dev-mods.py
+  [<mod>...] [--session <id>] [--watch]` mirrors each mod into the newest
+  (or the named) session's dev-mods folder as plain files, replacing a link
+  it finds there, less tests, preview scenes and the engine's `types/`.
+- **One copy per mod.** The desktop app also loads the organization library's
+  copy of a mod you have installed, and on 2026-11-03 a library task-compass
+  0.8.0 drew the pane over the 0.9.1 named in `CLAUDE_CODE_PLUGIN_DIRS`
+  (`claude plugin list` said the opposite: it reports the CLI's choice). While
+  developing a mod, turn its library copy off on claude.ai. agent-watch and
+  task-compass print their version on the desktop (`AGENT-WATCH 0.8.1` under
+  the Sessions table, `COMPASS 0.9.2` after the board's legend), which says
+  which copy draws.
 - **Several mods**: `CLAUDE_CODE_PLUGIN_DIRS` takes them separated by the
   platform's path-list separator (`:` in WSL, `;` on Windows).
 - **Check it** with `tests/test-mods.sh`. In WSL it picks the Windows
@@ -405,6 +419,28 @@ what every session loads, so keep it on `master`.
 - **Teammates install it from the organization plugin library**; the
   install line is in the mod's `README.md`. Publishing a new version there
   is a human step.
+
+## Previewing a mod's panes
+`python3 scripts/preview-mods.py` draws each mod's `preview/*.scene.tsx`
+scenes in the test kit and writes `build/preview/index.html`: every scene's
+tree (what `ui.drawn()` returns) laid out as flexbox, a cell 7.2 by 20 px on
+the desktop and one character on the terminal, the `Svg` and `Raster` as
+drawn, and a dashed line where the pane's height ends. It approximates the
+surfaces, for layout and content, not pixels: a last look in the app stays.
+
+- **Live**: `--serve 8765` serves the page, rebuilds the mod whose files
+  changed within a second of a save, and the page reloads itself. In the
+  desktop app, a `.claude/launch.json` entry (`"runtimeExecutable":
+  "python3", "runtimeArgs": ["scripts/preview-mods.py", "--serve", "8765"],
+  "port": 8765`) opens it in the browser pane; a `file://` page there is a
+  snapshot that loads no script.
+- **Real data**: task-compass's scenes read this repo's `.ai/GOALS.md`.
+- **How a tree leaves the kit**: the kit has no files and drops console
+  output, so a scene throws its trees, URI-encoded between `@@PREVIEW@@` and
+  `@@END@@`, and the script reads them out of the failure. Scenes run in a
+  scratch copy of the mod with no tests, so they never slow or fail its suite.
+- **A new scene**: copy a mod's `preview/*.scene.tsx`; a scene seeds its
+  state through the engine's hooks, as the mod's tests do.
 
 ## Wiring the `gather_subset` guard into a consuming Ansible repository
 

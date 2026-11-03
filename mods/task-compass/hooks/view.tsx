@@ -116,6 +116,9 @@ const noteBelow = ($: EngineInterface, said: string) => {
  */
 const isEngineElement = (value: unknown) => typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'engine'
 
+/** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it after the legend, so the person sees which copy draws the board. */
+export const VERSION = '0.9.2'
+
 /** The Compass pane: the sprint carousel and its legend, then what another mod contributes (ADR-0048). */
 export const registerPane = (on: On) => {
   on('ui.render', { component: 'CommandOutput', props: { command: 'compass' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
@@ -376,6 +379,11 @@ export const registerPane = (on: On) => {
                   <Text color={color('text-3')} size="caption">{` ${STATUS[status].label.toUpperCase()}`}</Text>
                 </Box>
               ))}
+              {!isTerminal && (
+                <Box flexGrow={1} justifyContent="flex-end">
+                  <Text key="compass-version" color={color('text-3')} size="caption">{`COMPASS ${VERSION}`}</Text>
+                </Box>
+              )}
             </Box>
           </Box>,
         )}

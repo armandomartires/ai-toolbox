@@ -7,6 +7,11 @@
 - The effort warning follows what ran: `dispatch` no longer says a host `modelSettings` effort "may replace" the request; a worker whose observed effort differs from its requested one carries `effort mismatch: requested X, observed Y`, naming the host setting if one is set, in `status` and `collect`. Seen 2026-11-03: three workers ran at their requested effort under `modelSettings.claude-sonnet-5-5.effortLevel = xhigh`.
 - A session task waiting for the person's turn holds no worker slot.
 
+## Mod preview and dev-mods copy
+- `scripts/preview-mods.py` draws each mod's `preview/*.scene.tsx` in the test kit and lays the trees out in `build/preview/index.html`; `--serve` rebuilds on save (`TASK-0217`).
+- `scripts/dev-mods.py` copies mods into a session's dev-mods folder as files, since a link may not reload.
+- task-compass 0.9.2 prints `COMPASS <version>` after the board's legend on the desktop.
+
 ## agent-watch 0.8.1
 - On the desktop, `AGENT-WATCH <version>` under the Sessions table.
 - In Compass's pane one blank row parts the Sprints board from the meter and the Sessions panel, with or without a meter (`TASK-0216`).
