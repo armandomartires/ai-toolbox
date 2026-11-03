@@ -256,6 +256,8 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0211 — task-compass 0.9.1: shorter carousel labels
 - [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget
 - [x] TASK-0214 — task-orchestrator cancels a handed-off task (B-068)
+- [ ] TASK-0215 — agent-watch 0.8.0: the band follows the run
+- [ ] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
 
 ## Post-S9 (superseded by the promotion above)
 

@@ -122,11 +122,14 @@ export const contributeSessions = async ($: EngineInterface, e: RenderInput<'Pan
   const meter = await drawMeter($, e)
   const sessions = await renderSessions($, e, state, 0)
 
+  // One blank row above the meter and the panel, whichever mod drew first: without it the Sessions frame touches the Sprints frame whenever no meter stands between them.
   return (
     <Box flexDirection="column">
       {inner as never}
-      {meter}
-      {sessions}
+      <Box key="agent-watch-contribution" flexDirection="column" marginTop={1}>
+        {meter}
+        {sessions}
+      </Box>
     </Box>
   )
 }

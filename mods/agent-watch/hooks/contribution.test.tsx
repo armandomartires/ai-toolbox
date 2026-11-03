@@ -158,6 +158,18 @@ for (const surface of SURFACES) {
     })
   }
 
+  for (const [label, compassPlugin] of [['compass first', COMPASS_FIRST], ['agent-watch first', COMPASS_SECOND]] as const) {
+    test(`one blank row parts the board from the meter and the panel, with no meter too, ${label} (${surface})`, { plugins: [compassPlugin] }, async ($, on) => {
+      await populate($, on, true, { agent: false })
+      const ui = await $.ui.mount(mountProps('task-compass', surface, 'task-compass'))
+      const block = await ui.find({ key: 'agent-watch-contribution' })
+      expect(block).toBeDefined()
+      expect((block as { props: { marginTop?: unknown } }).props.marginTop).toBe(1)
+      expect(await has(ui, /^SESSIONS$/)).toBe(true)
+      await ui.unmount()
+    })
+  }
+
   test(`agent-watch first, then compass: the Compass pane shows BOARD, then SESSIONS and the agents (${surface})`, { plugins: [COMPASS_SECOND] }, async ($, on) => {
     await populate($, on)
     const ui = await $.ui.mount(mountProps('task-compass', surface, 'task-compass'))

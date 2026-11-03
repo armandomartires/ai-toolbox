@@ -7,6 +7,11 @@
 - The effort warning follows what ran: `dispatch` no longer says a host `modelSettings` effort "may replace" the request; a worker whose observed effort differs from its requested one carries `effort mismatch: requested X, observed Y`, naming the host setting if one is set, in `status` and `collect`. Seen 2026-11-03: three workers ran at their requested effort under `modelSettings.claude-sonnet-5-5.effortLevel = xhigh`.
 - A session task waiting for the person's turn holds no worker slot.
 
+## agent-watch 0.8.1
+- On the desktop, `AGENT-WATCH <version>` under the Sessions table.
+- In Compass's pane one blank row parts the Sprints board from the meter and the Sessions panel, with or without a meter (`TASK-0216`).
+- On the desktop the Sessions panel keeps its KPI row and selected panel at any height; the pane scrolls.
+
 ## agent-watch 0.8.0
 - The band follows task-orchestrator's run (`TASK-0215`): while a ledger task is open, one mark per task in the Sessions panel's glyphs and colours, `n/m TASKS`, the running task with its elapsed time, `N QUEUED · WAIT ON <id>`; never `ALL DONE` while anything runs or waits, with or without a run.
 - A session with a running or queued member, or an open sub-session, is never `DONE` in the Sessions panel.

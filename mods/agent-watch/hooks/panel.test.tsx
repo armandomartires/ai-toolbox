@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { AgentInfo, AgentSpawnInput, EngineInterface, On, Register } from 'claude-code'
 
-import { sessionsLayout } from './panel'
+import { sessionsLayout, VERSION } from './panel'
 import { TOKENS } from './sigma'
 
 // The Sessions panel (ADR-0047) in agent-watch's own pane: one fixture of a
@@ -462,8 +462,9 @@ test('the layout never takes more rows than the pane has, folded or not, whateve
               for (const isListCollapsed of hasFold ? [false, true] : [false]) {
                 const layout = layoutOf({ rows, cols, isTerminal, lines, reservedRows, hasFold, isListCollapsed })
                 // Wherever the chart is drawn the parts never exceed the pane, whatever is folded, the toggle line paid for.
-                // A desktop's chart is never shrunk or hidden for height: its rows may exceed the pane only when no KPI row and no panel is left to fold.
-                if (layout.hasChart) expect(layout.used <= rows || (!isTerminal && !layout.hasKpi && !layout.hasSelected)).toBe(true)
+                // A desktop's chart, KPI row and selected panel are never folded for height: its pane scrolls past them, so only a terminal's parts must fit.
+                if (layout.hasChart && isTerminal) expect(layout.used <= rows).toBe(true)
+                if (!isTerminal) expect(layout.hasKpi && layout.hasSelected).toBe(true)
                 if (layout.hasChart && !isTerminal && layout.chartGap === 0) tight.push(layout.chartPx)
                 if (!isTerminal) {
                   expect(layout.hasChart).toBe(true)
@@ -609,7 +610,8 @@ test('the pane draws the screenshot of 2026-10-29: this session idle, ORCH BALAN
   next('E1-engine row', [/^E1-engine · investigator/, '■', ' DONE', '1/1', '1m44s', '817k', /^\s+44 CALLS · 817k TOK$/])
   next('E2-panels row', [/^E2-panels · investigator/, '■', ' DONE', '1/1', '1m29s', '350.2k', /^\s+26 CALLS · 350\.2k TOK$/])
   next('agent-3 row', [/^agent-3 · tester/, '■', ' DONE', '1/1', '5m12s', '2.5M', /^\s+31 CALLS · 2\.5M TOK$/])
-  // Nothing is drawn after the last agent's caption.
+  // Nothing is drawn after the last agent's caption but the mod's version, a desktop's alone.
+  next('version', [/^AGENT-WATCH \d+\.\d+\.\d+$/])
   expect(nodes.length).toBe(cursor)
 
   // The sunburst: the centre is this session's name, state, steps and duration; each sector carries its label and its steps.
@@ -621,4 +623,26 @@ test('the pane draws the screenshot of 2026-10-29: this session idle, ORCH BALAN
   for (const agent of ['E1-engine', 'E2-panels', 'agent-3']) expect(source, agent).toMatch(new RegExp(`>${agent}</text><text[^>]*>1/1</text>`))
   expect((source.match(/>1\/1<\/text>/g) ?? []).length).toBe(3)
   await ui.unmount()
+})
+
+test('a desktop keeps the KPI row and the selected panel at any height and width: its pane scrolls, as it does for the chart', TREE, async ($, on) => {
+  await populate($, on)
+  // A wide default-height pane, as Compass's pane seats it under its board: the chart alone took these rows before.
+  for (const [bodyRows, columns] of [[24, 120], [40, 100], [60, 160]] as const) {
+    const ui = await mount($, 'desktop', { scroll: { offset: 0, bodyRows } }, columns)
+    expect((await ui.findAll({ type: 'Text', text: /^PROGRESS$/ })).length).toBeGreaterThan(1)
+    expect((await ui.findAll({ type: 'Text', text: /^SELECTED$/ })).length).toBeGreaterThan(0)
+    await ui.unmount()
+  }
+})
+
+test('a desktop prints the version under the table; a terminal does not', TREE, async ($, on) => {
+  await populate($, on)
+  expect(VERSION).toMatch(/^\d+\.\d+\.\d+$/)
+  const desktop = await mount($, 'desktop')
+  expect(await desktop.find({ text: `AGENT-WATCH ${VERSION}` })).toBeDefined()
+  await desktop.unmount()
+  const terminal = await mount($, 'terminal')
+  expect(await terminal.find({ text: /^AGENT-WATCH / })).toBeUndefined()
+  await terminal.unmount()
 })

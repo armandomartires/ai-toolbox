@@ -26,6 +26,8 @@ const COLUMNS_MIN = 22
 const COL = { state: 11, steps: 7, time: 6, tok: 6 }
 /** The rows the KPI row (a label, a value and a caption, and the margin above) and the selected-element panel take. */
 const KPI_ROWS = 4
+/** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it under the table, so the person sees which copy draws the panel. */
+export const VERSION = '0.8.1'
 const PANEL_ROWS = 9
 /** The compact strip's rows: its margin and its line. */
 const STRIP_ROWS = 2
@@ -161,10 +163,11 @@ export const sessionsLayout = (input: {
   // The KPI row and the selected-element panel fold before the chart does.
   const spare = rows - (panelLines + fixed) - (hasChart ? chartBlock : 0)
   // The panel is funded before the KPI row; without room for it a two-row strip (margin and line) keeps the transcript reachable.
-  const hasSelected = spare - PANEL_ROWS >= 0
+  // A desktop folds neither for height, as it keeps its chart: its pane scrolls, and Compass's pane hands it the whole pane's rows though its board took some.
+  const hasSelected = !isTerminal || spare - PANEL_ROWS >= 0
   const stripRows = hasSelected ? 0 : STRIP_ROWS
   const taken = hasSelected ? PANEL_ROWS : stripRows
-  const hasKpi = spare - taken - KPI_ROWS >= 0
+  const hasKpi = !isTerminal || spare - taken - KPI_ROWS >= 0
   const slack = Math.max(0, spare - (hasKpi ? KPI_ROWS : 0) - taken)
   // The chart grows from the slack only, so the table keeps its room; capped, it shrinks rather than push it out.
   const chartRows = hasChart ? Math.max(tier.chartMin, Math.min(wantRows, tier.chartMin + slack)) : 0
@@ -471,6 +474,11 @@ export async function renderSessions($: EngineInterface, e: RenderInput<'Pane'>,
         {column(COL.tok, label('Tok'))}
       </Box>
       {(isListFoldedNow ? tree.slice(0, 1) : tree).map(sessionHead)}
+      {!isTerminal && (
+        <Box marginTop={1} justifyContent="flex-end">
+          <Text key="agent-watch-version" color={color('text-3')} size="caption">{`AGENT-WATCH ${VERSION}`}</Text>
+        </Box>
+      )}
     </Box>,
   )
 }
