@@ -3,6 +3,7 @@
 **Status**: accepted
 **Date**: 2026-10-26
 **Task**: `TASK-0177`
+**Amended 2026-11-04** on the human's choice (`TASK-0222`): see clause 4 and the last **Consequences** bullet.
 
 ## Context
 
@@ -13,7 +14,7 @@ On 2026-10-26 the human asked to merge `claude-mods`, a folder outside any repos
 1. **`mods/<name>/` is a component kind.** A mod is a Claude Code plugin folder: `.claude-plugin/plugin.json` whose `name` matches the directory, `hooks/hooks.json` naming its hooks modules, and a `README.md`. New mods copy `mods/_template/`. Rules: authoring guide, *Mods*.
 2. **Mods target Claude Code only.** That is the one client with the capability, so the portability rule (`AGENTS.md`, *Objective and scope*) is met by it alone.
 3. **The gate checks shape, offline.** The mod's own tests need a `claude` that supports mods, which the gate must not require, so they run in `tests/test-mods.sh`, outside the gate, like the MCP smoke test. A SKIP is not a pass.
-4. **The live copy loads from this checkout**, through `CLAUDE_CODE_PLUGIN_DIRS` in the host's `~/.claude/settings.json` (runbook, *Loading a mod in development*). `install.sh` does not deploy mods.
+4. **The live copy loads from this checkout**, through `CLAUDE_CODE_PLUGIN_DIRS` in the host's `~/.claude/settings.json` (runbook, *Loading a mod in development*). `install.sh` copies and links no mod; since `TASK-0222` it writes that setting.
 5. **Teammates get a mod from the organization plugin library.** Publishing there stays a human step.
 6. **A mod's planning lives in `.ai/`.** `claude-mods/GOALS.md` was retired, not imported: its sprints were done, and its one open story is `B-064`.
 
@@ -28,4 +29,5 @@ On 2026-10-26 the human asked to merge `claude-mods`, a folder outside any repos
 - One place to develop, review and push mods, under the same gate and record as every other component.
 - The mod tests are not enforced by the gate. Run `tests/test-mods.sh` for any task that changes a mod.
 - The pane reads `GOALS.md` from a project's `.ai/` folder (`TASK-0180`; it first read the project root), so it shows no board in this repository.
+- **Amendment, 2026-11-04.** The setting was written by hand per host, and a new mod went missing until someone saw its command fail: on 2026-11-04 Windows listed only task-compass, from the WSL checkout. `install.sh`'s claude-code step now sets `CLAUDE_CODE_PLUGIN_DIRS` to every selected mod in the checkout it runs from, in that host's paths and separator, and `--status` names a mod not listed from there. Mods join the selection namespace. Each host still needs its own run. Proven by `tests/test-install.sh`, in the gate.
 - No `Unexercised:` row is added (`ADR-0039`): `task-compass` is in daily use, and its tests run for real.

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Deploy skills to agent clients, emit agent roles, and print MCP
-# registration commands.
+# Deploy skills to agent clients, emit agent roles, list mods for Claude
+# Code, and print MCP registration commands.
 #
 # Usage: install.sh [link|copy] [--client claude-code|opencode|lm-studio-bionic|all]
 #                   [--bionic-project DIR] [--only NAME[,NAME...]]
 #        install.sh --status [--only NAME[,NAME...]]
 #
 # Selection (TASK-0164). By default every component is deployed. To deploy
-# only some, name them, from skills/, agents/ and mcp-servers/ alike:
+# only some, name them, from skills/, agents/, mcp-servers/ and mods/ alike:
 #   --only a,b          for this run (repeatable), overriding the file;
 #   install.selection   at the repo root, gitignored, one name per line, `#`
 #                       comments -- read by every run, --status included.
@@ -31,8 +31,22 @@
 # Developer Mode. Every link is verified after it is made.
 #
 # --status prints, per client and skill, whether the install is a link to
-# this checkout or a copy, and its version against the repo's. A report,
-# not a gate: nothing in validate.sh or CI calls it (ADR-0009).
+# this checkout or a copy, and its version against the repo's; and, per mod,
+# whether Claude Code's settings list it from this checkout. A report, not a
+# gate: nothing in validate.sh or CI calls it (ADR-0009).
+#
+# Mods (TASK-0222). Claude Code loads a mod in development from the folders
+# CLAUDE_CODE_PLUGIN_DIRS names, an `env` entry of ~/.claude/settings.json.
+# The claude-code step sets it to every selected mod in THIS checkout, in
+# this host's paths and separator (`;` and C:\ paths under Git Bash, `:`
+# elsewhere), and CLAUDE_CODE_PLUGIN_DIR_WATCH=1 when unset. Each host -
+# Windows, WSL, an SSH machine - has its own settings file, so run this
+# once on each, from that host's checkout. The merge keeps an entry that is
+# not a repo mod, replaces a repo mod's entry from another checkout (and
+# says so), and drops a deselected mod's entry only when it points here.
+# A settings.json that does not parse is never written: the run fails. It
+# takes effect in the next session. Before this, the list was written by
+# hand per host, and each new mod went missing until someone noticed.
 #
 # Overwrite policy (TASK-0006): a client target is replaced only when this
 # repo owns a skill of that name, and replacing a pre-existing non-symlink
@@ -80,7 +94,7 @@ case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) WINDOWS_LINKS=1 ;; esac
 # One namespace across the three deployable kinds, built from the same skips
 # the deploy loops use. Space-delimited strings, not associative arrays, so
 # this stays bash 3 compatible.
-SKILL_NAMES=" " ROLE_NAMES=" " SERVER_NAMES=" "
+SKILL_NAMES=" " ROLE_NAMES=" " SERVER_NAMES=" " MOD_NAMES=" "
 for d in skills/*; do
   n=$(basename "$d"); case "$n" in _template*) continue ;; esac
   [ -f "$d/SKILL.md" ] && SKILL_NAMES="$SKILL_NAMES$n "
@@ -93,13 +107,18 @@ for d in mcp-servers/*; do
   n=$(basename "$d"); case "$n" in _template*) continue ;; esac
   { [ -f "$d/pyproject.toml" ] || [ -f "$d/server.json" ]; } && SERVER_NAMES="$SERVER_NAMES$n "
 done
-for n in $SKILL_NAMES $ROLE_NAMES $SERVER_NAMES; do
+# A mod is a Claude Code plugin with a hooks module (ADR-0040).
+for d in mods/*; do
+  n=$(basename "$d"); case "$n" in _template*) continue ;; esac
+  [ -f "$d/.claude-plugin/plugin.json" ] && [ -d "$d/hooks" ] && MOD_NAMES="$MOD_NAMES$n "
+done
+for n in $SKILL_NAMES $ROLE_NAMES $SERVER_NAMES $MOD_NAMES; do
   k=0
-  for list in "$SKILL_NAMES" "$ROLE_NAMES" "$SERVER_NAMES"; do
+  for list in "$SKILL_NAMES" "$ROLE_NAMES" "$SERVER_NAMES" "$MOD_NAMES"; do
     [[ "$list" == *" $n "* ]] && k=$((k + 1))
   done
   if [ "$k" -gt 1 ]; then
-    echo "component name '$n' exists in more than one of skills/, agents/, mcp-servers/;" >&2
+    echo "component name '$n' exists in more than one of skills/, agents/, mcp-servers/, mods/;" >&2
     echo "  a selection could not say which. Rename one." >&2
     exit 2
   fi
@@ -126,17 +145,18 @@ if [ "$SEL_SOURCE" != "all" ]; then
   fi
   unknown=""
   for n in $SEL; do
-    [[ "$SKILL_NAMES$ROLE_NAMES$SERVER_NAMES" == *" $n "* ]] || unknown="$unknown $n"
+    [[ "$SKILL_NAMES$ROLE_NAMES$SERVER_NAMES$MOD_NAMES" == *" $n "* ]] || unknown="$unknown $n"
   done
   if [ -n "$unknown" ]; then
     echo "unknown component(s) in $SEL_SOURCE:$unknown -- nothing was installed." >&2
     echo "  skills:     $SKILL_NAMES" >&2
     echo "  agents:     $ROLE_NAMES" >&2
     echo "  mcp-servers:$SERVER_NAMES" >&2
+    echo "  mods:       $MOD_NAMES" >&2
     exit 2
   fi
   count=0; for n in $SEL; do count=$((count + 1)); done
-  total=0; for n in $SKILL_NAMES $ROLE_NAMES $SERVER_NAMES; do total=$((total + 1)); done
+  total=0; for n in $SKILL_NAMES $ROLE_NAMES $SERVER_NAMES $MOD_NAMES; do total=$((total + 1)); done
   echo "selection: $count of $total components, from $SEL_SOURCE"
 fi
 is_selected() { [ "$SEL_SOURCE" = "all" ] || [[ "$SEL" == *" $1 "* ]]; }
@@ -220,6 +240,142 @@ deploy_skills() {
   done
 }
 
+# Merge this checkout's mods into a Claude Code settings.json's
+# CLAUDE_CODE_PLUGIN_DIRS (TASK-0222). $1 is the settings file, $2 is
+# `write` or `status`. Python, because the file is JSON: a sed edit of it is
+# how a hand fix wrote invalid escapes on 2026-11-04.
+plugin_dirs() {
+  local settings="$1" action="$2" sep=":" n p specs=""
+  [ "$WINDOWS_LINKS" -eq 1 ] && sep=";"
+  for n in $MOD_NAMES; do
+    p="$(pwd)/mods/$n"
+    [ "$WINDOWS_LINKS" -eq 1 ] && p="$(cygpath -w "$p")"
+    if is_selected "$n"; then specs="$specs$n|1|$p"$'\n'; else specs="$specs$n|0|$p"$'\n'; fi
+  done
+  # A linked worktree is not what sessions should load (ADR-0023): say so.
+  local wt="" gd common
+  if gd=$(git rev-parse --git-dir 2>/dev/null) && common=$(git rev-parse --git-common-dir 2>/dev/null) \
+     && [ "$(cd "$gd" && pwd -P)" != "$(cd "$common" && pwd -P)" ]; then
+    wt="  NOTICE: this checkout is a worktree; every session loads its mods until install.sh runs in the main checkout"
+  fi
+  PLUGIN_DIRS_WORKTREE="$wt" PLUGIN_DIRS_SPECS="$specs" python3 - "$settings" "$action" "$sep" <<'PYMERGE'
+import json, os, sys
+settings, action, sep = sys.argv[1:4]
+KEY, WATCH = "CLAUDE_CODE_PLUGIN_DIRS", "CLAUDE_CODE_PLUGIN_DIR_WATCH"
+mods = []  # (name, selected, path), in the repo's order
+for line in os.environ["PLUGIN_DIRS_SPECS"].splitlines():
+    if line:
+        n, sel, p = line.split("|", 2)
+        mods.append((n, sel == "1", p))
+
+
+def norm(p):
+    return os.path.normcase(os.path.normpath(p.strip()))
+
+
+def base(p):
+    # The last path part, by either separator: a WSL entry read on Windows
+    # and a Windows entry read in WSL both name their mod.
+    return p.strip().rstrip("\\/").replace("\\", "/").rsplit("/", 1)[-1]
+
+
+def mod_of(e):
+    b = base(e)
+    return next((m for m in mods if m[0] == b), None)
+
+
+data = {}
+if os.path.exists(settings):
+    try:
+        with open(settings, encoding="utf-8") as f:
+            text = f.read()
+        data = json.loads(text) if text.strip() else {}
+    except ValueError as e:
+        print("ERROR: %s does not parse as JSON (%s); its mod list was not written."
+              % (settings, e), file=sys.stderr)
+        sys.exit(1)
+    if not isinstance(data, dict):
+        print("ERROR: %s is not a JSON object; its mod list was not written."
+              % settings, file=sys.stderr)
+        sys.exit(1)
+env = data.get("env") if isinstance(data.get("env"), dict) else {}
+current = [e for e in str(env.get(KEY, "")).split(sep) if e.strip()]
+
+if action == "status":
+    for n, sel, p in mods:
+        hits = [e for e in current if base(e) == n]
+        try:
+            with open(os.path.join(p, ".claude-plugin", "plugin.json"), encoding="utf-8") as f:
+                ver = json.load(f).get("version", "-")
+        except (OSError, ValueError):
+            ver = "-"
+        if any(norm(e) == norm(p) for e in hits):
+            state = "listed here"
+        elif hits:
+            state = "listed elsewhere: " + hits[0].strip()
+        else:
+            state = "absent"
+        flag = ""
+        if not sel:
+            state += " (not selected)"
+        elif state != "listed here":
+            flag = "  MISSING"
+        print("%-12s %-18s %-8s %s%s" % ("claude-code", "mod:" + n, ver, state, flag))
+    sys.exit(0)
+
+kept, notes = [], []
+for e in current:
+    m = mod_of(e)
+    if m is None:
+        kept.append(e)          # not a repo mod: never ours to change
+        continue
+    n, sel, p = m
+    if norm(e) == norm(p):
+        if not sel:
+            notes.append("mod unlisted: %s -> claude-code (not selected)" % n)
+        continue                # put back below when selected
+    if sel:
+        notes.append("  NOTICE: %s was listed from %s; now from this checkout" % (n, e.strip()))
+    else:
+        kept.append(e)
+        notes.append("  NOTICE: %s is not selected, but is listed from %s; left in place"
+                     % (n, e.strip()))
+ours = [p for n, sel, p in mods if sel]
+value = sep.join(dict.fromkeys(kept + ours))
+new_env = dict(env)
+if value:
+    new_env[KEY] = value
+    new_env.setdefault(WATCH, "1")
+else:
+    new_env.pop(KEY, None)
+if new_env == env:
+    # Nothing changed: say only what is left in place, as a copy of a skill
+    # is reported on every run.
+    for line in notes:
+        if "left in place" in line:
+            print(line)
+    sys.exit(0)
+new = dict(data)
+if new_env:
+    new["env"] = new_env
+else:
+    new.pop("env", None)
+tmp = settings + ".tmp"
+with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+    json.dump(new, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+os.replace(tmp, settings)
+if os.environ.get("PLUGIN_DIRS_WORKTREE"):
+    notes.append(os.environ["PLUGIN_DIRS_WORKTREE"])
+for line in notes:
+    print(line)
+listed = [n for n, sel, _ in mods if sel]
+if listed:
+    print("mods listed: %s -> claude-code (%s in %s; from the next session)"
+          % (", ".join(listed), KEY, settings))
+PYMERGE
+}
+
 skill_version() { # the frontmatter version of a SKILL.md, quotes stripped
   awk '/^[[:space:]]*version:/ { v = $2; gsub(/["\047\r]/, "", v); print v; exit }' "$1"
 }
@@ -289,6 +445,9 @@ if [ "$STATUS" -eq 1 ]; then
       printf '%-12s %-18s %-8s (repo %s) %s%s\n' \
         "$client" "$name" "${have:--}" "$want" "$state" "$flag"
     done
+    if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
+      plugin_dirs "$parent/settings.json" status
+    fi
   done <<EOF
 $CLIENTS
 EOF
@@ -343,6 +502,9 @@ while IFS='|' read -r client target parent agents_target; do
   fi
   deployed_any=1
   deploy_skills "$target" "$MODE" "$client"
+  if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
+    plugin_dirs "$parent/settings.json" write || exit 1
+  fi
 
   # Agents are EMITTED, never linked (ADR-0018 clause 3): a per-client file's
   # content differs by definition, so it cannot be a symlink to one source.

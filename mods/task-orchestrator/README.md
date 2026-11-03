@@ -14,7 +14,7 @@ Published to the organization plugin library (0.4.4, 2026-11-02; claude.ai ran n
 
 The library copy is 0.4.4 and has no session workers; 0.5.0 runs from this checkout until it is republished.
 
-From this checkout, add the folder to `CLAUDE_CODE_PLUGIN_DIRS` in `~/.claude/settings.json` (runbook, *Loading a mod in development*).
+From this checkout, `scripts/install.sh --client claude-code` adds the folder to `CLAUDE_CODE_PLUGIN_DIRS` in `~/.claude/settings.json` (runbook, *Loading a mod in development*).
 
 ## Activation
 

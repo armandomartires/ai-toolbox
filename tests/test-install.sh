@@ -148,6 +148,59 @@ check "S10 unselected and absent is 'not selected', not STALE" "$(has "$st_beta"
 inst --only alpha --only alpha
 check "S11 duplicates count once" "$(has "$out" 'selection: 1 of 6'; echo $?)" "$out"
 
+# S12-S17: mods in CLAUDE_CODE_PLUGIN_DIRS (TASK-0222). Added last, so the
+# counts above stay as they were.
+for m in mod-x mod-y _template no-hooks; do
+  mkdir -p "$R/mods/$m/.claude-plugin"
+  printf '{"name": "%s", "version": "1.2.3"}\n' "$m" > "$R/mods/$m/.claude-plugin/plugin.json"
+  [ "$m" = no-hooks ] || mkdir -p "$R/mods/$m/hooks"
+done
+SEP=":"; [ "$WIN" -eq 1 ] && SEP=";"
+winpath() { if [ "$WIN" -eq 1 ]; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
+FOREIGN="$(winpath "$tmp/my-plugin")"
+ELSEWHERE="$(winpath "$tmp/other-checkout/mods/mod-y")"
+SET="$HOME/.claude/settings.json"
+FOREIGN="$FOREIGN" ELSEWHERE="$ELSEWHERE" SEP="$SEP" python3 - "$SET" <<'EOF'
+import json, os, sys
+json.dump({"model": "opus", "env": {"OTHER": "kept",
+           "CLAUDE_CODE_PLUGIN_DIRS": os.environ["FOREIGN"] + os.environ["SEP"] + os.environ["ELSEWHERE"]},
+           "permissions": {"allow": ["Bash(ls)"]}}, open(sys.argv[1], "w"), indent=2)
+EOF
+entries() { python3 -c "import json,sys;print('\n'.join(json.load(open(sys.argv[1])).get('env',{}).get('CLAUDE_CODE_PLUGIN_DIRS','').split(sys.argv[2])))" "$SET" "$SEP" | tr -d '\r'; }
+ours() { (cd "$R" && winpath "$(pwd)/mods/$1"); }
+
+inst --client claude-code
+e="$(entries)"
+check "S12 run exits 0 and lists both mods" "$([ "$rc" -eq 0 ] && has "$out" 'mods listed: mod-x, mod-y'; echo $?)" "$out"
+check "S12 entries: the foreign one, then this checkout's mods" "$([ "$e" = "$FOREIGN"$'\n'"$(ours mod-x)"$'\n'"$(ours mod-y)" ]; echo $?)" "$e"
+check "S12 another checkout's entry is replaced and announced" "$(lacks "$e" other-checkout && has "$out" 'mod-y was listed from'; echo $?)" "$out"
+check "S12 _template and a plugin without hooks are not mods" "$(lacks "$e" _template && lacks "$e" no-hooks; echo $?)" "$e"
+check "S12 every other key kept; watch set" "$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));sys.exit(not(d['model']=='opus' and d['env']['OTHER']=='kept' and d['permissions']=={'allow':['Bash(ls)']} and d['env']['CLAUDE_CODE_PLUGIN_DIR_WATCH']=='1'))" "$SET"; echo $?)"
+
+before="$(cat "$SET")"
+inst --client claude-code
+check "S13 a second run changes nothing and says nothing of mods" "$([ "$before" = "$(cat "$SET")" ] && lacks "$out" 'mods listed' && lacks "$out" NOTICE; echo $?)" "$out"
+
+inst --status
+check "S14 --status lists each mod here, with its version" "$(has "$out" 'mod:mod-x' && has "$out" '1.2.3' && has "$out" 'listed here' && lacks "$out" MISSING; echo $?)" "$out"
+
+inst --client claude-code --only alpha
+e="$(entries)"
+check "S15 deselected mods are unlisted; the foreign entry stays" "$([ "$e" = "$FOREIGN" ] && has "$out" 'mod unlisted: mod-x'; echo $?)" "$e"
+inst --status --only alpha
+check "S15 --status says 'not selected', not MISSING" "$(has "$out" 'absent (not selected)' && lacks "$out" MISSING; echo $?)" "$out"
+
+ELSEWHERE_X="$(winpath "$tmp/other-checkout/mods/mod-x")"
+ELSEWHERE_X="$ELSEWHERE_X" python3 -c "import json,os,sys;d=json.load(open(sys.argv[1]));d['env']['CLAUDE_CODE_PLUGIN_DIRS']=os.environ['ELSEWHERE_X'];json.dump(d,open(sys.argv[1],'w'),indent=2)" "$SET"
+inst --client claude-code --only alpha
+check "S16 a deselected mod listed from elsewhere is left and reported" "$([ "$(entries)" = "$ELSEWHERE_X" ] && has "$out" 'left in place'; echo $?)" "$out"
+inst --status
+check "S16 --status flags a mod listed elsewhere as MISSING" "$(has "$out" 'listed elsewhere' && has "$out" MISSING; echo $?)" "$out"
+
+printf '{"env": {bad\n' > "$SET"
+inst --client claude-code
+check "S17 a settings.json that does not parse fails the run, untouched" "$([ "$rc" -ne 0 ] && has "$out" 'does not parse' && [ "$(cat "$SET")" = '{"env": {bad' ]; echo $?)" "$out"
+
 if [ "$fails" -ne 0 ]; then
   echo "test-install.sh: $fails of $cases case(s) FAILED"; exit 1
 fi

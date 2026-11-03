@@ -373,18 +373,29 @@ touched. Every client in `install.sh`'s list must have a
 `configs/<client>/README.md`; `tests/validate.sh` enforces the pairing.
 
 ## Loading a mod in development
-`install.sh` does not deploy mods (`ADR-0040`). Every session on a host
-loads a mod straight from this checkout through two variables in the
-`env` block of that host's `~/.claude/settings.json`, the one the Claude
-desktop app reads (on Windows, `%USERPROFILE%\.claude\settings.json`):
+Every session on a host loads mods straight from a checkout through two
+variables in the `env` block of that host's `~/.claude/settings.json` (on
+Windows, `%USERPROFILE%\.claude\settings.json`, the one the desktop app
+reads): `CLAUDE_CODE_PLUGIN_DIRS`, the mod folders, and
+`CLAUDE_CODE_PLUGIN_DIR_WATCH=1`. `scripts/install.sh` writes both
+(`TASK-0222`): every selected mod in the checkout it runs from, in that
+host's paths and separator. Run it once per host, from that host's main
+checkout, and again after a pull that adds a mod:
 
-```json
-"CLAUDE_CODE_PLUGIN_DIRS": "\\\\wsl.localhost\\<distro>\\home\\<user>\\work\\sigmarecon\\ai-toolbox\\mods\\task-compass",
-"CLAUDE_CODE_PLUGIN_DIR_WATCH": "1"
+```bash
+scripts/install.sh --client claude-code
+scripts/install.sh --status    # per mod: listed here, listed elsewhere or absent (MISSING)
 ```
 
-The example is a Windows app reading a WSL checkout; on one filesystem,
-use the plain path. With the watch on, an edit reloads the mod
+Windows, WSL and each SSH machine read their own settings file, so each
+needs its own run. Until 2026-11-04 the list was written by hand: Windows
+then named only task-compass, from the WSL checkout, and `/switchboard` was
+missing with no error. The merge keeps entries that are not this repo's
+mods, replaces a repo mod's entry from another checkout and says so, and
+refuses a settings file that does not parse. With a selection
+(`install.selection` or `--only`), name the mods too: an unselected mod
+leaves the list. Run from a worktree, it lists the worktree's mods and says
+so; run it again from the main checkout. With the watch on, an edit reloads the mod
 when the turn that made it ends, over `\\wsl.localhost` too (observed
 2026-10-26, `TASK-0177`). As with linked skills, the main checkout's branch is
 what every session loads, so keep it on `master`.
