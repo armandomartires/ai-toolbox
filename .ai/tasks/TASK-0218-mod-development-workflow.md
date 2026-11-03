@@ -1,0 +1,83 @@
+# TASK-0218 — One workflow for developing mods, with a chart and a skill
+
+## Status
+
+- Status: in review
+- Owner: agent (Claude Code)
+- Created: 2026-11-03
+- Updated: 2026-11-03
+- Applies to: `docs/development/`, `skills/mod-dev/`, `.ai/decisions/`, `.ai/planning/BACKLOG.md`, the authoring guide's *Mods* section
+- Source: the human, 2026-11-03, after `TASK-0217`: make the whole mod-development process one structured, documented workflow in Anthropic's own terms, with an HTML chart page, the skills it needs, and a view to OpenCode and Codex
+
+## Objective
+
+Every mod change follows the same nine stages, from the task brief to the organization library, each with its command, its check and who runs it; the stages are drawn on one page the person can share; and a skill runs the agent's stages in order.
+
+## Inputs
+
+| Artifact | Expected state |
+|----------|----------------|
+| `docs/operations/runbook.md` | *Loading a mod in development* and *Previewing a mod's panes* as `TASK-0217` left them |
+| `scripts/dev-mods.py`, `scripts/preview-mods.py`, `tests/test-mods.sh`, `scripts/check-mods.py` | at `6601902` |
+| the `plugin-authoring` skill and Claude Code's public plugin docs (`code.claude.com/docs/en/plugins/`, read 2026-11-03) | the terms the workflow uses |
+
+## Scope
+
+- In: `docs/development/mod-workflow.md` (the stages, the one-copy rule, portability); `docs/development/mod-workflow.html` (flow, swimlane and gate charts, self-contained, both themes), also published as an Artifact; `ADR-0051`; `skills/mod-dev/` (`SKILL.md`, `scripts/mod-dev.sh`: scaffold, sync, preview, test, check, status, in order); the guide's *Mods* section points at the workflow; three backlog rows (OpenCode plugins, Codex equivalents, a versions pane).
+- Out: an OpenCode or Codex port of any mod; a `CHANGELOG.md` per mod (git is the record, `ADR-0033`); a mod that lists loaded versions (`B-071`); removing the library's duplicate task-compass (the human's).
+
+## Likely files
+
+`docs/development/mod-workflow.md`, `docs/development/mod-workflow.html`, `docs/development/authoring-guide.md`, `.ai/decisions/0051-mod-development-workflow.md`, `skills/mod-dev/SKILL.md`, `skills/mod-dev/scripts/mod-dev.sh`, `docs/registry.md`, `.ai/planning/BACKLOG.md`, `.ai/context/CURRENT_STATE.md`, `.ai/GOALS.md`, `.ai/tasks/TODO.md`
+
+## Execution plan
+
+1. Read the runbook's two mod sections, the scripts, the `plugin-authoring` skill and its `reference.md`, and the public plugin docs.
+2. Write the ADR: nine stages, one loaded copy per mod per session, the checks that gate each stage.
+3. Write `mod-workflow.md`: a table per stage (command, check, who), then the one-copy rule, then portability.
+4. Build `skills/mod-dev/` and run each subcommand once against `agent-watch`.
+5. Draw `mod-workflow.html` with the `artifact-design` and `dataviz` skills; publish it as an Artifact.
+6. Add the backlog rows, point the guide at the workflow, regenerate the registry, edit `CURRENT_STATE.md`.
+7. Run the validations below; leave the commit to the human.
+
+## Acceptance criteria
+
+- [x] `docs/development/mod-workflow.md` names, for each of nine stages, its command, its check and whether the agent or the human runs it
+- [x] The one-copy rule is stated with the documented precedence (a `CLAUDE_CODE_PLUGIN_DIRS` copy replaces a same-named installed or synced one) and the 2026-11-03 exception
+- [x] `mod-workflow.html` renders in light and dark, at phone width, with a stage flow, an agent-versus-human swimlane and the gate table, and is published as an Artifact
+- [x] `scripts/mod-dev.sh check`, `sync`, `preview`, `test` and `status` each ran once against `agent-watch` on this host
+- [x] Portability: a table mapping each stage to OpenCode plugins and Codex, and one backlog row per client
+- [ ] The human follows the workflow for the next mod task
+
+## Mandatory validations
+
+- [x] python3 scripts/check-mods.py
+- [x] tests/test-mods.sh --mod agent-watch
+- [x] scripts/check-private-names.sh
+- [ ] tests/validate.sh (run it in WSL; it times out on this Windows clone)
+
+## Risks and rollback
+
+- The public docs and the installed CLI (2.1.317) can disagree; the workflow cites the docs and names what was observed here.
+- A workflow nobody runs decays: the skill is its runnable form, and the next mod task is its first exercise.
+- Rollback: git revert the task commit
+
+## Outputs / handover
+
+| Artifact | End state |
+|----------|-----------|
+| `docs/development/mod-workflow.md` | the nine stages, the one-copy rule, portability to OpenCode and Codex |
+| `docs/development/mod-workflow.html` | the same as a chart page, self-contained, published as an Artifact |
+| `skills/mod-dev/` | `/mod-dev`: `check`, `scaffold`, `sync`, `preview`, `test`, `status`, `all` |
+| `ADR-0051` | the workflow as the repo's rule for mod work |
+| `BACKLOG.md` | `B-069` OpenCode plugins, `B-070` Codex equivalents, `B-071` a versions pane |
+
+Next: the human reviews the page and the doc, then says whether to commit.
+
+## Execution log
+
+- 2026-11-03 · Claude Code (Fable 5.1) · docs, ADR, skill and page written; the gate fails only on four briefs already on master
+  - Evidence: `python3 scripts/check-mods.py` → `OK (5 mods)`; `tests/test-mods.sh --mod agent-watch` → `PASS agent-watch: 137 pass`
+  - Evidence: `scripts/check-private-names.sh` → `OK (3 patterns)`; `check-backlog-closures.py` → `OK (61 closed rows, 10 open)`
+  - Evidence: `tests/validate.sh` in a WSL clone with this tree overlaid (CR stripped) → `ARTIFACTS: 4 artifact(s) do not match their schema`: `TASK-0201` (98 > 90 lines), `TASK-0215`, `TASK-0216`, `TASK-0217` (missing sections), all at `6601902`; this task's brief and ADR pass
+  - Deviation: `tests/validate.sh` cannot run from `/mnt/c` on this clone (CRLF breaks `set -o pipefail`)

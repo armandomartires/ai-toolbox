@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- The mod workflow as a chart page (docs/development/mod-workflow.md owns the rule; ADR-0051).
+     Self-contained: no local assets; the Google Fonts link degrades to the system fallback offline. -->
+<title>Mod Workflow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column of bracketed panels on the SIGMAorbital grid; the flow runs left to right and stacks on a phone.
+   Tokens: SIGMAorbital v2 (mods/_template/hooks/sigma.tsx), Night ops first, Daylight under the light scheme. */
+:root {
+  color-scheme: dark;
+  --void: #07080a; --bg: #0e1013; --surface: #15181c; --raised: #1c2026; --grid: #1f242a;
+  --line: #3a4048; --line-strong: #6b737d;
+  --text-3: #7e8790; --text-2: #b4bbc2; --text-1: #e8ecef; --white: #ffffff;
+  --cyan: #7fe7ff; --amber: #ffc857; --red: #ff5a5f; --violet: #b8a9ff; --green: #7cffb2;
+  --cyan-ink: #07080a; --amber-ink: #07080a;
+  --display: "Orbitron", "Segoe UI", system-ui, sans-serif;
+  --body: "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --void: #dfe2dc; --bg: #eceee9; --surface: #f6f7f4; --raised: #ffffff; --grid: #d5d8d2;
+    --line: #b4b8b1; --line-strong: #7a808a;
+    --text-3: #5c626b; --text-2: #3d434b; --text-1: #101215; --white: #000000;
+    --cyan: #00708a; --amber: #8a5a00; --red: #b8360a; --violet: #6a52c9; --green: #007a5a;
+    --cyan-ink: #ffffff; --amber-ink: #ffffff;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --void: #dfe2dc; --bg: #eceee9; --surface: #f6f7f4; --raised: #ffffff; --grid: #d5d8d2;
+  --line: #b4b8b1; --line-strong: #7a808a;
+  --text-3: #5c626b; --text-2: #3d434b; --text-1: #101215; --white: #000000;
+  --cyan: #00708a; --amber: #8a5a00; --red: #b8360a; --violet: #6a52c9; --green: #007a5a;
+  --cyan-ink: #ffffff; --amber-ink: #ffffff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text-2);
+  font-family: var(--body); font-size: 17px; line-height: 1.45;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px;
+}
+h1, h2, h3 { font-family: var(--display); color: var(--text-1); text-wrap: balance; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
+h1 { font-size: clamp(26px, 4vw, 40px); font-weight: 700; color: var(--white); }
+h2 { font-size: 15px; font-weight: 500; }
+h3 { font-size: 13px; font-weight: 500; color: var(--text-2); }
+p { margin: 0; max-width: 72ch; }
+a { color: var(--cyan); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--white); outline-offset: 2px; }
+code, .mono { font-family: var(--mono); font-size: .86em; color: var(--text-1); }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
+.lede { font-size: 19px; color: var(--text-2); max-width: 68ch; }
+header { display: grid; gap: 10px; }
+header .meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-family: var(--mono); font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; }
+
+/* Bracketed panel: four corner arms on a square frame, as the mods draw it. */
+.panel { position: relative; background: var(--surface); border: 1px solid var(--line); padding: 22px 22px 20px; display: grid; gap: 16px; min-width: 0; }
+.panel::before, .panel::after { content: ""; position: absolute; width: 18px; height: 10px; border: 1px solid var(--line-strong); pointer-events: none; }
+.panel::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+.panel::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.panel-head .code { font-family: var(--mono); font-size: 12px; color: var(--text-3); letter-spacing: .1em; }
+
+/* Legend */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.g { display: inline-block; width: 10px; height: 10px; }
+.g.agent { background: var(--cyan); }
+.g.human { background: var(--amber); }
+.g.gate { width: 0; height: 0; border: 6px solid transparent; border-bottom-color: var(--text-1); border-top: 0; position: relative; top: -1px; }
+.g.gate::after { content: ""; position: absolute; left: -6px; top: 6px; border: 6px solid transparent; border-top-color: var(--text-1); border-bottom: 0; }
+.g.line { width: 14px; height: 0; border-top: 2px dotted var(--line-strong); }
+
+/* Flow of stages */
+.flow { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
+.stage { position: relative; display: grid; gap: 6px; align-content: start; background: var(--raised); border: 1px solid var(--line); border-top: 3px solid var(--cyan); padding: 10px 10px 12px; min-width: 0; }
+.stage.human { border-top-color: var(--amber); }
+.stage.handoff { border-top-color: var(--cyan); border-image: linear-gradient(90deg, var(--cyan) 55%, var(--amber) 55%) 1; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); }
+.stage .n { font-family: var(--mono); font-size: 11px; color: var(--text-3); letter-spacing: .1em; }
+.stage .name { font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--text-1); text-transform: uppercase; letter-spacing: .05em; line-height: 1.25; }
+.stage .who { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.stage .who.a { color: var(--cyan); }
+.stage .who.h { color: var(--amber); }
+.stage .cmd { font-family: var(--mono); font-size: 11px; color: var(--text-2); word-break: break-word; line-height: 1.35; }
+.stage .gate { margin-top: 4px; padding-top: 6px; border-top: 1px dotted var(--line); font-size: 12px; color: var(--text-3); line-height: 1.3; }
+.stage .gate b { color: var(--text-1); font-weight: 600; }
+.stage .gate::before { content: "GATE "; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--text-3); }
+.stage.last .gate::before { content: "DONE "; }
+@media (max-width: 980px) { .flow { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .flow { grid-template-columns: 1fr; } }
+
+/* Tables */
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 15.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 500; border-bottom-color: var(--line-strong); }
+td.num { font-family: var(--mono); color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td code { white-space: nowrap; }
+td .wrapcode { white-space: normal; }
+.tag { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 1px 6px; border: 1px solid var(--line-strong); color: var(--text-2); white-space: nowrap; }
+.tag.a { border-color: var(--cyan); color: var(--cyan); }
+.tag.h { border-color: var(--amber); color: var(--amber); }
+.tag.ah { border-image: linear-gradient(90deg, var(--cyan), var(--amber)) 1; }
+.mark { font-family: var(--mono); font-size: 15px; }
+.mark.full { color: var(--cyan); }
+.mark.part { color: var(--amber); }
+.mark.none { color: var(--red); }
+
+/* SVG */
+.svgwrap { overflow-x: auto; }
+svg { display: block; width: 100%; height: auto; }
+svg.swim { min-width: 760px; }
+svg text { font-family: var(--body); font-size: 13px; fill: var(--text-2); }
+svg .lane-label { font-family: var(--display); font-size: 11px; letter-spacing: .1em; fill: var(--text-1); text-transform: uppercase; }
+svg .mono { font-family: var(--mono); font-size: 11px; fill: var(--text-3); letter-spacing: .06em; }
+svg .num { font-family: var(--mono); font-size: 12px; font-weight: 500; }
+svg .num.a { fill: var(--cyan-ink); }
+svg .num.h { fill: var(--amber-ink); }
+svg .name { font-family: var(--display); font-size: 10px; letter-spacing: .06em; fill: var(--text-1); }
+svg .lane { stroke: var(--line); stroke-width: 1; }
+svg .path { stroke: var(--line-strong); stroke-width: 2; fill: none; }
+svg .hand { stroke: var(--amber); stroke-width: 2; fill: none; stroke-dasharray: 4 4; }
+svg .node-a { fill: var(--cyan); }
+svg .node-h { fill: var(--amber); }
+svg .node-o { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1.5; stroke-dasharray: 3 3; }
+svg .gate { fill: var(--surface); stroke: var(--text-1); stroke-width: 1.5; }
+svg .gate.hard { fill: var(--text-1); }
+svg .box { fill: var(--raised); stroke: var(--line); }
+svg .box.lib { stroke: var(--amber); }
+svg .box.co { stroke: var(--cyan); }
+svg .arrow { stroke: var(--line-strong); stroke-width: 1.5; fill: none; marker-end: url(#arr); }
+svg .arrow.off { stroke: var(--red); stroke-dasharray: 4 4; }
+svg .t1 { fill: var(--text-1); font-weight: 600; }
+svg .t3 { fill: var(--text-3); font-size: 12px; }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.note { border-left: 2px solid var(--line-strong); padding: 2px 0 2px 14px; display: block; font-size: 15.5px; }
+.note b { display: block; margin-bottom: 4px; color: var(--text-1); font-weight: 600; }
+.note.caution { border-left-color: var(--amber); }
+.note.critical { border-left-color: var(--red); }
+footer { font-size: 14px; color: var(--text-3); display: grid; gap: 6px; }
+footer ul { margin: 0; padding-left: 18px; }
+@media (prefers-reduced-motion: no-preference) { .pulse { animation: pulse 1.6s ease-in-out infinite; } }
+@keyframes pulse { 50% { opacity: .45; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">ai-toolbox · docs/development · ADR-0051</div>
+  <h1>Mod Workflow</h1>
+  <p class="lede">A mod is a Claude Code plugin whose hooks module the engine loads. Every change to one under <code>mods/</code> goes through the nine stages below, each gated by a check, three of them handed to the human. Cyan is the agent, amber the human; colour marks the actor only.</p>
+  <div class="meta"><span>stages 9</span><span>hand-offs 3</span><span>gates 8</span><span>read 2026-11-03</span></div>
+</header>
+
+<section class="panel" aria-labelledby="flow-h">
+  <div class="panel-head"><h2 id="flow-h">The nine stages</h2><span class="code">FLOW · LEFT TO RIGHT</span></div>
+  <div class="legend"><span><i class="g agent"></i>agent</span><span><i class="g human"></i>human</span><span><i class="g agent" style="background:linear-gradient(90deg,var(--cyan),var(--amber))"></i>agent, then a hand-off</span></div>
+  <ol class="flow" style="list-style:none;margin:0;padding:0">
+    <li class="stage handoff"><span class="n">01</span><span class="name">Plan</span><span class="who a">agent → human</span><span class="cmd">.ai/tasks/TASK-NNNN · GOALS.md</span><span class="gate"><b>brief passes its schema</b>; the human says build</span></li>
+    <li class="stage"><span class="n">02</span><span class="name">Scaffold</span><span class="who a">agent</span><span class="cmd">mod-dev.sh scaffold &lt;name&gt;</span><span class="gate"><b>check-mods.py</b> → OK</span></li>
+    <li class="stage handoff"><span class="n">03</span><span class="name">Load</span><span class="who a">agent → human</span><span class="cmd">dev-mods.py &lt;name&gt; · CLAUDE_CODE_PLUGIN_DIRS</span><span class="gate"><b>one copy</b> in claude plugin list; library copy off</span></li>
+    <li class="stage"><span class="n">04</span><span class="name">Build</span><span class="who a">agent</span><span class="cmd">hooks/*.tsx · claude plugin validate</span><span class="gate"><b>Validation passed</b>; hooks: and calls: as meant</span></li>
+    <li class="stage"><span class="n">05</span><span class="name">Preview</span><span class="who a">agent · human looks</span><span class="cmd">preview-mods.py --serve 8765</span><span class="gate"><b>every scene drawn</b>, both surfaces</span></li>
+    <li class="stage"><span class="n">06</span><span class="name">Test</span><span class="who a">agent</span><span class="cmd">test-mods.sh --mod &lt;name&gt;</span><span class="gate"><b>PASS</b>; SKIP is not a pass</span></li>
+    <li class="stage human"><span class="n">07</span><span class="name">Live check</span><span class="who h">human · agent records</span><span class="cmd">a real session, each surface</span><span class="gate"><b>seen</b>; version line = manifest</span></li>
+    <li class="stage"><span class="n">08</span><span class="name">Version</span><span class="who a">agent</span><span class="cmd">plugin.json · README · CURRENT_STATE</span><span class="gate"><b>check-mods.py</b> OK; status shows it loaded</span></li>
+    <li class="stage handoff last"><span class="n">09</span><span class="name">Commit &amp; Publish</span><span class="who a">agent → human</span><span class="cmd">validate.sh · one commit (TASK) · PublishPlugin</span><span class="gate"><b>gate passes</b>; &lt;name&gt;@synced at the new version</span></li>
+  </ol>
+</section>
+
+<section class="panel" aria-labelledby="swim-h">
+  <div class="panel-head"><h2 id="swim-h">Who does what</h2><span class="code">SWIMLANE · AGENT / HUMAN</span></div>
+  <div class="legend"><span><i class="g agent"></i>agent runs it</span><span><i class="g human"></i>human runs it</span><span><i class="g line"></i>the other looks or records</span><span><i class="g gate"></i>a gate between stages</span></div>
+  <div class="svgwrap">
+  <svg class="swim" viewBox="0 0 1120 300" role="img" aria-label="Swimlane: the agent runs stages 2, 4, 5, 6 and 8 and starts 1, 3 and 9; the human closes 1, 3 and 9 and runs 7; a gate sits between every pair of stages.">
+    <title>Swimlane of the nine stages across the agent and human lanes</title>
+    <!-- lanes -->
+    <rect x="0" y="40" width="1120" height="110" class="lane" fill="var(--surface)"></rect>
+    <rect x="0" y="150" width="1120" height="110" class="lane" fill="var(--bg)"></rect>
+    <line x1="0" y1="150" x2="1120" y2="150" class="lane"></line>
+    <text x="14" y="64" class="lane-label">Agent</text>
+    <text x="14" y="174" class="lane-label">Human</text>
+    <!-- stage columns: x = 110 + i*115 -->
+    <g class="mono" text-anchor="middle">
+      <text x="110" y="28">01 PLAN</text><text x="225" y="28">02 SCAFFOLD</text><text x="340" y="28">03 LOAD</text><text x="455" y="28">04 BUILD</text><text x="570" y="28">05 PREVIEW</text><text x="685" y="28">06 TEST</text><text x="800" y="28">07 LIVE CHECK</text><text x="915" y="28">08 VERSION</text><text x="1030" y="28">09 COMMIT · PUBLISH</text>
+    </g>
+    <!-- main path through the owner of each stage: agent y=100, human y=210 -->
+    <polyline class="path" points="110,100 110,210 225,210 225,100 340,100 340,210 455,210 455,100 570,100 685,100 800,100 800,210 915,210 915,100 1030,100 1030,210"></polyline>
+    <!-- hand-offs within a stage -->
+    <line x1="110" y1="100" x2="110" y2="210" class="hand"></line>
+    <line x1="340" y1="100" x2="340" y2="210" class="hand"></line>
+    <line x1="1030" y1="100" x2="1030" y2="210" class="hand"></line>
+    <!-- gates between stages (on the segment that leaves the stage) -->
+    <g class="gate">
+      <path d="M167,210 l8,-8 l8,8 l-8,8 z"><title>Gate 1→2: the brief passes its schema; the human says build</title></path>
+      <path d="M282,100 l8,-8 l8,8 l-8,8 z"><title>Gate 2→3: check-mods.py OK</title></path>
+      <path d="M397,210 l8,-8 l8,8 l-8,8 z"><title>Gate 3→4: one loaded copy; library copy off</title></path>
+      <path d="M512,100 l8,-8 l8,8 l-8,8 z"><title>Gate 4→5: Validation passed</title></path>
+      <path d="M627,100 l8,-8 l8,8 l-8,8 z"><title>Gate 5→6: every scene drawn</title></path>
+      <path d="M742,100 l8,-8 l8,8 l-8,8 z"><title>Gate 6→7: PASS (SKIP is not a pass)</title></path>
+      <path d="M857,210 l8,-8 l8,8 l-8,8 z"><title>Gate 7→8: seen; the version line matches</title></path>
+      <path d="M972,100 l8,-8 l8,8 l-8,8 z"><title>Gate 8→9: check-mods.py OK; status shows it loaded</title></path>
+    </g>
+    <!-- secondary presence: the other lane looks or records -->
+    <circle cx="570" cy="210" r="9" class="node-o"><title>05: the human looks at the preview</title></circle>
+    <circle cx="800" cy="100" r="9" class="node-o"><title>07: the agent records what was seen</title></circle>
+    <!-- owner nodes -->
+    <g>
+      <circle cx="110" cy="100" r="14" class="node-a"></circle><text x="110" y="104" class="num a" text-anchor="middle">1</text>
+      <circle cx="110" cy="210" r="14" class="node-h"></circle><text x="110" y="214" class="num h" text-anchor="middle">1</text>
+      <circle cx="225" cy="100" r="14" class="node-a"></circle><text x="225" y="104" class="num a" text-anchor="middle">2</text>
+      <circle cx="340" cy="100" r="14" class="node-a"></circle><text x="340" y="104" class="num a" text-anchor="middle">3</text>
+      <circle cx="340" cy="210" r="14" class="node-h"></circle><text x="340" y="214" class="num h" text-anchor="middle">3</text>
+      <circle cx="455" cy="100" r="14" class="node-a"></circle><text x="455" y="104" class="num a" text-anchor="middle">4</text>
+      <circle cx="570" cy="100" r="14" class="node-a"></circle><text x="570" y="104" class="num a" text-anchor="middle">5</text>
+      <circle cx="685" cy="100" r="14" class="node-a"></circle><text x="685" y="104" class="num a" text-anchor="middle">6</text>
+      <circle cx="800" cy="210" r="14" class="node-h"></circle><text x="800" y="214" class="num h" text-anchor="middle">7</text>
+      <circle cx="915" cy="100" r="14" class="node-a"></circle><text x="915" y="104" class="num a" text-anchor="middle">8</text>
+      <circle cx="1030" cy="100" r="14" class="node-a"></circle><text x="1030" y="104" class="num a" text-anchor="middle">9</text>
+      <circle cx="1030" cy="210" r="14" class="node-h"></circle><text x="1030" y="214" class="num h" text-anchor="middle">9</text>
+    </g>
+    <!-- what the human does at each hand-off -->
+    <g class="t3" text-anchor="middle">
+      <text x="110" y="240">says build</text>
+      <text x="340" y="240">Turn them on;</text><text x="340" y="254">library copy off</text>
+      <text x="570" y="240">looks</text>
+      <text x="800" y="240">sees it live</text>
+      <text x="1030" y="240">says commit;</text><text x="1030" y="254">PublishPlugin</text>
+      <text x="800" y="130">records it</text>
+    </g>
+    <text x="14" y="286" class="mono">A GATE IS THE CHECK THAT LETS THE NEXT STAGE START · HOVER A GATE FOR ITS CHECK</text>
+  </svg>
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="gates-h">
+  <div class="panel-head"><h2 id="gates-h">The gates</h2><span class="code">COMMAND · CHECK · WHO</span></div>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>#</th><th>Stage</th><th>Command</th><th>Check that gates the next stage</th><th>Who</th></tr></thead>
+    <tbody>
+      <tr><td class="num">01</td><td>Plan</td><td><span class="wrapcode mono">.ai/templates/TASK.md → .ai/tasks/TASK-NNNN; a Compass line</span></td><td><code>check-artifact.sh --kind task</code> passes; the human says build</td><td><span class="tag ah">A→H</span></td></tr>
+      <tr><td class="num">02</td><td>Scaffold</td><td><code>mod-dev.sh scaffold &lt;name&gt;</code></td><td><code>scripts/check-mods.py</code> → OK</td><td><span class="tag a">A</span></td></tr>
+      <tr><td class="num">03</td><td>Load</td><td><code>scripts/dev-mods.py &lt;name&gt;</code> or <code>CLAUDE_CODE_PLUGIN_DIRS</code></td><td><code>claude plugin list</code> names one copy; the library copy is off</td><td><span class="tag ah">A→H</span></td></tr>
+      <tr><td class="num">04</td><td>Build</td><td><code>claude plugin validate mods/&lt;name&gt;</code></td><td><code>Validation passed</code>; <code>hooks:</code> and <code>calls:</code> as meant</td><td><span class="tag a">A</span></td></tr>
+      <tr><td class="num">05</td><td>Preview</td><td><code>scripts/preview-mods.py --serve 8765</code></td><td>every scene drawn on <code>terminal</code> and <code>desktop</code></td><td><span class="tag a">A</span> <span class="tag h">H looks</span></td></tr>
+      <tr><td class="num">06</td><td>Test</td><td><code>tests/test-mods.sh --mod &lt;name&gt;</code></td><td><code>PASS &lt;name&gt;</code>; SKIP is not a pass</td><td><span class="tag a">A</span></td></tr>
+      <tr><td class="num">07</td><td>Live check</td><td>the mod in a real session, each surface</td><td>the human saw it; the pane's version line is the manifest's</td><td><span class="tag h">H</span> <span class="tag a">A records</span></td></tr>
+      <tr><td class="num">08</td><td>Version</td><td><code>plugin.json</code> version, README <em>Not yet verified</em>, <code>CURRENT_STATE.md</code></td><td><code>check-mods.py</code> OK; <code>mod-dev.sh status</code> shows the version loaded</td><td><span class="tag a">A</span></td></tr>
+      <tr><td class="num">09</td><td>Commit &amp; Publish</td><td><code>tests/validate.sh</code>; one commit <code>(TASK-NNNN)</code>; <code>PublishPlugin</code></td><td>the gate passes; <code>ls-remote</code> equals HEAD; <code>&lt;name&gt;@synced</code> at the new version</td><td><span class="tag ah">A→H</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="t3" style="color:var(--text-3);font-size:14px">Semver by this repository's rule: patch for a fix, minor for a feature, major for a change to <code>types/index.d.ts</code> that another mod mirrors. Claude Code itself does not check <code>version</code> against semver; it hands users a new copy only when the string changes. Git is the changelog: <code>git log --oneline -- mods/&lt;name&gt;</code>.</p>
+</section>
+
+<section class="panel" aria-labelledby="copy-h">
+  <div class="panel-head"><h2 id="copy-h">One copy of a mod per session</h2><span class="code">PRECEDENCE · WHAT LOADS</span></div>
+  <div class="svgwrap">
+  <svg viewBox="0 0 1080 230" role="img" aria-label="Where a mod's copies come from and which one a session loads" style="min-width:680px">
+    <title>The checkout's copy, the session copy and the library copy, and which the session loads</title>
+    <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"></path></marker></defs>
+    <!-- sources -->
+    <rect x="20" y="30" width="250" height="70" class="box co"></rect>
+    <text x="36" y="56" class="t1">the checkout, on master</text>
+    <text x="36" y="78" class="mono">mods/&lt;name&gt; · edit here</text>
+    <rect x="20" y="130" width="250" height="70" class="box lib"></rect>
+    <text x="36" y="156" class="t1">the organization library</text>
+    <text x="36" y="178" class="mono">claude.ai · &lt;name&gt;@synced</text>
+    <!-- routes -->
+    <rect x="330" y="20" width="300" height="44" class="box"></rect>
+    <text x="346" y="47" class="mono">CLAUDE_CODE_PLUGIN_DIRS · watched</text>
+    <rect x="330" y="78" width="300" height="44" class="box"></rect>
+    <text x="346" y="105" class="mono">dev-mods.py → dev-mods/&lt;session&gt;/ · files</text>
+    <rect x="330" y="143" width="300" height="44" class="box"></rect>
+    <text x="346" y="170" class="mono">synced from claude.ai · lowest precedence</text>
+    <!-- session -->
+    <rect x="700" y="55" width="360" height="110" class="box co"></rect>
+    <text x="716" y="82" class="t1">the session</text>
+    <text x="716" y="104" class="t3">loads one copy of the name; hooks of a second never run</text>
+    <text x="716" y="126" class="mono">check: the version line in the pane</text>
+    <text x="716" y="148" class="mono">AGENT-WATCH 0.8.1 · COMPASS 0.9.2</text>
+    <!-- arrows -->
+    <path d="M270,55 C300,55 300,42 330,42" class="arrow"></path>
+    <path d="M270,75 C300,75 300,100 330,100" class="arrow"></path>
+    <path d="M270,165 L330,165" class="arrow"></path>
+    <path d="M630,42 C670,42 670,90 700,90" class="arrow"></path>
+    <path d="M630,100 C670,100 670,110 700,110" class="arrow"></path>
+    <path d="M630,165 C670,165 670,130 700,130" class="arrow off"></path>
+    <text x="700" y="195" class="t3">off while developing; on 2026-11-03 the desktop drew it anyway</text>
+    <text x="20" y="222" class="mono">EDIT THE CHECKOUT · COPY, NEVER LINK · TURN THE LIBRARY COPY OFF UNTIL THE NEW VERSION IS PUBLISHED</text>
+  </svg>
+  </div>
+  <div class="notes">
+    <div class="note caution"><b>Turn the library copy off while developing.</b> The documented precedence puts a <code>CLAUDE_CODE_PLUGIN_DIRS</code> plugin above an installed or synced one, silently. On 2026-11-03 the desktop app drew the library's task-compass 0.8.0 over the checkout's 0.9.1 all the same, while <code>claude plugin list</code> said the opposite. Read the version line, not the list.</div>
+    <div class="note critical"><b>Copy, never link.</b> A junction from a session's dev-mods folder into the checkout kept running hours-old code. <code>dev-mods.py</code> copies as files and mirrors edits; it replaces a link it finds.</div>
+    <div class="note"><b>Edit the checkout.</b> The dev-mods copy is a mirror, overwritten at the next sync; an edit there would load a second plugin of the name.</div>
+    <div class="note"><b>When a mod seems not to run.</b> The docs' order: <code>claude plugin validate</code>, <code>/reload-plugins</code>, the <code>/plugin</code> Errors tab, <code>claude plugin list</code>; here, the version line last. A failed hook is skipped and named once in the transcript; every occurrence is in <code>claude --debug</code>.</div>
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="port-h">
+  <div class="panel-head"><h2 id="port-h">Portability: OpenCode and Codex</h2><span class="code">STAGE × CLIENT · READ 2026-11-03</span></div>
+  <div class="legend"><span><b class="mark full">●</b>&nbsp;maps one to one</span><span><b class="mark part">◐</b>&nbsp;maps, in another shape</span><span><b class="mark none">○</b>&nbsp;no equivalent</span></div>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Stage</th><th>Claude Code mod</th><th></th><th>OpenCode plugin (2.x, <code>@opencode/plugin</code>)</th><th></th><th>Codex (CLI 0.166, app)</th></tr></thead>
+    <tbody>
+      <tr><td>Plan · Commit</td><td>a task brief; one commit per task</td><td class="mark full">●</td><td>the same</td><td class="mark full">●</td><td>the same</td></tr>
+      <tr><td>Scaffold</td><td><code>mods/_template/</code></td><td class="mark part">◐</td><td><code>mods/&lt;name&gt;/opencode/</code>: <code>index.ts</code> with <code>Plugin.define({ id, setup(ctx) })</code>, <code>tui.tsx</code>; imports the mod's pure modules</td><td class="mark part">◐</td><td><code>mods/&lt;name&gt;/codex/</code>: a bundle with <code>plugin.json</code>, <code>hooks/hooks.json</code>, <code>skills/</code>, <code>mcp.json</code></td></tr>
+      <tr><td>Load</td><td><code>CLAUDE_CODE_PLUGIN_DIRS</code>, <code>dev-mods.py</code>, hot reload</td><td class="mark part">◐</td><td><code>.opencode/plugins/&lt;name&gt;/</code> found at start, or <code>"plugins"</code> in <code>opencode.json(c)</code>; no hot reload documented</td><td class="mark part">◐</td><td>copy into <code>~/.codex/plugins/</code>, a marketplace entry, restart</td></tr>
+      <tr><td>Build: hooks</td><td><code>tool.call</code>, <code>prompt.submit</code>, <code>session.start</code> on <code>$</code></td><td class="mark full">●</td><td><code>ctx.tool.hook</code>, <code>ctx.permission.hook</code>, <code>ctx.session.hook</code>, <code>ctx.event.subscribe</code></td><td class="mark part">◐</td><td><code>hooks.json</code>: <code>PreToolUse</code>, <code>PostToolUse</code>, <code>UserPromptSubmit</code>, <code>Stop</code>… as external commands on JSON stdin; cannot ask</td></tr>
+      <tr><td>Build: tools, commands</td><td><code>$.tool.register</code>, <code>$.command.register</code></td><td class="mark full">●</td><td><code>ctx.tool.transform</code>, <code>ctx.command.transform</code></td><td class="mark part">◐</td><td>tools only through MCP servers; commands only as skills (<code>$name</code>)</td></tr>
+      <tr><td>Build: panes, bands, toasts</td><td><code>ui.render</code> on <code>Pane</code>, <code>AbovePrompt</code>; <code>$.ui.toast</code></td><td class="mark part">◐</td><td><code>context.ui.slot</code> (<code>sidebar.content</code>, <code>session.panel</code>, <code>home.footer.status</code>…) in Solid JSX on OpenTUI; <code>context.ui.toast.show</code></td><td class="mark none">○</td><td>no UI of any kind</td></tr>
+      <tr><td>Preview</td><td>the kit draws scenes; <code>preview-mods.py</code></td><td class="mark none">○</td><td>none; the desktop app loads no TUI slots</td><td class="mark none">○</td><td>nothing to draw</td></tr>
+      <tr><td>Test</td><td><code>claude plugin test</code></td><td class="mark part">◐</td><td>no harness: <code>bun test</code> with a hand-made <code>ctx</code></td><td class="mark none">○</td><td>none</td></tr>
+      <tr><td>Live check</td><td>terminal and desktop</td><td class="mark part">◐</td><td>the TUI</td><td class="mark part">◐</td><td>CLI and app; the IDE extension loads no plugins</td></tr>
+      <tr><td>Version</td><td><code>plugin.json</code>, semver here</td><td class="mark full">●</td><td><code>package.json</code>, semver; pin with <code>pkg@1.2.0</code></td><td class="mark full">●</td><td><code>plugin.json</code> <code>version</code>, the cache key</td></tr>
+      <tr><td>Publish</td><td><code>PublishPlugin</code> → the organization library; a marketplace repo</td><td class="mark part">◐</td><td><code>npm publish</code>; no organization library</td><td class="mark part">◐</td><td>a marketplace repo a workspace admin imports, with per-role policy</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="notes">
+    <div class="note"><b>One to one.</b> Plan, Commit, the version step, red-proof, and the pure modules a mod keeps apart from its hooks.</div>
+    <div class="note caution"><b>Not portable.</b> Panes and bands, the kit and the preview built on it, hot reload, the organization library.</div>
+    <div class="note"><b>Where a port lives.</b> One subfolder per client inside the mod's folder, so the registry keeps one row; needs an amendment to <code>ADR-0040</code> clause 2. Backlog <code>B-069</code> (OpenCode) and <code>B-070</code> (Codex).</div>
+  </div>
+</section>
+
+
+<footer>
+  <span class="eyebrow">Sources</span>
+  <ul>
+    <li><code>docs/development/mod-workflow.md</code> owns the rule; <code>ADR-0051</code> decides it; <code>ADR-0040</code> made mods a component kind; <code>ADR-0033</code> makes git the record.</li>
+    <li>The runbook's <em>Loading a mod in development</em> and <em>Previewing a mod's panes</em>; <code>scripts/dev-mods.py</code>, <code>scripts/preview-mods.py</code>, <code>tests/test-mods.sh</code>, <code>scripts/check-mods.py</code>, <code>skills/mod-dev/</code>.</li>
+    <li>Claude Code's plugin docs, read 2026-11-03: <a href="https://code.claude.com/docs/en/plugins/loading">loading</a> (name conflicts, precedence), <a href="https://code.claude.com/docs/en/plugins/mods/create">mods/create</a>, <a href="https://code.claude.com/docs/en/plugins/mods/test">mods/test</a>, <a href="https://code.claude.com/docs/en/plugins/manifest-reference">manifest reference</a>, <a href="https://code.claude.com/docs/en/plugins/publish">publish</a>, <a href="https://code.claude.com/docs/en/plugins/cli-reference">CLI reference</a>; the bundled <code>plugin-authoring</code> skill.</li>
+  </ul>
+</footer>
+</div>
+</body>
+</html>

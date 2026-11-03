@@ -352,8 +352,10 @@ is the one owner; each mod holds a byte-identical copy, which the gate
 checks. Change the owner, then copy it to every mod.
 
 A mod's own module map and traps go in its `DEVELOPING.md`, as
-`mods/task-compass/` does. Loading a mod in development: runbook, *Loading a
-mod in development*.
+`mods/task-compass/` does. The order of a mod change, the check that gates
+each stage and who runs it: `mod-workflow.md` (`ADR-0051`), run by
+`skills/mod-dev/`; its chart is `mod-workflow.html`. Loading a mod in
+development on a host: runbook, *Loading a mod in development*.
 
 Type-check with TypeScript 5.4 or later. Once the engine has loaded a mod
 from a watched folder, `tsc -p mods/<name>` works through the laid

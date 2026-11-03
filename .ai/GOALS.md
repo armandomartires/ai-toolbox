@@ -475,6 +475,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0217-preview-mod-panes.md
 - [?] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
   .ai/tasks/TASK-0219-mod-preview-refined.md
+- [?] TASK-0218 — One workflow for developing mods, with a chart and a skill
+  .ai/tasks/TASK-0218-mod-development-workflow.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
@@ -491,4 +493,10 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - B-064 `task-compass`'s README has no screenshots
   .ai/planning/BACKLOG.md
 - B-067 The OpenCode driver journals every tool error as `tool-denied`
+  .ai/planning/BACKLOG.md
+- B-069 An OpenCode port of a mod: `mods/<name>/opencode/` on `@opencode/plugin`
+  .ai/planning/BACKLOG.md
+- B-070 A Codex equivalent of a mod: `mods/<name>/codex/`, a plugin bundle
+  .ai/planning/BACKLOG.md
+- B-071 A pane that lists every repo mod's loaded version beside its manifest
   .ai/planning/BACKLOG.md
