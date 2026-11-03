@@ -1,5 +1,5 @@
-// A small board for the preview scenes; scripts/preview-mods.py replaces it,
-// in its scratch copy only, with the repo's own .ai/GOALS.md.
+// The pinned board the snapshotted Compass scenes draw. The repo's live board goes
+// to goals.live.ts, which scripts/preview-mods.py fills in its scratch copy only.
 export const GOALS = `# Project
 
 ## Sprint 1 — Foundations

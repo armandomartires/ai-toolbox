@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { ConfigRow, On } from 'claude-code'
 
+import { engine as shared } from '../preview/fixtures'
 import { applyPlan, currentSprint, guessStory, parseSprints, setStoryStatus } from './model'
 import { TOKENS } from './sigma'
 import { VERSION } from './view'
@@ -54,40 +55,7 @@ const SURFACES = ['terminal', 'desktop'] as const
  */
 type AppTool = never
 
-/**
- * The engine beneath the mod: a .ai/GOALS.md kept in memory in /p, the session's
- * folder unless the test moves it.
- */
-const engine = (on: On) => {
-  const file = { text: GOALS, mtime: 1, cwd: '/p' }
-  on('command.register', (_, e) => ({ value: { command: e.name } }))
-  on('tool.register', (_, e) => ({ value: { tool: `mcp__task-compass__${e.name}` } }))
-  on('tool.describe', (_, e) => ({ description: e.description }))
-  on('ui.invalidate', () => ({ value: undefined }))
-  on('classic.CwdChanged', () => ({}))
-  on('ui.open', () => ({ value: { isPlaced: true } }))
-  // The test kit's base hook for the pane, which Compass's `next(e)` reaches: it draws nothing.
-  on('ui.render', { component: 'Pane', requestId: 'task-compass' }, ($, e) => {
-    const { Box } = $.ui.resolve(e)
-
-    return <Box />
-  })
-  on('session.cwd', () => ({ value: file.cwd }))
-  on('fs.stat', (_, e) => {
-    if (!/[\\/]p[\\/]\.ai[\\/]GOALS\.md$/.test(e.path)) throw new Error('ENOENT')
-    return { value: { kind: 'file', size: file.text.length, mtimeMs: file.mtime, isLink: false } }
-  })
-  on('fs.read', () => ({ value: file.text }))
-  on('fs.write', (_, e) => {
-    file.text = e.text
-    file.mtime++
-    return { value: undefined }
-  })
-  on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.call', () => ({ result: {} }))
-
-  return file
-}
+const engine = (on: On) => shared(on, GOALS)
 
 test('sprints, stories, statuses and details come from GOALS.md', () => {
   const sprints = parseSprints(GOALS)

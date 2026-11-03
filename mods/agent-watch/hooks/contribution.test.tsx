@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { AgentInfo, AgentSpawnInput, EngineInterface, On, Register } from 'claude-code'
 
+import { engine as shared } from '../preview/fixtures'
 import { COMPASS_PANE } from './view'
 
 // The Sessions panel contributed to Compass's pane (ADR-0048):
@@ -61,21 +62,9 @@ const COMPASS_FIRST = { name: 'task-compass', tier: 'prepend', register: compass
 const COMPASS_SECOND = { name: 'task-compass', tier: 'append', register: compass } as const
 const BARE_FIRST = { name: 'task-compass', tier: 'prepend', register: compassWithoutNext } as const
 
-/** The engine beneath the mods: a list of agents the test moves. */
+/** The engine beneath the mods (the shared one), and below it what the engine draws for a pane no plugin answers: the bottom of the chain. */
 const engine = (on: On, listed: { value: AgentInfo[] }, base: boolean | 'engine' = true, tool: (call: Record<string, unknown>) => unknown = () => ({})) => {
-  on('command.register', (_, e) => ({ value: { command: e.name } }))
-  on('ui.open', () => ({ value: { isPlaced: true } }))
-  on('ui.view', () => ({ value: {} }))
-  on('ui.toast', () => ({ value: undefined }))
-  on('ui.status', () => ({ value: undefined }))
-  on('classic.SubagentStop', () => ({}))
-  on('agent.list', () => ({ value: listed.value }))
-  on('agent.spawn', (_, e) => ({ model: 'm', agentId: `id-${e.description}` }))
-  on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('turn.complete', (_, e) => ({ text: e.answer }))
-  on('turn.start', () => ({ turnId: 't' }))
-  on('tool.call', (_, e) => ({ result: tool(e as unknown as Record<string, unknown>) }) as never)
-  // What the engine draws for a pane no plugin answers: the bottom of the chain.
+  shared(on, listed, tool)
   // Without it the kit throws there, as the real engine might (unverified).
   if (!base) return
   // Core's own drawing, as the engine's types have the last hook answer: what next(e) resolves to for the innermost hook.

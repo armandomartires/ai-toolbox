@@ -12,6 +12,9 @@
 - `scripts/dev-mods.py` copies mods into a session's dev-mods folder as files, since a link may not reload.
 - task-compass 0.9.2 prints `COMPASS <version>` after the board's legend on the desktop.
 
+## Mod preview 2
+- Scenes on a shared kit (`TASK-0219`): sizes, surfaces and presses asked from the served page and drawn through the test kit; the terminal on a character grid with Ink's rules; the light theme from each mod's tokens; committed snapshots with `--snapshot` and `--check`, a CHANGED badge and a PNG per drawing; fixtures shared by each mod's tests and scenes.
+
 ## agent-watch 0.8.1
 - On the desktop, `AGENT-WATCH <version>` under the Sessions table.
 - In Compass's pane one blank row parts the Sprints board from the meter and the Sessions panel, with or without a meter (`TASK-0216`).

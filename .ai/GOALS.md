@@ -473,6 +473,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0216-agent-watch-gap-and-kpis.md
 - [?] TASK-0217 — Preview mod panes in a browser; copy mods into a session
   .ai/tasks/TASK-0217-preview-mod-panes.md
+- [?] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
+  .ai/tasks/TASK-0219-mod-preview-refined.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

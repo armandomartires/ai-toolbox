@@ -1,53 +1,28 @@
-// Preview scenes (scripts/preview-mods.py): Compass's pane drawn by the test
-// kit from a board (the repo's own .ai/GOALS.md in the script's scratch copy),
-// its trees handed to the preview page by the kit's failure message. Not a
-// test: the script renames it into one in that copy.
+// Preview scenes (scripts/preview-mods.py, preview/scene-kit.ts): Compass's pane with a
+// live task list, on a pinned board (snapshotted) and on this repo's own .ai/GOALS.md
+// (shown, never snapshotted: the board changes with every task). Not a test: the
+// script runs this file as one in a scratch copy of the mod.
 import { mock, test } from 'claude-code/testing'
-import type { On } from 'claude-code'
+import type { EngineInterface, On } from 'claude-code'
 
+import { TOKENS } from '../hooks/sigma'
+import { engine } from './fixtures'
 import { GOALS } from './goals.fixture'
+import { GOALS_LIVE } from './goals.live'
+import { REQUEST } from './request'
+import { runScenes, type Scene } from './scene-kit'
 
-const SCENES: { name: string; surface: 'desktop' | 'terminal'; columns: number; rows: number }[] = [
-  { name: 'Compass pane · desktop · default', surface: 'desktop', columns: 76, rows: 40 },
-  { name: 'Compass pane · desktop · narrow', surface: 'desktop', columns: 48, rows: 40 },
-  { name: 'Compass pane · desktop · wide', surface: 'desktop', columns: 120, rows: 50 },
-  { name: 'Compass pane · terminal', surface: 'terminal', columns: 100, rows: 40 },
-]
-
-const engine = (on: On) => {
-  on('command.register', (_, e) => ({ value: { command: e.name } }))
-  on('tool.register', (_, e) => ({ value: { tool: `mcp__task-compass__${e.name}` } }))
-  on('tool.describe', (_, e) => ({ description: e.description }))
-  on('ui.invalidate', () => ({ value: undefined }))
-  on('classic.CwdChanged', () => ({}))
-  on('ui.open', () => ({ value: { isPlaced: true } }))
-  on('ui.render', { component: 'Pane', requestId: 'task-compass' }, ($, e) => {
-    const { Box } = $.ui.resolve(e)
-    return <Box />
-  })
-  on('session.cwd', () => ({ value: '/p' }))
-  on('fs.stat', (_, e) => {
-    if (!/[\\/]p[\\/]\.ai[\\/]GOALS\.md$/.test(e.path)) throw new Error('ENOENT')
-    return { value: { kind: 'file', size: GOALS.length, mtimeMs: 1, isLink: false } }
-  })
-  on('fs.read', () => ({ value: GOALS }))
-  on('fs.write', () => ({ value: undefined }))
-  on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('tool.call', () => ({ result: {} }))
-}
-
-test('preview: task-compass', async ($, on) => {
+const populateOn = (goals: string) => async ($: EngineInterface, on: On) => {
   const clock = mock.clock(on, { now: 1_000 })
-  engine(on)
+  engine(on, goals)
   await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
   await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: [{ content: 'Write the model', status: 'completed' }, { content: 'Render the dots', status: 'in_progress' }, { content: 'Test it', status: 'pending' }] } as never)
   await clock.advance(12_000)
-  const out: unknown[] = []
-  for (const scene of SCENES) {
-    const props = { title: 'Compass', isFocused: false, bodyColumns: scene.columns, placement: 'dock', scroll: { offset: 0, bodyRows: scene.rows }, view: {} }
-    const ui = await $.ui.mount({ plugin: 'task-compass', component: 'Pane', requestId: 'task-compass', surface: scene.surface, props } as never)
-    out.push({ mod: 'task-compass', ...scene, tree: await ui.drawn() })
-    await ui.unmount()
-  }
-  throw new Error(`@@PREVIEW@@${encodeURIComponent(JSON.stringify(out))}@@END@@`)
-})
+}
+
+const scenes: Record<string, Scene> = {
+  'Compass pane': { requestId: 'task-compass', title: 'Compass', sizes: [[76, 40], [48, 40], [120, 50]], surfaces: ['desktop', 'terminal'], populate: populateOn(GOALS) },
+  ...(GOALS_LIVE ? { 'Compass pane · this repo': { requestId: 'task-compass', title: 'Compass', sizes: [[100, 50]], surfaces: ['desktop'], populate: populateOn(GOALS_LIVE), snapshot: false } } : {}),
+}
+
+runScenes(test, 'task-compass', scenes, REQUEST, {}, TOKENS)

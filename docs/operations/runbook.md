@@ -422,25 +422,46 @@ what every session loads, so keep it on `master`.
 
 ## Previewing a mod's panes
 `python3 scripts/preview-mods.py` draws each mod's `preview/*.scene.tsx`
-scenes in the test kit and writes `build/preview/index.html`: every scene's
-tree (what `ui.drawn()` returns) laid out as flexbox, a cell 7.2 by 20 px on
-the desktop and one character on the terminal, the `Svg` and `Raster` as
-drawn, and a dashed line where the pane's height ends. It approximates the
-surfaces, for layout and content, not pixels: a last look in the app stays.
+scenes in the test kit and writes `build/preview/index.html`: every drawing
+(what `ui.drawn()` returned) laid out as the surface would, the desktop as
+flexbox at 7.2 by 20 px per cell, the terminal on a character grid with Ink's
+wrapping and box-drawing borders, the `Svg` and `Raster` as drawn, a dashed
+line where the pane's height ends, and the mod's light theme on a switch. It
+approximates the surfaces, for layout and content, not pixels: a last look in
+the app stays.
 
+- **A scene** (`TASK-0219`) is a populated pane: `preview/fixtures.ts` holds
+  the engine stand-in and the state the mod's tests also use, and the scene
+  file names each pane with its default sizes and surfaces, then calls
+  `runScenes` from `preview/scene-kit.ts` (a copy of
+  `scripts/preview/scene-kit.ts` the script refreshes; never edit the copy).
+  One kit test per drawing; a scene throws its drawing, URI-encoded between
+  `@@PREVIEW@@` and `@@END@@`, since the kit has no files and drops console
+  output, and the script reads it out of the failure. Scenes run in a scratch
+  copy of the mod with no tests, so they never slow or fail its suite.
 - **Live**: `--serve 8765` serves the page, rebuilds the mod whose files
-  changed within a second of a save, and the page reloads itself. In the
+  changed within a second of a save, and the page reloads itself. On the page
+  each drawing has controls: another size, the other surface, and every
+  Button is a press; each asks the server (`POST /run`) to draw that scene
+  again through the kit, and `Built` returns to the built drawing. In the
   desktop app, a `.claude/launch.json` entry (`"runtimeExecutable":
   "python3", "runtimeArgs": ["scripts/preview-mods.py", "--serve", "8765"],
   "port": 8765`) opens it in the browser pane; a `file://` page there is a
   snapshot that loads no script.
-- **Real data**: task-compass's scenes read this repo's `.ai/GOALS.md`.
-- **How a tree leaves the kit**: the kit has no files and drops console
-  output, so a scene throws its trees, URI-encoded between `@@PREVIEW@@` and
-  `@@END@@`, and the script reads them out of the failure. Scenes run in a
-  scratch copy of the mod with no tests, so they never slow or fail its suite.
-- **A new scene**: copy a mod's `preview/*.scene.tsx`; a scene seeds its
-  state through the engine's hooks, as the mod's tests do.
+- **Snapshots**: `--snapshot` writes each built drawing, normalised, to
+  `mods/<mod>/preview/snapshots/`, committed with the mod; `--check` fails
+  on any drawing that differs, naming the first differing path, and the
+  served page marks such a drawing CHANGED. A change meant to look different
+  is followed by `--snapshot`, which refuses a failed build. The PNG button saves a drawing as a picture
+  for a README or a brief.
+- **Real data**: task-compass's `Compass pane · this repo` scene reads this
+  repo's `.ai/GOALS.md` (`preview/goals.live.ts`, filled in the scratch copy);
+  it is shown and never snapshotted (`snapshot: false`), since the board
+  changes with every task. The snapshotted scenes draw the pinned
+  `preview/goals.fixture.ts`.
+- **A new scene**: copy a mod's `preview/` files; `scripts/dev-mods.py`
+  never copies `preview/` into a session, so a hooks module must not import
+  from it, only tests and scenes may.
 
 ## Wiring the `gather_subset` guard into a consuming Ansible repository
 
