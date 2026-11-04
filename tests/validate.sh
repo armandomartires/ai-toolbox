@@ -2163,5 +2163,12 @@ else
   fail=1
 fi
 
+# --------------------------------------------------------------------------
+# The SBOM helper still adds external MCP servers (issue #12): a red proof.
+if ! python3 scripts/sbom-add-external.py --self-test; then
+  echo "SBOM: scripts/sbom-add-external.py self-test failed"
+  fail=1
+fi
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
