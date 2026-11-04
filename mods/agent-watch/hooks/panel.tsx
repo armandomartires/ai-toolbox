@@ -5,6 +5,7 @@ import type { AgentRow, BackgroundTask, OrchPolicy, OrchTask, Task, WorkflowRun 
 import { elapsed, fit, headCaption, trimTree } from './model'
 import { memberCaption, sessionTree, tokensText } from './sessions'
 import type { Member, SessionNode } from './sessions'
+import { handleSlot } from './handle'
 import { color, hms, kit, theme } from './sigma'
 import type { Token } from './sigma'
 import { arcs, chartAgents, chartFailed, chartRunning, rollupOf, stateGlyph, stateTone, stateWord, sunburstCells, sunburstSvg } from './sunburst'
@@ -27,7 +28,7 @@ const COL = { state: 11, steps: 7, time: 6, tok: 6 }
 /** The rows the KPI row (a label, a value and a caption, and the margin above) and the selected-element panel take. */
 const KPI_ROWS = 4
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it under the table, so the person sees which copy draws the panel. */
-export const VERSION = '0.8.1'
+export const VERSION = '0.9.0'
 const PANEL_ROWS = 9
 /** The compact strip's rows: its margin and its line. */
 const STRIP_ROWS = 2
@@ -43,6 +44,8 @@ const TABLE_HEAD_ROWS = 1
 const SPARE_ROWS = 2
 /** The lines the Sessions tree may take beyond its session heads and the ledger's tasks. */
 const TREE_LINES = 16
+/** The fewest rows a drag on the Sessions handle holds the panel at (ADR-0052). */
+export const SESSIONS_MIN = 12
 /** The fewest pane rows the sunburst is drawn in (it is hidden below them). */
 const CHART_MIN_ROWS = 9
 /** The tight tier, which keeps the chart on a default-height pane: its least rows (terminal). A desktop's chart is never shrunk. */
@@ -196,9 +199,17 @@ export type SessionsState = {
  * The Sessions panel as one bracketed frame, from `state`: for the pane `e`
  * (its size, surface and viewed agent) with `reservedRows` of it spent above
  * the panel. A declaration: the engine follows `$` past an import only into one.
- * It draws colour by state (`stateTone`), never by session.
+ * It draws colour by state (`stateTone`), never by session. `sizing.held` is
+ * the rows a drag on its handle holds it at, and `sizing.handle` draws that
+ * handle under it from the rows the panel takes (ADR-0052).
  */
-export async function renderSessions($: EngineInterface, e: RenderInput<'Pane'>, state: SessionsState, reservedRows: number) {
+export async function renderSessions(
+  $: EngineInterface,
+  e: RenderInput<'Pane'>,
+  state: SessionsState,
+  reservedRows: number,
+  sizing?: { held?: number; handle?: (rows: number) => unknown },
+) {
   const ui = $.ui.resolve(e)
   const { Box, Button, Text } = ui
   // `Raster` is the terminal's alone and `Svg` the remote surfaces'; each is drawn only on its own.
@@ -207,7 +218,9 @@ export async function renderSessions($: EngineInterface, e: RenderInput<'Pane'>,
   const [picked, isListFolded] = await Promise.all([read($, selected), read($, listCollapsed)])
   const isTerminal = e.surface === 'terminal'
   const cols = Math.max(COLUMNS_MIN, e.props.bodyColumns)
-  const rows = Math.max(16, e.props.scroll.bodyRows)
+  // The rows a drag on the handle holds the panel at, else the pane's.
+  const held = sizing?.held === undefined ? undefined : Math.max(SESSIONS_MIN, sizing.held)
+  const rows = held ?? Math.max(16, e.props.scroll.bodyRows)
   // The frame holds what is four cells narrower than the pane.
   const body = Math.max(1, cols - FRAME_COLS)
   const viewing = e.props.view.agentId
@@ -441,9 +454,10 @@ export async function renderSessions($: EngineInterface, e: RenderInput<'Pane'>,
   // What runs: the agents, and the background tasks (ADR-0049), so a long background command never reads as 0 RUNNING.
   const running = state.agents.filter(row => row.status === 'running').length + (state.background ?? []).filter(task => task.status === 'running').length
 
-  return panel(
-    { title: 'Sessions', code: `${running} running`, width: cols, bracketed: true },
-    <Box flexDirection="column">
+  // A held panel is that tall: its body takes what the frame and the title leave, and what does not fit is cut, since a desktop folds nothing for height.
+  const drawn = held ?? layout.used
+  const content = (
+    <Box key="sessions-content" flexDirection="column" {...(held === undefined ? {} : { height: held - HEAD_ROWS - FRAME_ROWS, overflow: 'hidden' as const })}>
       {hasKpi && kpiRow}
       {hasChart && (
         <Box flexDirection="column" marginTop={chartGap}>
@@ -479,6 +493,31 @@ export async function renderSessions($: EngineInterface, e: RenderInput<'Pane'>,
           <Text key="agent-watch-version" color={color('text-3')} size="caption">{`AGENT-WATCH ${VERSION}`}</Text>
         </Box>
       )}
+    </Box>
+  )
+
+  const framed = panel(
+    { title: 'Sessions', code: `${running} running`, width: cols, bracketed: true },
+    <Box key="sessions-body" flexDirection="column">
+      {content}
     </Box>,
+  )
+  if (sizing?.handle === undefined) return framed
+  // The handle lies on the frame's bottom edge (ADR-0052), outside the clipped content, so a short panel keeps it.
+  return (
+    <Box key="sessions-frame" flexDirection="column">
+      {framed}
+      {handleSlot(ui as never, {
+        key: 'sessions-handle',
+        width: cols,
+        isTerminal,
+        isAuto: held === undefined,
+        bar: color('line-strong'),
+        fill: color('raised'),
+        edge: color('line'),
+        text: color('text-1'),
+        client: sizing.handle(drawn),
+      })}
+    </Box>
   )
 }

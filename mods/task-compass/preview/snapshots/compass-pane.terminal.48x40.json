@@ -13,160 +13,129 @@
       "children": [
        {
         "children": [
-         "┌"
-        ],
-        "props": {
-         "color": "#e8ecef"
-        },
-        "type": "Text"
-       }
-      ],
-      "props": {
-       "left": -1,
-       "position": "absolute",
-       "top": -1
-      },
-      "type": "Box"
-     },
-     {
-      "children": [
-       {
-        "children": [
-         "┐"
-        ],
-        "props": {
-         "color": "#e8ecef"
-        },
-        "type": "Text"
-       }
-      ],
-      "props": {
-       "position": "absolute",
-       "right": -1,
-       "top": -1
-      },
-      "type": "Box"
-     },
-     {
-      "children": [
-       {
-        "children": [
-         "└"
-        ],
-        "props": {
-         "color": "#e8ecef"
-        },
-        "type": "Text"
-       }
-      ],
-      "props": {
-       "bottom": -1,
-       "left": -1,
-       "position": "absolute"
-      },
-      "type": "Box"
-     },
-     {
-      "children": [
-       {
-        "children": [
-         "┘"
-        ],
-        "props": {
-         "color": "#e8ecef"
-        },
-        "type": "Text"
-       }
-      ],
-      "props": {
-       "bottom": -1,
-       "position": "absolute",
-       "right": -1
-      },
-      "type": "Box"
-     },
-     {
-      "children": [
-       {
-        "children": [
-         "SPRINTS"
-        ],
-        "props": {
-         "color": "#e8ecef",
-         "weight": "bold",
-         "wrap": "truncate-end"
-        },
-        "type": "Text"
-       },
-       {
-        "children": [
          {
           "children": [
-           "2 SPRINTS"
+           "┌"
           ],
           "props": {
-           "color": "#7e8790",
-           "size": "caption",
-           "tabular": true
+           "color": "#e8ecef"
           },
           "type": "Text"
          }
         ],
         "props": {
-         "flexShrink": 0,
-         "marginLeft": 1
+         "left": -1,
+         "position": "absolute",
+         "top": -1
         },
         "type": "Box"
-       }
-      ],
-      "props": {
-       "flexDirection": "row",
-       "justifyContent": "space-between",
-       "width": 44
-      },
-      "type": "Box"
-     },
-     {
-      "children": [
-       "────────────────────────────────────────────"
-      ],
-      "props": {
-       "color": "#3a4048"
-      },
-      "type": "Text"
-     },
-     {
-      "children": [
+       },
        {
         "children": [
          {
           "children": [
-           " "
-          ],
-          "type": "Text"
-         },
-         {
-          "children": [
-           "S2/2"
+           "┐"
           ],
           "props": {
-           "color": "#7e8790",
-           "tabular": true
+           "color": "#e8ecef"
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "position": "absolute",
+         "right": -1,
+         "top": -1
+        },
+        "type": "Box"
+       },
+       {
+        "children": [
+         {
+          "children": [
+           "└"
+          ],
+          "props": {
+           "color": "#e8ecef"
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "bottom": -1,
+         "left": -1,
+         "position": "absolute"
+        },
+        "type": "Box"
+       },
+       {
+        "children": [
+         {
+          "children": [
+           "┘"
+          ],
+          "props": {
+           "color": "#e8ecef"
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "bottom": -1,
+         "position": "absolute",
+         "right": -1
+        },
+        "type": "Box"
+       },
+       {
+        "children": [
+         {
+          "children": [
+           "SPRINTS"
+          ],
+          "props": {
+           "color": "#e8ecef",
+           "weight": "bold",
+           "wrap": "truncate-end"
           },
           "type": "Text"
          },
          {
           "children": [
-           " "
+           {
+            "children": [
+             "2 SPRINTS"
+            ],
+            "props": {
+             "color": "#7e8790",
+             "size": "caption",
+             "tabular": true
+            },
+            "type": "Text"
+           }
           ],
-          "type": "Text"
+          "props": {
+           "flexShrink": 0,
+           "marginLeft": 1
+          },
+          "type": "Box"
          }
         ],
         "props": {
          "flexDirection": "row",
-         "justifyContent": "space-between"
+         "justifyContent": "space-between",
+         "width": 44
         },
         "type": "Box"
+       },
+       {
+        "children": [
+         "────────────────────────────────────────────"
+        ],
+        "props": {
+         "color": "#3a4048"
+        },
+        "type": "Text"
        },
        {
         "children": [
@@ -174,293 +143,30 @@
           "children": [
            {
             "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 "●"
-                ],
-                "props": {
-                 "color": "#e8ecef"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 " S1 Foundations"
-                ],
-                "props": {
-                 "color": "#7e8790",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "s1",
-               "label": " S1 Foundations",
-               "plain": true
-              },
-              "type": "Button"
-             }
+             " "
             ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
+            "type": "Text"
            },
            {
             "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 {
-                  "children": [
-                   "│"
-                  ],
-                  "props": {
-                   "color": "#3a4048"
-                  },
-                  "type": "Text"
-                 }
-                ],
-                "props": {
-                 "flexDirection": "column",
-                 "width": 1
-                },
-                "type": "Box"
-               }
-              ],
-              "props": {
-               "flexDirection": "row",
-               "width": 2
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               "▰▰▰▰▰ 2/2"
-              ],
-              "props": {
-               "color": "#7e8790",
-               "wrap": "truncate-end"
-              },
-              "type": "Text"
-             }
+             "S2/2"
             ],
             "props": {
-             "flexDirection": "row"
+             "color": "#7e8790",
+             "tabular": true
             },
-            "type": "Box"
+            "type": "Text"
            },
            {
             "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 {
-                  "children": [
-                   "│"
-                  ],
-                  "props": {
-                   "color": "#3a4048"
-                  },
-                  "type": "Text"
-                 }
-                ],
-                "props": {
-                 "flexDirection": "column",
-                 "width": 1
-                },
-                "type": "Box"
-               }
-              ],
-              "props": {
-               "flexDirection": "row",
-               "width": 2
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 "▾ HIDE"
-                ],
-                "props": {
-                 "color": "#6b737d"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "fold-s1",
-               "label": "▾ HIDE",
-               "plain": true
-              },
-              "type": "Button"
-             }
+             " "
             ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               "│"
-              ],
-              "props": {
-               "color": "#3a4048"
-              },
-              "type": "Text"
-             }
-            ],
-            "props": {
-             "flexDirection": "column",
-             "width": 1
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 "●"
-                ],
-                "props": {
-                 "color": "#e8ecef"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 " Parse the board"
-                ],
-                "props": {
-                 "color": "#7e8790",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "st1.1",
-               "label": " Parse the board",
-               "plain": true
-              },
-              "type": "Button"
-             }
-            ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               "│"
-              ],
-              "props": {
-               "color": "#3a4048"
-              },
-              "type": "Text"
-             }
-            ],
-            "props": {
-             "flexDirection": "column",
-             "width": 1
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 "●"
-                ],
-                "props": {
-                 "color": "#e8ecef"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 " Draw the carousel"
-                ],
-                "props": {
-                 "color": "#7e8790",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "st1.2",
-               "label": " Draw the carousel",
-               "plain": true
-              },
-              "type": "Button"
-             }
-            ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
+            "type": "Text"
            }
           ],
           "props": {
-           "flexDirection": "column",
-           "width": 22
+           "flexDirection": "row",
+           "justifyContent": "space-between"
           },
           "type": "Box"
          },
@@ -472,17 +178,48 @@
               "children": [
                {
                 "children": [
-                 "◉"
+                 {
+                  "children": [
+                   "●"
+                  ],
+                  "props": {
+                   "color": "#e8ecef"
+                  },
+                  "type": "Text"
+                 }
                 ],
                 "props": {
-                 "color": "#ffffff"
+                 "flexShrink": 0,
+                 "key": "glyph"
                 },
-                "type": "Text"
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " S1 Foundations"
+                  ],
+                  "props": {
+                   "color": "#7e8790",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "s1",
+                 "label": " S1 Foundations",
+                 "plain": true
+                },
+                "type": "Button"
                }
               ],
               "props": {
-               "flexShrink": 0,
-               "key": "glyph"
+               "flexDirection": "row"
               },
               "type": "Box"
              },
@@ -490,29 +227,242 @@
               "children": [
                {
                 "children": [
-                 " S2 Live"
+                 {
+                  "children": [
+                   {
+                    "children": [
+                     "│"
+                    ],
+                    "props": {
+                     "color": "#3a4048"
+                    },
+                    "type": "Text"
+                   }
+                  ],
+                  "props": {
+                   "flexDirection": "column",
+                   "width": 1
+                  },
+                  "type": "Box"
+                 }
                 ],
                 "props": {
-                 "color": "#e8ecef",
-                 "weight": "semibold",
+                 "flexDirection": "row",
+                 "width": 2
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 "▰▰▰▰▰ 2/2"
+                ],
+                "props": {
+                 "color": "#7e8790",
                  "wrap": "truncate-end"
                 },
                 "type": "Text"
                }
               ],
-              "press": {
-               "plugin": "task-compass"
-              },
               "props": {
-               "key": "s2",
-               "label": " S2 Live",
-               "plain": true
+               "flexDirection": "row"
               },
-              "type": "Button"
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   {
+                    "children": [
+                     "│"
+                    ],
+                    "props": {
+                     "color": "#3a4048"
+                    },
+                    "type": "Text"
+                   }
+                  ],
+                  "props": {
+                   "flexDirection": "column",
+                   "width": 1
+                  },
+                  "type": "Box"
+                 }
+                ],
+                "props": {
+                 "flexDirection": "row",
+                 "width": 2
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   "▾ HIDE"
+                  ],
+                  "props": {
+                   "color": "#6b737d"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "fold-s1",
+                 "label": "▾ HIDE",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 "│"
+                ],
+                "props": {
+                 "color": "#3a4048"
+                },
+                "type": "Text"
+               }
+              ],
+              "props": {
+               "flexDirection": "column",
+               "width": 1
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   "●"
+                  ],
+                  "props": {
+                   "color": "#e8ecef"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " Parse the board"
+                  ],
+                  "props": {
+                   "color": "#7e8790",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "st1.1",
+                 "label": " Parse the board",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 "│"
+                ],
+                "props": {
+                 "color": "#3a4048"
+                },
+                "type": "Text"
+               }
+              ],
+              "props": {
+               "flexDirection": "column",
+               "width": 1
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   "●"
+                  ],
+                  "props": {
+                   "color": "#e8ecef"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " Draw the carousel"
+                  ],
+                  "props": {
+                   "color": "#7e8790",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "st1.2",
+                 "label": " Draw the carousel",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
              }
             ],
             "props": {
-             "flexDirection": "row"
+             "flexDirection": "column",
+             "width": 22
             },
             "type": "Box"
            },
@@ -524,34 +474,754 @@
                 "children": [
                  {
                   "children": [
-                   "│"
+                   "◉"
                   ],
                   "props": {
-                   "color": "#3a4048"
+                   "color": "#ffffff"
                   },
                   "type": "Text"
                  }
                 ],
                 "props": {
-                 "flexDirection": "column",
-                 "width": 1
+                 "flexShrink": 0,
+                 "key": "glyph"
                 },
                 "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " S2 Live"
+                  ],
+                  "props": {
+                   "color": "#e8ecef",
+                   "weight": "semibold",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "s2",
+                 "label": " S2 Live",
+                 "plain": true
+                },
+                "type": "Button"
                }
               ],
               "props": {
-               "flexDirection": "row",
-               "width": 2
+               "flexDirection": "row"
               },
               "type": "Box"
              },
              {
               "children": [
-               "▱▱▱▱▱ 0/5"
+               {
+                "children": [
+                 {
+                  "children": [
+                   {
+                    "children": [
+                     "│"
+                    ],
+                    "props": {
+                     "color": "#3a4048"
+                    },
+                    "type": "Text"
+                   }
+                  ],
+                  "props": {
+                   "flexDirection": "column",
+                   "width": 1
+                  },
+                  "type": "Box"
+                 }
+                ],
+                "props": {
+                 "flexDirection": "row",
+                 "width": 2
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 "▱▱▱▱▱ 0/5"
+                ],
+                "props": {
+                 "color": "#7e8790",
+                 "wrap": "truncate-end"
+                },
+                "type": "Text"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   {
+                    "children": [
+                     "│"
+                    ],
+                    "props": {
+                     "color": "#3a4048"
+                    },
+                    "type": "Text"
+                   }
+                  ],
+                  "props": {
+                   "flexDirection": "column",
+                   "width": 1
+                  },
+                  "type": "Box"
+                 }
+                ],
+                "props": {
+                 "flexDirection": "row",
+                 "width": 2
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   "▾ HIDE"
+                  ],
+                  "props": {
+                   "color": "#6b737d"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "hotkey": "k",
+                 "key": "fold-s2",
+                 "label": "▾ HIDE",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 "│"
+                ],
+                "props": {
+                 "color": "#3a4048"
+                },
+                "type": "Text"
+               }
+              ],
+              "props": {
+               "flexDirection": "column",
+               "width": 1
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   "◐"
+                  ],
+                  "props": {
+                   "color": "#7fe7ff"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " ▸Follow the task l…"
+                  ],
+                  "props": {
+                   "color": "#e8ecef",
+                   "weight": "semibold",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "st2.1",
+                 "label": " ▸Follow the task l…",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   {
+                    "children": [
+                     "│"
+                    ],
+                    "props": {
+                     "color": "#3a4048"
+                    },
+                    "type": "Text"
+                   }
+                  ],
+                  "props": {
+                   "flexDirection": "column",
+                   "width": 1
+                  },
+                  "type": "Box"
+                 }
+                ],
+                "props": {
+                 "flexDirection": "row",
+                 "width": 2
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   "•"
+                  ],
+                  "props": {
+                   "color": "#e8ecef"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " 1 task done"
+                  ],
+                  "props": {
+                   "color": "#7e8790",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "t2-done",
+                 "label": " 1 task done",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   {
+                    "children": [
+                     "│"
+                    ],
+                    "props": {
+                     "color": "#3a4048"
+                    },
+                    "type": "Text"
+                   }
+                  ],
+                  "props": {
+                   "flexDirection": "column",
+                   "width": 1
+                  },
+                  "type": "Box"
+                 }
+                ],
+                "props": {
+                 "flexDirection": "row",
+                 "width": 2
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   "•"
+                  ],
+                  "props": {
+                   "color": "#7fe7ff"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " Render the dots"
+                  ],
+                  "props": {
+                   "color": "#e8ecef",
+                   "weight": "semibold",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "t2-2",
+                 "label": " Render the dots",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   {
+                    "children": [
+                     "│"
+                    ],
+                    "props": {
+                     "color": "#3a4048"
+                    },
+                    "type": "Text"
+                   }
+                  ],
+                  "props": {
+                   "flexDirection": "column",
+                   "width": 1
+                  },
+                  "type": "Box"
+                 }
+                ],
+                "props": {
+                 "flexDirection": "row",
+                 "width": 2
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   "•"
+                  ],
+                  "props": {
+                   "color": "#b4bbc2"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " Test it"
+                  ],
+                  "props": {
+                   "color": "#b4bbc2",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "t2-3",
+                 "label": " Test it",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 "│"
+                ],
+                "props": {
+                 "color": "#3a4048"
+                },
+                "type": "Text"
+               }
+              ],
+              "props": {
+               "flexDirection": "column",
+               "width": 1
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   "▲"
+                  ],
+                  "props": {
+                   "color": "#ffc857"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " Hover cards"
+                  ],
+                  "props": {
+                   "color": "#b4bbc2",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "st2.2",
+                 "label": " Hover cards",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 "│"
+                ],
+                "props": {
+                 "color": "#3a4048"
+                },
+                "type": "Text"
+               }
+              ],
+              "props": {
+               "flexDirection": "column",
+               "width": 1
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   "◆"
+                  ],
+                  "props": {
+                   "color": "#ff5a5f"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " Blocked on a decis…"
+                  ],
+                  "props": {
+                   "color": "#b4bbc2",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "st2.3",
+                 "label": " Blocked on a decis…",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 "│"
+                ],
+                "props": {
+                 "color": "#3a4048"
+                },
+                "type": "Text"
+               }
+              ],
+              "props": {
+               "flexDirection": "column",
+               "width": 1
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   "○"
+                  ],
+                  "props": {
+                   "color": "#b4bbc2"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " Screenshots later"
+                  ],
+                  "props": {
+                   "color": "#b4bbc2",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "st2.4",
+                 "label": " Screenshots later",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 "│"
+                ],
+                "props": {
+                 "color": "#3a4048"
+                },
+                "type": "Text"
+               }
+              ],
+              "props": {
+               "flexDirection": "column",
+               "width": 1
+              },
+              "type": "Box"
+             },
+             {
+              "children": [
+               {
+                "children": [
+                 {
+                  "children": [
+                   "◌"
+                  ],
+                  "props": {
+                   "color": "#7e8790"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "props": {
+                 "flexShrink": 0,
+                 "key": "glyph"
+                },
+                "type": "Box"
+               },
+               {
+                "children": [
+                 {
+                  "children": [
+                   " An idea"
+                  ],
+                  "props": {
+                   "color": "#7e8790",
+                   "wrap": "truncate-end"
+                  },
+                  "type": "Text"
+                 }
+                ],
+                "press": {
+                 "plugin": "task-compass"
+                },
+                "props": {
+                 "key": "st2.5",
+                 "label": " An idea",
+                 "plain": true
+                },
+                "type": "Button"
+               }
+              ],
+              "props": {
+               "flexDirection": "row"
+              },
+              "type": "Box"
+             }
+            ],
+            "props": {
+             "flexDirection": "column",
+             "width": 22
+            },
+            "type": "Box"
+           }
+          ],
+          "props": {
+           "flexDirection": "row",
+           "flexGrow": 1,
+           "key": "sprint-columns"
+          },
+          "type": "Box"
+         },
+         {
+          "children": [
+           {
+            "children": [
+             {
+              "children": [
+               "◌"
               ],
               "props": {
                "color": "#7e8790",
-               "wrap": "truncate-end"
+               "size": "caption"
+              },
+              "type": "Text"
+             },
+             {
+              "children": [
+               " BACKLOG"
+              ],
+              "props": {
+               "color": "#7e8790",
+               "size": "caption"
               },
               "type": "Text"
              }
@@ -565,124 +1235,26 @@
             "children": [
              {
               "children": [
-               {
-                "children": [
-                 {
-                  "children": [
-                   "│"
-                  ],
-                  "props": {
-                   "color": "#3a4048"
-                  },
-                  "type": "Text"
-                 }
-                ],
-                "props": {
-                 "flexDirection": "column",
-                 "width": 1
-                },
-                "type": "Box"
-               }
+               "○"
               ],
               "props": {
-               "flexDirection": "row",
-               "width": 2
+               "color": "#b4bbc2",
+               "size": "caption"
               },
-              "type": "Box"
+              "type": "Text"
              },
              {
               "children": [
-               {
-                "children": [
-                 "▾ HIDE"
-                ],
-                "props": {
-                 "color": "#6b737d"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "hotkey": "k",
-               "key": "fold-s2",
-               "label": "▾ HIDE",
-               "plain": true
-              },
-              "type": "Button"
-             }
-            ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               "│"
+               " TO DO"
               ],
               "props": {
-               "color": "#3a4048"
+               "color": "#7e8790",
+               "size": "caption"
               },
               "type": "Text"
              }
             ],
             "props": {
-             "flexDirection": "column",
-             "width": 1
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 "◐"
-                ],
-                "props": {
-                 "color": "#7fe7ff"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 " ▸Follow the task l…"
-                ],
-                "props": {
-                 "color": "#e8ecef",
-                 "weight": "semibold",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "st2.1",
-               "label": " ▸Follow the task l…",
-               "plain": true
-              },
-              "type": "Button"
-             }
-            ],
-            "props": {
              "flexDirection": "row"
             },
             "type": "Box"
@@ -691,246 +1263,27 @@
             "children": [
              {
               "children": [
-               {
-                "children": [
-                 {
-                  "children": [
-                   "│"
-                  ],
-                  "props": {
-                   "color": "#3a4048"
-                  },
-                  "type": "Text"
-                 }
-                ],
-                "props": {
-                 "flexDirection": "column",
-                 "width": 1
-                },
-                "type": "Box"
-               }
+               "◐"
               ],
               "props": {
-               "flexDirection": "row",
-               "width": 2
+               "color": "#7fe7ff",
+               "size": "caption"
               },
-              "type": "Box"
+              "type": "Text"
              },
              {
               "children": [
-               {
-                "children": [
-                 "•"
-                ],
-                "props": {
-                 "color": "#e8ecef"
-                },
-                "type": "Text"
-               }
+               " IN PROGRESS"
               ],
               "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 " 1 task done"
-                ],
-                "props": {
-                 "color": "#7e8790",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "t2-done",
-               "label": " 1 task done",
-               "plain": true
-              },
-              "type": "Button"
-             }
-            ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 {
-                  "children": [
-                   "│"
-                  ],
-                  "props": {
-                   "color": "#3a4048"
-                  },
-                  "type": "Text"
-                 }
-                ],
-                "props": {
-                 "flexDirection": "column",
-                 "width": 1
-                },
-                "type": "Box"
-               }
-              ],
-              "props": {
-               "flexDirection": "row",
-               "width": 2
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 "•"
-                ],
-                "props": {
-                 "color": "#7fe7ff"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 " Render the dots"
-                ],
-                "props": {
-                 "color": "#e8ecef",
-                 "weight": "semibold",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "t2-2",
-               "label": " Render the dots",
-               "plain": true
-              },
-              "type": "Button"
-             }
-            ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 {
-                  "children": [
-                   "│"
-                  ],
-                  "props": {
-                   "color": "#3a4048"
-                  },
-                  "type": "Text"
-                 }
-                ],
-                "props": {
-                 "flexDirection": "column",
-                 "width": 1
-                },
-                "type": "Box"
-               }
-              ],
-              "props": {
-               "flexDirection": "row",
-               "width": 2
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 "•"
-                ],
-                "props": {
-                 "color": "#b4bbc2"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 " Test it"
-                ],
-                "props": {
-                 "color": "#b4bbc2",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "t2-3",
-               "label": " Test it",
-               "plain": true
-              },
-              "type": "Button"
-             }
-            ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               "│"
-              ],
-              "props": {
-               "color": "#3a4048"
+               "color": "#7e8790",
+               "size": "caption"
               },
               "type": "Text"
              }
             ],
             "props": {
-             "flexDirection": "column",
-             "width": 1
+             "flexDirection": "row"
             },
             "type": "Box"
            },
@@ -938,44 +1291,23 @@
             "children": [
              {
               "children": [
-               {
-                "children": [
-                 "▲"
-                ],
-                "props": {
-                 "color": "#ffc857"
-                },
-                "type": "Text"
-               }
+               "▲"
               ],
               "props": {
-               "flexShrink": 0,
-               "key": "glyph"
+               "color": "#ffc857",
+               "size": "caption"
               },
-              "type": "Box"
+              "type": "Text"
              },
              {
               "children": [
-               {
-                "children": [
-                 " Hover cards"
-                ],
-                "props": {
-                 "color": "#b4bbc2",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
+               " IN REVIEW"
               ],
-              "press": {
-               "plugin": "task-compass"
-              },
               "props": {
-               "key": "st2.2",
-               "label": " Hover cards",
-               "plain": true
+               "color": "#7e8790",
+               "size": "caption"
               },
-              "type": "Button"
+              "type": "Text"
              }
             ],
             "props": {
@@ -987,62 +1319,23 @@
             "children": [
              {
               "children": [
-               "│"
+               "◆"
               ],
               "props": {
-               "color": "#3a4048"
+               "color": "#ff5a5f",
+               "size": "caption"
               },
               "type": "Text"
-             }
-            ],
-            "props": {
-             "flexDirection": "column",
-             "width": 1
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 "◆"
-                ],
-                "props": {
-                 "color": "#ff5a5f"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
              },
              {
               "children": [
-               {
-                "children": [
-                 " Blocked on a decis…"
-                ],
-                "props": {
-                 "color": "#b4bbc2",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
+               " BLOCKED"
               ],
-              "press": {
-               "plugin": "task-compass"
-              },
               "props": {
-               "key": "st2.3",
-               "label": " Blocked on a decis…",
-               "plain": true
+               "color": "#7e8790",
+               "size": "caption"
               },
-              "type": "Button"
+              "type": "Text"
              }
             ],
             "props": {
@@ -1054,129 +1347,23 @@
             "children": [
              {
               "children": [
-               "│"
+               "●"
               ],
               "props": {
-               "color": "#3a4048"
+               "color": "#e8ecef",
+               "size": "caption"
               },
               "type": "Text"
-             }
-            ],
-            "props": {
-             "flexDirection": "column",
-             "width": 1
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 "○"
-                ],
-                "props": {
-                 "color": "#b4bbc2"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
              },
              {
               "children": [
-               {
-                "children": [
-                 " Screenshots later"
-                ],
-                "props": {
-                 "color": "#b4bbc2",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "st2.4",
-               "label": " Screenshots later",
-               "plain": true
-              },
-              "type": "Button"
-             }
-            ],
-            "props": {
-             "flexDirection": "row"
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               "│"
+               " DONE"
               ],
               "props": {
-               "color": "#3a4048"
+               "color": "#7e8790",
+               "size": "caption"
               },
               "type": "Text"
-             }
-            ],
-            "props": {
-             "flexDirection": "column",
-             "width": 1
-            },
-            "type": "Box"
-           },
-           {
-            "children": [
-             {
-              "children": [
-               {
-                "children": [
-                 "◌"
-                ],
-                "props": {
-                 "color": "#7e8790"
-                },
-                "type": "Text"
-               }
-              ],
-              "props": {
-               "flexShrink": 0,
-               "key": "glyph"
-              },
-              "type": "Box"
-             },
-             {
-              "children": [
-               {
-                "children": [
-                 " An idea"
-                ],
-                "props": {
-                 "color": "#7e8790",
-                 "wrap": "truncate-end"
-                },
-                "type": "Text"
-               }
-              ],
-              "press": {
-               "plugin": "task-compass"
-              },
-              "props": {
-               "key": "st2.5",
-               "label": " An idea",
-               "plain": true
-              },
-              "type": "Button"
              }
             ],
             "props": {
@@ -1186,211 +1373,70 @@
            }
           ],
           "props": {
-           "flexDirection": "column",
-           "width": 22
+           "columnGap": 2,
+           "flexDirection": "row",
+           "flexWrap": "wrap",
+           "marginTop": 1
           },
           "type": "Box"
          }
         ],
         "props": {
-         "flexDirection": "row",
+         "flexDirection": "column",
          "flexGrow": 1
         },
         "type": "Box"
-       },
-       {
-        "children": [
-         {
-          "children": [
-           {
-            "children": [
-             "◌"
-            ],
-            "props": {
-             "color": "#7e8790",
-             "size": "caption"
-            },
-            "type": "Text"
-           },
-           {
-            "children": [
-             " BACKLOG"
-            ],
-            "props": {
-             "color": "#7e8790",
-             "size": "caption"
-            },
-            "type": "Text"
-           }
-          ],
-          "props": {
-           "flexDirection": "row"
-          },
-          "type": "Box"
-         },
-         {
-          "children": [
-           {
-            "children": [
-             "○"
-            ],
-            "props": {
-             "color": "#b4bbc2",
-             "size": "caption"
-            },
-            "type": "Text"
-           },
-           {
-            "children": [
-             " TO DO"
-            ],
-            "props": {
-             "color": "#7e8790",
-             "size": "caption"
-            },
-            "type": "Text"
-           }
-          ],
-          "props": {
-           "flexDirection": "row"
-          },
-          "type": "Box"
-         },
-         {
-          "children": [
-           {
-            "children": [
-             "◐"
-            ],
-            "props": {
-             "color": "#7fe7ff",
-             "size": "caption"
-            },
-            "type": "Text"
-           },
-           {
-            "children": [
-             " IN PROGRESS"
-            ],
-            "props": {
-             "color": "#7e8790",
-             "size": "caption"
-            },
-            "type": "Text"
-           }
-          ],
-          "props": {
-           "flexDirection": "row"
-          },
-          "type": "Box"
-         },
-         {
-          "children": [
-           {
-            "children": [
-             "▲"
-            ],
-            "props": {
-             "color": "#ffc857",
-             "size": "caption"
-            },
-            "type": "Text"
-           },
-           {
-            "children": [
-             " IN REVIEW"
-            ],
-            "props": {
-             "color": "#7e8790",
-             "size": "caption"
-            },
-            "type": "Text"
-           }
-          ],
-          "props": {
-           "flexDirection": "row"
-          },
-          "type": "Box"
-         },
-         {
-          "children": [
-           {
-            "children": [
-             "◆"
-            ],
-            "props": {
-             "color": "#ff5a5f",
-             "size": "caption"
-            },
-            "type": "Text"
-           },
-           {
-            "children": [
-             " BLOCKED"
-            ],
-            "props": {
-             "color": "#7e8790",
-             "size": "caption"
-            },
-            "type": "Text"
-           }
-          ],
-          "props": {
-           "flexDirection": "row"
-          },
-          "type": "Box"
-         },
-         {
-          "children": [
-           {
-            "children": [
-             "●"
-            ],
-            "props": {
-             "color": "#e8ecef",
-             "size": "caption"
-            },
-            "type": "Text"
-           },
-           {
-            "children": [
-             " DONE"
-            ],
-            "props": {
-             "color": "#7e8790",
-             "size": "caption"
-            },
-            "type": "Text"
-           }
-          ],
-          "props": {
-           "flexDirection": "row"
-          },
-          "type": "Box"
-         }
-        ],
-        "props": {
-         "columnGap": 2,
-         "flexDirection": "row",
-         "flexWrap": "wrap",
-         "marginTop": 1
-        },
-        "type": "Box"
        }
       ],
       "props": {
+       "borderColor": "#3a4048",
+       "borderStyle": "single",
        "flexDirection": "column",
-       "flexGrow": 1
+       "paddingX": 1,
+       "width": 48
+      },
+      "type": "Box"
+     },
+     {
+      "children": [
+       {
+        "client": {
+         "plugin": "task-compass"
+        },
+        "props": {
+         "height": 1,
+         "key": "sprints-handle",
+         "module": "hooks/handle.tsx",
+         "props": {
+          "bracket": "#e8ecef",
+          "edge": "#3a4048",
+          "hot": "#7fe7ff",
+          "isAuto": true,
+          "line": "#6b737d",
+          "min": 6,
+          "rows": 16,
+          "surface": "terminal",
+          "text": "#7e8790"
+         },
+         "width": "100%"
+        },
+        "type": "Client"
+       }
+      ],
+      "props": {
+       "bottom": 0,
+       "height": 1,
+       "key": "sprints-handle-slot",
+       "left": 0,
+       "position": "absolute",
+       "width": 48
       },
       "type": "Box"
      }
     ],
     "props": {
-     "borderColor": "#3a4048",
-     "borderStyle": "single",
      "flexDirection": "column",
-     "paddingX": 1,
-     "width": 48
+     "key": "sprints-frame"
     },
     "type": "Box"
    },

@@ -481,6 +481,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0220-switchboard-topic-groups.md
 - [x] TASK-0222 — install.sh writes the mod list Claude Code loads, and --status reports it
   .ai/tasks/TASK-0222-install-mod-plugin-dirs.md
+- [x] TASK-0221 — task-compass 0.10.0, agent-watch 0.9.0: drag handles size the Sprints and Sessions panels
+  .ai/tasks/TASK-0221-pane-drag-handles.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

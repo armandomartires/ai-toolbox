@@ -5,6 +5,7 @@
 ## Modules
 
 - `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
+- `hooks/handle.tsx`: the resize handle's surface module and `heldRows`, a byte-identical copy of `mods/_template/hooks/handle.tsx` (`ADR-0052`); never edit it here.
 - `hooks/model.ts`: pure logic (parse sprints, status table `STATUS` on SIGMAorbital tokens, `setStoryStatus`, `applyPlan`, `guessStory`, `wrap`). Tested directly in `register.test.tsx`.
 - `hooks/rails.ts`: pure layout of the pane: `focusOf`, `carousel`, `columnRows` (rows, cards, progress, folding), sprint dates. Tested directly in `rails.test.ts`.
 - `hooks/view.tsx`: the `ui.render` pane, drawing what `rails.ts` lays out, and `registerPane` and its slot (below), and `renderOutput`, `/compass` and `/goals` drawn as panels from the results `register.tsx` keeps with `remember`.
@@ -29,6 +30,10 @@ Statuses map to fixed `GOALS.md` markers: plain item = backlog, `[ ]` todo, `[>]
 - The story tool is answered from the general `tool.call` hook by comparing `e.tool` with `mcp__task-compass__story`.
 - Cards open on a click on a dot's name, a plain `Button`; the dot stays a `Text` outside it. The open card sits in its column's flow under its story, so the rows below slide down. The tree fills the pane with `minHeight` of `e.props.scroll.bodyRows`, not the viewport's rows.
 - On a desktop the rail is the left edge of a bordered `Box` clipped by a one-cell `overflow="hidden"` Box (`railRun`), and cards are four straight edges (`frame` from `sigma.tsx`); the terminal keeps `│` text.
+
+## The resize handle
+
+Under the Sprints panel, on a surface whose table has `Client` (terminal, desktop), the pane draws a `Client` keyed `sprints-handle` running `handle.tsx` (`ADR-0052`) in `handleSlot`, absolute at the foot of a column Box that holds the panel alone, so its row is the frame's own last row: a terminal redraws that edge around the grip, a desktop draws a 3px `Svg` bar (`barSvg`) on its bottom line and the hint (`hintText`) as a hover reveal just above it, centred, framed in `line` on a solid `raised` fill (a `display: none` Box with no key, so the keyed slot is what the hover answers to); the region itself draws nothing there. Its `ui.message` hook, on `{ requestId: 'task-compass', element: 'sprints-handle' }`, reads the post with `heldRows` (clamped to `[BOARD_FLOOR, 400]`, `null` for reset) and writes `sprintsRows[surface]` in `$.state`. A held value is the board's `room` and the columns Box's `height` (`overflow: hidden`), so its delta is the panel's; automatic is today's room, and the handle is told the longest column's drawn rows (`drawnRows`), what a drag starts from. The hook answers `{ props }` with the held rows, so a drag's next move does not wait on a redraw (seen live: without it the desktop measured every move from the press's height and snapped back). The handle measures a terminal drag from the region where it now is and a desktop one from where it was at the press (`handle.tsx`), both seen live in a spike. Kept per session and per surface, never in `$.store`: a row is not the same height on the two. Mobile and vscode draw no handle and ignore a held value. Tested in `handle.test.tsx`.
 
 ## Contributions
 

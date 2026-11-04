@@ -39,6 +39,10 @@ export const isRailRow = (row: Row) => row.glyph === '│' && !row.text
 
 export const cardHeight = (card: Card) => card.lines.length + 2
 
+/** The rows a column's rows draw: one each, and an open card's own under its dot. */
+export const drawnRows = (rows: Row[], opened: string | null) =>
+  rows.reduce((n, row) => n + 1 + (row.card && row.key !== undefined && row.key === opened ? cardHeight(row.card) : 0), 0)
+
 export const shortTitle = (sprint: Sprint) =>
   sprint.title.replace(/^sprint\s*\d+\s*[—–:-]?\s*/i, '') || sprint.title
 

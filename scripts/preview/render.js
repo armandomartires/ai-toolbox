@@ -250,6 +250,18 @@ window.PreviewRender = (() => {
       return el
     } else if (node.type === 'Raster') {
       return raster(p, ctx)
+    } else if (node.type === 'Client') {
+      // A surface module's region, which the scene's tree does not carry: drawn as a resize handle's grip (ADR-0052), its rows tall, named by its key.
+      el = document.createElement('div')
+      el.className = 'box'
+      el.style.cssText = `justify-content:center;height:${y(p.height || 1)};${p.width ? 'width:' + x(p.width) : ''}`
+      el.title = `Client ${p.key} · ${p.module}`
+      const grip = document.createElement('span')
+      grip.className = 'txt'
+      grip.style.color = (p.props && p.props.line) || col('line-strong')
+      appendCells(grip, '━━━━━━', ctx)
+      el.append(grip)
+      return el
     } else if (node.type === 'Markdown' || node.type === 'Code') {
       el = document.createElement('pre')
       el.textContent = p.text || p.source || p.children || ''

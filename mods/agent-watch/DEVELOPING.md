@@ -4,6 +4,7 @@
 
 ## Modules
 
+- `hooks/handle.tsx`: the resize handle's surface module and `heldRows`, a byte-identical copy of `mods/_template/hooks/handle.tsx` (`ADR-0052`); never edit it here.
 - `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here. Its `IDENTITY`, `agentState`, `fit`, `elapsed`, `kit` and the command-output cache are used below.
 - `hooks/sessions.ts`: the session tree (`sessionTree`, which never leaves a sub-session done while a member runs or waits or a sub-session under it is open, `iconOf`, `SESSION_TONES`, `toneToken`, `outcomeOf`, `memberTone`, `memberCaption`, `ledgerBadge`, `progressOf`, `activityLine`), pure, importing only `./sigma` and declaring the row shapes it reads itself. agent-watch's alone: task-compass holds no copy (`ADR-0048`), and gate rule 7 lists only `sigma.tsx`. `SESSION_TONES`, `toneToken`, `memberTone` and `iconOf` survive only for the band's glyphs; the pane colours by state.
 - `hooks/model.ts`: pure logic (`mergeListed`, `spawnedRow`; `elapsed` and `fit` re-exported from `sigma.tsx`, everything `sessions.ts` exports re-exported from it), `trimTree` (fits the tree to a line budget, never cutting a head or a ledger task) and `headCaption`, the sessions' tracking (`nextTone`, `assignTones`, `turnEnded`, `turnStarted`, `recordRun`), the task list (`taskChange`, `applyPlan`), the activity (`summarizeCall`, `callStarted`, `callEnded`, `tokensOf`, `turnCounted`) and the alerts (`endedBadly`, `markAlerted`, `alertText`, `runningText`, `watchText`). Tested directly in `model.test.ts`.
@@ -36,6 +37,10 @@
 - **Debug lines** (`$.ui.log(..., { to: 'debug' })`): `agent-watch: next(e) resolved nothing`, `resolved <typeof> (type <x>)` or `rejected: <message>`, written only when it differs from the last (`noteBelow`, a module-level `lastBelow`, which a reload resets), so a live failure is diagnosable and a redraw adds none.
 
 Tested in `contribution.test.tsx` (agent-watch against a Compass stand-in, both load orders, the meter above the panel and absent without a task list); Compass's side is `mods/task-compass/hooks/slot.test.tsx`.
+
+## The Sessions handle
+
+In Compass's pane only, on a surface whose table has `Client` (terminal, desktop), `contributeSessions` hands `renderSessions` a `sizing`: `held`, the rows `sessionsRows[surface]` keeps in `$.state`, and `handle`, which draws a one-row `Client` keyed `sessions-handle` running `handle.tsx` (`ADR-0052`) under the panel. A held value replaces the pane's rows as `sessionsLayout`'s `rows`, so the panel folds for it exactly as for a short pane, and the panel's content is held at that less the frame and title (4) with `overflow: hidden`, since a desktop folds nothing for height; the handle is told the held rows, or `layout.used` when automatic. The handle sits in `handleSlot`, absolute at the foot of a column Box that holds the panel alone (the frame's own last row), outside the clipped content; on the desktop a 3px `Svg` bar (`barSvg`) lies on that edge under the region, and the hint is a hover reveal just above it, framed on a solid `raised` fill (a `display: none` Box with no key: keyed, its hover would be its own, which the kit refuses). `sizeSessions` answers `ui.message` on `{ requestId: 'task-compass', element: 'sessions-handle' }`: `heldRows` clamps to `[SESSIONS_MIN = 12, 400]`, `null` resets, and it answers `{ props }` with the held rows so a drag does not wait on a redraw. The Agents pane passes no `sizing`. Kept per session and per surface, never in `$.store`. Tested in `handle.test.tsx`.
 
 ## The orchestrator tie-in
 

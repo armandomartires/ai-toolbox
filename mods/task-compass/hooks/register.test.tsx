@@ -146,7 +146,7 @@ test('the timeline shows sprints side by side with cards and tasks', async ($, o
     // No card is open until a dot or its name is pressed.
     // (The bracketed Sprints panel is filled too, but as wide as the pane.)
     const isCard = (one: { type: string; props: Record<string, unknown> }) =>
-      one.type === 'Box' && one.props.backgroundColor !== undefined && one.props.width !== PANE.props.bodyColumns
+      one.type === 'Box' && one.props.backgroundColor !== undefined && one.props.width !== undefined && one.props.width !== PANE.props.bodyColumns
     const card = async () => (await ui.findAll({ type: 'Box' })).find(isCard)
     expect(await card()).toBeUndefined()
     await ui.press({ key: 'st2.1' })

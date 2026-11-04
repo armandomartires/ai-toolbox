@@ -17,7 +17,8 @@ each directory mods/<dir>/:
      string: the topic switchboard groups the mod under; rule 2b)
   7. each shared hooks module a mod carries is a byte-identical copy of its
      one owner, a table (SHARED): hooks/sigma.tsx, the SIGMAorbital design
-     module (ADR-0043), owned by mods/_template. A mod whose hooks draw
+     module (ADR-0043), and hooks/handle.tsx, the panel resize handle
+     (ADR-0052), both owned by mods/_template. A mod whose hooks draw
      (`ui.render`) carries a sigma.tsx;
   8. a mod that reads another mod's $.state declares that part of the
      owner's contract as a MIRROR (ADR-0044): a comment
@@ -47,6 +48,7 @@ NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # Shared hooks modules: file name -> the one copy that owns it (rule 7).
 SHARED = {
     "sigma.tsx": os.path.join("mods", "_template", "hooks", "sigma.tsx"),
+    "handle.tsx": os.path.join("mods", "_template", "hooks", "handle.tsx"),
 }
 SIGMA_OWNER = SHARED["sigma.tsx"]
 DRAWS = re.compile(r"""['"]ui\.render['"]""")

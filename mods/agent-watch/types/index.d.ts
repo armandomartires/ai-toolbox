@@ -124,6 +124,8 @@ declare module 'claude-code' {
       agents: AgentRow[]
       /** The clock the elapsed times are drawn against. */
       now: number
+      /** The rows the person dragged the Sessions panel in Compass's pane to, by surface (`terminal`, `desktop`); a surface not listed sizes it itself (ADR-0052). */
+      sessionsRows: Record<string, number>
       /** The animation frame, moved on a tick while an agent runs. */
       frame: number
       /** Claude's live task list, from TodoWrite, TaskCreate/TaskUpdate or the desktop app's plan. */

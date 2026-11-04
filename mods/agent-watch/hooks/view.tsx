@@ -1,10 +1,11 @@
-import { atom, read } from 'claude-code'
-import type { EngineInterface, RenderInput } from 'claude-code'
+import { atom, read, update } from 'claude-code'
+import type { EngineInterface, RenderInput, UiMessageArgument, UiMessageResult } from 'claude-code'
 
 import type { WatchOutput } from './model'
 import { drawMeter } from './band'
-import { renderSessions } from './panel'
-import { kit, recall } from './sigma'
+import { heldRows } from './handle'
+import { renderSessions, SESSIONS_MIN } from './panel'
+import { color, kit, recall } from './sigma'
 
 // The same $.state values register.tsx writes: the engine lists a module's
 // reads and writes from atoms declared in that file.
@@ -14,6 +15,8 @@ const tasks = atom({ plugin: 'agent-watch', key: 'tasks' } as const, [])
 const runs = atom({ plugin: 'agent-watch', key: 'runs' } as const, [])
 const tones = atom({ plugin: 'agent-watch', key: 'tones' } as const, {})
 const background = atom({ plugin: 'agent-watch', key: 'background' } as const, [])
+// The rows the person dragged the Sessions panel in Compass's pane to, by surface; none there is automatic (ADR-0052).
+const sessionsRows = atom({ plugin: 'agent-watch', key: 'sessionsRows' } as const, {})
 // task-orchestrator's run, read and never written (types/index.d.ts, the mirror).
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 const policy = atom({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
@@ -24,6 +27,24 @@ const enabled = atom({ plugin: 'task-orchestrator', key: 'enabled' } as const, f
  * Renaming Compass's pane breaks the slot silently, so a test pins it.
  */
 export const COMPASS_PANE = 'task-compass'
+
+/** The resize handle's `Client` key under the Sessions panel in Compass's pane: what `ui.message` names when it posts. */
+export const SESSIONS_HANDLE = 'sessions-handle'
+/** The surfaces whose table has `Client`, where the handle is drawn and a held size applies; mobile and vscode keep the automatic layout. */
+const SIZED = ['terminal', 'desktop']
+
+/** The handle's props (`handle.tsx`, `HandleProps`): what the render draws and what a post answers, so a drag never waits on a redraw. */
+const handleProps = (surface: string, rows: number, isAuto: boolean) => ({
+  rows,
+  min: SESSIONS_MIN,
+  isAuto,
+  surface,
+  line: color('line-strong'),
+  hot: color('cyan'),
+  text: color('text-3'),
+  edge: color('line'),
+  bracket: color('text-1'),
+})
 
 // What the pane beneath the contribution last resolved to, so a live failure leaves one debug-log line (ADR-0048) and a redraw adds none.
 let lastBelow = ''
@@ -118,9 +139,22 @@ export const contributeSessions = async ($: EngineInterface, e: RenderInput<'Pan
   if (!isRejected) noteBelow($, resolved === undefined ? 'resolved nothing' : `resolved ${typeof resolved}${typeof resolved === 'object' && resolved !== null ? ` (type ${String((resolved as { type?: unknown }).type)})` : ''}`)
   // Core's own drawing is no part of the board (isEngineElement): it is left out, so the meter and the panel stand alone beneath a pane nobody else draws.
   const inner = isEngineElement(resolved) ? undefined : resolved
-  const { Box } = $.ui.resolve(e)
+  const ui = $.ui.resolve(e)
+  const { Box } = ui
   const meter = await drawMeter($, e)
-  const sessions = await renderSessions($, e, state, 0)
+  // A drag on the handle under the panel holds it at a height (ADR-0052), on a surface that draws the handle.
+  const { Client } = ui as unknown as { Client?: (props: Record<string, unknown>) => never }
+  const canSize = typeof Client === 'function' && SIZED.includes(e.surface)
+  const held = canSize ? (await read($, sessionsRows))[e.surface] : undefined
+  const sessions = await renderSessions(
+    $,
+    e,
+    state,
+    0,
+    canSize && Client !== undefined
+      ? { held, handle: rows => <Client key={SESSIONS_HANDLE} module="./handle.tsx" width="100%" height={1} props={handleProps(e.surface, rows, held === undefined)} /> }
+      : undefined,
+  )
 
   // One blank row above the meter and the panel, whichever mod drew first: without it the Sessions frame touches the Sprints frame whenever no meter stands between them.
   return (
@@ -132,4 +166,21 @@ export const contributeSessions = async ($: EngineInterface, e: RenderInput<'Pan
       </Box>
     </Box>
   )
+}
+
+/**
+ * A drag on the handle under the Sessions panel: the rows it asks for are
+ * held for this surface, or let go back to automatic (ADR-0052). An exported
+ * arrow, passed by reference to `on(...)` in register.tsx.
+ */
+export const sizeSessions = async ($: EngineInterface, e: UiMessageArgument, next: (e: UiMessageArgument) => Promise<UiMessageResult>) => {
+  const asked = SIZED.includes(e.surface) ? heldRows(e.data, SESSIONS_MIN) : undefined
+  if (asked === undefined) return next(e)
+  await update($, sessionsRows, now => {
+    const { [e.surface]: _, ...rest } = now
+    return asked === null ? rest : { ...rest, [e.surface]: asked }
+  })
+  await next(e)
+  // The instance's next props at once: a drag's next move should not wait for the redraw. Automatic waits for that redraw, which alone knows the rows drawn.
+  return asked === null ? {} : { props: handleProps(e.surface, asked, false) }
 }

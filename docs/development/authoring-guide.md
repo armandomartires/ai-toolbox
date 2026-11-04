@@ -350,7 +350,10 @@ column; `tests/test-mods.sh` runs `claude plugin validate` and
 `hooks/sigma.tsx`: its tokens, status glyphs and primitives, and, in its
 header, the rules every surface follows. `mods/_template/hooks/sigma.tsx`
 is the one owner; each mod holds a byte-identical copy, which the gate
-checks. Change the owner, then copy it to every mod.
+checks. Change the owner, then copy it to every mod. A panel the person
+resizes by dragging draws `hooks/handle.tsx` under it in a `Client`, owned
+and gated the same way (`ADR-0052`); the mod that draws the panel keeps its
+height.
 
 A mod's own module map and traps go in its `DEVELOPING.md`, as
 `mods/task-compass/` does. The order of a mod change, the check that gates
