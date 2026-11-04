@@ -13,3 +13,5 @@ include:
   - local: .gitlab/ci/gitleaks.yml
   # CycloneDX SBOM (issue #12).
   - local: .gitlab/ci/sbom.yml
+  # Gates allowlist, hash pinning and sandbox tests (issue #6).
+  - local: .gitlab/ci/gates-sandbox.yml

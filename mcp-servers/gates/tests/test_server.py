@@ -30,6 +30,10 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("GATES_RUN_ROOT", str(tmp_path / "run"))
     monkeypatch.setenv("GATES_REPO_ROOT", str(tmp_path))
     monkeypatch.delenv("GATES_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(FIXTURE)))
+    monkeypatch.setenv("GATES_ALLOWED_EXECUTABLES", "sh,false,sleep,printf")
+    # Sandboxed wherever bwrap exists; CI's `gates-sandbox` job requires it.
+    monkeypatch.setenv("GATES_SANDBOX", "bwrap" if shutil.which("bwrap") else "none")
     return tmp_path
 
 
@@ -178,3 +182,77 @@ def test_evidence_line_matches_run_gate_sh(env):
         return line.replace(str(root), "<ROOT>").split(" ELAPSED=")[0] + " " + line.split(" LOG=")[1].replace(str(root), "<ROOT>")
 
     assert norm(evidence(env)[0], env / "run") == norm(theirs, other_root)
+
+
+# --- Issue #6: allowlist, hash pinning, sandbox -------------------------------
+
+def _map(tmp_path, gates):
+    p = tmp_path / "map.json"
+    p.write_text(json.dumps({"gates": gates}))
+    return p
+
+
+def test_unlisted_executable_is_refused(env, monkeypatch):
+    m = _map(env, {"curl": {"argv": ["curl", "https://example.invalid"]},
+                   "path": {"argv": ["/tmp/sh", "-c", "true"]}})
+    monkeypatch.setenv("GATES_MAP", str(m))
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(m)))
+    for name in ("curl", "path"):
+        r = server.start_gate(name)
+        assert r["state"] == "REFUSED", r
+        assert "GATES_ALLOWED_EXECUTABLES" in r["reason"]
+        assert not (env / "run" / "gates" / r["handle"] / "spec.json").exists()
+
+
+def test_changed_map_hash_is_refused(env, monkeypatch):
+    m = _map(env, {"ok": {"argv": ["sh", "-c", "true"]}})
+    monkeypatch.setenv("GATES_MAP", str(m))
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(m)))
+    assert server.start_gate("ok")["state"] == "RUNNING"
+    m.write_text(json.dumps({"gates": {"ok": {"argv": ["sh", "-c", "id"]}}}))
+    with pytest.raises(server.ConfigError, match="does not match"):
+        server.start_gate("ok")
+
+
+def test_refuses_to_start_unpinned_or_without_allowlist(env, monkeypatch):
+    monkeypatch.delenv("GATES_MAP_SHA256")
+    with pytest.raises(server.ConfigError, match="GATES_MAP_SHA256"):
+        server.config()
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(FIXTURE)))
+    monkeypatch.setenv("GATES_ALLOWED_EXECUTABLES", "")
+    with pytest.raises(server.ConfigError, match="ALLOWED"):
+        server.config()
+
+
+def test_sandbox_is_not_a_silent_fallback(env, monkeypatch):
+    monkeypatch.setenv("GATES_SANDBOX", "bwrap")
+    monkeypatch.setenv("PATH", str(env))   # no bwrap here
+    with pytest.raises(server.ConfigError, match="bwrap is not on PATH"):
+        server.config()
+
+
+def test_sandbox_argv_shape():
+    a = server.sandbox_argv(["sh", "-c", "x"], "/r", "bwrap")
+    assert a[0] == "bwrap" and "--unshare-net" in a and a[-3:] == ["sh", "-c", "x"]
+    assert a[a.index("--ro-bind") + 1:a.index("--ro-bind") + 3] == ["/", "/"]
+    assert server.sandbox_argv(["sh"], "/r", "none") == ["sh"]
+
+
+SANDBOXED = pytest.mark.skipif(
+    shutil.which("bwrap") is None and not os.environ.get("GATES_REQUIRE_SANDBOX"),
+    reason="bwrap not installed")
+
+
+@SANDBOXED
+def test_gate_runs_without_network_and_with_a_read_only_repo(env, monkeypatch):
+    (env / "file").write_text("x")
+    script = ("if cat /proc/net/dev | grep -qv -e lo: -e Inter -e face; then echo NET; exit 1; fi;"
+              " if echo y > file 2>/dev/null; then echo WROTE; exit 1; fi; echo SANDBOXED")
+    m = _map(env, {"probe": {"argv": ["sh", "-c", script]}})
+    monkeypatch.setenv("GATES_MAP", str(m))
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(m)))
+    monkeypatch.setenv("GATES_SANDBOX", "bwrap")
+    r = finish("probe")
+    log = Path(r["log"]).read_text()
+    assert r["state"] == "PASSED", log
+    assert "SANDBOXED" in log and (env / "file").read_text() == "x"

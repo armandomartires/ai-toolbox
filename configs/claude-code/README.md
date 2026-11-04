@@ -315,6 +315,7 @@ Notes:
 > ```bash
 > claude mcp add --scope local --transport stdio gates \
 >   --env GATES_MAP=<consumer gate map> --env GATES_RUN_ROOT=<gitignored dir> \
+>   --env GATES_MAP_SHA256=<sha256 of the map> --env GATES_ALLOWED_EXECUTABLES=<a,b> \
 >   -- uv --directory <absolute path to mcp-servers/gates> run gates
 > ```
 >
@@ -325,7 +326,11 @@ Notes:
 >
 > **Required environment:** `GATES_MAP` (the consuming repository's gate map)
 > and `GATES_RUN_ROOT` (state, logs and the evidence file `gates.txt`; keep it
-> gitignored). Optional: `GATES_REPO_ROOT`, `GATES_TIMEOUT_SECONDS`.
+> gitignored), `GATES_MAP_SHA256` (the approved map's SHA-256; a changed map
+> is refused) and `GATES_ALLOWED_EXECUTABLES` (comma-separated; a gate naming
+> any other executable is REFUSED). Optional: `GATES_REPO_ROOT`,
+> `GATES_TIMEOUT_SECONDS`, `GATES_SANDBOX` (`bwrap` by default: no network,
+> read-only filesystem; `none` is an explicit opt-out). Issue #6.
 >
 > **Launch form, for reference only:** `uv --directory <absolute path to
 > mcp-servers/gates> run gates` — cwd-independent, so it is the form a client

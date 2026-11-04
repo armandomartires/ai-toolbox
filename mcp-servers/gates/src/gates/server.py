@@ -15,7 +15,9 @@ Destructive, and authorized: .ai/tasks/TASK-0088-gates-mcp-server.md.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+import shutil
 import os
 import signal
 import subprocess
@@ -30,7 +32,8 @@ from pydantic import Field
 
 HANDLE = r"^[A-Za-z0-9._-]{1,128}$"
 NAME = r"^[A-Za-z0-9._-]{1,64}$"
-TERMINAL = {"PASSED", "FAILED", "SKIPPED", "TIMEOUT", "KILLED", "MISSING"}
+TERMINAL = {"PASSED", "FAILED", "SKIPPED", "TIMEOUT", "KILLED", "MISSING", "REFUSED"}
+SANDBOXES = ("bwrap", "none")
 OWNER = "gates-mcp-server"
 MAX_WAIT_SECONDS = 420          # inside an agent's ten-minute call cap
 DEFAULT_TIMEOUT_SECONDS = 3600
@@ -41,6 +44,47 @@ _serial = count(1)
 
 class ConfigError(RuntimeError):
     """The server cannot run gates as configured; stated, never guessed."""
+
+
+def sha256_file(path: str) -> str:
+    with open(path, "rb") as fh:
+        return hashlib.sha256(fh.read()).hexdigest()
+
+
+def allowed_executables() -> set[str]:
+    """GATES_ALLOWED_EXECUTABLES: the operator's allowlist (issue #6).
+
+    Comma-separated. It lives in the server's environment, NOT in the gate
+    map, so a map edit cannot widen it. An entry with no slash matches a bare
+    argv[0] resolved on PATH; an absolute entry matches that exact path.
+    """
+    raw = os.environ.get("GATES_ALLOWED_EXECUTABLES", "")
+    return {x.strip() for x in raw.split(",") if x.strip()}
+
+
+def refusal(argv: list[str], allow: set[str]) -> str | None:
+    """Why argv[0] may not run, or None."""
+    exe = argv[0]
+    if exe in allow and ("/" not in exe or os.path.isabs(exe)):
+        return None
+    return "executable %r is not in GATES_ALLOWED_EXECUTABLES" % exe
+
+
+def sandbox_argv(argv: list[str], cwd: str, mode: str) -> list[str]:
+    """Wrap argv so the gate has no network and a read-only filesystem.
+
+    bwrap: the whole host is bound read-only (the repo included), /tmp is a
+    private tmpfs, and the network, PID and IPC namespaces are unshared.
+    `none` is an explicit opt-out the operator must set; it is never a
+    fallback when bwrap is missing.
+    """
+    if mode == "none":
+        return list(argv)
+    return ["bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc",
+            "--tmpfs", "/tmp",
+            # Re-expose the gate's cwd read-only in case it lives under /tmp.
+            "--ro-bind", cwd, cwd, "--unshare-net", "--unshare-pid", "--unshare-ipc",
+            "--new-session", "--die-with-parent", "--chdir", cwd, "--"] + list(argv)
 
 
 def config() -> dict[str, Any]:
@@ -54,6 +98,23 @@ def config() -> dict[str, Any]:
         raise ConfigError("GATES_MAP %r is not a file" % map_path)
     if not run_root:
         raise ConfigError("GATES_RUN_ROOT is not set")
+    pinned = os.environ.get("GATES_MAP_SHA256", "").strip().lower()
+    if not pinned:
+        raise ConfigError("GATES_MAP_SHA256 is not set: the gate map must be "
+                          "hash-pinned (issue #6)")
+    actual = sha256_file(map_path)
+    if actual != pinned:
+        raise ConfigError("GATES_MAP hash %s does not match GATES_MAP_SHA256 %s: "
+                          "the map changed since it was approved" % (actual, pinned))
+    if not allowed_executables():
+        raise ConfigError("GATES_ALLOWED_EXECUTABLES is not set: there is no "
+                          "default allowlist")
+    sandbox = os.environ.get("GATES_SANDBOX", "bwrap")
+    if sandbox not in SANDBOXES:
+        raise ConfigError("GATES_SANDBOX must be one of %s" % ", ".join(SANDBOXES))
+    if sandbox == "bwrap" and shutil.which("bwrap") is None:
+        raise ConfigError("GATES_SANDBOX=bwrap but bwrap is not on PATH; install "
+                          "bubblewrap or set GATES_SANDBOX=none explicitly")
     try:
         with open(map_path, encoding="utf-8") as fh:
             data = json.load(fh)
@@ -78,6 +139,8 @@ def config() -> dict[str, Any]:
         "repo_root": Path(os.environ.get("GATES_REPO_ROOT")
                           or os.path.dirname(os.path.abspath(map_path))),
         "timeout": int(timeout),
+        "allow": allowed_executables(),
+        "sandbox": sandbox,
     }
 
 
@@ -103,8 +166,11 @@ def summary(d: Path) -> dict[str, Any]:
     elapsed = 0 if started == 0 else finished - started
     line = "GATE %s NAME=%s STATE=%s EXIT=%d ELAPSED=%ds LOG=%s" % (
         handle, name, state, code, elapsed, d / "log")
-    return {"handle": handle, "gate": name, "state": state, "exit": code,
-            "elapsed_seconds": elapsed, "log": str(d / "log"), "line": line}
+    out = {"handle": handle, "gate": name, "state": state, "exit": code,
+           "elapsed_seconds": elapsed, "log": str(d / "log"), "line": line}
+    if state == "REFUSED":
+        out["reason"] = _read(d, "refused", "")
+    return out
 
 
 def _terminal(d: Path) -> bool:
@@ -146,8 +212,15 @@ def start_gate(
     if entry is None:
         (d / "state").write_text("MISSING", encoding="utf-8")
         return summary(d)
-    spec = {"argv": entry["argv"],
-            "cwd": str(cfg["repo_root"] / entry.get("cwd", ".")),
+    why = refusal(entry["argv"], cfg["allow"])
+    if why is not None:
+        (d / "state").write_text("REFUSED", encoding="utf-8")
+        (d / "refused").write_text(why, encoding="utf-8")
+        return summary(d)
+    cwd = str(cfg["repo_root"] / entry.get("cwd", "."))
+    spec = {"argv": sandbox_argv(entry["argv"], cwd, cfg["sandbox"]),
+            "sandbox": cfg["sandbox"],
+            "cwd": cwd,
             "timeout_seconds": entry.get("timeout_seconds", cfg["timeout"]),
             "skip_exit": entry.get("skip_exit"),
             "evidence_file": str(cfg["run_root"] / "gates.txt")}
