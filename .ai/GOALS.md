@@ -489,8 +489,10 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0226-orchestrator-token-economy.md
 - [x] TASK-0224 — task-orchestrator 0.5.3: model routing fixes
   .ai/tasks/TASK-0224-orchestrator-model-routing.md
-- [?] TASK-0225 — task-orchestrator 0.5.4: a misclassification hint, and the session gate's effort from settings
+- [x] TASK-0225 — task-orchestrator 0.5.4: a misclassification hint, and the session gate's effort from settings
   .ai/tasks/TASK-0225-orchestrator-open-items.md
+- [x] TASK-0227 — vault-secrets 2.3.1: judge an AppRole file on Windows by its access list
+  .ai/tasks/TASK-0227-vault-approle-on-windows.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

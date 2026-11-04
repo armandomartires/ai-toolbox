@@ -46,6 +46,12 @@
 # TASK-0158 adds T50-T55: import, which moves a migrated repository's existing
 # env file into its declared backend on every backend, printing names only.
 #
+# TASK-0227 adds T56-T57: on Windows an AppRole file is judged by its access
+# list, not its mode, which Python reports as 666 there for every file. T56
+# runs the deciding rule on any platform; T57 reads real access lists and
+# runs only on Windows, where this suite does not reach it yet (its login
+# cases wait on a prompt there), so TASK-0227's brief records a direct run.
+#
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -909,6 +915,36 @@ try:
     # An absolute path: a bare name searched along a WSL PATH can raise EACCES.
     code = spawned([os.path.join(WORK, "no-such-command-t27")])
     check("T27 on Windows, a missing command exits 127", code == 127, "exit %s" % code)
+
+    # T56 - who besides the owner may read, on Windows (TASK-0227).
+    me, other = "S-1-5-21-1-2-3-1001", "S-1-5-21-1-2-3-1002"
+    check("T56 owner, SYSTEM, Administrators and OWNER RIGHTS are private",
+          mod.windows_other_readers(me, [me, "S-1-5-18", "S-1-5-32-544", "S-1-3-4"]) == [])
+    check("T56 Everyone, Users or another account is named",
+          mod.windows_other_readers(me, [me, "S-1-1-0", "S-1-5-32-545", other])
+          == sorted(["S-1-1-0", "S-1-5-32-545", other]))
+    check("T56 a file with no access list is readable by everyone",
+          mod.windows_other_readers(me, None) == ["everyone (the file has no access list)"])
+
+    # T57 - real access lists, on Windows only.
+    if os.name == "nt":
+        acl_dir = tempfile.mkdtemp(dir=os.path.expanduser("~"))
+        acl_file = os.path.join(acl_dir, "t57.approle")
+        with open(acl_file, "w", encoding="utf-8") as fh:
+            json.dump({"role_id": ROLE_ID, "secret_id": SECRET_ID}, fh)
+        try:
+            check("T57 a fresh file under the profile is private",
+                  mod.windows_other_readers(*mod.windows_read_grants(acl_file)) == [])
+            subprocess.run(["icacls", acl_file, "/grant", "*S-1-1-0:R"], capture_output=True)
+            p = run(["exec", "--map", MAP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN"),
+                    env={"VAULT_AUTH_METHOD": "approle", "VAULT_APPROLE_FILE": acl_file})
+            check("T57 a file Everyone can read is refused before any login, with the fix",
+                  p.returncode == 1 and "S-1-1-0" in p.stderr and "/remove:g *S-1-1-0" in p.stderr
+                  and probe() is None and not any(x[1] == "auth/approle/login" for x in taken()),
+                  p.stderr.strip())
+        finally:
+            os.remove(acl_file)
+            os.rmdir(acl_dir)
 
     if not os.path.exists("secrets.map"):
         check("T16 secrets.map exists at the repo root", False)

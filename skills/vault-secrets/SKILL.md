@@ -4,7 +4,7 @@ description: "Supply secrets to a command from where the project keeps them - Ha
 license: MIT
 metadata:
   author: armando.martires
-  version: "2.3.0"
+  version: "2.3.1"
 ---
 
 # vault-secrets
@@ -44,8 +44,9 @@ below works as it always has: Vault, driven by the map.
    this rule stands between an agent and an overwrite. Versions are kept and
    nothing can delete, but a wrong value still breaks whatever depends on it.
 7. **Never copy, print or move the AppRole credential file.** It is the
-   codebase's identity. The loader refuses it once group or others can read
-   it.
+   codebase's identity, and each host gets its own `secret_id`. The loader
+   refuses it once group or others can read it; on Windows, once anyone
+   besides its owner, SYSTEM and Administrators can.
 
 ## Choosing a backend
 
@@ -114,7 +115,7 @@ write its secrets without a human password:
 
 ```bash
 export VAULT_AUTH_METHOD=approle
-export VAULT_APPROLE_FILE=~/.config/vault/<codebase>.approle   # role_id + secret_id, mode 600
+export VAULT_APPROLE_FILE=~/.config/vault/<codebase>.approle   # role_id + secret_id, mode 600 (Windows: private to you)
 ```
 
 - Each command logs in for itself and keeps no token. `exec` revokes its

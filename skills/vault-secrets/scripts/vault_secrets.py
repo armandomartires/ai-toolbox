@@ -797,6 +797,89 @@ def method():
     return m
 
 
+# -- who may read a file on Windows (TASK-0227) -------------------------------
+# Python on Windows reports every file as mode 666 or 444, whatever its access
+# list says, so a mode check there refuses every file, a locked-down one too.
+# On Windows the access list is the answer: the file is private when only its
+# owner, SYSTEM and Administrators are granted read. A file under %USERPROFILE%
+# inherits exactly that, so a plain copy there passes.
+
+# OWNER RIGHTS stands for whoever owns the file, so it is the owner too.
+WINDOWS_TRUSTED = {"S-1-5-18": "SYSTEM", "S-1-5-32-544": "Administrators", "S-1-3-4": "OWNER RIGHTS"}
+# FILE_READ_DATA, GENERIC_ALL, GENERIC_READ
+WINDOWS_READ_MASK = 0x00000001 | 0x10000000 | 0x80000000
+
+
+def windows_read_grants(path):
+    """(owner SID, [SIDs an allow ACE grants read]) for a file; the list is None
+    when the file has no access list at all, which lets everyone in."""
+    import ctypes
+    from ctypes import wintypes
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    vp = ctypes.c_void_p
+    advapi.GetNamedSecurityInfoW.argtypes = [wintypes.LPCWSTR, ctypes.c_int, wintypes.DWORD,
+                                             ctypes.POINTER(vp), ctypes.POINTER(vp),
+                                             ctypes.POINTER(vp), ctypes.POINTER(vp), ctypes.POINTER(vp)]
+    advapi.GetNamedSecurityInfoW.restype = wintypes.DWORD
+    advapi.ConvertSidToStringSidW.argtypes = [vp, ctypes.POINTER(vp)]
+    advapi.GetAclInformation.argtypes = [vp, vp, wintypes.DWORD, ctypes.c_int]
+    advapi.GetAce.argtypes = [vp, wintypes.DWORD, ctypes.POINTER(vp)]
+    kernel.LocalFree.argtypes = [vp]
+    kernel.LocalFree.restype = vp
+
+    class AclSizeInformation(ctypes.Structure):
+        _fields_ = [("AceCount", wintypes.DWORD), ("AclBytesInUse", wintypes.DWORD),
+                    ("AclBytesFree", wintypes.DWORD)]
+
+    def sid_string(psid):
+        out = vp()
+        if not advapi.ConvertSidToStringSidW(psid, ctypes.byref(out)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            return ctypes.wstring_at(out.value)
+        finally:
+            kernel.LocalFree(out)
+
+    owner, dacl, sd = vp(), vp(), vp()
+    # SE_FILE_OBJECT = 1; OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION
+    rc = advapi.GetNamedSecurityInfoW(path, 1, 0x1 | 0x4, ctypes.byref(owner), None,
+                                      ctypes.byref(dacl), None, ctypes.byref(sd))
+    if rc:
+        raise ctypes.WinError(rc)
+    try:
+        owner_sid = sid_string(owner)
+        if not dacl.value:
+            return owner_sid, None
+        info = AclSizeInformation()
+        if not advapi.GetAclInformation(dacl, ctypes.byref(info), ctypes.sizeof(info), 2):
+            raise ctypes.WinError(ctypes.get_last_error())
+        readers = []
+        for i in range(info.AceCount):
+            ace = vp()
+            if not advapi.GetAce(dacl, i, ctypes.byref(ace)):
+                raise ctypes.WinError(ctypes.get_last_error())
+            # ACE_HEADER: type (byte), flags (byte), size (word); then the mask
+            # and, for ACCESS_ALLOWED_ACE (type 0), the SID at offset 8.
+            ace_type = ctypes.c_ubyte.from_address(ace.value).value
+            flags = ctypes.c_ubyte.from_address(ace.value + 1).value
+            mask = wintypes.DWORD.from_address(ace.value + 4).value
+            if ace_type != 0 or flags & 0x08:  # not an allow ACE, or inherit-only
+                continue
+            if mask & WINDOWS_READ_MASK:
+                readers.append(sid_string(vp(ace.value + 8)))
+        return owner_sid, readers
+    finally:
+        kernel.LocalFree(sd)
+
+
+def windows_other_readers(owner, readers):
+    """Who besides the owner, SYSTEM and Administrators may read; [] when nobody."""
+    if readers is None:
+        return ["everyone (the file has no access list)"]
+    return sorted({r for r in readers if r != owner and r not in WINDOWS_TRUSTED})
+
+
 def approle_login(vault):
     """A short-lived token from the AppRole credential file, held in memory only."""
     path = os.path.expanduser(os.environ.get("VAULT_APPROLE_FILE") or "")
@@ -806,9 +889,22 @@ def approle_login(vault):
         mode = stat.S_IMODE(os.stat(path).st_mode)
     except FileNotFoundError:
         die("AppRole credential file not found: %s" % path)
-    if mode & 0o077:
-        # Checked before the file is even read. On /mnt/c every file reads as
-        # 0777, so a credential copied there is refused rather than trusted.
+    # Checked before the file is even read.
+    if os.name == "nt":
+        try:
+            others = windows_other_readers(*windows_read_grants(path))
+        except OSError as e:
+            die("cannot read the access list of %s (%s): refusing to trust it" % (path, e))
+        if others:
+            # /grant:r replaces only the named account's grants, so every other
+            # explicit reader is removed by name too.
+            remove = "".join(" /remove:g *%s" % o for o in others if o.startswith("S-"))
+            die("%s can be read by %s, besides its owner, SYSTEM and Administrators: run "
+                "icacls \"%s\" /inheritance:r /grant:r \"%s:F\"%s"
+                % (path, ", ".join(others), path, os.environ.get("USERNAME") or "<you>", remove))
+    elif mode & 0o077:
+        # On /mnt/c every file reads as 0777, so a credential copied there is
+        # refused rather than trusted.
         die("%s is readable by group or others (mode %03o): chmod 600 it, on the "
             "Linux filesystem -- /mnt/c cannot hold it" % (path, mode))
     try:

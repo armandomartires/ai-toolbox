@@ -147,6 +147,13 @@ export VAULT_SECRETS_MAPS=secrets.map:$HOME/.config/vault/ai-toolbox.map
   `vault-layout.md`. Do not copy another host's: then a lost laptop can be
   cut off alone. Copy the private map securely (`scp`, mode 600), never via
   `/mnt/c` or a synced folder.
+- **On Windows** (`TASK-0227`), set the three variables as user environment
+  variables, and keep `~` in both map paths, since the map list is split on
+  `:`. Save the credential under `%USERPROFILE%\.config\vault\`: a file there
+  inherits access for you, SYSTEM and Administrators only, which is what the
+  loader accepts. Python reports every Windows file as mode 666, so the loader
+  reads the access list there instead; when it refuses, it prints the
+  `icacls` command that fixes the file.
 - **Revoke or rotate:** destroy the host's `secret_id` by its accessor, which
   is printed at issue and kept in the file, then issue a new one. The
   `secret_id` expires after one year; `exec` then exits 3 with `AppRole

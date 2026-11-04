@@ -82,7 +82,10 @@ path "kv/metadata/ai-toolbox/*" { capabilities = ["read", "list"] }
   `secret_id_ttl = 8760h` and `secret_id_num_uses = 0`.
 - **The credential** is a JSON file `{role_id, secret_id, secret_id_accessor}`
   at mode 600, under `~/.config/vault/`, never inside a repository. The
-  loader refuses it if group or others can read it.
+  loader refuses it if group or others can read it. On Windows, where Python
+  reports every file as mode 666, it reads the access list instead: only the
+  owner, SYSTEM and Administrators may read (TASK-0227). A file written under
+  `%USERPROFILE%` inherits exactly that.
 - **Issue one `secret_id` per host:** `POST
   auth/approle/role/ai-toolbox/secret-id`, with admin rights. Then any host
   can be cut off alone.
