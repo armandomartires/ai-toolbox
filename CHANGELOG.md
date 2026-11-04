@@ -1,5 +1,8 @@
 # Changelog
 
+## Live-verification gate (#9)
+- A mod leaves `experimental` only with a recorded live session per feature: `status.json`'s `live_verification` records for the current `plugin.json` version, each pointing at an `.ai/sessions/` record, all `pass`, and a README with nothing "not yet seen live". `scripts/check-mod-status.py` enforces it from `tests/validate.sh` (with a self-test). `loops/release-check` gains step 3a.
+
 ## Mod status: experimental (#5)
 - Every mod feature is experimental during the development stage (Armando, 2026-11-04). Each mod carries `status.json` (`status`, `reason`, `live_verification`), its README says so, and `docs/registry.md`'s Mods table has a Status column. `tests/validate.sh` fails a mod without a status, or with any status but `experimental`, until the live-verification gate (#9) exists.
 - `scripts/install.sh` still deploys every mod by default; labelling them experimental in its output is a separate MR.
