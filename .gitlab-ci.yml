@@ -13,3 +13,5 @@ include:
   - local: .gitlab/ci/gitleaks.yml
   # CycloneDX SBOM (issue #12).
   - local: .gitlab/ci/sbom.yml
+  # Unattended runs in a throwaway container (issue #11).
+  - local: .gitlab/ci/unattended-sandbox.yml

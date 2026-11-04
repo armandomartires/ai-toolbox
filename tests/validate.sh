@@ -2189,5 +2189,20 @@ if ! python3 scripts/check-mod-status.py --self-test; then
 fi
 python3 scripts/check-mod-status.py || fail=1
 
+# --------------------------------------------------------------------------
+# Unattended-run sandbox, Level 1 (issue #11).
+# WHY: unattended runs executed on the dev host with user credentials.
+# WHAT THIS PROVES: the CI jobs are pinned to runner tag docker, run
+# assert-sandbox.sh, use id_tokens and no host credential or mount; the
+# proposed Vault policy is read-only on sigmarecon-projects/*/ai-toolbox/*
+# with an explicit deny on operator/*; the JWT role is bound to project 17
+# protected refs. The --self-tests are the red proofs.
+# WHAT IT DOES NOT PROVE: that Vault holds this policy (applied by hand) or
+# that egress is filtered (it is not; see docs/security/unattended-sandbox.md).
+python3 scripts/check-sandbox-ci.py --self-test || fail=1
+python3 scripts/check-sandbox-ci.py || fail=1
+python3 scripts/sandbox/vault-fetch.py --self-test || fail=1
+bash -n scripts/sandbox/assert-sandbox.sh || fail=1
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
