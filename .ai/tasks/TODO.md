@@ -270,6 +270,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0225 — task-orchestrator 0.5.4: a misclassification hint, and the session gate's effort from settings
 - [x] TASK-0227 — vault-secrets 2.3.1: judge an AppRole file on Windows by its access list
 - [x] TASK-0228 — The OpenCode driver tells a permission denial from another tool error (B-067)
+- [x] TASK-0229 — task-compass's README shows the pane on the desktop and in a terminal (B-064)
 
 ## Post-S9 (superseded by the promotion above)
 
