@@ -1,5 +1,7 @@
 # my-mod
 
+> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `status.json`.
+
 One paragraph for the person who installs it: what the mod shows or does, on which surfaces (terminal, desktop), and what it needs.
 
 ## Manifest

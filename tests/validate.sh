@@ -2235,5 +2235,23 @@ for f in scripts/mcp-sandbox.sh .gitlab/ci/mcp-tool-lock.yml; do
   fi
 done
 
+# Mod status and the live-verification gate (issues #5 and #9).
+#
+# WHY: features shipped "tested in the kit, not yet seen live". Every mod is
+# experimental during the development stage (Armando, 2026-11-04), and one
+# leaves experimental only with a recorded live session per feature for its
+# current version. WHAT THIS PROVES: each mods/*/status.json is well-formed;
+# a `verified` mod has passing live_verification records for its current
+# plugin.json version, each pointing at an existing .ai/sessions/ record, and
+# a README with nothing left "not yet seen live"; templates stay
+# experimental. The --self-test is the red proof, run every time.
+# WHAT IT DOES NOT PROVE: that the recorded session really showed the feature
+# working; a human reads the session record at release-check step 3a.
+if ! python3 scripts/check-mod-status.py --self-test; then
+  echo "MOD STATUS: the live-verification gate no longer rejects its seeded cases"
+  fail=1
+fi
+python3 scripts/check-mod-status.py || fail=1
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail

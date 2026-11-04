@@ -1,5 +1,7 @@
 # switchboard
 
+> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `status.json`.
+
 A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or connectors** off and on, per project, from a **Switchboard** pane beside the chat or the `/switchboard` command. Something turned off is refused when called and, where the engine lets a mod, hidden from what the model reads, so it cannot be picked by mistake. Everything is on until you turn it off.
 
 - **Mods** (any plugin): its hooks are refused as it loads, from the next session or reload. A plugin that loads before switchboard is not refused.
