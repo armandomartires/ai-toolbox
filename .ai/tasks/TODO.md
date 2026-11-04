@@ -267,6 +267,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0223 — Every pane panel is resizable, from one shared panel; mods are built from shared parts
 - [x] TASK-0226 — task-orchestrator 0.5.2: fewer coordinator tokens
 - [x] TASK-0224 — task-orchestrator 0.5.3: model routing fixes
+- [x] TASK-0225 — task-orchestrator 0.5.4: a misclassification hint, and the session gate's effort from settings
 
 ## Post-S9 (superseded by the promotion above)
 
