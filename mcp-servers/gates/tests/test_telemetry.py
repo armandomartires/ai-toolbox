@@ -17,6 +17,11 @@ def spans(tmp_path, monkeypatch):
     monkeypatch.setenv("GATES_MAP", str(FIXTURE))
     monkeypatch.setenv("GATES_RUN_ROOT", str(tmp_path / "run"))
     monkeypatch.setenv("GATES_REPO_ROOT", str(tmp_path))
+    # Issue #6 (!13): the map is hash-pinned and argv[0] allowlisted.
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(FIXTURE)))
+    monkeypatch.setenv("GATES_ALLOWED_EXECUTABLES", "sh,false")
+    monkeypatch.setenv("GATES_ALLOWED_LAUNCHERS", "sh")
+    monkeypatch.setenv("GATES_SANDBOX", "bwrap" if shutil.which("bwrap") else "none")
     exp = InMemorySpanExporter()
     provider = sdk.TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(exp))

@@ -17,5 +17,7 @@ include:
   - local: .gitlab/ci/evals.yml
   # External MCP server lockfiles and tool-definition hashes (issue #7).
   - local: .gitlab/ci/mcp-tool-lock.yml
+  # Gates allowlist, hash pinning and sandbox tests (issue #6).
+  - local: .gitlab/ci/gates-sandbox.yml
   # OpenTelemetry spans reach a collector (issue #14).
   - local: .gitlab/ci/otel.yml

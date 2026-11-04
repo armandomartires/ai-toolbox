@@ -51,6 +51,18 @@ description = "Path of the consuming repository's gate map (JSON). The server re
 required = true
 description = "Directory for per-gate state and logs; gates.txt there is the run's evidence file. Must be gitignored in the consuming repository"
 
+[tool.ai-toolbox.environment.GATES_MAP_SHA256]
+required = true
+description = "SHA-256 of the approved gate map. The server refuses to start, and start_gate refuses to run, when the map's hash differs (issue #6)"
+
+[tool.ai-toolbox.environment.GATES_ALLOWED_EXECUTABLES]
+required = true
+description = "Comma-separated executables a gate's argv[0] may name (bare names resolved on PATH, or exact absolute paths). Anything else is REFUSED. Kept outside the map so a map edit cannot widen it (issue #6)"
+
+[tool.ai-toolbox.environment.GATES_SANDBOX]
+required = false
+description = "bwrap (default): each gate runs under bubblewrap with no network, a read-only filesystem and a private /tmp. none: an explicit opt-out; never a silent fallback when bwrap is missing (issue #6)"
+
 [tool.ai-toolbox.environment.OTEL_EXPORTER_OTLP_ENDPOINT]
 required = false
 description = "OTLP/HTTP collector URL. When set and the `otel` extra is installed, each start_gate and wait_gate call emits an `execute_tool` span (issue #14). Unset: no telemetry"
@@ -67,4 +79,5 @@ description = "Watchdog default for a gate with no timeout_seconds of its own. D
 # relative to this directory. The fixture map runs nothing harmful, and the
 # handshake invokes no tool anyway.
 [tool.ai-toolbox.smoke_test]
-env = { GATES_MAP = "tests/fixtures/gates.json" }
+# GATES_SANDBOX=none only because the handshake runs no gate.
+env = { GATES_MAP = "tests/fixtures/gates.json", GATES_MAP_SHA256 = "d64b1fba2691cfcbdd53232e349e967366e9c3b25ab7ff40df8c275c347a020a", GATES_ALLOWED_EXECUTABLES = "sh,false,sleep,printf", GATES_SANDBOX = "none" }
