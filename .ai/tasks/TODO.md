@@ -260,7 +260,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [ ] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
 - [ ] TASK-0217 — Preview mod panes in a browser; copy mods into a session
 - [ ] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
-- [ ] TASK-0218 — One workflow for developing mods, with a chart and a skill
+- [x] TASK-0218 — One workflow for developing mods, with a chart and a skill
 - [x] TASK-0220 — switchboard 0.5.0: mods and skills grouped by topic, in SIGMAorbital
 - [x] TASK-0222 — install.sh writes the mod list Claude Code loads, and --status reports it
 - [x] TASK-0221 — task-compass 0.10.0, agent-watch 0.9.0: drag handles size the Sprints and Sessions panels

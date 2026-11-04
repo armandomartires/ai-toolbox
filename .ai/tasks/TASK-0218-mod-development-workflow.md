@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-03
-- Updated: 2026-11-03
+- Updated: 2026-11-04
 - Applies to: `docs/development/`, `skills/mod-dev/`, `.ai/decisions/`, `.ai/planning/BACKLOG.md`, the authoring guide's *Mods* section
 - Source: the human, 2026-11-03, after `TASK-0217`: make the whole mod-development process one structured, documented workflow in Anthropic's own terms, with an HTML chart page, the skills it needs, and a view to OpenCode and Codex
 
@@ -47,14 +47,14 @@ Every mod change follows the same nine stages, from the task brief to the organi
 - [x] `mod-workflow.html` renders in light and dark, at phone width, with a stage flow, an agent-versus-human swimlane and the gate table, and is published as an Artifact
 - [x] `scripts/mod-dev.sh check`, `sync`, `preview`, `test` and `status` each ran once against `agent-watch` on this host
 - [x] Portability: a table mapping each stage to OpenCode plugins and Codex, and one backlog row per client
-- [ ] The human follows the workflow for the next mod task
+- [x] The human follows the workflow for the next mod task
 
 ## Mandatory validations
 
 - [x] python3 scripts/check-mods.py
 - [x] tests/test-mods.sh --mod agent-watch
 - [x] scripts/check-private-names.sh
-- [ ] tests/validate.sh (run it in WSL; it times out on this Windows clone)
+- [x] tests/validate.sh (run it in WSL; it times out on this Windows clone)
 
 ## Risks and rollback
 
@@ -81,3 +81,5 @@ Next: the human reviews the page and the doc, then says whether to commit.
   - Evidence: `scripts/check-private-names.sh` → `OK (3 patterns)`; `check-backlog-closures.py` → `OK (61 closed rows, 10 open)`
   - Evidence: `tests/validate.sh` in a WSL clone with this tree overlaid (CR stripped) → `ARTIFACTS: 4 artifact(s) do not match their schema`: `TASK-0201` (98 > 90 lines), `TASK-0215`, `TASK-0216`, `TASK-0217` (missing sections), all at `6601902`; this task's brief and ADR pass
   - Deviation: `tests/validate.sh` cannot run from `/mnt/c` on this clone (CRLF breaks `set -o pipefail`)
+- 2026-11-04 · Claude Code (Opus 5.5) · closed: the later mod tasks ran on the workflow (`TASK-0222` and `TASK-0223` cite it); the four briefs the gate failed on are repaired (`fc0c0d7`)
+  - Evidence: `tests/validate.sh` in a WSL clone at `d48488f` → `validate.sh: OK`
