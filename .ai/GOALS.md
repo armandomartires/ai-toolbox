@@ -485,6 +485,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0221-pane-drag-handles.md
 - [x] TASK-0223 — Every pane panel is resizable, from one shared panel; mods are built from shared parts
   .ai/tasks/TASK-0223-shared-resizable-panel.md
+- [?] TASK-0226 — task-orchestrator 0.5.2: fewer coordinator tokens
+  .ai/tasks/TASK-0226-orchestrator-token-economy.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

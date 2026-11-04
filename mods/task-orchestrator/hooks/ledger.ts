@@ -197,12 +197,28 @@ export const mayEscalate = (task: Task, limits: Limits): string | undefined =>
 
 const settingsText = (settings: Settings | undefined): string => (settings ? `${settings.model}/${settings.effort}` : '?')
 
+/** A token count as the line prints it: 980, 12.4k, 1.2M. */
+export const tokensText = (tokens: number): string =>
+  tokens >= 1_000_000 ? `${(tokens / 1_000_000).toFixed(1)}M` : tokens >= 1_000 ? `${(tokens / 1_000).toFixed(1)}k` : String(tokens)
+
+/** A turn's usage as the engine reports it, the four counts summed; undefined when it reported none. */
+export const usageTokens = (usage: unknown): number | undefined => {
+  if (typeof usage !== 'object' || usage === null) return undefined
+  const one = usage as Record<string, unknown>
+  const count = (key: string) => (typeof one[key] === 'number' ? (one[key] as number) : 0)
+  return count('input_tokens') + count('output_tokens') + count('cache_read_input_tokens') + count('cache_creation_input_tokens')
+}
+
+/** The tokens every task reported, summed, and how many reported. */
+export const runTokens = (ledger: Ledger): { tokens: number; counted: number } =>
+  ledger.reduce((sum, task) => (task.tokens === undefined ? sum : { tokens: sum.tokens + task.tokens, counted: sum.counted + 1 }), { tokens: 0, counted: 0 })
+
 /** One line a task, in the shape the brief asks for. */
 export const line = (task: Task): string => {
   const observed = task.observed ? `observed ${settingsText(task.observed)}` : task.resolvedModel ? `resolved ${task.resolvedModel}, effort unverified` : 'unverified'
   const next = task.report?.next?.trim() || task.reason || (task.status === 'queued' ? 'waits for its turn' : task.status === 'running' ? 'collect it' : '')
   const mismatch = task.notes.find(one => one.startsWith('effort mismatch'))
-  return `${task.id} → ${task.role}${task.agentId ?? task.sessionId ? ` [${task.agentId ?? task.sessionId}]` : ''} → requested ${settingsText(task.requested)} → ${observed}${mismatch ? ` (${mismatch})` : ''} → ${task.status}${next ? ` → ${next}` : ''}`
+  return `${task.id} → ${task.role}${task.agentId ?? task.sessionId ? ` [${task.agentId ?? task.sessionId}]` : ''} → requested ${settingsText(task.requested)} → ${observed}${mismatch ? ` (${mismatch})` : ''} → ${task.status}${task.tokens !== undefined ? ` · ${tokensText(task.tokens)} tok` : ''}${next ? ` → ${next}` : ''}`
 }
 
 export const summary = (ledger: Ledger): string => (ledger.length ? ledger.map(line).join('\n') : 'No task in the ledger.')
@@ -224,6 +240,7 @@ export const auditRow = (task: Task) => ({
   status: task.status,
   requested: task.requested,
   resolvedModel: task.resolvedModel,
+  tokens: task.tokens,
   observed: task.observed,
   agentId: task.agentId,
   runAs: task.runAs,

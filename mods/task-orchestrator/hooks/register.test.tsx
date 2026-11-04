@@ -19,7 +19,11 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVer
   // The desktop app's session tools the mod sees or calls, as `options.session` answers them.
   const calls: Record<string, unknown>[] = []
   on('command.register', (_, e) => ({ value: { command: e.name } }))
-  on('tool.register', (_, e) => ({ value: { tool: `mcp__task-orchestrator__${e.name}` } }))
+  const tools: Record<string, unknown>[] = []
+  on('tool.register', (_, e) => {
+    tools.push(e as unknown as Record<string, unknown>)
+    return { value: { tool: `mcp__task-orchestrator__${e.name}` } }
+  })
   on('agent.register', (_, e) => {
     registered.push(e as unknown as Record<string, unknown>)
     return { value: { agent: `task-orchestrator:${e.name}` } }
@@ -54,6 +58,7 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVer
     return { value: undefined }
   })
   on('ui.toast', () => ({ value: undefined }))
+  on('tool.describe', (_, e) => ({ description: e.description }))
   on('ui.log', () => ({ value: undefined }))
   on('tool.call', (_, e) => {
     if (e.tool === 'TaskStop') stopped.push(String((e as { task_id?: string }).task_id))
@@ -63,12 +68,16 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVer
     }
     return { result: 'ok' }
   })
-  on('prompt.submit', (_, e) => ({ text: e.text, context: e.context }))
+  const prompts: unknown[] = []
+  on('prompt.submit', (_, e) => {
+    prompts.push(e.context)
+    return { text: e.text, context: e.context }
+  })
   on('turn.complete', (_, e) => ({ text: e.answer }))
   on('turn.step', async function* (_, e) {
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
   })
-  return { spawned, registered, stopped, statuses, refused, calls }
+  return { spawned, registered, stopped, statuses, refused, calls, tools, prompts }
 }
 
 const dispatch = (input: Record<string, unknown>) => ({ tool: 'mcp__task-orchestrator__dispatch', ...input })
@@ -98,6 +107,8 @@ test('dispatch routes, registers the profile with model and effort, spawns a rea
   const scout = world.registered.find(one => one.name === 'scout')
   expect(scout).toMatchObject({ model: 'haiku', effort: 'low', tools: ['Read', 'Grep', 'Glob', 'LS'] })
   expect(scout?.disallowedTools).toContain('Agent')
+  // A writer role names its tools too, so no connector's schema rides into its context (TASK-0226).
+  expect(world.registered.find(one => one.name === 'builder')?.tools).toEqual(['Read', 'Grep', 'Glob', 'LS', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash', 'TodoWrite'])
 
   // The worker's first model request shows the effective settings.
   for await (const _ of $.turn.step({ turnId: 't', index: 0, model: 'claude-haiku-4-5', effort: 'low', messageCount: 1, agentId: 'agent-1' })) { /* drained */ }
@@ -127,7 +138,90 @@ test('collect on a running task answers inside its hook budget, which every slee
   await clock.advance(12_000)
   const got = String((await pending).result)
   expect(got).toContain('T1 → scout')
-  expect(got).toContain('still running: call collect again')
+  expect(got).toContain('still running: do not poll')
+})
+
+test('a report prints once to a collect with no ids; naming the id prints it again (TASK-0226)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser' }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+
+  const first = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect' } as never)).result)
+  expect(first).toContain('findings: found')
+  const second = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect' } as never)).result)
+  expect(second).toContain('T1 → scout')
+  expect(second).not.toContain('findings: found')
+  expect(second).toContain('report: printed earlier; collect ["T1"] prints it again')
+  const named = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['T1'] } as never)).result)
+  expect(named).toContain('findings: found')
+})
+
+test("a worker's reported usage is its task's tokens, and the run line sums them (TASK-0226)", async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find a' }))
+  await $.tool.call(dispatch({ id: 'T2', class: 'lookup', objective: 'Find b' }))
+  const usage = (input: number) => ({ input_tokens: input, output_tokens: 200, cache_read_input_tokens: 1_000, cache_creation_input_tokens: 0, model: 'm' })
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't1', usage: usage(10_000) } as never)
+  await $.turn.complete({ agentId: 'agent-2', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't2', usage: usage(800) } as never)
+  const got = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect' } as never)).result)
+  expect(got).toContain('T1 → scout [agent-1]')
+  expect(got).toContain('completed · 11.2k tok')
+  expect(got).toContain('completed · 2.0k tok')
+  expect(got).toContain('workers used 13.2k tokens over 2 task(s)')
+  const status = String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)
+  expect(status).toContain('workers used 13.2k tokens over 2 task(s)')
+})
+
+test("a hand-off's assignment prints once; a later collect points at it, and naming the id prints it again (TASK-0226)", async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  engine(on, { noVerdict: 2 })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find it' }))).result)
+  expect(held).toContain('# Assignment H1 — role scout')
+  const later = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect' } as never)).result)
+  expect(later).not.toContain('# Assignment H1')
+  expect(later).toContain('assignment for H1: printed earlier')
+  const named = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['H1'] } as never)).result)
+  expect(named).toContain('# Assignment H1 — role scout')
+})
+
+test('the tools are deferred while off, the protocol rides in no description, and it reaches the model once (TASK-0226)', async ($, on) => {
+  mock.store(on)
+  mock.env(on, {})
+  const { tools: registeredTools, prompts: sent } = engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  expect(registeredTools.find(one => one.name === 'dispatch')?.description).toContain('never poll')
+  expect(String(registeredTools.find(one => one.name === 'dispatch')?.description)).not.toContain('lead coordinator')
+
+  const describe = () => $.tool.describe({ tool: 'mcp__task-orchestrator__dispatch', description: 'Delegate', provider: { plugin: 'task-orchestrator', tier: 'user' } } as never)
+  expect((await describe()).isDeferred).toBe(true)
+  // Off: no protocol on a prompt.
+  await $.prompt.submit({ text: 'hi', context: [] } as never)
+  expect(String(sent.at(-1) ?? '')).not.toContain('lead coordinator')
+
+  const turnedOn = await $.command.run({ command: 'orchestrate', args: 'on' })
+  expect(String((turnedOn as { context?: unknown }).context)).toContain('lead coordinator')
+  expect((await describe()).isDeferred).toBeUndefined()
+  // Already sent by /orchestrate on: the next prompt does not repeat it.
+  await $.prompt.submit({ text: 'go', context: [] } as never)
+  expect(String(sent.at(-1) ?? '')).not.toContain('lead coordinator')
+
+  // A new session that starts on gets it on its first prompt, and only then.
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.prompt.submit({ text: 'one', context: [] } as never)
+  expect(String(sent.at(-1))).toContain('lead coordinator')
+  await $.prompt.submit({ text: 'two', context: [] } as never)
+  expect(String(sent.at(-1) ?? '')).not.toContain('lead coordinator')
 })
 
 test('overrides are disclosed, a gated effort is refused, and an unavailable model falls back visibly', async ($, on) => {

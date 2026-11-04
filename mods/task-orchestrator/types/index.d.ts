@@ -66,6 +66,8 @@ export type Task = {
   requested: Settings
   /** The model core resolved the alias to, from the spawn's answer. */
   resolvedModel?: string
+  /** Tokens the worker's turns reported (input, output, cache read and write), summed; absent until one reports (TASK-0226). */
+  tokens?: number
   /** What the first `turn.step` of the worker's loop carried. */
   observed?: Settings & { at: number }
   agentId?: string

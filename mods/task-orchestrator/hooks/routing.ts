@@ -104,6 +104,12 @@ export const DEFAULT_LIMITS: Limits = {
 /** The tools a read-only role may call: no shell, no writes, no agents. */
 export const READ_ONLY_TOOLS = ['Read', 'Grep', 'Glob', 'LS'] as const
 
+/**
+ * The tools a writer role may call, named so a worker does not carry every
+ * connector's schema in its context; widen it here if a writer needs more.
+ */
+export const WRITER_TOOLS = ['Read', 'Grep', 'Glob', 'LS', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash', 'TodoWrite'] as const
+
 /** Withheld from every worker: a worker never delegates or stops others. */
 export const WORKER_DENIED_TOOLS = ['Agent', 'Workflow', 'SendMessage', 'TaskStop', 'EnterWorktree', 'ExitWorktree'] as const
 

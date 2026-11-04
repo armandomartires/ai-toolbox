@@ -12,7 +12,7 @@ Published to the organization plugin library (0.4.4, 2026-11-02; claude.ai ran n
 /plugin install task-orchestrator@claudeai-organization-library
 ```
 
-The library copy is 0.4.4 and has no session workers; 0.5.0 runs from this checkout until it is republished.
+The library copy is 0.4.4 and has no session workers; 0.5.2 runs from this checkout until it is republished.
 
 From this checkout, `scripts/install.sh --client claude-code` adds the folder to `CLAUDE_CODE_PLUGIN_DIRS` in `~/.claude/settings.json` (runbook, *Loading a mod in development*).
 
@@ -32,7 +32,7 @@ Orchestration starts **off**. `/orchestrate on` turns it on for this project's s
 - `/orchestrate providers [enable|disable <id>]`: the external-provider adapters. None is implemented in this version; enabling one is refused and the data-sharing disclosure is shown.
 - `/orchestrate cancel [<task>|all]`: cancels queued work, stops running workers through `TaskStop` (a running session through `stop_session`), and withdraws a hand-off still waiting for the coordinator's Agent or `start_session` call, which is then refused if made.
 
-The model drives the rest through four tools: `dispatch` (a task with id, class, objective, inputs, allowed files, prohibited areas, deliverables, acceptance, dependencies, and optional role, model, effort, isolation and `runAs`), `collect` (waits for tasks to end and returns their reports; a hook's ten-second budget bills every sleep, so one call waits about eight seconds at most, `collectTimeoutMs` below that, and a task still running says to call again: each ended task also leaves the coordinator a note), `status` and `cancel`. A `dispatch` under the id of a task that ended `blocked`, `failed` or `partial` retries it in its place, as retry 1 or 2 of 2; its dependants keep waiting on it. A dependant whose dependency ended without completing stays queued, and `status` and `collect` say which task holds it and how to retry it, rather than leaving it to wait in silence.
+The model drives the rest through four tools: `dispatch` (a task with id, class, objective, inputs, allowed files, prohibited areas, deliverables, acceptance, dependencies, and optional role, model, effort, isolation and `runAs`), `collect` (waits for tasks to end and returns their reports; a hook's ten-second budget bills every sleep, so one call waits about eight seconds at most, `collectTimeoutMs` below that, and a task still running says not to poll: each ended task leaves the coordinator a note, and it calls `collect` once for it; a report, and a hand-off's assignment, print once, and naming the task's id prints them again), `status` and `cancel`. While orchestration is off the four tools are deferred behind ToolSearch, so a session that never turns it on does not carry their schemas; the coordinator protocol reaches the model once a session, as the context of `/orchestrate on` or of the first prompt of a session that starts on, not inside `dispatch`'s description. A `dispatch` under the id of a task that ended `blocked`, `failed` or `partial` retries it in its place, as retry 1 or 2 of 2; its dependants keep waiting on it. A dependant whose dependency ended without completing stays queued, and `status` and `collect` say which task holds it and how to retry it, rather than leaving it to wait in silence.
 
 ### Worker roles
 
@@ -52,7 +52,7 @@ The model drives the rest through four tools: `dispatch` (a task with id, class,
 
 Each role's own profile (`task-orchestrator:builder`) holds the table's settings. A task that asks for another model, effort or isolation runs under a profile of its own, `task-orchestrator:builder--sonnet-high` (`-wt` when isolated), so two builders at medium and high never share one registration.
 
-A read-only role gets `Read`, `Grep`, `Glob` and `LS` and nothing else, so it has no shell. Every role is denied `Agent`, `Workflow`, `SendMessage`, `TaskStop` and the worktree tools. Each worker ends with a fixed report (Status, Findings, Files, Checks actually run, Evidence, Risks, Next) and is told to list checks it did not run under Next, never under Checks. A worker is told not to update the person's task board or task list; the coordinator keeps the [task-compass](../task-compass/README.md) board current.
+A read-only role gets `Read`, `Grep`, `Glob` and `LS` and nothing else, so it has no shell. A writer role gets those and `Edit`, `Write`, `MultiEdit`, `NotebookEdit`, `Bash` and `TodoWrite` (`WRITER_TOOLS` in `routing.ts`), so no connector's schema rides into its context. Every role is denied `Agent`, `Workflow`, `SendMessage`, `TaskStop` and the worktree tools. Each worker ends with a fixed report (Status, Findings, Files, Checks actually run, Evidence, Risks, Next) and is told to list checks it did not run under Next, never under Checks. A worker is told not to update the person's task board or task list; the coordinator keeps the [task-compass](../task-compass/README.md) board current.
 
 ### Session workers
 
@@ -90,7 +90,7 @@ The choices made with `/orchestrate` (on, policy, opt-ins, providers) are stored
 
 ## What is enforced and what is observed
 
-`ARCHITECTURE.md` has the full split. In short: limits, nesting, the write fence and the opt-in gates are code; the model and effort of a worker are set on its registered profile and are **requested** until the worker's first model request shows them, when `status` reports them as **observed**; a host setting such as `modelSettings.<model>.effortLevel` or `CLAUDE_CODE_SUBAGENT_MODEL` is listed by `status` as disclosed (not a prediction), and a mismatch between requested and observed effort is noted on the task; the mod never overrides either. Token and cost totals are not reported: the mod has no telemetry to read.
+`ARCHITECTURE.md` has the full split. In short: limits, nesting, the write fence and the opt-in gates are code; the model and effort of a worker are set on its registered profile and are **requested** until the worker's first model request shows them, when `status` reports them as **observed**; a host setting such as `modelSettings.<model>.effortLevel` or `CLAUDE_CODE_SUBAGENT_MODEL` is listed by `status` as disclosed (not a prediction), and a mismatch between requested and observed effort is noted on the task; the mod never overrides either. A subagent worker's tokens (input, output and cache, summed from the usage its turns report) are shown on its task line, and the run line in `status` and `collect` sums them; a session worker's are not counted, and the coordinator's own are not either. Cost is not reported.
 
 ### In auto permission mode
 
