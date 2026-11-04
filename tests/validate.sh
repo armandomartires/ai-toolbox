@@ -2069,5 +2069,20 @@ if [ -d "$SCHEMA_DIR" ] && [ -r "$ARTIFACT_LIB" ]; then
   fi
 fi
 
+# --------------------------------------------------------------------------
+# No hidden or bidirectional Unicode in agent instruction files (issue #4).
+#
+# WHY: AGENTS.md, CLAUDE.md, agents/, loops/, prompts/ and every SKILL.md
+# steer agent sessions. Bidi overrides, zero-width and tag characters are
+# invisible in a diff review and can smuggle instructions past it.
+# WHAT THIS PROVES: none of those code points is present in that file set,
+# and the checker still fires on a seeded file (--self-test, a red proof run
+# every time). WHAT IT DOES NOT PROVE: that visible text is benign.
+if ! python3 scripts/check-hidden-unicode.py --self-test; then
+  echo "HIDDEN-UNICODE: the checker no longer detects seeded characters"
+  fail=1
+fi
+python3 scripts/check-hidden-unicode.py || fail=1
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
