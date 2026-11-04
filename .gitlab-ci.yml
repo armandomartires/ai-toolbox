@@ -15,3 +15,5 @@ include:
   - local: .gitlab/ci/sbom.yml
   # Agent eval suite (issue #10).
   - local: .gitlab/ci/evals.yml
+  # External MCP server lockfiles and tool-definition hashes (issue #7).
+  - local: .gitlab/ci/mcp-tool-lock.yml
