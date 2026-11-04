@@ -66,6 +66,12 @@ MECHANICAL_BOUND = 3
 # default agent. These are the stderr strings observed by TASK-0055 (F1).
 FALLBACK_MARKERS = ("Falling back to default agent",
                     "is a subagent, not a primary agent")
+# An errored tool call is a permission refusal only when its error text holds
+# one of these: opencode 1.18's own UI tells denials from other errors by the
+# same four substrings (PermissionRejectedError, PermissionCorrectedError,
+# PermissionDeniedError, a dismissed question). B-067.
+DENIAL_MARKERS = ("rejected permission", "specified a rule", "user dismissed",
+                  "QuestionRejectedError")
 
 # The slots templates/binding.md requires, plus the two this driver adds
 # (extra slots are allowed and checked like every other — check-binding.sh).
@@ -354,7 +360,7 @@ class Driver:
                        "the default agent (ADR-0022 clause 5.1)" % (role, self.b.roles[role]))
         if proc.returncode != 0:
             raise Mechanical("%s exited %d: %s" % (role, proc.returncode, proc.stderr.strip()[:200]))
-        texts, denied, parsed_any = [], [], False
+        texts, denied, errored, parsed_any = [], [], [], False
         for line in proc.stdout.splitlines():
             try:
                 ev = json.loads(line)
@@ -364,10 +370,17 @@ class Driver:
             part = ev.get("part") or {}
             if ev.get("type") == "text" and isinstance(part.get("text"), str):
                 texts.append(part["text"])
-            if ev.get("type") == "tool_use" and (part.get("state") or {}).get("status") == "error":
-                denied.append(part.get("tool", "?"))
+            state = part.get("state") or {}
+            if ev.get("type") == "tool_use" and state.get("status") == "error":
+                error = state.get("error")
+                is_denial = isinstance(error, str) and any(m in error for m in DENIAL_MARKERS)
+                (denied if is_denial else errored).append(part.get("tool", "?"))
         if denied:
             self.journal("tool-denied", role=role, tools=denied)
+        if errored:
+            # Not a permission refusal: bad arguments, a missing file, an
+            # aborted call. Journaled apart so a denial count means denials (B-067).
+            self.journal("tool-error", role=role, tools=errored)
         return "\n".join(texts) if parsed_any else proc.stdout
 
     def ask(self, role, prompt, validate=None):

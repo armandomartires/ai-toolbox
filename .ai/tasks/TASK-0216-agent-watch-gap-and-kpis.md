@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-03
-- Updated: 2026-11-03
+- Updated: 2026-11-04
 - Applies to: `mods/agent-watch/` (0.8.0 → 0.8.1)
 - Source: the human, 2026-11-03: "sometimes the margin between panes becomes 0, so they connect" and "We lost the KPIs section on the top of the SESSIONS graph"; "Yes, fix both"
 
@@ -44,7 +44,7 @@ In Compass's pane the Sessions frame never touches the Sprints frame, and on the
 - [x] A blank row above the meter and the Sessions panel in Compass's pane, with or without a meter, either load order, both surfaces
 - [x] The desktop draws the KPI row and the SELECTED panel at 24, 40 and 60 rows and 100 to 160 columns
 - [x] The desktop prints `AGENT-WATCH <version>` under the table; a terminal does not
-- [ ] Seen live in the desktop app's Compass pane (blocked: the desktop app drew the library's task-compass 0.8.0, which hides agent-watch's panel; seen in the preview, `TASK-0217`)
+- [x] Seen live in the desktop app's Compass pane (since seen in TASK-0221 and TASK-0223; first blocked: the desktop app drew the library's task-compass 0.8.0, which hides agent-watch's panel; seen in the preview, `TASK-0217`)
 
 ## Mandatory validations
 
@@ -69,3 +69,4 @@ Next: remove the library's duplicate task-compass 0.8.0, restart the app, look a
 
 - 2026-11-03 · Claude Code (Opus 5.5) · both causes read from the code; fixed; 136 pass; 6 tests fail at 0.8.0's two files (4 gap cases, the layout invariant, the desktop KPI test)
 - 2026-11-03 · Claude Code (Opus 5.5) · the human saw no change live; the version line added to tell which copy draws, and it was absent: the desktop app drew the organization library's task-compass 0.8.0 (its own Sessions panel), not agent-watch's; task-compass 0.9.1 republished to the library; 137 pass
+- 2026-11-04 · Claude Code (Opus 5.5) · board review: the Sessions panel in Compass's pane was seen live on the desktop in TASK-0221 ("Looks right") and TASK-0223; closed
