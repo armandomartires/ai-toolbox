@@ -1,0 +1,40 @@
+# Mandatory validation on the GitLab origin (issue #1, Q1 of the standards
+# remediation report). Mirrors .github/workflows/validate.yml's `validate`
+# job so GitLab MRs get the same gate GitHub pushes already have.
+#
+# A SEPARATE FILE AND JOB from .gitlab/ci/dashboard-pages.yml on purpose: the
+# dashboard is a view, never a merge condition. Only this job is meant to be
+# the merge gate (via "Pipelines must succeed", a project setting changed by
+# hand, not here).
+#
+# Deliberately NOT run: tests/smoke-mcp.sh (network, SKIP != PASS), same
+# reasoning as the GitHub workflow.
+validate:
+  stage: test
+  # python:3.11 carries bash, git and python3 - everything validate.sh and
+  # sync-registry.sh need. The gate stays offline and hermetic.
+  image: python:3.11
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    # Some checks read history; avoid a shallow clone surprising them.
+    GIT_DEPTH: 0
+  before_script:
+    - bash --version | head -1
+    - python3 --version
+    - git --version
+    # Tests that create throwaway repos need an identity.
+    - git config --global user.email "ci@example.invalid"
+    - git config --global user.name "GitLab CI"
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+  script:
+    - bash tests/validate.sh
+    # The registry is generated; a diff after regenerating means it is stale.
+    - bash scripts/sync-registry.sh
+    - |
+      if ! git diff --quiet docs/registry.md; then
+        echo "docs/registry.md is stale - run scripts/sync-registry.sh and commit the result"
+        git --no-pager diff docs/registry.md
+        exit 1
+      fi
