@@ -31,7 +31,8 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("GATES_REPO_ROOT", str(tmp_path))
     monkeypatch.delenv("GATES_TIMEOUT_SECONDS", raising=False)
     monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(FIXTURE)))
-    monkeypatch.setenv("GATES_ALLOWED_EXECUTABLES", "sh,false,sleep,printf")
+    monkeypatch.setenv("GATES_ALLOWED_EXECUTABLES", "sh,false,sleep,printf,printenv")
+    monkeypatch.setenv("GATES_ALLOWED_LAUNCHERS", "sh")
     # Sandboxed wherever bwrap exists; CI's `gates-sandbox` job requires it.
     monkeypatch.setenv("GATES_SANDBOX", "bwrap" if shutil.which("bwrap") else "none")
     return tmp_path
@@ -201,7 +202,7 @@ def test_unlisted_executable_is_refused(env, monkeypatch):
         r = server.start_gate(name)
         assert r["state"] == "REFUSED", r
         assert "GATES_ALLOWED_EXECUTABLES" in r["reason"]
-        assert not (env / "run" / "gates" / r["handle"] / "spec.json").exists()
+        assert not (env / "run" / "gates" / r["handle"] / "watchdog.pid").exists()
 
 
 def test_changed_map_hash_is_refused(env, monkeypatch):
@@ -232,10 +233,94 @@ def test_sandbox_is_not_a_silent_fallback(env, monkeypatch):
 
 
 def test_sandbox_argv_shape():
-    a = server.sandbox_argv(["sh", "-c", "x"], "/r", "bwrap")
+    a = server.sandbox_argv(["sh", "-c", "x"], "/r", "bwrap", "/r")
     assert a[0] == "bwrap" and "--unshare-net" in a and a[-3:] == ["sh", "-c", "x"]
     assert a[a.index("--ro-bind") + 1:a.index("--ro-bind") + 3] == ["/", "/"]
+    for flag in ("--clearenv", "--unshare-user", "--unshare-uts"):
+        assert flag in a
+    assert a[a.index("--cap-drop") + 1] == "ALL"
+    assert ["--tmpfs", os.path.expanduser("~")] == a[a.index(os.path.expanduser("~")) - 1:a.index(os.path.expanduser("~")) + 1]
     assert server.sandbox_argv(["sh"], "/r", "none") == ["sh"]
+
+
+# --- Review note_1346 ---------------------------------------------------------
+
+def test_env_and_launchers_cannot_widen_the_allowlist(env, monkeypatch):
+    monkeypatch.setenv("GATES_ALLOWED_EXECUTABLES", "env,false")
+    with pytest.raises(server.ConfigError, match="never allowed"):
+        server.config()
+    monkeypatch.setenv("GATES_ALLOWED_EXECUTABLES", "sh,false")
+    monkeypatch.setenv("GATES_ALLOWED_LAUNCHERS", "")
+    with pytest.raises(server.ConfigError, match="GATES_ALLOWED_LAUNCHERS"):
+        server.config()
+    monkeypatch.setenv("GATES_ALLOWED_EXECUTABLES", "python3.11,false")
+    with pytest.raises(server.ConfigError, match="shell or interpreter"):
+        server.config()
+
+
+def test_env_gate_is_refused_even_if_listed_in_launchers(env, monkeypatch):
+    m = _map(env, {"e": {"argv": ["env", "sh", "-c", "id"]}})
+    monkeypatch.setenv("GATES_MAP", str(m))
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(m)))
+    monkeypatch.setenv("GATES_ALLOWED_LAUNCHERS", "sh,env")
+    r = server.start_gate("e")
+    assert r["state"] == "REFUSED" and "never allowed" in r["reason"]
+
+
+def test_cwd_outside_the_repo_is_refused(env, monkeypatch):
+    m = _map(env, {"up": {"argv": ["false"], "cwd": "../.."}, "abs": {"argv": ["false"], "cwd": "/etc"}})
+    monkeypatch.setenv("GATES_MAP", str(m))
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(m)))
+    for name in ("up", "abs"):
+        r = server.start_gate(name)
+        assert r["state"] == "REFUSED" and "leaves the repository" in r["reason"], r
+
+
+def test_executable_resolving_inside_the_repo_is_refused(env, monkeypatch):
+    (env / "bin").mkdir()
+    fake = env / "bin" / "false"
+    fake.write_text("#!/bin/sh\nexit 0\n")
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", str(env / "bin") + os.pathsep + os.environ["PATH"])
+    r = server.start_gate("bad")
+    assert r["state"] == "REFUSED" and "inside the repository" in r["reason"], r
+
+
+def test_a_spec_json_in_the_run_dir_is_never_read(env):
+    r = finish("ok")
+    d = env / "run" / "gates" / r["handle"]
+    assert not (d / "spec.json").exists()
+    assert r["state"] == "PASSED"
+
+
+def test_the_gate_gets_no_server_environment(env, monkeypatch):
+    m = _map(env, {"pe": {"argv": ["printenv"]}})
+    monkeypatch.setenv("GATES_MAP", str(m))
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(m)))
+    monkeypatch.setenv("GATES_TEST_SECRET", "s3cr3t")
+    r = finish("pe")
+    log = Path(r["log"]).read_text()
+    assert "s3cr3t" not in log and "GATES_TEST_SECRET" not in log
+    assert "HOME=/tmp" in log
+
+
+def test_map_is_hashed_and_parsed_from_the_same_bytes(env, monkeypatch):
+    m = _map(env, {"ok": {"argv": ["false"]}})
+    monkeypatch.setenv("GATES_MAP", str(m))
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(m)))
+    reads = []
+    real_open = open
+
+    def swapping_open(path, mode="r", *a, **kw):
+        # Any SECOND read of the map sees a swapped file.
+        if str(path) == str(m):
+            reads.append(mode)
+            if len(reads) > 1:
+                m.write_text(json.dumps({"gates": {"ok": {"argv": ["sh", "-c", "id"]}}}))
+        return real_open(path, mode, *a, **kw)
+    monkeypatch.setattr("builtins.open", swapping_open)
+    cfg = server.config()
+    assert cfg["gates"]["ok"]["argv"] == ["false"] and len(reads) == 1
 
 
 SANDBOXED = pytest.mark.skipif(
@@ -256,3 +341,18 @@ def test_gate_runs_without_network_and_with_a_read_only_repo(env, monkeypatch):
     log = Path(r["log"]).read_text()
     assert r["state"] == "PASSED", log
     assert "SANDBOXED" in log and (env / "file").read_text() == "x"
+
+
+@SANDBOXED
+def test_the_sandbox_hides_the_home_directory(env, monkeypatch, tmp_path_factory):
+    home = Path(os.path.expanduser("~"))
+    if not home.is_dir() or home == Path("/"):
+        pytest.skip("no home directory")
+    m = _map(env, {"ls": {"argv": ["sh", "-c", "ls -A \"$0\" | wc -l", str(home)]}})
+    monkeypatch.setenv("GATES_MAP", str(m))
+    monkeypatch.setenv("GATES_MAP_SHA256", server.sha256_file(str(m)))
+    monkeypatch.setenv("GATES_SANDBOX", "bwrap")
+    r = finish("ls")
+    log = Path(r["log"]).read_text()
+    assert r["state"] == "PASSED", log
+    assert log.strip() == "0", log

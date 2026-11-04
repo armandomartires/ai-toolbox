@@ -17,8 +17,8 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import shutil
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -39,6 +39,16 @@ SANDBOXES = ("bwrap", "none")
 OWNER = "gates-mcp-server"
 MAX_WAIT_SECONDS = 420          # inside an agent's ten-minute call cap
 DEFAULT_TIMEOUT_SECONDS = 3600
+# Review note_1346 item 1. Pure launchers run whatever their arguments name,
+# so they are never allowed. Shells and interpreters run code from their
+# arguments or the (agent-writable) repo; an operator who needs one must name
+# it a second time in GATES_ALLOWED_LAUNCHERS, accepting that for those gates
+# the hash-pinned argv and the sandbox are the boundary, not the allowlist.
+NEVER_ALLOWED = {"env", "xargs", "sudo", "doas", "nohup", "timeout", "nice", "setsid",
+                 "chroot", "busybox", "stdbuf", "ionice", "taskset", "unshare", "nsenter"}
+LAUNCHERS = {"sh", "bash", "dash", "zsh", "ksh", "fish", "node", "npx", "npm", "uv", "uvx",
+             "perl", "ruby", "make", "git", "deno", "bun", "php", "lua", "tclsh"}
+SANDBOX_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 mcp = FastMCP("gates")
 _serial = count(1)
@@ -53,40 +63,102 @@ def sha256_file(path: str) -> str:
         return hashlib.sha256(fh.read()).hexdigest()
 
 
+def _names(var: str) -> set[str]:
+    return {x.strip() for x in os.environ.get(var, "").split(",") if x.strip()}
+
+
 def allowed_executables() -> set[str]:
     """GATES_ALLOWED_EXECUTABLES: the operator's allowlist (issue #6).
 
     Comma-separated. It lives in the server's environment, NOT in the gate
     map, so a map edit cannot widen it. An entry with no slash matches a bare
-    argv[0] resolved on PATH; an absolute entry matches that exact path.
+    argv[0], resolved ONCE at startup to an absolute path outside the repo; an
+    absolute entry matches that exact path.
     """
-    raw = os.environ.get("GATES_ALLOWED_EXECUTABLES", "")
-    return {x.strip() for x in raw.split(",") if x.strip()}
+    return _names("GATES_ALLOWED_EXECUTABLES")
+
+
+def _is_launcher(exe: str) -> str | None:
+    base = os.path.basename(exe)
+    if base in NEVER_ALLOWED:
+        return "never"
+    if base in LAUNCHERS or base.startswith("python"):
+        return "launcher"
+    return None
+
+
+def check_allowlist(allow: set[str], launchers: set[str]) -> None:
+    for exe in sorted(allow):
+        kind = _is_launcher(exe)
+        if kind == "never":
+            raise ConfigError("GATES_ALLOWED_EXECUTABLES names %r, a launcher that runs "
+                              "whatever its arguments say; it is never allowed" % exe)
+        if kind == "launcher" and os.path.basename(exe) not in launchers:
+            raise ConfigError("GATES_ALLOWED_EXECUTABLES names %r, a shell or interpreter; "
+                              "name it in GATES_ALLOWED_LAUNCHERS too to accept that the "
+                              "pinned argv and the sandbox, not the allowlist, bound it" % exe)
+
+
+def resolve_executable(exe: str, repo_root: Path) -> str:
+    """argv[0] as an absolute path, resolved on PATH once; refused when PATH
+    gives a relative entry or a path inside the repository."""
+    if os.path.isabs(exe):
+        return exe
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        if not entry or not os.path.isabs(entry):
+            continue  # relative PATH entries are never searched
+        cand = os.path.join(entry, exe)
+        if os.path.isfile(cand) and os.access(cand, os.X_OK):
+            real = Path(cand).resolve()
+            if real == repo_root or repo_root in real.parents:
+                raise ConfigError("%r resolves inside the repository (%s)" % (exe, real))
+            return str(real)
+    raise ConfigError("%r is not on PATH" % exe)
 
 
 def refusal(argv: list[str], allow: set[str]) -> str | None:
     """Why argv[0] may not run, or None."""
     exe = argv[0]
+    if _is_launcher(exe) == "never":
+        return "executable %r is a launcher and is never allowed" % exe
     if exe in allow and ("/" not in exe or os.path.isabs(exe)):
         return None
     return "executable %r is not in GATES_ALLOWED_EXECUTABLES" % exe
 
 
-def sandbox_argv(argv: list[str], cwd: str, mode: str) -> list[str]:
-    """Wrap argv so the gate has no network and a read-only filesystem.
+def gate_env() -> dict[str, str]:
+    """The only environment a gate gets (review note_1346 item 4)."""
+    return {"PATH": SANDBOX_PATH, "HOME": "/tmp", "LANG": os.environ.get("LANG", "C.UTF-8")}
 
-    bwrap: the whole host is bound read-only (the repo included), /tmp is a
-    private tmpfs, and the network, PID and IPC namespaces are unshared.
-    `none` is an explicit opt-out the operator must set; it is never a
-    fallback when bwrap is missing.
+
+def sandbox_argv(argv: list[str], cwd: str, mode: str, repo_root: str | None = None,
+                 bwrap: str = "bwrap") -> list[str]:
+    """Wrap argv so the gate has no network, no host secrets and a read-only
+    filesystem.
+
+    bwrap: the host is bound read-only, then the home directory and /tmp are
+    hidden under empty tmpfs mounts, the repository and the gate's cwd are
+    re-exposed read-only, the environment is cleared down to gate_env(), every
+    capability is dropped, and the user, network, PID, IPC and UTS namespaces
+    are unshared. `none` is an explicit opt-out the operator must set; it is
+    never a fallback when bwrap is missing.
     """
     if mode == "none":
         return list(argv)
-    return ["bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc",
-            "--tmpfs", "/tmp",
-            # Re-expose the gate's cwd read-only in case it lives under /tmp.
-            "--ro-bind", cwd, cwd, "--unshare-net", "--unshare-pid", "--unshare-ipc",
-            "--new-session", "--die-with-parent", "--chdir", cwd, "--"] + list(argv)
+    home = os.path.expanduser("~")
+    out = [bwrap, "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc",
+           "--tmpfs", "/tmp"]
+    if home not in ("/", "") and os.path.isdir(home):
+        out += ["--tmpfs", home]
+    for p in dict.fromkeys(x for x in (repo_root, cwd) if x):
+        out += ["--ro-bind", p, p]
+    out += ["--clearenv"]
+    for k, v in gate_env().items():
+        out += ["--setenv", k, v]
+    out += ["--unshare-user", "--unshare-net", "--unshare-pid", "--unshare-ipc",
+            "--unshare-uts", "--cap-drop", "ALL", "--new-session", "--die-with-parent",
+            "--chdir", cwd, "--"]
+    return out + list(argv)
 
 
 def config() -> dict[str, Any]:
@@ -104,22 +176,26 @@ def config() -> dict[str, Any]:
     if not pinned:
         raise ConfigError("GATES_MAP_SHA256 is not set: the gate map must be "
                           "hash-pinned (issue #6)")
-    actual = sha256_file(map_path)
+    # Read the bytes ONCE: hash and parse the same bytes (review note_1346 item 2).
+    with open(map_path, "rb") as fh:
+        raw = fh.read()
+    actual = hashlib.sha256(raw).hexdigest()
     if actual != pinned:
         raise ConfigError("GATES_MAP hash %s does not match GATES_MAP_SHA256 %s: "
                           "the map changed since it was approved" % (actual, pinned))
     if not allowed_executables():
         raise ConfigError("GATES_ALLOWED_EXECUTABLES is not set: there is no "
                           "default allowlist")
+    check_allowlist(allowed_executables(), _names("GATES_ALLOWED_LAUNCHERS"))
     sandbox = os.environ.get("GATES_SANDBOX", "bwrap")
     if sandbox not in SANDBOXES:
         raise ConfigError("GATES_SANDBOX must be one of %s" % ", ".join(SANDBOXES))
-    if sandbox == "bwrap" and shutil.which("bwrap") is None:
+    bwrap = shutil.which("bwrap") if sandbox == "bwrap" else None
+    if sandbox == "bwrap" and bwrap is None:
         raise ConfigError("GATES_SANDBOX=bwrap but bwrap is not on PATH; install "
                           "bubblewrap or set GATES_SANDBOX=none explicitly")
     try:
-        with open(map_path, encoding="utf-8") as fh:
-            data = json.load(fh)
+        data = json.loads(raw.decode("utf-8"))
     except ValueError as exc:
         raise ConfigError("GATES_MAP does not parse as JSON: %s" % exc) from exc
     gates = data.get("gates") if isinstance(data, dict) else None
@@ -135,11 +211,13 @@ def config() -> dict[str, Any]:
     timeout = os.environ.get("GATES_TIMEOUT_SECONDS") or str(DEFAULT_TIMEOUT_SECONDS)
     if not timeout.isdigit() or int(timeout) < 1:
         raise ConfigError("GATES_TIMEOUT_SECONDS must be a positive integer")
+    repo_root = Path(os.environ.get("GATES_REPO_ROOT")
+                     or os.path.dirname(os.path.abspath(map_path))).resolve()
     return {
         "gates": gates,
         "run_root": Path(run_root).absolute(),
-        "repo_root": Path(os.environ.get("GATES_REPO_ROOT")
-                          or os.path.dirname(os.path.abspath(map_path))),
+        "repo_root": repo_root,
+        "bwrap": str(Path(bwrap).resolve()) if bwrap else None,
         "timeout": int(timeout),
         "allow": allowed_executables(),
         "sandbox": sandbox,
@@ -226,20 +304,38 @@ def _start_gate(name: str) -> dict[str, Any]:
         (d / "state").write_text("REFUSED", encoding="utf-8")
         (d / "refused").write_text(why, encoding="utf-8")
         return summary(d)
-    cwd = str(cfg["repo_root"] / entry.get("cwd", "."))
-    spec = {"argv": sandbox_argv(entry["argv"], cwd, cfg["sandbox"]),
+    root = cfg["repo_root"]
+    cwd_path = (root / entry.get("cwd", ".")).resolve()
+    if cwd_path != root and root not in cwd_path.parents:
+        # Review note_1346 item 5: a gate never runs outside the repository.
+        (d / "state").write_text("REFUSED", encoding="utf-8")
+        (d / "refused").write_text("cwd %r leaves the repository" % entry.get("cwd"), encoding="utf-8")
+        return summary(d)
+    cwd = str(cwd_path)
+    try:
+        exe = resolve_executable(entry["argv"][0], root)
+    except ConfigError as exc:
+        (d / "state").write_text("REFUSED", encoding="utf-8")
+        (d / "refused").write_text(str(exc), encoding="utf-8")
+        return summary(d)
+    argv = [exe] + entry["argv"][1:]
+    spec = {"argv": sandbox_argv(argv, cwd, cfg["sandbox"], str(root), cfg["bwrap"] or "bwrap"),
+            "env": gate_env(),
             "sandbox": cfg["sandbox"],
             "cwd": cwd,
             "timeout_seconds": entry.get("timeout_seconds", cfg["timeout"]),
             "skip_exit": entry.get("skip_exit"),
             "evidence_file": str(cfg["run_root"] / "gates.txt")}
-    (d / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
     (d / "started").write_text(str(int(time.time())), encoding="utf-8")
     (d / "state").write_text("RUNNING", encoding="utf-8")
+    # The spec goes to the watchdog over its stdin, never through a file the
+    # agent could rewrite in the run directory (review note_1346 item 3).
     watchdog = subprocess.Popen(
         [sys.executable, "-m", "gates.watchdog", str(d)],
-        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL, start_new_session=True)
+    watchdog.stdin.write(json.dumps(spec).encode("utf-8"))
+    watchdog.stdin.close()
     (d / "watchdog.pid").write_text(str(watchdog.pid), encoding="utf-8")
     return summary(d)
 

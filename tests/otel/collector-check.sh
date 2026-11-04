@@ -16,6 +16,11 @@ tar xzf "$work/otelcol.tgz" -C "$work" otelcol
 pid=$!
 for _ in $(seq 40); do grep -q "Everything is ready" "$work/collector.log" && break; sleep 0.5; done
 cd "$here/mcp-servers/gates"
+# Issue #6 (!13): hash-pinned map and allowlist. GATES_SANDBOX=none because
+# this job's container cannot create user namespaces; the sandbox itself is
+# tested by gates-sandbox.
+GATES_MAP_SHA256="$(sha256sum tests/fixtures/gates.json | cut -d' ' -f1)" \
+GATES_ALLOWED_EXECUTABLES=sh,false GATES_ALLOWED_LAUNCHERS=sh GATES_SANDBOX=none \
 GATES_MAP=tests/fixtures/gates.json GATES_RUN_ROOT="$work/run" GATES_REPO_ROOT="$work" \
 OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318 OTEL_SERVICE_NAME=gates-ci \
   uv run --extra otel python - <<'PY'

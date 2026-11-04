@@ -21,14 +21,16 @@ from gates.server import summary
 
 
 def run(d: Path) -> None:
-    spec = json.loads((d / "spec.json").read_text(encoding="utf-8"))
+    # From stdin only: the server writes it there and closes the pipe. A
+    # spec.json in the run directory is never read (review note_1346 item 3).
+    spec = json.loads(sys.stdin.buffer.read().decode("utf-8"))
     started = int((d / "started").read_text(encoding="utf-8"))
     limit = int(spec["timeout_seconds"])
     with open(d / "log", "w", encoding="utf-8") as log:
         try:
             proc = subprocess.Popen(spec["argv"], cwd=spec["cwd"], stdin=subprocess.DEVNULL,
                                     stdout=log, stderr=subprocess.STDOUT,
-                                    start_new_session=True)
+                                    env=spec.get("env") or {}, start_new_session=True)
         except OSError as exc:
             log.write("gates: could not start %r: %s\n" % (spec["argv"][0], exc))
             proc = None

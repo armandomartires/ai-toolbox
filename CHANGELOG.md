@@ -1,5 +1,10 @@
 # Changelog
 
+## Gates MCP server: hardened execution (issue #6)
+- Each gate runs in `bwrap`: read-only root, private `/tmp`, `$HOME` hidden, no network, cleared environment (`PATH`, `HOME=/tmp`, `LANG` only), all capabilities dropped. The command allowlist alone is not the security boundary.
+- `argv[0]` is resolved on absolute `PATH` entries and refused if it lives inside the repository. `env`, `xargs`, `sudo` and similar are never allowed; shells and interpreters (`sh`, `bash`, `python`, `node`, `npx`, `uv`, `make`, `git`, …) also need `GATES_ALLOWED_LAUNCHERS`. A `cwd` outside the repository is refused. The spec reaches the watchdog over stdin, not a file.
+- **Upgrade:** set `GATES_MAP_SHA256` to `sha256sum gates.json | cut -d' ' -f1` (the map is hashed and parsed from the same bytes), set a command allowlist (starter: `GATES_ALLOWED_EXECUTABLES=pytest,ruff,npm,cargo`), list any launcher you need in `GATES_ALLOWED_LAUNCHERS`, and install `bubblewrap`. `GATES_SANDBOX=none` is for tests only.
+
 ## Unattended runs: hash-chained journal (issue #14)
 - Every journal line carries `prev`, the SHA-256 of the previous line. Check it with `skills/unattended-ops/scripts/journal-chain.py verify <journal> [--head <sha256>]`.
 - The driver records the final head as `Journal head: <sha256>` in the handover and as `journal-head:` on stdout. On resume it halts if the journal no longer chains up to the head in the handover.
