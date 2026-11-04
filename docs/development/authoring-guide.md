@@ -343,7 +343,7 @@ column; `tests/test-mods.sh` runs `claude plugin validate` and
 | `hooks/hooks.json` | Required. `modules` lists the hooks modules, each a file in `hooks/`. | **yes** |
 | `types` in `plugin.json` | The `$.state` contract, `types/index.d.ts` by convention. Every `$.state` key a module uses is declared there, and it exports types only. | the file exists; **its content is checked by `plugin validate` only** |
 | `README.md` | Required: the user-facing spec and install line. | **yes** |
-| `status.json` | Required (issue #5): `status` (`experimental`; `verified` only through the live-verification gate, #9), `reason`, and a `live_verification` list. The README states the same `Status:`. The registry's Status column is generated from it. Not read by the engine. | **yes** |
+| `status.json` | Required (issue #5): `status` (`experimental` or `verified`), `reason`, and a `live_verification` list. `verified` needs passing records (`feature`, `version`, `date`, `client`, `session` in `.ai/sessions/`, `verified_by`, `result`) for the current `plugin.json` version and a README with nothing "not yet seen live" (#9, `loops/release-check` step 3a). The README states the same `Status:`. The registry's Status column is generated from it. Not read by the engine. | **yes**: `scripts/check-mod-status.py` |
 | `*.test.ts`, `*.test.tsx` | Pure logic sits in plain functions, tested directly; hooks and panes through `claude-code/testing`. | **no**: `tests/test-mods.sh` |
 | `.claude-plugin/types/` | Laid by the engine per CLI version. Never committed. | **yes** (`.gitignore`, and the gate fails on a tracked one) |
 

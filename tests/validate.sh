@@ -2171,40 +2171,23 @@ if ! python3 scripts/sbom-add-external.py --self-test; then
 fi
 
 # --------------------------------------------------------------------------
-# Every mod declares its status, and today that status is experimental
-# (issue #5).
+# Mod status and the live-verification gate (issues #5 and #9).
 #
-# WHY: features shipped "tested in the kit, not yet seen live" with nothing
-# machine-readable saying so. Armando decided (2026-11-04) that every mod
-# feature is experimental during the development stage. WHAT THIS PROVES:
-# each mods/*/ (template included) has a status.json whose status is
-# "experimental" or "verified", a live_verification list, and a README that
-# states the same status; the registry's Status column is generated from it.
-# A "verified" status is only accepted through the live-verification gate
-# (#9); until that gate exists, anything but "experimental" fails here.
-python3 - <<'PY' || fail=1
-import glob, json, os, sys
-bad = []
-for d in sorted(glob.glob("mods/*/")):
-    d = d.rstrip("/")
-    p = os.path.join(d, "status.json")
-    try:
-        st = json.load(open(p, encoding="utf-8"))
-    except (OSError, ValueError) as e:
-        bad.append(f"{p}: missing or not JSON ({e.__class__.__name__})")
-        continue
-    status = st.get("status")
-    if status != "experimental":
-        bad.append(f"{p}: status is {status!r}; only 'experimental' is allowed until the live-verification gate (#9)")
-    if not isinstance(st.get("live_verification"), list):
-        bad.append(f"{p}: live_verification must be a list")
-    readme = os.path.join(d, "README.md")
-    if os.path.isfile(readme) and f"Status: {status}." not in open(readme, encoding="utf-8").read():
-        bad.append(f"{readme}: does not state 'Status: {status}.'")
-for b in bad:
-    print("MOD STATUS: " + b)
-sys.exit(1 if bad else 0)
-PY
+# WHY: features shipped "tested in the kit, not yet seen live". Every mod is
+# experimental during the development stage (Armando, 2026-11-04), and one
+# leaves experimental only with a recorded live session per feature for its
+# current version. WHAT THIS PROVES: each mods/*/status.json is well-formed;
+# a `verified` mod has passing live_verification records for its current
+# plugin.json version, each pointing at an existing .ai/sessions/ record, and
+# a README with nothing left "not yet seen live"; templates stay
+# experimental. The --self-test is the red proof, run every time.
+# WHAT IT DOES NOT PROVE: that the recorded session really showed the feature
+# working; a human reads the session record at release-check step 3a.
+if ! python3 scripts/check-mod-status.py --self-test; then
+  echo "MOD STATUS: the live-verification gate no longer rejects its seeded cases"
+  fail=1
+fi
+python3 scripts/check-mod-status.py || fail=1
 
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
