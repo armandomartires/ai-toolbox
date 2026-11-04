@@ -2115,5 +2115,35 @@ then
   fail=1
 fi
 
+# --------------------------------------------------------------------------
+# The AI risk register exists and is well-formed (issue #13).
+#
+# WHAT THIS PROVES: .ai/context/risk-register.md has a dated "Last reviewed"
+# line and every register row has the table's ten columns, an R-NN id and a
+# status. WHAT IT DOES NOT PROVE: that the review actually happened, or that
+# the ratings are right; that is the sprint checkpoint's job.
+if [ -r .ai/context/risk-register.md ]; then
+  python3 - .ai/context/risk-register.md <<'PY' || fail=1
+import re, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+bad = []
+if not re.search(r"^Last reviewed: \d{4}-\d{2}-\d{2}", text, re.M):
+    bad.append("no 'Last reviewed: YYYY-MM-DD' line")
+rows = [l for l in text.splitlines() if l.startswith("| R-")]
+if not rows:
+    bad.append("no R-NN rows")
+for l in rows:
+    cells = [c.strip() for c in l.strip().strip("|").split("|")]
+    if len(cells) != 10 or not re.fullmatch(r"R-\d{2}", cells[0]) or not cells[-1]:
+        bad.append("malformed row: " + l[:60])
+for b in bad:
+    print("RISK-REGISTER: " + b)
+sys.exit(1 if bad else 0)
+PY
+else
+  echo "RISK-REGISTER: .ai/context/risk-register.md is missing"
+  fail=1
+fi
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
