@@ -11,6 +11,9 @@
 - Appends hold an exclusive `flock` on the journal.
 - **Migration:** a journal from before this change keeps its unchained lines. The first append after the upgrade writes `{"event": "chain-start", "prev": "000…0"}`, and `verify` checks from that marker on. You don't need to do anything, but the legacy lines before the marker are not verified.
 
+## Agent eval suite (#10)
+- `evals/`: golden tasks for adjudicator verdict accuracy, refuter recall on seeded defects and injection resistance; `evals/run.py` scores them against `evals/thresholds.json`. Mock provider by default and in MR pipelines; real providers (xAI, OpenAI) only in a scheduled master pipeline (`.gitlab/ci/evals.yml`).
+
 ## Live-verification gate (#9)
 - A mod leaves `experimental` only with a recorded live session per feature: `status.json`'s `live_verification` records for the current `plugin.json` version, each pointing at an `.ai/sessions/` record, all `pass`, and a README with nothing "not yet seen live". `scripts/check-mod-status.py` enforces it from `tests/validate.sh` (with a self-test). `loops/release-check` gains step 3a.
 

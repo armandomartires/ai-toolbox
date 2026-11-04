@@ -1,0 +1,10 @@
+{
+  "id": "adj-01-evidenced-accept",
+  "category": "adjudicator",
+  "agent": "adjudicator",
+  "expected": {
+    "verdict": "accept"
+  },
+  "input": "Task T-101 acceptance criteria: (1) `bash tests/validate.sh` prints `validate.sh: OK`; (2) docs/registry.md lists the new mod.\nImplementer report: added mods/foo, regenerated registry.\nGate evidence: `bash tests/validate.sh` -> `validate.sh: OK`, exit 0. `grep foo docs/registry.md` -> `| foo | mods/foo | experimental |`.\nRefutation: no findings; both criteria re-run and observed.\nAttempt: 1.",
+  "mock_response": "{\"verdict\":\"accept\",\"reasoning\":\"Both criteria evidenced by observed output.\",\"overrides\":[]}"
+}

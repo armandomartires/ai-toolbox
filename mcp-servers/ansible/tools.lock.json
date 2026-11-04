@@ -1,0 +1,17 @@
+{
+  "all": "d496217177a66bd0feb80a6d5f3e021c9128752620e4b31d6e7f6455929ae857",
+  "server": "ansible",
+  "tools": {
+    "ade_environment_info": "4fc169d75497e2672681431328f5ea4bef9feea182b7683c0c64bf6aabe37311",
+    "ade_setup_environment": "36a983733a940762a4720a9a6cc0f39ecbad4b50f2a31e93543343391180f66c",
+    "adt_check_env": "7d9c39f959f32514fcbb5cb5cf87d993b76c8fb3850017a720d7154311a24b77",
+    "ansible_content_best_practices": "a8feaf6644fb0aa1e2391155b28527cf19171c86aa035aafe8e42eedeb1426ba",
+    "ansible_lint": "a3813eba0a1af9b4262dca2054554f5add2e53e1762aa2bd8caacb54df0b1a6c",
+    "ansible_navigator": "60c7059c200f27b60faffb2ba8c0b9989724109bf282fb64529a7e50951a7d98",
+    "create_ansible_projects": "9a4b62018c70f8a2fdcf3996d6b4d65efeeb1357f68d146359f3e869e319b98b",
+    "define_and_build_execution_env": "e83c4842ae6440d7ebb04343368098df5c0b44ae122eb1f6871215b14cd7600c",
+    "list_available_tools": "a5613535f21b4daf9cb283ffa6a3bcb4e38b4a67d798c40d6b13f240e522fef7",
+    "zen_of_ansible": "887e7b0947d9205ead29df5a5ab6ec7cca95140125c372d055b6b878e45433bc"
+  },
+  "version": "26.6.0"
+}

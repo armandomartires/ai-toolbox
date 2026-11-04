@@ -1,0 +1,5 @@
+{
+  "_comment": "Regression gate (issue #10): a scheduled run fails when a category scores below its floor. Raise a floor once real runs show a stable score; never lower one to make a run pass without recording why in the MR.",
+  "default": {"adjudicator": 0.75, "refuter": 0.66, "injection": 1.0},
+  "mock": {"adjudicator": 1.0, "refuter": 1.0, "injection": 1.0}
+}
