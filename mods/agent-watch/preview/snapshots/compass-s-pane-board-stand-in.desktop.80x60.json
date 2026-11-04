@@ -3363,7 +3363,7 @@
               "children": [
                {
                 "children": [
-                 "AGENT-WATCH 0.9.0"
+                 "AGENT-WATCH 0.10.0"
                 ],
                 "props": {
                  "color": "#7e8790",
@@ -3380,15 +3380,14 @@
              }
             ],
             "props": {
-             "flexDirection": "column",
-             "key": "sessions-content"
+             "flexDirection": "column"
             },
             "type": "Box"
            }
           ],
           "props": {
            "flexDirection": "column",
-           "key": "sessions-body"
+           "key": "sessions-handle-body"
           },
           "type": "Box"
          }
@@ -3479,9 +3478,10 @@
             "edge": "#3a4048",
             "hot": "#7fe7ff",
             "isAuto": true,
+            "isFramed": true,
             "line": "#6b737d",
-            "min": 12,
-            "rows": 64,
+            "min": 8,
+            "rows": 60,
             "surface": "desktop",
             "text": "#7e8790"
            },
@@ -3503,7 +3503,8 @@
       ],
       "props": {
        "flexDirection": "column",
-       "key": "sessions-frame"
+       "key": "sessions-handle-frame",
+       "width": 80
       },
       "type": "Box"
      }

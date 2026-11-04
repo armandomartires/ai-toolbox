@@ -28,6 +28,8 @@ declare module 'claude-code' {
       topics: Record<string, string>
       /** The pane's collapsed groups, each `<kind>:<topic>` (`mod:planning`); a group not listed shows its rows. */
       closedGroups: string[]
+      /** The rows the person dragged this mod's panels' bodies to, by pane, handle and surface (sigma.tsx `heldOf`); a panel not listed sizes itself (ADR-0053). */
+      panelRows: Record<string, number>
     }
   }
 }

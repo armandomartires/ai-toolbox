@@ -71,7 +71,7 @@ const populate = async ($: EngineInterface, on: On) => {
 }
 
 /** The height the panel's content is held and cut at; undefined while it sizes itself. */
-const heldBody = async (ui: Mounted) => ((await ui.find({ key: 'sessions-content' }))?.props as { height?: number } | undefined)?.height
+const heldBody = async (ui: Mounted) => ((await ui.find({ key: 'sessions-handle-body' }))?.props as { height?: number } | undefined)?.height
 
 /** The rows the handle is told the panel takes. */
 const handleRows = async (ui: Mounted) => ((await ui.find({ key: HANDLE }))?.props as { props?: { rows?: number } } | undefined)?.props?.rows
@@ -92,9 +92,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(auto).toBeGreaterThan(12)
 
     await drag(ui, 5)
-    // Held at the rows the panel took plus the drag: the body takes them less the frame (2) and the title and its rule (2).
+    // Held at the body's rows plus the drag.
     expect(await handleRows(ui)).toBe(auto + 5)
-    expect(await heldBody(ui)).toBe(auto + 5 - 4)
+    expect(await heldBody(ui)).toBe(auto + 5)
 
     await ui.pointer({ type: 'down', x: 10, y: 0, button: 'left', in: HANDLE })
     await ui.pointer({ type: 'down', x: 10, y: 0, button: 'left', in: HANDLE })
@@ -103,7 +103,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await ui.unmount()
   })
 
-  test(`a drag never holds the Sessions panel under 12 rows (${surface})`, { plugins: [COMPASS] }, async ($, on) => {
+  test(`a drag never holds the Sessions panel under 12 rows, its body 8 (${surface})`, { plugins: [COMPASS] }, async ($, on) => {
     await populate($, on)
     const ui = await $.ui.mount(mountProps('task-compass', surface, 'task-compass'))
     await drag(ui, -200)
@@ -132,12 +132,17 @@ test("a height held on one surface leaves the other's panel sizing itself", { pl
   await desk.unmount()
 })
 
-test("agent-watch's own Agents pane draws no handle", async ($, on) => {
+test("agent-watch's own Agents pane has the handle too, and its height is its own, apart from Compass's pane", { plugins: [COMPASS] }, async ($, on) => {
   await populate($, on)
   for (const surface of ['terminal', 'desktop'] as const) {
-    const ui = await $.ui.mount(mountProps('agent-watch', surface, 'agent-watch'))
-    expect(await ui.findAll({ type: 'Client' })).toHaveLength(0)
-    await ui.unmount()
+    const own = await $.ui.mount(mountProps('agent-watch', surface, 'agent-watch'))
+    expect(await own.find({ type: 'Client', key: HANDLE })).toBeDefined()
+    await drag(own, -200)
+    expect(await heldBody(own)).toBe(8)
+    await own.unmount()
+    const compass = await $.ui.mount(mountProps('task-compass', surface, 'task-compass'))
+    expect(await heldBody(compass)).toBeUndefined()
+    await compass.unmount()
   }
 })
 
@@ -173,7 +178,7 @@ test('on a desktop a held panel shorter than its content is cut, not grown: the 
   await populate($, on)
   const ui = await $.ui.mount(mountProps('task-compass', 'desktop', 'task-compass'))
   await drag(ui, -200)
-  expect((await ui.find({ key: 'sessions-content' }))?.props).toMatchObject({ height: 12 - 4, overflow: 'hidden' })
+  expect((await ui.find({ key: 'sessions-handle-body' }))?.props).toMatchObject({ height: 8, overflow: 'hidden' })
   expect(await ui.find({ type: 'Client', key: HANDLE })).toBeDefined()
   await ui.unmount()
 })

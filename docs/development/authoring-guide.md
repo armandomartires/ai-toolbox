@@ -350,10 +350,23 @@ column; `tests/test-mods.sh` runs `claude plugin validate` and
 `hooks/sigma.tsx`: its tokens, status glyphs and primitives, and, in its
 header, the rules every surface follows. `mods/_template/hooks/sigma.tsx`
 is the one owner; each mod holds a byte-identical copy, which the gate
-checks. Change the owner, then copy it to every mod. A panel the person
-resizes by dragging draws `hooks/handle.tsx` under it in a `Client`, owned
-and gated the same way (`ADR-0052`); the mod that draws the panel keeps its
-height.
+checks. Change the owner, then copy it to every mod.
+
+**Shared parts first** (`ADR-0053`). A mod is built from the template's
+parts, and an element more than one mod could use (a panel, a control, a
+handle, a layout rule) is built in the owner, `mods/_template/hooks/`, and
+copied out, never inside one mod. Before writing an element, look there:
+`kit()` in `sigma.tsx` (panels, stats, meters, badges, toggles, rules),
+`handle.tsx`. A rule that must hold for every mod gets a check in
+`scripts/check-mods.py`. **Every panel in a pane is resizable**: pass
+`resize: { key, rows, held, min }` to `kit().panel`, read `held` with
+`heldOf(panelRows, e, key)`, and answer the pane's `ui.message` with
+`(await resizeAnswer(e, MINS, fn => update($, panelRows, fn))) ?? next(e)`,
+where `panelRows` is the mod's one `$.state` value for it. The panel draws
+the handle (`handle.tsx`, which every mod that carries `sigma.tsx` carries)
+on its bottom edge, holds its body at the rows dragged to, and draws nothing
+new on mobile and vscode. The gate fails a mod that draws a Pane with no
+`resize` (rule 9).
 
 A mod's own module map and traps go in its `DEVELOPING.md`, as
 `mods/task-compass/` does. The order of a mod change, the check that gates

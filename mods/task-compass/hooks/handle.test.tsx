@@ -56,8 +56,8 @@ const engine = (on: On) => {
 
 type Mounted = Awaited<ReturnType<EngineInterface['ui']['mount']>>
 
-/** The height the board's columns are held at; undefined while they size themselves. */
-const heldAt = async (ui: Mounted) => ((await ui.find({ key: 'sprint-columns' }))?.props as { height?: number } | undefined)?.height
+/** The height the board's body is held at; undefined while it sizes itself. */
+const heldAt = async (ui: Mounted) => ((await ui.find({ key: 'sprints-handle-body' }))?.props as { height?: number } | undefined)?.height
 
 /** The rows the handle is told the columns take. */
 const handleRows = async (ui: Mounted) => ((await ui.find({ key: HANDLE }))?.props as { props?: { rows?: number } } | undefined)?.props?.rows
@@ -88,18 +88,18 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await ui.unmount()
   })
 
-  test(`a drag never holds the board under its floor of 6 rows, and up and down nudge it a row (${surface})`, async ($, on) => {
+  test(`a drag never holds the board's body under 9 rows (6 for its columns), and up and down nudge it a row (${surface})`, async ($, on) => {
     engine(on)
     await $.session.start({ cwd: '/p', surface, isInteractive: true })
     const ui = await $.ui.mount({ ...PANE, surface })
     await ui.pointer({ type: 'down', x: 10, y: 0, button: 'left', in: HANDLE })
     await ui.pointer({ type: 'move', x: 10, y: -40, button: 'left', in: HANDLE })
     await ui.pointer({ type: 'up', x: 10, y: -40, button: 'left', in: HANDLE })
-    expect(await heldAt(ui)).toBe(6)
+    expect(await heldAt(ui)).toBe(9)
     await ui.key({ key: 'down', in: HANDLE })
     await ui.key({ key: 'down', in: HANDLE })
     await ui.key({ key: 'up', in: HANDLE })
-    expect(await heldAt(ui)).toBe(7)
+    expect(await heldAt(ui)).toBe(10)
     await ui.key({ key: 'r', in: HANDLE })
     expect(await heldAt(ui)).toBeUndefined()
     await ui.unmount()

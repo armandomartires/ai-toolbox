@@ -19,7 +19,8 @@ each directory mods/<dir>/:
      one owner, a table (SHARED): hooks/sigma.tsx, the SIGMAorbital design
      module (ADR-0043), and hooks/handle.tsx, the panel resize handle
      (ADR-0052), both owned by mods/_template. A mod whose hooks draw
-     (`ui.render`) carries a sigma.tsx;
+     (`ui.render`) carries a sigma.tsx, and a mod that carries a sigma.tsx
+     carries a handle.tsx, which sigma.tsx imports (ADR-0053);
   8. a mod that reads another mod's $.state declares that part of the
      owner's contract as a MIRROR (ADR-0044): a comment
      `// MIRROR of mods/<owner>/types/index.d.ts` naming a prefix ("Each
@@ -27,7 +28,12 @@ each directory mods/<dir>/:
      owner's `<Name>` (a union or plain type word for word, an object type
      field by field, a subset allowed), and its `'<owner>'` PluginState
      block agreeing with the owner's, key by key. A PluginState block for
-     another mod without a mirror fails too.
+     another mod without a mirror fails too;
+  9. every panel in a pane is resizable (ADR-0053): a mod whose hooks draw a
+     `Pane` pass `resize:` to sigma.tsx's `panel` in its hooks modules, once
+     the template's handle.tsx exists. A text check: it finds a pane with no
+     resizable panel, not a pane with one panel left out, which the mod's
+     tests catch.
 
 WHAT THIS PROVES: Claude Code can find the mod's manifest, hooks modules and
 contract, and the registry can index it; every mod draws from one copy of
@@ -52,6 +58,8 @@ SHARED = {
 }
 SIGMA_OWNER = SHARED["sigma.tsx"]
 DRAWS = re.compile(r"""['"]ui\.render['"]""")
+PANE = re.compile(r"""component:\s*['"]Pane['"]""")
+RESIZE = re.compile(r"\bresize:")
 
 
 def load(path, bad, what):
@@ -117,6 +125,7 @@ def check(mod, bad):
     if not os.path.isfile(os.path.join(mod, "README.md")):
         bad.append("%s: missing README.md" % mod)
     check_sigma(mod, hooks_dir, bad)
+    check_resize(mod, hooks_dir, bad)
     check_mirror(mod, bad)
 
 
@@ -128,15 +137,30 @@ def read_bytes(path):
         return None
 
 
-def draws(hooks_dir):
-    """True when a hooks module (not a test) hooks `ui.render`."""
+def hooks_text(hooks_dir, pattern):
+    """True when a hooks module (not a test) matches `pattern`."""
     for root, _, files in os.walk(hooks_dir):
         for f in files:
             if f.endswith((".ts", ".tsx")) and ".test." not in f:
                 text = read_bytes(os.path.join(root, f)) or b""
-                if DRAWS.search(text.decode("utf-8", "replace")):
+                if pattern.search(text.decode("utf-8", "replace")):
                     return True
     return False
+
+
+def draws(hooks_dir):
+    """True when a hooks module (not a test) hooks `ui.render`."""
+    return hooks_text(hooks_dir, DRAWS)
+
+
+def check_resize(mod, hooks_dir, bad):
+    """Rule 9: a mod that draws a Pane gives its panels a resize handle."""
+    if read_bytes(SHARED["handle.tsx"]) is None:
+        return
+    if hooks_text(hooks_dir, PANE) and not hooks_text(hooks_dir, RESIZE):
+        bad.append("%s: draws a Pane whose panels take no resize handle; pass "
+                   "resize: { key, rows, held, min } to kit().panel and answer "
+                   "ui.message with resizeAnswer (ADR-0053)" % mod)
 
 
 def check_sigma(mod, hooks_dir, bad):
@@ -150,6 +174,10 @@ def check_sigma(mod, hooks_dir, bad):
             if name == "sigma.tsx" and draws(hooks_dir):
                 bad.append("%s: draws (ui.render) without hooks/sigma.tsx; "
                            "cp %s %s" % (mod, owner_path, copy))
+            elif (name == "handle.tsx" and owner is not None
+                  and os.path.isfile(os.path.join(hooks_dir, "sigma.tsx"))):
+                bad.append("%s: carries hooks/sigma.tsx without hooks/handle.tsx, "
+                           "which it imports; cp %s %s" % (mod, owner_path, copy))
         elif owner is None:
             bad.append("%s: has hooks/%s but its owner %s is missing"
                        % (mod, name, owner_path))

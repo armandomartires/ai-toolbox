@@ -1,10 +1,10 @@
 import type { ClientModule, ClientPointerEvent } from 'claude-code'
 
 /**
- * A panel's resize handle (ADR-0052): a `Client` laid over the panel's bottom
- * edge (`handleSlot`), so a drag reaches it (`surface.onPointer`), and posted
- * to the drawing mod's own `ui.message` hooks, which store the rows and draw
- * again. A terminal draws the whole bottom edge, its corners and the grip in
+ * A panel's resize handle (ADR-0052, ADR-0053): the `Client` that
+ * `kit().panel({ resize })` in sigma.tsx lays over the panel's bottom edge, so
+ * a drag reaches it (`surface.onPointer`), and posted to the drawing mod's own
+ * `ui.message` hook (`resizeAnswer`), which stores the rows and draws again. A terminal draws the whole bottom edge, its corners and the grip in
  * it. On a desktop a text glyph cannot be placed to the pixel (a `▁` fell
  * below the line, seen live), so the hooks module draws the bar as an `Svg`
  * (`barSvg`) on the frame's bottom line and the region here draws only a hint.
@@ -25,6 +25,8 @@ export type HandleProps = {
   isAuto: boolean
   /** `terminal` or `desktop`: how a drag's rows are measured (below). */
   surface: string
+  /** The panel is a bracketed frame, whose corners a terminal redraws; else the edge is a plain rule. */
+  isFramed: boolean
   /** Hex colours: the grip at rest, while hovered or dragged, the hint, the panel's edge and its corner brackets. */
   line: string
   hot: string
@@ -73,8 +75,10 @@ const Handle: ClientModule<HandleProps, Look> = (props, surface) => {
     drags.set(surface, drag)
   }
   const held = drag
-  // The listener reads the latest props: a desktop need not call the module again between pointer events.
-  held.props = props
+  // The listener reads the latest props: a desktop need not call the module again between pointer events. A hook's answer
+  // (`resizeAnswer`) hands only what changed, the rows and `isAuto`, so they are laid over the last full props.
+  held.props = { ...held.props, ...props }
+  const now = held.props
   const look = surface.state ?? { isHover: false, isDragging: false }
   const show = (next: Partial<Look>) => surface.setState({ ...look, ...next })
   const ask = (kind: 'move' | 'nudge', rows: number) => surface.post({ kind, rows: Math.max(held.props.min, Math.round(rows)) })
@@ -119,10 +123,11 @@ const Handle: ClientModule<HandleProps, Look> = (props, surface) => {
   })
 
   const isHot = look.isDragging || look.isHover
-  const hint = look.isDragging ? '' : look.isHover ? hintText(props.isAuto) : ''
-  const grip = isHot ? props.hot : props.line
-  if (props.surface === 'terminal') {
-    // The panel's own bottom edge, redrawn whole with the grip in its middle: `└─` and `─┘` in the brackets' colour, `─` in the edge's.
+  const hint = look.isDragging ? '' : look.isHover ? hintText(now.isAuto) : ''
+  const grip = isHot ? now.hot : now.line
+  if (now.surface === 'terminal') {
+    // The panel's own bottom edge, redrawn whole with the grip in its middle: a frame's `└─` and `─┘` in the brackets' colour, `─` in the edge's.
+    const [left, right] = now.isFramed ? ['└─', '─┘'] : ['──', '──']
     const middle = Math.max(GRIP_CELLS, surface.columns - 4)
     const label = hint === '' ? '' : ` ${hint} `
     const inner = Math.min(middle, GRIP_CELLS + label.length)
@@ -130,12 +135,12 @@ const Handle: ClientModule<HandleProps, Look> = (props, surface) => {
     const after = middle - inner - before
     return (
       <Box flexDirection="row">
-        <Text color={props.bracket}>└─</Text>
-        <Text color={props.edge}>{'─'.repeat(before)}</Text>
+        <Text color={now.isFramed ? now.bracket : now.edge}>{left}</Text>
+        <Text color={now.edge}>{'─'.repeat(before)}</Text>
         <Text color={grip}>{'━'.repeat(GRIP_CELLS)}</Text>
-        {label !== '' && <Text color={props.text}>{label.slice(0, inner - GRIP_CELLS)}</Text>}
-        <Text color={props.edge}>{'─'.repeat(after)}</Text>
-        <Text color={props.bracket}>─┘</Text>
+        {label !== '' && <Text color={now.text}>{label.slice(0, inner - GRIP_CELLS)}</Text>}
+        <Text color={now.edge}>{'─'.repeat(after)}</Text>
+        <Text color={now.isFramed ? now.bracket : now.edge}>{right}</Text>
       </Box>
     )
   }
@@ -152,41 +157,5 @@ export const BAR_PX = { width: 64, height: 3 } as const
 /** The desktop's bar as `Svg` markup, in `fill`. */
 export const barSvg = (fill: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${BAR_PX.width}" height="${BAR_PX.height}" viewBox="0 0 ${BAR_PX.width} ${BAR_PX.height}"><rect width="${BAR_PX.width}" height="${BAR_PX.height}" fill="${fill}"/></svg>`
-
-type El = (props: Record<string, unknown>) => unknown
-
-/**
- * The handle as a mod draws it (ADR-0052): a one-row slot laid over the
- * panel's bottom edge, absolute in a column Box that holds the panel and
- * nothing else, so the slot's row is the frame's own last row on both
- * surfaces (a terminal's border row; a desktop's last padding row, whose foot
- * is the 1px edge). In it, on a desktop, the 3px bar and the hint, a framed
- * hover reveal on a solid fill just above the edge; then `client`, the
- * mod's own `Client` running this module, which takes the pointer.
- */
-export const handleSlot = (
-  els: { Box: El; Text: El; Svg?: El },
-  o: { key: string; width: number; isTerminal: boolean; isAuto: boolean; bar: string; fill: string; edge: string; text: string; client: unknown },
-) => {
-  const { Box, Text, Svg } = els as unknown as Record<'Box' | 'Text' | 'Svg', (props: Record<string, unknown>) => never>
-  return (
-    <Box key={`${o.key}-slot`} position="absolute" bottom={0} left={0} width={o.width} height={1}>
-      {!o.isTerminal && typeof Svg === 'function' && (
-        <Box key={`${o.key}-bar`} position="absolute" bottom={0} left={0} width="100%" flexDirection="row" justifyContent="center">
-          <Svg source={barSvg(o.bar)} width={BAR_PX.width} height={BAR_PX.height} alt="Resize handle" />
-        </Box>
-      )}
-      {/* No key: keyed, the reveal's hover would be its own, which the engine refuses; the keyed slot is what it answers to. */}
-      {!o.isTerminal && (
-        <Box position="absolute" bottom={1} left={0} width="100%" flexDirection="row" justifyContent="center" display="none" hover={{ display: 'flex' }}>
-          <Box borderStyle="single" borderColor={o.edge} backgroundColor={o.fill} paddingX={1}>
-            <Text color={o.text} backgroundColor={o.fill} size="caption">{hintText(o.isAuto)}</Text>
-          </Box>
-        </Box>
-      )}
-      {o.client as never}
-    </Box>
-  )
-}
 
 export default Handle

@@ -483,6 +483,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0222-install-mod-plugin-dirs.md
 - [x] TASK-0221 — task-compass 0.10.0, agent-watch 0.9.0: drag handles size the Sprints and Sessions panels
   .ai/tasks/TASK-0221-pane-drag-handles.md
+- [x] TASK-0223 — Every pane panel is resizable, from one shared panel; mods are built from shared parts
+  .ai/tasks/TASK-0223-shared-resizable-panel.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

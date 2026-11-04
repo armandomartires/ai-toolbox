@@ -32,3 +32,7 @@
 - **A server has two spellings**: `claude.ai Gmail` in `/mcp` and `tool.describe`'s provider (`mcp:claude.ai Gmail`), `claude_ai_Gmail` in its tools' names. `isOff` compares the tool-name spelling; `offName` gives back the one it was turned off by.
 - **Gating hooks have no `.catch`** on purpose: a judge that fails lets the call or plugin through, the safe way for a convenience switch to fail.
 - **Headless checks**: `claude -p "/switchboard ..." --plugin-dir mods/switchboard --output-format stream-json --verbose` runs the command with no model call; its `system/init` line lists the servers, plugins and skills, and `--debug-file` shows each hook's verdict.
+
+## The resize handle
+
+The pane's one panel is `kit().panel` with `resize: { key: 'switchboard-handle', rows, held, min: 4 }` (`ADR-0053`). It is not bracketed, so the shared panel draws the handle in a row under it, a plain edge. `rows` is counted as `section`, `group` and `row` draw (a wrapped caption or row is not counted). `sizePanels` is `resizeAnswer` into `panelRows`. `hooks/handle.tsx` is a byte-identical copy of the template's, which `sigma.tsx` imports. Tested in `register.test.tsx`.

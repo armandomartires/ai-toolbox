@@ -1,10 +1,10 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, RenderInput } from 'claude-code'
+import type { EngineInterface, RenderInput, UiMessageArgument, UiMessageResult } from 'claude-code'
 
 import type { Kind } from '../types'
 import { KINDS, SELF, groupKey, groupRows, isOff, isProtected, pendingNote, shownName, takesEffect } from './model'
 import type { ListOutput } from './model'
-import { STATUS, color, kit, recall } from './sigma'
+import { STATUS, color, heldOf, kit, recall, resizeAnswer } from './sigma'
 import { saveOff } from './store'
 
 // The same $.state values the hooks write: the engine lists a module's reads
@@ -16,9 +16,15 @@ const open = atom({ plugin: 'switchboard', key: 'open' } as const, ['mod'])
 const hints = atom({ plugin: 'switchboard', key: 'hints' } as const, {})
 const topics = atom({ plugin: 'switchboard', key: 'topics' } as const, {})
 const closedGroups = atom({ plugin: 'switchboard', key: 'closedGroups' } as const, [])
+// The rows the person dragged this mod's panels to (ADR-0053), read with `heldOf`, written by `resizeAnswer`.
+const panelRows = atom({ plugin: 'switchboard', key: 'panelRows' } as const, {})
 
 export const PANE = 'switchboard'
 export const TITLE = 'Switchboard'
+/** The resize handle's `Client` key on the Switchboard panel's bottom edge (ADR-0053). */
+export const SWITCHBOARD_HANDLE = 'switchboard-handle'
+/** Each of this pane's handles with the fewest rows a drag holds its panel's body at: a section header and a row. */
+const MINS = { [SWITCHBOARD_HANDLE]: 4 }
 
 const HEADINGS: Record<Kind, string> = { mod: 'Mods', skill: 'Skills', connector: 'Connectors' }
 
@@ -38,7 +44,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
   const { Box, Button, Text } = ui
   const { label, panel, rule, toggle } = kit(ui, e.surface)
   const width = Math.max(20, e.props.bodyColumns)
-  const [held, known, gone, shown, named, grouped, closed] = await Promise.all([
+  const [held, known, gone, shown, named, grouped, closed, sized] = await Promise.all([
     read($, off),
     read($, seen),
     read($, refused),
@@ -46,12 +52,16 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     read($, hints),
     read($, topics),
     read($, closedGroups),
+    read($, panelRows),
   ])
+  // The body's rows when it sizes itself, counted as `section`, `group` and `row` draw them: where a drag starts (ADR-0053).
+  let bodyRows = 0
 
   const row = (kind: Kind, name: string) => {
     const isSelf = kind === 'mod' && name === SELF
     const isOn = !isOff(held, kind, name)
     const note = kind === 'mod' && !isSelf ? pendingNote(held, gone, name) : undefined
+    bodyRows += note === undefined ? 1 : 2
     const press = () => void saveOff($, kind, name, isOn).catch(() => undefined)
 
     // The design's Toggle (SIGMAorbital): the square switch, the name and its
@@ -83,6 +93,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     const head = `${isClosed ? '▸' : '▾'} ${topic}`
     const counts = `${members.length}${offCount > 0 ? ` · ${STATUS.offline.glyph} ${offCount} OFF` : ''}`
     const spare = width - head.length - counts.length - 3
+    bodyRows += 2
 
     return (
       <Box flexDirection="column" marginTop={1}>
@@ -107,6 +118,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     const groups = groupRows(kind, names, grouped)
     const offCount = names.filter(name => isOff(held, kind, name)).length
     const isOpen = shown.includes(kind)
+    bodyRows += 2 + (isOpen ? 1 + (names.length === 0 ? 1 : 0) : 0)
     const flip = () =>
       void update($, open, list => (list.includes(kind) ? list.filter(k => k !== kind) : [...list, kind])).catch(() => undefined)
     const counts = `${names.length}${offCount > 0 ? ` · ${STATUS.offline.glyph} ${offCount} OFF` : ''}`
@@ -124,12 +136,25 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
   }
 
   const allOff = KINDS.reduce((sum, kind) => sum + held[kind].length, 0)
+  const sections = KINDS.map(section)
   return (
     <Box flexDirection="column" minHeight={e.props.scroll.bodyRows}>
-      {panel({ title: 'Switchboard', code: allOff > 0 ? `${allOff} off` : 'all on', width }, <Box flexDirection="column">{KINDS.map(section)}</Box>)}
+      {panel(
+        {
+          title: 'Switchboard',
+          code: allOff > 0 ? `${allOff} off` : 'all on',
+          width,
+          resize: { key: SWITCHBOARD_HANDLE, rows: bodyRows, held: heldOf(sized, e, SWITCHBOARD_HANDLE), min: MINS[SWITCHBOARD_HANDLE] },
+        },
+        <Box flexDirection="column">{sections}</Box>,
+      )}
     </Box>
   )
 }
+
+/** A drag on the panel's handle: the rows it asks for are held for this surface, or let go back to automatic (ADR-0053). */
+export const sizePanels = async ($: EngineInterface, e: UiMessageArgument, next: (e: UiMessageArgument) => Promise<UiMessageResult>) =>
+  (await resizeAnswer(e, MINS, fn => update($, panelRows, fn))) ?? next(e)
 
 /**
  * `/switchboard list` as a panel per kind; none for a row this session did

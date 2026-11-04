@@ -57,8 +57,8 @@ declare module 'claude-code' {
       railStart: number | null
       /** The numbers of the sprints folded to their header, progress and toggle; the rest show their stories. */
       foldedSprints: number[]
-      /** The rows the person dragged the board's columns to, by surface (`terminal`, `desktop`); a surface not listed sizes them itself (ADR-0052). */
-      sprintsRows: Record<string, number>
+      /** The rows the person dragged this mod's panels' bodies to, by pane, handle and surface (sigma.tsx `heldOf`); a panel not listed sizes itself (ADR-0053). */
+      panelRows: Record<string, number>
     }
   }
 }

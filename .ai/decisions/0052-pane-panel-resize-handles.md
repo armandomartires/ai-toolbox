@@ -1,6 +1,6 @@
 # 0052 — Each mod draws the resize handle for its own panel, from one shared surface module
 
-**Status**: proposed
+**Status**: proposed (clause 1, the drawing, superseded by ADR-0053 clause 2)
 **Date**: 2026-11-03
 **Sprint / task**: `Post-S10`, `TASK-0221`
 

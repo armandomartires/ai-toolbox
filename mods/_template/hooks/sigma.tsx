@@ -30,7 +30,16 @@
 // as the border's own edges clipped to a 2-cell and a 1-row arm (`┌ ┐ └ ┘` on a
 // terminal), so each arm lies on the line it sits on. Motion is a glyph pulse
 // only, and only while something runs.
+//
+// Every panel in a pane is resizable (ADR-0053): `panel({ ..., resize })` draws
+// the handle on its bottom edge (`handle.tsx`, a surface module every mod
+// carries) and holds its body at the rows dragged to; the mod's `ui.message`
+// hook answers with `resizeAnswer` into one `panelRows` value, read back with
+// `heldOf`. A part more than one mod can use is built here, or beside this file
+// in the template, never inside one mod.
 import type { ConfigValue, ElementTable, EngineInterface, On, RenderChildren, RenderSurface } from 'claude-code'
+
+import { BAR_PX, barSvg, heldRows, hintText } from './handle'
 
 export const SIGMA = 'SIGMAorbital tokens v2'
 
@@ -219,6 +228,51 @@ export const recall = <T,>(text: string): T | undefined => {
 }
 
 type Ui = ElementTable<RenderSurface>
+
+/**
+ * A panel the person sizes by dragging its bottom edge (ADR-0053). `key` is
+ * the handle's `Client` key, unique in its pane; `rows` the rows the body
+ * takes when it sizes itself, where a drag starts; `held` what `heldOf` read
+ * (undefined: automatic); `min` the fewest rows a drag holds the body at.
+ */
+export type Resize = { key: string; rows: number; held?: number; min: number }
+
+/** Every held body height of a mod, one `$.state` value, by pane, handle and surface (`heldKey`). */
+export type PanelRows = Record<string, number>
+
+/** The surfaces whose element table has `Client`: only there is a handle drawn and a height held. */
+export const RESIZED = ['terminal', 'desktop'] as const
+
+const heldKey = (requestId: string, key: string, surface: string) => `${requestId}/${key}@${surface}`
+
+/** The rows the person held a panel's body at on this pane and surface; undefined while it sizes itself. */
+export const heldOf = (rows: PanelRows, e: { requestId: string; surface: string }, key: string) =>
+  (RESIZED as readonly string[]).includes(e.surface) ? rows[heldKey(e.requestId, key, e.surface)] : undefined
+
+/**
+ * A mod's `ui.message` hook for its panels' handles: `mins` names each handle
+ * it draws in the pane with its floor; `write` is the mod's own update of its
+ * `panelRows` atom (atoms are read off the file that declares them). Resolves
+ * to the answer, or undefined for a post that is no handle's, to pass on:
+ * `(await resizeAnswer(e, MINS, fn => update($, panelRows, fn))) ?? next(e)`.
+ */
+export const resizeAnswer = async (
+  e: { requestId: string; element: string; surface: string; data: unknown },
+  mins: Record<string, number>,
+  write: (fn: (now: PanelRows) => PanelRows) => Promise<unknown>,
+): Promise<{ props?: unknown } | undefined> => {
+  const min = mins[e.element]
+  if (min === undefined || !(RESIZED as readonly string[]).includes(e.surface)) return undefined
+  const asked = heldRows(e.data, min)
+  if (asked === undefined) return undefined
+  const at = heldKey(e.requestId, e.element, e.surface)
+  await write(now => {
+    const { [at]: _, ...rest } = now
+    return asked === null ? rest : { ...rest, [at]: asked }
+  })
+  // The instance's next rows at once, so a drag's next move does not wait on the redraw; automatic waits for it, which alone knows the rows drawn.
+  return asked === null ? {} : { props: { rows: asked, isAuto: false } }
+}
 
 /** One stat block: `value` pre-formatted, `delta` with its sign, `status` the colour of a value out of limits. */
 export type StatBlock = { label: string; value: string; unit?: string; delta?: string; caption?: string; size?: 'md' | 'lg' | 'xl'; status?: Token }
@@ -409,7 +463,76 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
    * in `line` and text-1 corner brackets, drawn without the panel's height.
    * Without it a panel draws no border; `card` frames it square, which needs its height.
    */
+  /**
+   * A panel, sized by a drag on its bottom edge when `opts.resize` is given and
+   * the surface draws a `Client` (ADR-0053): the body held at `resize.held`
+   * rows, what does not fit cut; the handle laid over the frame's last row (a
+   * bracketed panel) or drawn in the row under it (a plain one). On a desktop
+   * the handle's region shows nothing: a 3px bar on the edge and, on hover, a
+   * framed hint on a solid fill above it. Elsewhere, the panel alone.
+   */
   const panel = (
+    opts: { title: string; code?: string; width: number; bracketed?: boolean; card?: { height: number; fill?: Token }; resize?: Resize },
+    body: RenderChildren,
+  ) => {
+    const { Client, Svg } = ui as unknown as Record<'Client' | 'Svg', ((props: Record<string, unknown>) => never) | undefined>
+    const r = opts.resize
+    if (r === undefined || typeof Client !== 'function' || !(RESIZED as readonly string[]).includes(surface)) return drawPanel(opts, body)
+    const held = r.held === undefined ? undefined : Math.max(r.min, r.held)
+    const isFramed = opts.bracketed === true
+    const sized = (
+      <Box key={`${r.key}-body`} flexDirection="column" {...(held === undefined ? {} : { height: held, overflow: 'hidden' as const })}>
+        {body}
+      </Box>
+    )
+    const handle = (
+      <Client
+        key={r.key}
+        module="./handle.tsx"
+        width="100%"
+        height={1}
+        props={{
+          rows: held ?? r.rows,
+          min: r.min,
+          isAuto: held === undefined,
+          surface,
+          isFramed,
+          line: color('line-strong'),
+          hot: color('cyan'),
+          text: color('text-3'),
+          edge: color('line'),
+          bracket: color('text-1'),
+        }}
+      />
+    )
+    // Absolute over a bracketed frame's last row (its border row on a terminal, the padding row whose foot is the edge on a desktop); a plain panel's in the row under it.
+    const slot = (
+      <Box key={`${r.key}-slot`} width={opts.width} height={1} {...(isFramed ? { position: 'absolute' as const, bottom: 0, left: 0 } : {})}>
+        {!isTerminal && typeof Svg === 'function' && (
+          <Box key={`${r.key}-bar`} position="absolute" bottom={0} left={0} width="100%" flexDirection="row" justifyContent="center">
+            <Svg source={barSvg(color('line-strong'))} width={BAR_PX.width} height={BAR_PX.height} alt="Resize handle" />
+          </Box>
+        )}
+        {/* No key: keyed, the reveal's hover would be its own, which the engine refuses; the keyed slot is what it answers to. */}
+        {!isTerminal && (
+          <Box position="absolute" bottom={1} left={0} width="100%" flexDirection="row" justifyContent="center" display="none" hover={{ display: 'flex' }}>
+            <Box borderStyle="single" borderColor={color('line')} backgroundColor={color('raised')} paddingX={1}>
+              <Text color={color('text-1')} backgroundColor={color('raised')} size="caption">{hintText(held === undefined)}</Text>
+            </Box>
+          </Box>
+        )}
+        {handle}
+      </Box>
+    )
+    return (
+      <Box key={`${r.key}-frame`} flexDirection="column" width={opts.width}>
+        {drawPanel(opts, sized)}
+        {slot}
+      </Box>
+    )
+  }
+
+  const drawPanel = (
     opts: { title: string; code?: string; width: number; bracketed?: boolean; card?: { height: number; fill?: Token } },
     body: RenderChildren,
   ) => {

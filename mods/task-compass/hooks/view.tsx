@@ -5,8 +5,7 @@ import type { Sprint, Status } from '../types'
 import { fit, STATUS, STATUSES } from './model'
 import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, drawnRows, focusOf, isRailRow, RAIL_GUTTER, sprintLabel } from './rails'
 import type { Row } from './rails'
-import { handleSlot, heldRows } from './handle'
-import { color, kit, recall } from './sigma'
+import { color, heldOf, kit, recall, resizeAnswer } from './sigma'
 
 // The same $.state values register.tsx writes: the engine lists a module's
 // reads and writes from atoms declared in that file.
@@ -20,8 +19,8 @@ const railStart = atom({ plugin: 'task-compass', key: 'railStart' } as const, nu
 const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
 // The sprints folded to their header and progress (none by default).
 const foldedSprints = atom({ plugin: 'task-compass', key: 'foldedSprints' } as const, [])
-// The rows the person dragged the board's columns to, by surface; none there is automatic (ADR-0052).
-const sprintsRows = atom({ plugin: 'task-compass', key: 'sprintsRows' } as const, {})
+// The rows the person dragged this mod's panels to (ADR-0053), read with `heldOf`, written by `resizeAnswer`.
+const panelRows = atom({ plugin: 'task-compass', key: 'panelRows' } as const, {})
 export const PANE = 'task-compass'
 const GOALS_FILE = 'GOALS.md'
 /** The cells a bracketed panel's border and padding take across: two each side. */
@@ -35,23 +34,12 @@ const FRAME_COLS = 4
  */
 const BOARD_CHROME_ROWS = 7
 const BOARD_FLOOR = 6
-/** The resize handle's `Client` key under the Sprints panel: what `ui.message` names when it posts. */
+/** The resize handle's `Client` key on the Sprints panel's bottom edge: what `ui.message` names when it posts. */
 export const SPRINTS_HANDLE = 'sprints-handle'
-/** The surfaces whose table has `Client`, where the handle is drawn and a held size applies; mobile and vscode keep the automatic layout. */
-const SIZED = ['terminal', 'desktop']
-
-/** The handle's props (`handle.tsx`, `HandleProps`): what the render draws and what a post answers, so a drag never waits on a redraw. */
-const handleProps = (surface: string, rows: number, isAuto: boolean) => ({
-  rows,
-  min: BOARD_FLOOR,
-  isAuto,
-  surface,
-  line: color('line-strong'),
-  hot: color('cyan'),
-  text: color('text-3'),
-  edge: color('line'),
-  bracket: color('text-1'),
-})
+/** The Sprints body's rows beside its columns: the carousel header, the legend's margin and the legend. */
+const BODY_EXTRA_ROWS = 3
+/** Each of this pane's handles with the fewest rows a drag holds its panel's body at. */
+const MINS = { [SPRINTS_HANDLE]: BOARD_FLOOR + BODY_EXTRA_ROWS }
 
 /** What `/compass` answers; what `/goals` answers, a sprint per row. */
 export type CompassOutput = { isPlaced: boolean; sprints: number; stories: number }
@@ -137,24 +125,14 @@ const noteBelow = ($: EngineInterface, said: string) => {
 const isEngineElement = (value: unknown) => typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'engine'
 
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it after the legend, so the person sees which copy draws the board. */
-export const VERSION = '0.10.0'
+export const VERSION = '0.11.0'
 
 /** The Compass pane: the sprint carousel and its legend, then what another mod contributes (ADR-0048). */
 export const registerPane = (on: On) => {
   on('ui.render', { component: 'CommandOutput', props: { command: 'compass' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
   on('ui.render', { component: 'CommandOutput', props: { command: 'goals' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
-  // A drag on the handle under the board: the rows it asks for are held for this surface, or let go back to automatic (ADR-0052).
-  on('ui.message', { requestId: PANE, element: SPRINTS_HANDLE }, async ($, e, next) => {
-    const asked = SIZED.includes(e.surface) ? heldRows(e.data, BOARD_FLOOR) : undefined
-    if (asked === undefined) return next(e)
-    await update($, sprintsRows, now => {
-      const { [e.surface]: _, ...rest } = now
-      return asked === null ? rest : { ...rest, [e.surface]: asked }
-    })
-    await next(e)
-    // The instance's next props at once: the next redraw hands them too, but a drag's next move should not wait for it. Automatic waits for that redraw, which alone knows the rows drawn.
-    return asked === null ? {} : { props: handleProps(e.surface, asked, false) }
-  })
+  // A drag on a handle in the pane: the rows it asks for are held for this surface, or let go back to automatic (ADR-0053).
+  on('ui.message', { requestId: PANE }, async ($, e, next) => (await resizeAnswer(e, MINS, fn => update($, panelRows, fn))) ?? next(e))
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
     // What another mod contributes to this pane (agent-watch's meter and Sessions panel, ADR-0048): drawn after the board, whichever mod loaded first.
     // A rejected next(e) is no contribution, and neither is core's own drawing (isEngineElement): a throw here, or an element the engine refuses, would make it draw its own pane in place of the board.
@@ -169,7 +147,7 @@ export const registerPane = (on: On) => {
     const ui = $.ui.resolve(e)
     const { Box, Button, Text } = ui
     const { frame, panel } = kit(ui, e.surface)
-    const [sprintList, declared, taskList, at, where, opened, scrolled, from, foldedList, heldBySurface] = await Promise.all([
+    const [sprintList, declared, taskList, at, where, opened, scrolled, from, foldedList, heldRowsMap] = await Promise.all([
       read($, sprints),
       read($, focus),
       read($, tasks),
@@ -179,18 +157,16 @@ export const registerPane = (on: On) => {
       read($, railStart),
       read($, source),
       read($, foldedSprints),
-      read($, sprintsRows),
+      read($, panelRows),
     ])
     const isTerminal = e.surface === 'terminal'
     const cols = Math.max(COLUMN_MIN, e.props.bodyColumns)
     // The pane's own room: the columns take what the board's chrome leaves, and
     // fold their done stories past it. A pane shorter than that scrolls.
     const rows = Math.max(16, e.props.scroll.bodyRows)
-    // A drag on the handle under the board holds its columns at a height (ADR-0052), on a surface that draws the handle.
-    const { Client } = ui as unknown as { Client?: (props: Record<string, unknown>) => never }
-    const canSize = typeof Client === 'function' && SIZED.includes(e.surface)
-    const held = canSize ? heldBySurface[e.surface] : undefined
-    const room = held !== undefined ? Math.max(BOARD_FLOOR, held) : Math.max(BOARD_FLOOR, rows - BOARD_CHROME_ROWS)
+    // A drag on the handle on the board's edge holds its body at a height (ADR-0053): the columns take what the header and legend leave.
+    const held = heldOf(heldRowsMap, e, SPRINTS_HANDLE)
+    const room = held !== undefined ? Math.max(BOARD_FLOOR, held - BODY_EXTRA_ROWS) : Math.max(BOARD_FLOOR, rows - BOARD_CHROME_ROWS)
 
     const { cur, focusId, isGuess } = focusOf(sprintList, declared, taskList)
     // The Sprints panel is a bracketed frame: what it holds is four cells narrower than the pane.
@@ -362,8 +338,8 @@ export const registerPane = (on: On) => {
         {list.map(drawRow)}
       </Box>
     ))
-    // What the columns take as drawn: the held rows, else the longest column's.
-    const columnsRows = held ?? Math.max(1, ...laid.map(list => drawnRows(list, opened)))
+    // What the body takes as drawn when it sizes itself: the longest column, the header and the legend.
+    const bodyRows = Math.max(1, ...laid.map(list => drawnRows(list, opened))) + BODY_EXTRA_ROWS
 
     // The carousel's controls; on the terminal, with the pane focused, h and
     // l scroll it and c goes back to the current sprint.
@@ -395,9 +371,14 @@ export const registerPane = (on: On) => {
 
     return (
       <Box flexDirection="column" minHeight={e.props.scroll.bodyRows}>
-        <Box key="sprints-frame" flexDirection="column">
         {panel(
-          { title: 'Sprints', code: sprintList.length === 0 ? undefined : `${sprintList.length} sprint${sprintList.length === 1 ? '' : 's'}`, width: cols, bracketed: true },
+          {
+            title: 'Sprints',
+            code: sprintList.length === 0 ? undefined : `${sprintList.length} sprint${sprintList.length === 1 ? '' : 's'}`,
+            width: cols,
+            bracketed: true,
+            resize: { key: SPRINTS_HANDLE, rows: bodyRows, held, min: MINS[SPRINTS_HANDLE] },
+          },
           <Box flexDirection="column" flexGrow={1}>
             {sprintList.length === 0 ? (
               <Text color={color('text-3')}>
@@ -411,7 +392,7 @@ export const registerPane = (on: On) => {
               header
             )}
 
-            <Box key="sprint-columns" flexDirection="row" flexGrow={1} {...(held !== undefined ? { height: held, overflow: 'hidden' as const } : {})}>
+            <Box key="sprint-columns" flexDirection="row" flexGrow={1} {...(held !== undefined ? { flexShrink: 1, overflow: 'hidden' as const } : {})}>
               {columns}
             </Box>
             {/* The status legend belongs to the board: inside its frame, wrapped to the frame's inner width. */}
@@ -430,21 +411,6 @@ export const registerPane = (on: On) => {
             </Box>
           </Box>,
         )}
-        {/* The handle lies on the frame's bottom edge (ADR-0052). */}
-        {canSize &&
-          Client !== undefined &&
-          handleSlot(ui as never, {
-            key: 'sprints-handle',
-            width: cols,
-            isTerminal,
-            isAuto: held === undefined,
-            bar: color('line-strong'),
-            fill: color('raised'),
-            edge: color('line'),
-            text: color('text-1'),
-            client: <Client key={SPRINTS_HANDLE} module="./handle.tsx" width="100%" height={1} props={handleProps(e.surface, columnsRows, held === undefined)} />,
-          })}
-        </Box>
 
         {contributed as never}
       </Box>

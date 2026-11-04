@@ -318,3 +318,27 @@ test('/switchboard list draws a panel per kind in the host theme; an unknown row
   expect((await old.find({ type: 'Text' }))?.text).toBe('engine')
   await old.unmount()
 })
+
+test('the Switchboard panel has the resize handle on its bottom edge: a drag holds its body, a double press lets it go, mobile has none (ADR-0053)', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  on('ui.message', () => ({}))
+  await start($)
+  const body = async (ui: Awaited<ReturnType<typeof $.ui.mount>>) => ((await ui.find({ key: 'switchboard-handle-body' }))?.props as { height?: number } | undefined)?.height
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    expect(await ui.find({ type: 'Client', key: 'switchboard-handle' })).toBeDefined()
+    expect(await body(ui)).toBeUndefined()
+    await ui.pointer({ type: 'down', x: 5, y: 0, button: 'left', in: 'switchboard-handle' })
+    await ui.pointer({ type: 'move', x: 5, y: -200, button: 'left', in: 'switchboard-handle' })
+    await ui.pointer({ type: 'up', x: 5, y: -200, button: 'left', in: 'switchboard-handle' })
+    expect(await body(ui)).toBe(4)
+    await ui.pointer({ type: 'down', x: 5, y: 0, button: 'left', in: 'switchboard-handle' })
+    await ui.pointer({ type: 'down', x: 5, y: 0, button: 'left', in: 'switchboard-handle' })
+    expect(await body(ui)).toBeUndefined()
+    await ui.unmount()
+  }
+  const phone = await $.ui.mount({ ...PANE, surface: 'mobile' })
+  expect(await phone.findAll({ type: 'Client' })).toHaveLength(0)
+  await phone.unmount()
+})

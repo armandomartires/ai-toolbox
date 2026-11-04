@@ -8,7 +8,7 @@ import { refreshInventory } from './inventory'
 import { USAGE, listData, listText, parseArgs, takesEffect } from './model'
 import { remember, syncTheme, watchTheme } from './sigma'
 import { loadOff, saveOff, syncOff } from './store'
-import { PANE, TITLE, renderOutput, renderPane } from './view'
+import { PANE, TITLE, renderOutput, renderPane, sizePanels } from './view'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
 // in that same file, so each module declares the atoms it uses.
@@ -56,5 +56,6 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, renderPane)
+  on('ui.message', { requestId: PANE }, sizePanels)
   on('ui.render', { component: 'CommandOutput', props: { command: 'switchboard' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
 }

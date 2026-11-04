@@ -160,5 +160,23 @@ for c in '"category": ""' '"category": "Planning"' '"category": "two words"' '"c
   check "C$i a bad category fails ($c)" $? "$out"
 done
 
+# Rule 7's import and rule 9 (ADR-0053), once the template owns a handle.tsx: a root <name> whose template owns both.
+hroot() { local r; r="$(root "$1")"; echo "export default 1" > "$r/mods/_template/hooks/handle.tsx"; echo "$r"; }
+both() { cp "$1/mods/_template/hooks/sigma.tsx" "$1/mods/_template/hooks/handle.tsx" "$1/mods/$2/hooks/"; }
+
+r="$(hroot no-handle)"; mod "$r" pane pane "$DRAW"; cp "$r/mods/_template/hooks/sigma.tsx" "$r/mods/pane/hooks/"; echo "const x = { resize: 1 }" >> "$r/mods/pane/hooks/register.tsx"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane: carries hooks/sigma.tsx without hooks/handle.tsx"* ]]
+check "H1 a sigma.tsx without the handle.tsx it imports fails, with the cp to run" $? "$out"
+
+r="$(hroot no-resize)"; mod "$r" pane pane "$DRAW"; both "$r" pane
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane: draws a Pane whose panels take no resize handle"* ]]
+check "H2 a mod that draws a Pane with no resizable panel fails" $? "$out"
+
+r="$(hroot resized)"; mod "$r" pane pane "$DRAW"; both "$r" pane; echo "const x = { resize: 1 }" >> "$r/mods/pane/hooks/register.tsx"
+run "$r"; check "H3 a Pane with a resizable panel passes" "$rc" "$out"
+
+r="$(hroot output-only)"; mod "$r" rows rows "on('ui.render', { component: 'CommandOutput' }, () => null)"; both "$r" rows
+run "$r"; check "H4 a mod that draws no Pane needs no resize" "$rc" "$out"
+
 echo "test-check-mods.sh: $((cases - fails))/$cases passed"
 [ "$fails" -eq 0 ]

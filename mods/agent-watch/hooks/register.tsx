@@ -30,7 +30,7 @@ import {
 } from './model'
 import { remember, syncTheme, watchTheme } from './sigma'
 import { PANE, TITLE } from './names'
-import { COMPASS_PANE, contributeSessions, renderOutput, renderPane, SESSIONS_HANDLE, sizeSessions } from './view'
+import { COMPASS_PANE, contributeSessions, renderOutput, renderPane, sizeSessions } from './view'
 import type { AgentRow } from '../types'
 import type { InFlight } from './model'
 
@@ -290,7 +290,8 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: PANE }, renderPane)
   // Compass's pane, after what Compass draws (ADR-0048).
   on('ui.render', { component: 'Pane', requestId: COMPASS_PANE }, contributeSessions)
-  on('ui.message', { requestId: COMPASS_PANE, element: SESSIONS_HANDLE }, sizeSessions)
+  on('ui.message', { requestId: COMPASS_PANE }, sizeSessions)
+  on('ui.message', { requestId: PANE }, sizeSessions)
   on('ui.render', { component: 'CommandOutput', props: { command: 'agent-watch' } }, async ($, e, next) => renderOutput($, e) ?? next(e))
   registerBand(on)
 }

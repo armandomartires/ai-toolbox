@@ -113,7 +113,8 @@ test('pressing a row selects it, outlines its arc and fills the selected panel; 
   const source = async () => String((await ui.find({ type: 'Svg' }))?.props.source)
   // The head row, and the panel's name and path while this session is the one shown.
   const sessions = async () => (await ui.findAll({ type: 'Text', text: /^THIS SESSION$/ })).length
-  const raised = async () => (await ui.findAll({ type: 'Box' })).filter(one => one.props.backgroundColor === DARK.raised).length
+  // The resize handle's hint is framed on `raised` too (ADR-0053): a row's fill is the unframed one.
+  const raised = async () => (await ui.findAll({ type: 'Box' })).filter(one => one.props.backgroundColor === DARK.raised && one.props.borderStyle === undefined).length
   // Nothing selected: this session in the panel, no arc outlined.
   expect(await source()).not.toContain(DARK.white)
   expect(await sessions()).toBe(3)
@@ -540,8 +541,9 @@ test('the pane draws the screenshot of 2026-10-29: this session idle, ORCH BALAN
   next('E1-engine row', [/^E1-engine · investigator/, '■', ' DONE', '1/1', '1m44s', '817k', /^\s+44 CALLS · 817k TOK$/])
   next('E2-panels row', [/^E2-panels · investigator/, '■', ' DONE', '1/1', '1m29s', '350.2k', /^\s+26 CALLS · 350\.2k TOK$/])
   next('agent-3 row', [/^agent-3 · tester/, '■', ' DONE', '1/1', '5m12s', '2.5M', /^\s+31 CALLS · 2\.5M TOK$/])
-  // Nothing is drawn after the last agent's caption but the mod's version, a desktop's alone.
+  // Nothing is drawn after the last agent's caption but the mod's version, a desktop's alone, and the resize handle's hover hint (ADR-0053).
   next('version', [/^AGENT-WATCH \d+\.\d+\.\d+$/])
+  next('handle hint', ['DRAG ↕ TO SIZE'])
   expect(nodes.length).toBe(cursor)
 
   // The sunburst: the centre is this session's name, state, steps and duration; each sector carries its label and its steps.
