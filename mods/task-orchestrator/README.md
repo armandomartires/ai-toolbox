@@ -6,7 +6,7 @@ Workers are subagents by default: each gets its own context and tools, runs in t
 
 ## Install
 
-Published to the organization plugin library (0.5.3, 2026-11-04; claude.ai ran no security scan on it). This checkout is 0.5.4 until it is republished:
+Published to the organization plugin library (0.5.4, 2026-11-04; claude.ai ran no security scan on it):
 
 ```
 /plugin install task-orchestrator@claudeai-organization-library
