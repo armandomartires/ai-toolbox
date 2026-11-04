@@ -1,0 +1,23 @@
+# Code owners for agent instruction files and the gates that check them
+# (issue #4, Q4 of docs/reports/2026-11-04-standards-remediation.md).
+#
+# These files steer every agent session, so a change to them needs the
+# owner's review. CODEOWNERS only REQUESTS that review; making it REQUIRED
+# is a project setting (protected branch "Code owner approval" on master)
+# that Armando turns on by hand - nothing in this file changes settings.
+
+# Agent instructions
+/AGENTS.md            @armando.martires
+/CLAUDE.md            @armando.martires
+/agents/              @armando.martires
+/loops/               @armando.martires
+/prompts/             @armando.martires
+/skills/*/SKILL.md    @armando.martires
+
+# The gates and this file itself
+/.gitlab/CODEOWNERS   @armando.martires
+/.gitlab-ci.yml       @armando.martires
+/.gitlab/ci/          @armando.martires
+/.githooks/           @armando.martires
+/tests/validate.sh    @armando.martires
+/scripts/check-hidden-unicode.py @armando.martires
