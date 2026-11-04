@@ -2,6 +2,14 @@
 # (tag `docker`, runner 3). GATES_REQUIRE_SANDBOX=1 turns the bwrap test from
 # skip-if-missing into must-run, so a runner that cannot sandbox fails here
 # instead of passing silently.
+#
+# Exit 77 = this runner cannot create user namespaces, so the sandbox was NOT
+# tested. It is an allowed failure (a warning, never a pass): runner 3's
+# docker executor refuses unshare(CLONE_NEWUSER) (ADR 0020 keeps it
+# unprivileged with the default seccomp profile). Every other failure, any
+# test included, still fails the pipeline. Once the runner allows user
+# namespaces the probe passes and the full suite is enforced again, with no
+# change here. Only the probe's known namespace errors map to 77.
 gates-sandbox:
   stage: test
   image: python:3.11
@@ -10,9 +18,22 @@ gates-sandbox:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: [mcp-servers/gates/**/*, .gitlab/ci/gates-sandbox.yml]
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  allow_failure:
+    exit_codes: [77]
   variables:
     GATES_REQUIRE_SANDBOX: "1"
   script:
     - apt-get update -qq && apt-get install -y -qq bubblewrap >/dev/null
+    - |
+      # The same namespaces the server's bwrap command unshares.
+      if ! bwrap --unshare-user --unshare-uts --unshare-ipc --unshare-pid --unshare-net \
+           --ro-bind / / --dev /dev --proc /proc true 2>bwrap-probe.err; then
+        cat bwrap-probe.err >&2
+        if grep -qE 'Creating new namespace failed|No permissions to creat(e|ing) new namespace|setting up uid map' bwrap-probe.err; then
+          echo "gates-sandbox: this runner cannot create user namespaces; the sandbox was NOT tested (exit 77, allowed failure)" >&2
+          exit 77
+        fi
+        echo "gates-sandbox: bwrap probe failed for another reason; running the suite to show it" >&2
+      fi
     - pip install -q uv==0.13.6
     - cd mcp-servers/gates && uv run --frozen pytest -q -rs
