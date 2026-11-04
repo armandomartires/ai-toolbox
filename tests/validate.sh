@@ -2115,5 +2115,25 @@ then
   fail=1
 fi
 
+# --------------------------------------------------------------------------
+# Every role and loop references the untrusted-content policy (issue #8).
+#
+# WHY: a role that never hears the rule cannot follow it. WHAT THIS PROVES:
+# the policy file exists and every agents/*/agent.md and loops/*/loop.md
+# (templates included, so new ones inherit it) names it. WHAT IT DOES NOT
+# PROVE: that a model obeys it; that is the eval suite's job (#10).
+UNTRUSTED_POLICY=docs/security/untrusted-content.md
+if [ ! -r "$UNTRUSTED_POLICY" ]; then
+  echo "UNTRUSTED: $UNTRUSTED_POLICY is missing"
+  fail=1
+fi
+for f in agents/*/agent.md loops/*/loop.md; do
+  [ -f "$f" ] || continue
+  if ! grep -qF "$UNTRUSTED_POLICY" "$f"; then
+    echo "UNTRUSTED: $f does not reference $UNTRUSTED_POLICY"
+    fail=1
+  fi
+done
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
