@@ -9,8 +9,39 @@
     "homepage": "https://github.com/ansible/vscode-ansible#readme"
   },
   "launch": {
-    "command": ["npx", "-y", "@ansible/ansible-mcp-server@26.6.0", "--stdio"],
+    "command": [
+      "npx",
+      "-y",
+      "@ansible/ansible-mcp-server@26.6.0",
+      "--stdio"
+    ],
     "transport": "stdio"
+  },
+  "pinned_launch": {
+    "note": "Issue #7. The lockfile install: `npm ci --ignore-scripts` in mcp-servers/ansible/lock verifies every package's integrity hash from package-lock.json, then this command runs the installed binary - no `npx -y` resolution at launch. scripts/mcp-sandbox.sh runs it in a container with only the egress declared below.",
+    "install": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "cwd": "lock",
+    "command": [
+      "node_modules/.bin/ansible-mcp-server",
+      "--stdio"
+    ]
+  },
+  "egress": {
+    "allow": [],
+    "note": "Issue #7. Hosts this server may reach at runtime. Empty: the wired tools need none, so scripts/mcp-sandbox.sh runs the container with --network none. A tool that needs the network (e.g. ansible's ade_setup_environment installing packages) then fails closed; adding a host here is a reviewed change."
+  },
+  "tool_lock": {
+    "note": "Issue #7. How scripts/mcp-tool-lock.py launches the pinned install to hash every tool definition into tools.lock.json; CI's mcp-tool-lock job fails on any added, removed or changed tool.",
+    "cwd": "lock",
+    "env": {
+      "WORKSPACE_ROOT": "/nonexistent-tool-lock"
+    }
   },
   "runtime": {
     "declared": "node>=24.0",

@@ -2170,5 +2170,52 @@ if ! python3 scripts/sbom-add-external.py --self-test; then
   fail=1
 fi
 
+# --------------------------------------------------------------------------
+# External MCP servers are pinned and sandboxed (issue #7): a lockfile with an
+# integrity hash on every package, a tools.lock.json of hashed tool
+# definitions, a declared egress list, and a sandbox launch with no network.
+if ! python3 scripts/mcp-tool-lock.py --self-test >/dev/null; then
+  echo "MCP-PIN: scripts/mcp-tool-lock.py self-test failed"
+  fail=1
+fi
+for manifest in mcp-servers/*/server.json; do
+  d=$(dirname "$manifest"); n=$(basename "$d")
+  case "$n" in _*) continue ;; esac
+  if ! python3 - "$d" <<'PY'
+import json, os, sys
+d = sys.argv[1]
+m = json.load(open(os.path.join(d, "server.json")))
+bad = []
+pl = m.get("pinned_launch")
+if not pl:
+    bad.append("no pinned_launch (npx -y has no integrity check)")
+else:
+    lock = os.path.join(d, pl["cwd"], "package-lock.json")
+    if not os.path.isfile(lock):
+        bad.append("no %s" % lock)
+    else:
+        pk = json.load(open(lock)).get("packages", {})
+        miss = [k for k, v in pk.items() if k and not v.get("link") and not v.get("integrity")]
+        if miss:
+            bad.append("lockfile packages without integrity: %s" % ", ".join(miss[:5]))
+        want = "%s@%s" % (m["upstream"]["package"], m["upstream"]["version"])
+        got = pk.get("node_modules/" + m["upstream"]["package"], {}).get("version")
+        if got != m["upstream"]["version"]:
+            bad.append("lockfile has %s, manifest says %s" % (got, want))
+if not isinstance(m.get("egress"), dict) or not isinstance(m["egress"].get("allow"), list):
+    bad.append("no egress.allow list")
+if not os.path.isfile(os.path.join(d, "tools.lock.json")):
+    bad.append("no tools.lock.json (run scripts/mcp-tool-lock.py approve)")
+for b in bad:
+    print("MCP-PIN: %s: %s" % (d, b))
+sys.exit(1 if bad else 0)
+PY
+  then fail=1; continue; fi
+  if ! scripts/mcp-sandbox.sh "$n" --print | grep -qx -- '--network'; then
+    echo "MCP-PIN: scripts/mcp-sandbox.sh $n does not set --network none"
+    fail=1
+  fi
+done
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
