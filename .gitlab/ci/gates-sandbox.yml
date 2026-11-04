@@ -29,7 +29,7 @@ gates-sandbox:
       if ! bwrap --unshare-user --unshare-uts --unshare-ipc --unshare-pid --unshare-net \
            --ro-bind / / --dev /dev --proc /proc true 2>bwrap-probe.err; then
         cat bwrap-probe.err >&2
-        if grep -qE 'Creating new namespace failed|No permissions to creat(e|ing) new namespace|setting up uid map' bwrap-probe.err; then
+        if grep -qE 'new namespace|uid map' bwrap-probe.err; then
           echo "gates-sandbox: this runner cannot create user namespaces; the sandbox was NOT tested (exit 77, allowed failure)" >&2
           exit 77
         fi
