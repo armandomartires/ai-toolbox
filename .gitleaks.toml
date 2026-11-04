@@ -1,0 +1,13 @@
+# gitleaks configuration (issue #3, Q3 of the standards remediation report).
+# Default rules plus a baseline allowlist. Every entry names WHY it is safe;
+# add new ones only after reading the finding, never to silence a real key.
+title = "ai-toolbox gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Dashboard KPI dict keys, e.g. \"key\": \"forecast_p85\" - identifiers, not credentials"
+regexTarget = "line"
+regexes = ['''"key":\s*"[a-z0-9_]+"''']
+paths = ['''^skills/project-workflow/dashboard/pm_metrics\.py$''']
