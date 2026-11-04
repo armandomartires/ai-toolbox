@@ -2083,6 +2083,37 @@ if ! python3 scripts/check-hidden-unicode.py --self-test; then
   fail=1
 fi
 python3 scripts/check-hidden-unicode.py || fail=1
+# Every GitHub Action is pinned to a full commit SHA (issue #2).
+#
+# WHY: a tag like @v4 is mutable; whoever controls the action's repo can move
+# it under us. WHAT THIS PROVES: every `uses:` in .github/workflows names a
+# 40-hex SHA (local `./` actions excepted), with a self-test so the check
+# cannot silently stop matching. WHAT IT DOES NOT PROVE: the pinned code is good.
+if ! python3 - <<'PY'
+import glob, re, sys
+pat = re.compile(r"^\s*(?:-\s*)?uses:\s*([^\s#]+)")
+def bad_refs(lines):
+    out = []
+    for i, l in enumerate(lines, 1):
+        m = pat.match(l)
+        if not m or m.group(1).startswith("./"):
+            continue
+        ref = m.group(1).rpartition("@")[2]
+        if not re.fullmatch(r"[0-9a-f]{40}", ref):
+            out.append((i, m.group(1)))
+    return out
+assert bad_refs(["      - uses: actions/checkout@v4"]) and not bad_refs(
+    ["      - uses: actions/checkout@" + "a" * 40 + " # v4", "  uses: ./local"]), "self-test"
+fail = False
+for f in sorted(glob.glob(".github/workflows/*.y*ml")):
+    for i, ref in bad_refs(open(f, encoding="utf-8").read().split("\n")):
+        print(f"ACTIONS-PIN: {f}:{i}: {ref} is not pinned to a commit SHA")
+        fail = True
+sys.exit(1 if fail else 0)
+PY
+then
+  fail=1
+fi
 
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
