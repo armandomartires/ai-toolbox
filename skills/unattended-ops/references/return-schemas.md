@@ -25,9 +25,11 @@ is the measurement that would settle it.
 **Extraction is structural, not prose-parsed.** Against
 `opencode 1.18.31`, `--format json` emits newline-delimited JSON with
 `type` ∈ {`step_start`, `text`, `tool_use`, `step_finish`}; the final message
-is at `part.text` where `type == "text"`, and **a denied tool call is a
-`tool_use` with `part.state.status == "error"`**, so a refusal is
-structurally distinguishable from a failure (`TASK-0055`, 2026-09-23). One
+is at `part.text` where `type == "text"`, and **an errored tool call is a
+`tool_use` with `part.state.status == "error"`**; a permission refusal is told
+from any other tool error only by `part.state.error`'s text, which the OpenCode
+driver matches against opencode's own denial wording (`TASK-0055`,
+2026-09-23; `TASK-0228`). One
 extraction function, with raw stdout as the fallback. Re-verify rather than
 cite: both clients' surfaces moved three times in four days during
 `TASK-0036`.
