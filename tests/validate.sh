@@ -2201,6 +2201,14 @@ python3 scripts/check-mod-status.py || fail=1
 # that egress is filtered (it is not; see docs/security/unattended-sandbox.md).
 python3 scripts/check-sandbox-ci.py --self-test || fail=1
 python3 scripts/check-sandbox-ci.py || fail=1
+# scrub-artifacts.sh removes a file holding a fetched value and fails.
+scrub_dir="$(mktemp -d)"
+printf 'x seeded-value-1234 y\n' > "$scrub_dir/leak"; printf 'clean\n' > "$scrub_dir/ok"
+if UNATTENDED_SECRETS="SCRUB_T=ai-toolbox/x#f" SCRUB_T=seeded-value-1234 bash scripts/sandbox/scrub-artifacts.sh "$scrub_dir" >/dev/null; then
+  echo "SANDBOX: scrub-artifacts did not fail on a leaked value"; fail=1
+fi
+{ [ ! -e "$scrub_dir/leak" ] && [ -e "$scrub_dir/ok" ]; } || { echo "SANDBOX: scrub-artifacts removed the wrong files"; fail=1; }
+rm -rf "$scrub_dir"
 python3 scripts/sandbox/vault-fetch.py --self-test || fail=1
 bash -n scripts/sandbox/assert-sandbox.sh || fail=1
 

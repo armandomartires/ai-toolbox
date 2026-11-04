@@ -33,16 +33,37 @@ fails if these are violated.
 ## Egress-filter gap
 
 Issue #11 asks for an egress allowlist. Level 1 does **not** filter egress: a
-job on runner 3 can reach any host the runner's Docker network can. The brief
-cites "ADR 0020 clause 4" for this gap. In this repository ADR-0020 is
-*"The LM Studio client is Bionic"* and its clause 4 concerns agent-role
-emission, not egress, so the referenced clause was not found here (it may be
-an ADR in the infra repository). Until an egress filter exists (Level 2: a
+job on runner 3 can reach any host the runner's Docker network can. This gap is
+governed by **ADR 0020 (runner/CI security), clauses 3-4, in the
+`sigmarecon/sysadmin/infrastructure` repository**. Clause 4 is the deferred
+egress filter. (Not this repository's ADR-0020, which is about the LM Studio
+client. The ai-toolbox bot token cannot read the infrastructure repository, so
+this is cited by repository and ADR number rather than linked to a file.)
+The egress acceptance criterion of #11 stays **open**. Until an egress filter exists (Level 2: a
 dedicated Docker network with an allowlisting proxy, or host firewall rules
 for the runner's bridge), a compromised run can exfiltrate whatever secrets it
 was given. Mitigations in Level 1: secrets are scoped read-only to
 `ai-toolbox/*`, `operator/*` is denied, tokens live 10 minutes, and only
-protected `master` pipelines can obtain one.
+only the `unattended-run` job (protected environment `unattended`, a schedule or
+manual run on protected `master`) can obtain one.
+
+## Secrets in logs and artifacts
+
+GitLab masks only CI/CD variables. Values fetched from Vault are **not**
+masked, so anything the driver or agent prints, and the `.ai/sessions/` and
+`.ai/handover*` artifacts (kept 30 days), could contain them. Level 1 limits this:
+
+- `vault-fetch.py` writes its exports to a file on `/dev/shm`. The job checks
+  its exit status (no `eval "$(...)"`, which fails open), sources the file and
+  deletes it.
+- After the driver, `scripts/sandbox/scrub-artifacts.sh` searches the artifact
+  paths for every fetched value and deletes any file that contains one. The job
+  then fails, so the leak is noticed.
+- Job logs are not scrubbed. Keep `UNATTENDED_SECRETS` to the minimum the run
+  needs. Moving secrets out of the agent's environment (files read only by the
+  tool that needs them) is Level 2.
+- `CI_JOB_TOKEN`, `XAI_API_KEY` and `OPENAI_API_KEY` are unset before the
+  driver starts, and `assert-sandbox.sh` fails if they are set.
 
 ## Apply steps (Armando, by hand)
 
@@ -50,14 +71,17 @@ protected `master` pipelines can obtain one.
    is applied through the managed path rather than added to the drift.
 1. Enable JWT auth for GitLab if not already present:
    `vault auth enable -path=jwt-gitlab jwt` and
-   `vault write auth/jwt-gitlab/config oidc_discovery_url=https://gtlb.sigmareconpt.duckdns.org bound_issuer=https://gtlb.sigmareconpt.duckdns.org`.
+   `vault write auth/jwt-gitlab/config oidc_discovery_url=https://<gitlab-host> bound_issuer=https://<gitlab-host>`.
 2. `vault policy write ai-toolbox-unattended-ro sandbox/vault/ai-toolbox-unattended.hcl`
    (confirm `sigmarecon-projects` is KV v2; adjust the `data/`/`metadata/` prefixes if not).
 3. `jq 'del(._comment)' sandbox/vault/jwt-role-ai-toolbox-unattended.json | vault write auth/jwt-gitlab/role/ai-toolbox-unattended -`
    (set `bound_audiences` and the job's `id_tokens.aud` to the same value).
-4. Set CI/CD variable `VAULT_ADDR` (project 17) and `UNATTENDED_SECRETS`.
-5. Check runner 3's `config.toml` against the requirements above.
-6. Run a manual pipeline on master with `UNATTENDED_RUN=1 UNATTENDED_DRY_RUN=1`;
+4. Create the protected environment `unattended` (Settings > CI/CD >
+   Protected environments) with Armando as the only deployer. The Vault role
+   binds `environment`, `environment_protected` and `pipeline_source`.
+5. Set CI/CD variable `VAULT_ADDR` (project 17) and `UNATTENDED_SECRETS`.
+6. Check runner 3's `config.toml` against the requirements above.
+7. Run a manual pipeline on master with `UNATTENDED_RUN=1 UNATTENDED_DRY_RUN=1`;
    that is the documented run for the acceptance criterion. Then add a schedule.
 
 ## Rollback

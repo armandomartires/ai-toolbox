@@ -33,6 +33,11 @@ def check_role(text):
     if bc.get("ref_protected") != "true": errs.append("role not bound to protected refs")
     if r.get("token_policies") != ["ai-toolbox-unattended-ro"]: errs.append("role policies are not exactly the read-only policy")
     if not r.get("token_no_default_policy"): errs.append("role keeps the default policy")
+    if bc.get("environment") != "unattended" or bc.get("environment_protected") != "true":
+        errs.append("role not bound to the protected environment 'unattended'")
+    if not bc.get("pipeline_source") or set(bc["pipeline_source"]) - {"schedule", "web"}:
+        errs.append("role not bound to pipeline_source schedule/web")
+    if r.get("bound_claims_type") != "string": errs.append("bound_claims_type must be string (no globs)")
     return errs
 
 
@@ -47,6 +52,13 @@ def check_ci(text):
         if "assert-sandbox.sh" not in body: errs.append(f"{job}: does not run assert-sandbox.sh")
         if re.search(r"VAULT_TOKEN|GITLAB_TOKEN|volumes:|privileged", body): errs.append(f"{job}: references a host credential or mount")
     if "id_tokens:" not in text: errs.append("unattended-run does not use id_tokens")
+    run = re.search(r"^unattended-run:\n((?:[ \n].*\n?)*)", text, re.M)
+    run = run.group(1) if run else ""
+    if not re.search(r"^\s+environment:\s*\n\s+name:\s*unattended\s*$", run, re.M):
+        errs.append("unattended-run: not in environment 'unattended'")
+    if re.search(r"\beval\b", run): errs.append("unattended-run: uses eval (fails open)")
+    if not re.search(r"unset\s+CI_JOB_TOKEN", run): errs.append("unattended-run: CI_JOB_TOKEN not unset")
+    if "scrub-artifacts.sh" not in run: errs.append("unattended-run: artifacts not scrubbed")
     if "$CI_DEFAULT_BRANCH" not in text: errs.append("unattended-run not restricted to the default branch")
     return errs
 
@@ -57,6 +69,18 @@ def self_test():
     assert check_hcl('path "kv/data/*" { capabilities = ["read"] }\npath "operator/*" { capabilities = ["deny"] }')
     assert check_role('{"bound_claims":{"project_id":"18"},"token_policies":["x"]}')
     assert check_ci("unattended-run:\n  script:\n    - echo $VAULT_TOKEN\n")
+    good_role = ('{"bound_claims":{"project_id":"17","ref_protected":"true","environment":"unattended",'
+                 '"environment_protected":"true","pipeline_source":["schedule","web"]},'
+                 '"bound_claims_type":"string","token_policies":["ai-toolbox-unattended-ro"],"token_no_default_policy":true}')
+    assert not check_role(good_role), check_role(good_role)
+    assert check_role(good_role.replace('"environment":"unattended",', ''))
+    assert check_role(good_role.replace('"string"', '"glob"'))
+    assert check_role(good_role.replace('"web"', '"push"'))
+    run = ("unattended-run:\n  tags: [docker]\n  environment:\n    name: unattended\n  id_tokens:\n  script:\n"
+           "    - unset CI_JOB_TOKEN\n    - bash scripts/sandbox/assert-sandbox.sh\n    - bash scripts/sandbox/scrub-artifacts.sh x\n")
+    assert not [e for e in check_ci(run) if e.startswith("unattended-run:")], check_ci(run)
+    assert check_ci(run + '    - eval "$(python3 f.py)"\n')
+    assert check_ci(run.replace("unset CI_JOB_TOKEN", "true"))
     print("check-sandbox-ci self-test: OK")
 
 

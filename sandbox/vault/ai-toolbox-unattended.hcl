@@ -9,8 +9,10 @@ path "sigmarecon-projects/data/ai-toolbox/*" {
   capabilities = ["read"]
 }
 
+# metadata read only (versions); no "list", so the job cannot enumerate the
+# names of all project secrets.
 path "sigmarecon-projects/metadata/ai-toolbox/*" {
-  capabilities = ["read", "list"]
+  capabilities = ["read"]
 }
 
 # Explicit deny on operator secrets. `deny` wins over any other policy
