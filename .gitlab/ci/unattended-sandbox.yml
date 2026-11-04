@@ -1,0 +1,75 @@
+# Unattended runs in a throwaway container (issue #11, Level 1).
+# Design and apply steps: docs/security/unattended-sandbox.md.
+# Checked by scripts/check-sandbox-ci.py from tests/validate.sh.
+
+# Runs on every MR and master pipeline, without secrets: proves the runner 3
+# container has no home mount and no host credentials.
+sandbox-selfcheck:
+  stage: test
+  image: python:3.11-slim
+  tags: [docker]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  cache: []
+  script:
+    # CI_JOB_TOKEN is always present in a job; drop it, as unattended-run does.
+    - unset CI_JOB_TOKEN
+    - bash scripts/sandbox/assert-sandbox.sh
+    - python3 scripts/sandbox/vault-fetch.py --self-test
+
+# The unattended run itself. Only on master, only when started on purpose
+# (a schedule or a manual pipeline with UNATTENDED_RUN=1). Secrets come from
+# Vault per job through the GitLab ID token; nothing is stored on the runner.
+unattended-run:
+  stage: test
+  image: python:3.11-slim
+  tags: [docker]
+  timeout: 2h
+  interruptible: false
+  resource_group: unattended-run
+  # Protected environment (Armando the only deployer). The Vault role is bound
+  # to this environment, so other jobs on master cannot get its token.
+  environment:
+    name: unattended
+  cache: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $UNATTENDED_RUN == "1" && ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: https://vault.sigmarecon.pt
+  variables:
+    GIT_DEPTH: 0
+    VAULT_ROLE: ai-toolbox-unattended
+    VAULT_AUTH_PATH: jwt-gitlab
+    # VAR=<path under sigmarecon-projects/ai-toolbox/>#<field>, space separated.
+    UNATTENDED_SECRETS: ""
+    UNATTENDED_BINDING: skills/unattended-ops/templates/bindings/opencode/binding.md
+  script:
+    - set -euo pipefail
+    # Drop credentials the agent must not use: the job token, and the LLM
+    # keys (scoped to evals-live in !17; unset here in case they are not).
+    - unset CI_JOB_TOKEN XAI_API_KEY OPENAI_API_KEY
+    - bash scripts/sandbox/assert-sandbox.sh
+    - test -n "$VAULT_ADDR" || { echo "VAULT_ADDR is not set"; exit 1; }
+    # Fail closed: a failed fetch stops the job (a command substitution would
+    # lose the exit status and carry on without secrets).
+    - secrets_file="$(mktemp /dev/shm/vault.XXXXXX)"
+    - python3 scripts/sandbox/vault-fetch.py > "$secrets_file" || { rm -f "$secrets_file"; echo "vault-fetch failed"; exit 1; }
+    - . "$secrets_file"
+    - rm -f "$secrets_file"
+    - unset VAULT_ID_TOKEN
+    - git config --global user.email "daneel.grokbot@noreply.sigmarecon.pt"
+    - git config --global user.name "Daneel - AIOps (unattended)"
+    - rc=0; python3 skills/unattended-ops/templates/bindings/opencode/driver.py --binding "$UNATTENDED_BINDING" --run-id "ci-$CI_PIPELINE_ID" ${UNATTENDED_DRY_RUN:+--dry-run} || rc=$?
+    # Vault values are not masked by GitLab. Remove any artifact file that
+    # contains a fetched value before upload (docs: "Secrets in logs and
+    # artifacts"). Runs here, not in after_script, which has no secrets.
+    - bash scripts/sandbox/scrub-artifacts.sh .ai/sessions .ai/handover*
+    - exit $rc
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - .ai/sessions/
+      - .ai/handover*
