@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Issue #12. Inert until a Renovate runner is set up for this GitLab instance (Armando). GitHub Actions stay with Dependabot (#2). External MCP servers in server.json are not managed: their version appears twice (upstream.version and the npx launch line) and must change together.",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "pep621",
+    "gitlabci"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "prConcurrentLimit": 3
+}

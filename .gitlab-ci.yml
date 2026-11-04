@@ -11,3 +11,5 @@ include:
   - local: .gitlab/ci/validate.yml
   # Secret scanning (issue #3).
   - local: .gitlab/ci/gitleaks.yml
+  # CycloneDX SBOM (issue #12).
+  - local: .gitlab/ci/sbom.yml
