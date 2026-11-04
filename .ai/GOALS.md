@@ -469,11 +469,11 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0214-cancel-a-handoff.md
 - [?] TASK-0215 — agent-watch 0.8.0: the band follows the run
   .ai/tasks/TASK-0215-agent-watch-band-follows-the-run.md
-- [?] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
+- [x] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
   .ai/tasks/TASK-0216-agent-watch-gap-and-kpis.md
 - [?] TASK-0217 — Preview mod panes in a browser; copy mods into a session
   .ai/tasks/TASK-0217-preview-mod-panes.md
-- [?] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
+- [x] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
   .ai/tasks/TASK-0219-mod-preview-refined.md
 - [x] TASK-0218 — One workflow for developing mods, with a chart and a skill
   .ai/tasks/TASK-0218-mod-development-workflow.md
@@ -493,6 +493,10 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0225-orchestrator-open-items.md
 - [x] TASK-0227 — vault-secrets 2.3.1: judge an AppRole file on Windows by its access list
   .ai/tasks/TASK-0227-vault-approle-on-windows.md
+- [x] TASK-0228 — The OpenCode driver tells a permission denial from another tool error (B-067)
+  .ai/tasks/TASK-0228-driver-tells-denials-from-errors.md
+- [x] TASK-0229 — task-compass's README shows the pane on the desktop and in a terminal (B-064)
+  .ai/tasks/TASK-0229-compass-readme-screenshots.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
@@ -505,10 +509,6 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - B-062 asset-management's vendored `project-workflow` predates `vendor-skill.sh` and is behind 7.1.2
   .ai/planning/BACKLOG.md
 - B-063 Estate repository work waiting on the human: pushes of `b92e2a9` (`B-039`) and `2a09fa0` (`B-052`); LDAP config drift, estate `#96`
-  .ai/planning/BACKLOG.md
-- B-064 `task-compass`'s README has no screenshots
-  .ai/planning/BACKLOG.md
-- B-067 The OpenCode driver journals every tool error as `tool-denied`
   .ai/planning/BACKLOG.md
 - B-069 An OpenCode port of a mod: `mods/<name>/opencode/` on `@opencode/plugin`
   .ai/planning/BACKLOG.md

@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-03
-- Updated: 2026-11-03
+- Updated: 2026-11-04
 - Applies to: `scripts/preview-mods.py`, `scripts/preview/`, `scripts/preview_snapshots.py`, `mods/agent-watch/preview/`, `mods/task-compass/preview/`, their tests
 - Source: the human, 2026-11-03: "We need to refine and improve the Mod preview tool", then all four of: closer to the real surfaces, presses and resizing, screenshots and regression, fit the workflow
 
@@ -71,3 +71,4 @@ Next: a PNG looked at once for fidelity; the kit's fragment quirk (a `<>…</>` 
 
 - 2026-11-03 · Claude Code (Fable 5.1) · P1 renderer, P2 fixtures, P3 snapshots done; PR not ready (a press lost its plugin, snapshots followed the live board, `--snapshot` on a failed build) and fixed by the coordinator with the low items (validation, JSON-only POST, in-flight guard, code-point clamp, `min-height`); agent-watch 137 pass, task-compass 46/9 as at HEAD, `check-mods` OK, `--check` stable twice
 - 2026-11-03 · Claude Code (Fable 5.1) · the protocol, server and page split written; a press (`toggle-list`) and a resize (100 columns) drawn through `POST /run`; P1, P2, P3 and PR dispatched in series; P1 started by the coordinator's own Agent call (auto mode gave the spawn no verdict)
+- 2026-11-04 · Claude Code (Opus 5.5) · board review: every criterion and validation is met; the PNG fidelity look and the fragment quirk are follow-ups, not criteria; closed

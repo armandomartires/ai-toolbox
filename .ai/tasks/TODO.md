@@ -257,10 +257,10 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget
 - [x] TASK-0214 — task-orchestrator cancels a handed-off task (B-068)
 - [ ] TASK-0215 — agent-watch 0.8.0: the band follows the run
-- [ ] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
+- [x] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
 - [ ] TASK-0217 — Preview mod panes in a browser; copy mods into a session
-- [ ] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
-- [ ] TASK-0218 — One workflow for developing mods, with a chart and a skill
+- [x] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
+- [x] TASK-0218 — One workflow for developing mods, with a chart and a skill
 - [x] TASK-0220 — switchboard 0.5.0: mods and skills grouped by topic, in SIGMAorbital
 - [x] TASK-0222 — install.sh writes the mod list Claude Code loads, and --status reports it
 - [x] TASK-0221 — task-compass 0.10.0, agent-watch 0.9.0: drag handles size the Sprints and Sessions panels
@@ -269,6 +269,8 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0224 — task-orchestrator 0.5.3: model routing fixes
 - [x] TASK-0225 — task-orchestrator 0.5.4: a misclassification hint, and the session gate's effort from settings
 - [x] TASK-0227 — vault-secrets 2.3.1: judge an AppRole file on Windows by its access list
+- [x] TASK-0228 — The OpenCode driver tells a permission denial from another tool error (B-067)
+- [x] TASK-0229 — task-compass's README shows the pane on the desktop and in a terminal (B-064)
 
 ## Post-S9 (superseded by the promotion above)
 

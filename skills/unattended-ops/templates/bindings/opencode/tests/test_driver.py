@@ -438,6 +438,31 @@ class TestHappyPath(Harness):
         for argv in self.invocations():
             self.assertIn("do not open the skill's files", argv[-1])
 
+    def test_only_a_permission_refusal_is_journaled_as_denied(self):
+        # B-067 / TASK-0228: TASK-0176's pilot journaled 40 tool-denied where
+        # opencode's log showed 8 denials; every errored tool counted. The
+        # texts are opencode 1.18's PermissionRejectedError, PermissionDeniedError,
+        # PermissionCorrectedError and a dismissed question, the four its own
+        # UI tells from other errors.
+        agents = happy()
+        agents["task-planner"][0]["tool_errors"] = [
+            ["bash", "The user has specified a rule which prevents you from using "
+                     "this specific tool call. Here are some of the relevant rules []"],
+            ["read", "The user rejected permission to use this specific tool call."],
+            ["edit", "The user rejected permission to use this specific tool call "
+                     "with the following feedback: no"],
+            ["question", "QuestionRejectedError: The user dismissed this question"],
+            ["write", "The write tool was called with invalid arguments: SchemaError("
+                      "Missing key\n  at [\"content\"])."],
+            ["read", "File not found: /x"],
+        ]
+        self.make_repo()
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        denied = [e for e in self.events("tool-denied") if e["role"] == "task-planner"]
+        errors = [e for e in self.events("tool-error") if e["role"] == "task-planner"]
+        self.assertEqual([e["tools"] for e in denied], [["bash", "read", "edit", "question"]])
+        self.assertEqual([e["tools"] for e in errors], [["write", "read"]])
+
     def test_preflight_is_handed_the_drivers_own_checks(self):
         # TASK-0096: the second dry run halted because the driver ran the
         # model and primary-mode checks and handed the role neither result.
