@@ -9,3 +9,5 @@ include:
   - local: .gitlab/ci/dashboard-pages.yml
   # Merge gate (issue #1). Separate from the dashboard, which never gates.
   - local: .gitlab/ci/validate.yml
+  # Secret scanning (issue #3).
+  - local: .gitlab/ci/gitleaks.yml
