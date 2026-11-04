@@ -13,3 +13,5 @@ include:
   - local: .gitlab/ci/gitleaks.yml
   # CycloneDX SBOM (issue #12).
   - local: .gitlab/ci/sbom.yml
+  # OpenTelemetry spans reach a collector (issue #14).
+  - local: .gitlab/ci/otel.yml

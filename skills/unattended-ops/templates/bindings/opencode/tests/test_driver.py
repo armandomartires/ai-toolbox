@@ -305,6 +305,24 @@ class TestForgeTracker(Harness):
         self.assertIn("gitlab (group/app)", text)
         self.assertRegex(text, r"- #42 @[0-9a-f]+: update the issue from the snapshot")
 
+    def test_the_journal_is_hash_chained_and_an_edit_is_detected(self):
+        # Issue #14: every line links to the previous line's SHA-256.
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        path = os.path.join(self.repo, ".run", "r1", "journal.jsonl")
+        tool = os.path.join(HERE, "..", "..", "..", "..", "scripts", "journal-chain.py")
+        ok = subprocess.run([sys.executable, tool, "verify", path], capture_output=True, text=True)
+        self.assertEqual(ok.returncode, 0, ok.stdout)
+        self.assertEqual(self.journal()[0]["prev"], "0" * 64)
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+        lines[1] = lines[1].replace('"event": "', '"event": "x', 1)
+        with open(path, "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        bad = subprocess.run([sys.executable, tool, "verify", path], capture_output=True, text=True)
+        self.assertEqual(bad.returncode, 1, bad.stdout)
+        self.assertIn("line 3", bad.stdout)
+
     def test_no_role_is_asked_to_run_glab_or_gh(self):
         self.make_forge()
         self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)

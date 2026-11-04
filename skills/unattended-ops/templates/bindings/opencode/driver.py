@@ -35,6 +35,7 @@ import signal
 import subprocess
 import sys
 import time
+import hashlib
 
 # --- Vocabulary owned elsewhere, cited here --------------------------------
 
@@ -123,6 +124,16 @@ GATE_LINE = re.compile(r"^GATE (?P<handle>\S+) NAME=(?P<name>\S+) "
                        r"STATE=(?P<state>[A-Z]+) EXIT=(?P<exit>-?\d+) "
                        r"ELAPSED=(?P<elapsed>\d+)s LOG=(?P<log>.*)$")
 
+
+
+def _journal_tail_hash(path):
+    """SHA-256 of the journal's last line (without newline), or 64 zeros."""
+    try:
+        with open(path, "rb") as fh:
+            lines = fh.read().decode("utf-8").rstrip("\n").split("\n")
+    except FileNotFoundError:
+        return "0" * 64
+    return hashlib.sha256(lines[-1].encode("utf-8")).hexdigest() if lines[-1] else "0" * 64
 
 class Halt(Exception):
     """The run ends (loop.md, `halt-run` and preflight halts); step 14 runs."""
@@ -314,6 +325,10 @@ class Driver:
         """Step 12 — one appended line per event, never truncated."""
         os.makedirs(os.path.dirname(self.b.journal_path), exist_ok=True)
         rec = {"run": self.b.run_id, "t": int(time.time()), "event": event, **fields}
+        # Hash chain (issue #14): `prev` is the SHA-256 of the previous line's
+        # bytes, 64 zeros for the first. Verify with
+        # skills/unattended-ops/scripts/journal-chain.py verify <journal>.
+        rec["prev"] = _journal_tail_hash(self.b.journal_path)
         with open(self.b.journal_path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec, sort_keys=True) + "\n")
 

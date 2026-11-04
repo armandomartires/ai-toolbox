@@ -2170,5 +2170,13 @@ if ! python3 scripts/sbom-add-external.py --self-test; then
   fail=1
 fi
 
+# --------------------------------------------------------------------------
+# The run journal is hash-chained (issue #14): edits, deletions, reordering
+# and (against a recorded head) truncation are detected. A red proof.
+if ! python3 skills/unattended-ops/scripts/journal-chain.py --self-test >/dev/null; then
+  echo "JOURNAL: skills/unattended-ops/scripts/journal-chain.py self-test failed"
+  fail=1
+fi
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
