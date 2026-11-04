@@ -2234,6 +2234,12 @@ for f in scripts/mcp-sandbox.sh .gitlab/ci/mcp-tool-lock.yml; do
     echo "MCP-PIN: $f uses a node image without a @sha256 digest"; fail=1
   fi
 done
+# The run journal is hash-chained (issue #14): edits, deletions, reordering
+# and (against a recorded head) truncation are detected. A red proof.
+if ! python3 skills/unattended-ops/scripts/journal-chain.py --self-test >/dev/null; then
+  echo "JOURNAL: skills/unattended-ops/scripts/journal-chain.py self-test failed"
+  fail=1
+fi
 
 # Mod status and the live-verification gate (issues #5 and #9).
 #

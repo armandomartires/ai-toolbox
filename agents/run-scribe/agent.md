@@ -48,6 +48,14 @@ made to agree with a summary, which is the failure this file exists to make
 impossible rather than unlikely. A wrong line is corrected by a **later**
 line saying so.
 
+**Hash-chained (issue #14).** Each line is a JSON object whose `prev` is the
+SHA-256 of the previous line's exact bytes (64 zeros for the first), so an
+edit, deletion or reordering is detectable:
+`skills/unattended-ops/scripts/journal-chain.py verify <journal>`. Append
+with `journal-chain.py append <journal> '<json>'` when you cannot compute the
+hash yourself, and put the HEAD it prints in the handover: the chain cannot
+show lines cut off the end unless that head is recorded elsewhere.
+
 **One window is irreducible** and you should not pretend otherwise: between
 `git commit` returning and the journal line reaching disk. A binding closes
 it **on resume**, with a `git log --grep <task id>` guard. Say so rather than

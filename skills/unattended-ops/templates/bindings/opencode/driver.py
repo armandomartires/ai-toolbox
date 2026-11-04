@@ -25,8 +25,10 @@ them (ADR-0032); a copy elsewhere is tested by whatever its repository wires.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import fnmatch
 import glob
+import hashlib
 import json
 import os
 import re
@@ -129,6 +131,89 @@ GATE_LINE = re.compile(r"^GATE (?P<handle>\S+) NAME=(?P<name>\S+) "
                        r"STATE=(?P<state>[A-Z]+) EXIT=(?P<exit>-?\d+) "
                        r"ELAPSED=(?P<elapsed>\d+)s LOG=(?P<log>.*)$")
 
+
+
+# --- Journal hash chain (issue #14) ------------------------------------------
+# Same format and rules as skills/unattended-ops/scripts/journal-chain.py,
+# repeated here because a binding copy must run without that script.
+GENESIS = "0" * 64
+HEAD_LINE = re.compile(r"^Journal head: ([0-9a-f]{64})\s*$", re.M)
+
+
+def _sha(b):
+    return hashlib.sha256(b).hexdigest()
+
+
+def _tail_line(fh):
+    """The last non-empty line's bytes, read backwards until a newline."""
+    fh.seek(0, os.SEEK_END)
+    end = fh.tell()
+    while end > 0:
+        fh.seek(end - 1)
+        if fh.read(1) != b"\n":
+            break
+        end -= 1
+    pos, buf = end, b""
+    while pos > 0:
+        step = min(4096, pos)
+        pos -= step
+        fh.seek(pos)
+        buf = fh.read(step) + buf
+        nl = buf.rfind(b"\n")
+        if nl != -1:
+            return buf[nl + 1:]
+    return buf
+
+
+def journal_append(path, rec):
+    """Append rec chained to the previous line, under an exclusive flock.
+    A journal ending in an unchained (pre-upgrade) line gets a chain-start
+    marker first. Returns the new head hash."""
+    with open(path, "a+b") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            tail, out = _tail_line(fh), b""
+            try:
+                chained = tail and "prev" in json.loads(tail.decode("utf-8"))
+            except ValueError:
+                chained = True  # hash it as is; verify will name the bad line
+            if tail and not chained:
+                marker = json.dumps({"event": "chain-start", "prev": GENESIS}, sort_keys=True).encode()
+                out, prev = marker + b"\n", _sha(marker)
+            else:
+                prev = _sha(tail) if tail else GENESIS
+            line = json.dumps(dict(rec, prev=prev), sort_keys=True).encode("utf-8")
+            fh.seek(0, os.SEEK_END)
+            fh.write(out + line + b"\n")
+            fh.flush()
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+    return _sha(line)
+
+
+def journal_verify(path, head=None):
+    """(ok, head-or-reason). Legacy unchained lines before line 1 or a
+    chain-start marker are skipped; everything after must chain."""
+    prev, started = GENESIS, False
+    with open(path, "rb") as fh:
+        for n, raw in enumerate(fh, 1):
+            line = raw.rstrip(b"\n")
+            try:
+                rec = json.loads(line.decode("utf-8"))
+            except ValueError:
+                return False, "line %d is not JSON" % n
+            if not started:
+                if "prev" not in rec:
+                    continue
+                if n > 1 and rec.get("event") != "chain-start":
+                    return False, "line %d: chained line after legacy lines without chain-start" % n
+                started = True
+            if rec.get("prev") != prev:
+                return False, "line %d: chain broken" % n
+            prev = _sha(line)
+    if head and head != prev:
+        return False, "head %s does not match the recorded %s" % (prev[:12], head[:12])
+    return True, prev
 
 class Halt(Exception):
     """The run ends (loop.md, `halt-run` and preflight halts); step 14 runs."""
@@ -320,8 +405,10 @@ class Driver:
         """Step 12 — one appended line per event, never truncated."""
         os.makedirs(os.path.dirname(self.b.journal_path), exist_ok=True)
         rec = {"run": self.b.run_id, "t": int(time.time()), "event": event, **fields}
-        with open(self.b.journal_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(rec, sort_keys=True) + "\n")
+        # Hash chain (issue #14): `prev` is the SHA-256 of the previous line's
+        # bytes, 64 zeros for the first. Verify with
+        # skills/unattended-ops/scripts/journal-chain.py verify <journal>.
+        self.journal_head = journal_append(self.b.journal_path, rec)
 
     def invoke(self, role, prompt):
         """Run one role via `opencode run`, returning its final message text.
@@ -411,6 +498,7 @@ class Driver:
         if dirty:
             # Rule 5; loop.md step 1: any dirty path is a halt naming it.
             raise Halt("working tree is dirty:\n" + dirty)
+        self.check_journal_anchor()
         if not self.opencode:
             raise Halt("opencode is not on PATH")
         for p in (self.b.evidence, self.b.journal_path, self.b.handover):
@@ -907,6 +995,29 @@ class Driver:
                     u["issue"], " @%s" % u["commit"] if u["commit"] else "", u["action"],
                     " (snapshot %s)" % u["snapshot"] if u["snapshot"] else ""))
 
+    def check_journal_anchor(self):
+        """On resume (issue #14): the journal must still chain up to the head
+        the previous run recorded in its handover. Lines cut off the end, or
+        a recomputed chain, no longer match."""
+        if not (os.path.exists(self.b.journal_path) and os.path.exists(self.b.handover)):
+            return
+        with open(self.b.handover, encoding="utf-8") as fh:
+            heads = HEAD_LINE.findall(fh.read())
+        if not heads:
+            return
+        ok, msg = journal_verify(self.b.journal_path, heads[-1])
+        if not ok:
+            raise Halt("journal does not match the head recorded in the handover: %s" % msg)
+
+    def record_journal_head(self):
+        """Step 14 — the anchor goes outside the journal: the handover and
+        the run summary on stdout (CI log)."""
+        head = getattr(self, "journal_head", None)
+        if not head:
+            return
+        with open(self.b.handover, "a", encoding="utf-8") as fh:
+            fh.write("\nJournal head: %s\n" % head)
+
     def step14_handover(self):
         """Step 14 — run-scribe re-derives the handover; runs even on a halt."""
         os.makedirs(os.path.dirname(self.b.handover), exist_ok=True)
@@ -939,6 +1050,7 @@ class Driver:
                     json.dumps(self.closed), json.dumps(self.parked), self.halted))
                 fh.write("Push: NOT TAKEN — merge and push are the human's.\n")
         self.write_forge_updates()
+        self.record_journal_head()
 
     def on_signal(self, signum, _frame):
         """SIGTERM, SIGINT, SIGHUP: stop at once, with a handover (TASK-0100).
@@ -1075,8 +1187,12 @@ def main(argv=None):
     except (Halt, OSError, ValueError) as exc:
         print("REFUSED: %s" % exc, file=sys.stderr)
         return 2
-    code = Driver(binding, dry_run=args.dry_run).run()
+    driver = Driver(binding, dry_run=args.dry_run)
+    code = driver.run()
     print("handover: %s" % binding.handover)
+    if getattr(driver, "journal_head", None):
+        # The run summary carries the anchor too (issue #14).
+        print("journal-head: %s" % driver.journal_head)
     return code
 
 

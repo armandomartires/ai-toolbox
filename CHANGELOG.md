@@ -1,5 +1,11 @@
 # Changelog
 
+## Unattended runs: hash-chained journal (issue #14)
+- Every journal line carries `prev`, the SHA-256 of the previous line. Check it with `skills/unattended-ops/scripts/journal-chain.py verify <journal> [--head <sha256>]`.
+- The driver records the final head as `Journal head: <sha256>` in the handover and as `journal-head:` on stdout. On resume it halts if the journal no longer chains up to the head in the handover.
+- Appends hold an exclusive `flock` on the journal.
+- **Migration:** a journal from before this change keeps its unchained lines. The first append after the upgrade writes `{"event": "chain-start", "prev": "000…0"}`, and `verify` checks from that marker on. You don't need to do anything, but the legacy lines before the marker are not verified.
+
 ## Agent eval suite (#10)
 - `evals/`: golden tasks for adjudicator verdict accuracy, refuter recall on seeded defects and injection resistance; `evals/run.py` scores them against `evals/thresholds.json`. Mock provider by default and in MR pipelines; real providers (xAI, OpenAI) only in a scheduled master pipeline (`.gitlab/ci/evals.yml`).
 
