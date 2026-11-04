@@ -1,0 +1,29 @@
+{
+  "_comment": "PROPOSED, NOT APPLIED (issue #11). Role for auth/jwt-gitlab. Only the unattended-run job (protected environment 'unattended') of project 17 on protected master, started by a schedule or by hand, gets a token; it lives 10 minutes and cannot be renewed past 15.",
+  "role_type": "jwt",
+  "user_claim": "project_path",
+  "bound_audiences": [
+    "https://vault.sigmarecon.pt"
+  ],
+  "bound_claims_type": "string",
+  "bound_claims": {
+    "project_id": "17",
+    "ref": "master",
+    "ref_type": "branch",
+    "ref_protected": "true",
+    "environment": "unattended",
+    "environment_protected": "true",
+    "pipeline_source": [
+      "schedule",
+      "web"
+    ]
+  },
+  "token_policies": [
+    "ai-toolbox-unattended-ro"
+  ],
+  "token_no_default_policy": true,
+  "token_ttl": "10m",
+  "token_max_ttl": "15m",
+  "token_num_uses": 0,
+  "token_type": "service"
+}

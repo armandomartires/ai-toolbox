@@ -1,0 +1,27 @@
+# CycloneDX SBOM (issue #12, part of N3). syft reads the lockfiles it knows
+# (mcp-servers/gates/uv.lock, pinned GitHub Actions); scripts/sbom-add-external.py
+# adds the external MCP servers that npx launches from server.json. The SBOM
+# is kept as a job artifact: 30 days on master and MRs, never expiring on a
+# tag. Not a merge gate: an SBOM is a record, so it fails only if generation
+# itself breaks. Signing and SLSA provenance are not here (see #12).
+sbom:
+  stage: test
+  image: python:3.11
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+  variables:
+    SYFT_VERSION: "1.56.0"
+    SYFT_SHA256: "1c2493cfcf52d3367d6cb25780d9190c111c2219c34c820574c43e8bae15c528"
+  script:
+    - curl -sSfL -o syft.tgz "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+    - echo "${SYFT_SHA256}  syft.tgz" | sha256sum -c -
+    - tar xzf syft.tgz syft && rm syft.tgz
+    - ./syft dir:. --exclude ./.git --exclude ./syft --source-name ai-toolbox --source-version "${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}" -o cyclonedx-json=sbom.cdx.json
+    - python3 scripts/sbom-add-external.py sbom.cdx.json
+    - python3 -c "import json; d=json.load(open('sbom.cdx.json')); print(len(d['components']), 'components')"
+  artifacts:
+    name: "sbom-${CI_COMMIT_REF_SLUG}"
+    paths: [sbom.cdx.json]
+    expire_in: 30 days

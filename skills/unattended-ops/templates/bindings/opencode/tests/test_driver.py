@@ -305,6 +305,44 @@ class TestForgeTracker(Harness):
         self.assertIn("gitlab (group/app)", text)
         self.assertRegex(text, r"- #42 @[0-9a-f]+: update the issue from the snapshot")
 
+    def test_the_journal_is_hash_chained_and_an_edit_is_detected(self):
+        # Issue #14: every line links to the previous line's SHA-256.
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        path = os.path.join(self.repo, ".run", "r1", "journal.jsonl")
+        tool = os.path.join(HERE, "..", "..", "..", "..", "scripts", "journal-chain.py")
+        ok = subprocess.run([sys.executable, tool, "verify", path], capture_output=True, text=True)
+        self.assertEqual(ok.returncode, 0, ok.stdout)
+        self.assertEqual(self.journal()[0]["prev"], "0" * 64)
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+        lines[1] = lines[1].replace('"event": "', '"event": "x', 1)
+        with open(path, "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        bad = subprocess.run([sys.executable, tool, "verify", path], capture_output=True, text=True)
+        self.assertEqual(bad.returncode, 1, bad.stdout)
+        self.assertIn("line 3", bad.stdout)
+
+    def test_the_journal_head_is_recorded_and_checked_on_resume(self):
+        # Review note_1350 item 1: the anchor lives outside the journal (the
+        # handover and stdout), and a resume halts if the journal no longer
+        # chains up to it.
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        path = os.path.join(self.repo, ".run", "r1", "journal.jsonl")
+        tool = os.path.join(HERE, "..", "..", "..", "..", "scripts", "journal-chain.py")
+        head = subprocess.run([sys.executable, tool, "verify", path], capture_output=True,
+                              text=True).stdout.split()[-1]
+        self.assertIn("Journal head: %s" % head, self.handover())
+        self.assertIn("journal-head: %s" % head, self.proc.stdout)
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+        with open(path, "w") as fh:
+            fh.write("\n".join(lines[:-1]) + "\n")
+        self.assertEqual(self.run_driver(forge_agents()), 1, self.proc.stderr)
+        halts = [r for r in self.journal() if r.get("event") == "halt"]
+        self.assertTrue(halts and "head recorded in the handover" in halts[-1]["reason"], halts)
+
     def test_no_role_is_asked_to_run_glab_or_gh(self):
         self.make_forge()
         self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
@@ -399,6 +437,31 @@ class TestHappyPath(Harness):
         self.assertTrue(self.invocations())
         for argv in self.invocations():
             self.assertIn("do not open the skill's files", argv[-1])
+
+    def test_only_a_permission_refusal_is_journaled_as_denied(self):
+        # B-067 / TASK-0228: TASK-0176's pilot journaled 40 tool-denied where
+        # opencode's log showed 8 denials; every errored tool counted. The
+        # texts are opencode 1.18's PermissionRejectedError, PermissionDeniedError,
+        # PermissionCorrectedError and a dismissed question, the four its own
+        # UI tells from other errors.
+        agents = happy()
+        agents["task-planner"][0]["tool_errors"] = [
+            ["bash", "The user has specified a rule which prevents you from using "
+                     "this specific tool call. Here are some of the relevant rules []"],
+            ["read", "The user rejected permission to use this specific tool call."],
+            ["edit", "The user rejected permission to use this specific tool call "
+                     "with the following feedback: no"],
+            ["question", "QuestionRejectedError: The user dismissed this question"],
+            ["write", "The write tool was called with invalid arguments: SchemaError("
+                      "Missing key\n  at [\"content\"])."],
+            ["read", "File not found: /x"],
+        ]
+        self.make_repo()
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        denied = [e for e in self.events("tool-denied") if e["role"] == "task-planner"]
+        errors = [e for e in self.events("tool-error") if e["role"] == "task-planner"]
+        self.assertEqual([e["tools"] for e in denied], [["bash", "read", "edit", "question"]])
+        self.assertEqual([e["tools"] for e in errors], [["write", "read"]])
 
     def test_preflight_is_handed_the_drivers_own_checks(self):
         # TASK-0096: the second dry run halted because the driver ran the

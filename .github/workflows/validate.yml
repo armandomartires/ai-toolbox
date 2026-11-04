@@ -47,7 +47,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # validate.sh parses server.json manifests with python3 and must
       # stay offline and hermetic (AGENTS.md, Commands).
@@ -71,11 +71,27 @@ jobs:
             exit 1
           fi
 
+  # Secret scanning (issue #3). The release binary is fetched and checked
+  # against its published SHA-256 before it runs; no third-party action.
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks 8.28.0 (checksum verified)
+        run: |
+          curl -sSfL -o gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz
+          echo "a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb  gitleaks.tgz" | sha256sum -c -
+          tar xzf gitleaks.tgz gitleaks
+      - name: Scan history for secrets
+        run: ./gitleaks git --redact --no-banner --verbose -c .gitleaks.toml .
+
   bindings:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Versions first, so a failure can be read against them. A missing
       # interpreter fails here; it never skips (ADR-0009).

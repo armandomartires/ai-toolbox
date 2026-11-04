@@ -2069,5 +2069,225 @@ if [ -d "$SCHEMA_DIR" ] && [ -r "$ARTIFACT_LIB" ]; then
   fi
 fi
 
+# --------------------------------------------------------------------------
+# No hidden or bidirectional Unicode in agent instruction files (issue #4).
+#
+# WHY: AGENTS.md, CLAUDE.md, agents/, loops/, prompts/ and every SKILL.md
+# steer agent sessions. Bidi overrides, zero-width and tag characters are
+# invisible in a diff review and can smuggle instructions past it.
+# WHAT THIS PROVES: none of those code points is present in that file set,
+# and the checker still fires on a seeded file (--self-test, a red proof run
+# every time). WHAT IT DOES NOT PROVE: that visible text is benign.
+if ! python3 scripts/check-hidden-unicode.py --self-test; then
+  echo "HIDDEN-UNICODE: the checker no longer detects seeded characters"
+  fail=1
+fi
+python3 scripts/check-hidden-unicode.py || fail=1
+# Every GitHub Action is pinned to a full commit SHA (issue #2).
+#
+# WHY: a tag like @v4 is mutable; whoever controls the action's repo can move
+# it under us. WHAT THIS PROVES: every `uses:` in .github/workflows names a
+# 40-hex SHA (local `./` actions excepted), with a self-test so the check
+# cannot silently stop matching. WHAT IT DOES NOT PROVE: the pinned code is good.
+if ! python3 - <<'PY'
+import glob, re, sys
+pat = re.compile(r"^\s*(?:-\s*)?uses:\s*([^\s#]+)")
+def bad_refs(lines):
+    out = []
+    for i, l in enumerate(lines, 1):
+        m = pat.match(l)
+        if not m or m.group(1).startswith("./"):
+            continue
+        ref = m.group(1).rpartition("@")[2]
+        if not re.fullmatch(r"[0-9a-f]{40}", ref):
+            out.append((i, m.group(1)))
+    return out
+assert bad_refs(["      - uses: actions/checkout@v4"]) and not bad_refs(
+    ["      - uses: actions/checkout@" + "a" * 40 + " # v4", "  uses: ./local"]), "self-test"
+fail = False
+for f in sorted(glob.glob(".github/workflows/*.y*ml")):
+    for i, ref in bad_refs(open(f, encoding="utf-8").read().split("\n")):
+        print(f"ACTIONS-PIN: {f}:{i}: {ref} is not pinned to a commit SHA")
+        fail = True
+sys.exit(1 if fail else 0)
+PY
+then
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
+# Every role and loop references the untrusted-content policy (issue #8).
+#
+# WHY: a role that never hears the rule cannot follow it. WHAT THIS PROVES:
+# the policy file exists and every agents/*/agent.md and loops/*/loop.md
+# (templates included, so new ones inherit it) names it. WHAT IT DOES NOT
+# PROVE: that a model obeys it; that is the eval suite's job (#10).
+UNTRUSTED_POLICY=docs/security/untrusted-content.md
+if [ ! -r "$UNTRUSTED_POLICY" ]; then
+  echo "UNTRUSTED: $UNTRUSTED_POLICY is missing"
+  fail=1
+fi
+for f in agents/*/agent.md loops/*/loop.md; do
+  [ -f "$f" ] || continue
+  if ! grep -qF "$UNTRUSTED_POLICY" "$f"; then
+    echo "UNTRUSTED: $f does not reference $UNTRUSTED_POLICY"
+    fail=1
+  fi
+done
+# The AI risk register exists and is well-formed (issue #13).
+#
+# WHAT THIS PROVES: .ai/context/risk-register.md has a dated "Last reviewed"
+# line and every register row has the table's ten columns, an R-NN id and a
+# status. WHAT IT DOES NOT PROVE: that the review actually happened, or that
+# the ratings are right; that is the sprint checkpoint's job.
+if [ -r .ai/context/risk-register.md ]; then
+  python3 - .ai/context/risk-register.md <<'PY' || fail=1
+import re, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+bad = []
+if not re.search(r"^Last reviewed: \d{4}-\d{2}-\d{2}", text, re.M):
+    bad.append("no 'Last reviewed: YYYY-MM-DD' line")
+rows = [l for l in text.splitlines() if l.startswith("| R-")]
+if not rows:
+    bad.append("no R-NN rows")
+for l in rows:
+    cells = [c.strip() for c in l.strip().strip("|").split("|")]
+    if len(cells) != 10 or not re.fullmatch(r"R-\d{2}", cells[0]) or not cells[-1]:
+        bad.append("malformed row: " + l[:60])
+for b in bad:
+    print("RISK-REGISTER: " + b)
+sys.exit(1 if bad else 0)
+PY
+else
+  echo "RISK-REGISTER: .ai/context/risk-register.md is missing"
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
+# The SBOM helper still adds external MCP servers (issue #12): a red proof.
+if ! python3 scripts/sbom-add-external.py --self-test; then
+  echo "SBOM: scripts/sbom-add-external.py self-test failed"
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
+# External MCP servers are pinned and sandboxed (issue #7): a lockfile with an
+# integrity hash on every package, a tools.lock.json of hashed tool
+# definitions, a declared egress list, and a sandbox launch with no network.
+if ! python3 scripts/mcp-tool-lock.py --self-test >/dev/null; then
+  echo "MCP-PIN: scripts/mcp-tool-lock.py self-test failed"
+  fail=1
+fi
+for manifest in mcp-servers/*/server.json; do
+  d=$(dirname "$manifest"); n=$(basename "$d")
+  case "$n" in _*) continue ;; esac
+  if ! python3 - "$d" <<'PY'
+import json, os, sys
+d = sys.argv[1]
+m = json.load(open(os.path.join(d, "server.json")))
+bad = []
+pl = m.get("pinned_launch")
+if not pl:
+    bad.append("no pinned_launch (npx -y has no integrity check)")
+else:
+    lock = os.path.join(d, pl["cwd"], "package-lock.json")
+    if not os.path.isfile(lock):
+        bad.append("no %s" % lock)
+    else:
+        pk = json.load(open(lock)).get("packages", {})
+        miss = [k for k, v in pk.items() if k and not v.get("link") and not v.get("integrity")]
+        if miss:
+            bad.append("lockfile packages without integrity: %s" % ", ".join(miss[:5]))
+        want = "%s@%s" % (m["upstream"]["package"], m["upstream"]["version"])
+        got = pk.get("node_modules/" + m["upstream"]["package"], {}).get("version")
+        if got != m["upstream"]["version"]:
+            bad.append("lockfile has %s, manifest says %s" % (got, want))
+if not isinstance(m.get("egress"), dict) or not isinstance(m["egress"].get("allow"), list):
+    bad.append("no egress.allow list")
+if not os.path.isfile(os.path.join(d, "tools.lock.json")):
+    bad.append("no tools.lock.json (run scripts/mcp-tool-lock.py approve)")
+for b in bad:
+    print("MCP-PIN: %s: %s" % (d, b))
+sys.exit(1 if bad else 0)
+PY
+  then fail=1; continue; fi
+  ws_tmp="$(mktemp -d)"
+  printed="$(WORKSPACE_ROOT="$ws_tmp" scripts/mcp-sandbox.sh "$n" --print)" || { echo "MCP-PIN: mcp-sandbox.sh $n --print failed"; fail=1; }
+  if ! grep -qx -- '--network' <<<"$printed"; then
+    echo "MCP-PIN: scripts/mcp-sandbox.sh $n does not set --network none"
+    fail=1
+  fi
+  # Only the declared workspace is mounted, and the server sees it as /work.
+  grep -qx -- "$(cd "$ws_tmp" && pwd -P):/work" <<<"$printed" || { echo "MCP-PIN: $n does not mount WORKSPACE_ROOT at /work"; fail=1; }
+  grep -qx -- 'WORKSPACE_ROOT=/work' <<<"$printed" || { echo "MCP-PIN: $n does not remap WORKSPACE_ROOT"; fail=1; }
+  if WORKSPACE_ROOT="$HOME" scripts/mcp-sandbox.sh "$n" --print >/dev/null 2>&1; then
+    echo "MCP-PIN: mcp-sandbox.sh accepted WORKSPACE_ROOT=\$HOME"; fail=1
+  fi
+  if (unset WORKSPACE_ROOT; scripts/mcp-sandbox.sh "$n" --print >/dev/null 2>&1); then
+    echo "MCP-PIN: mcp-sandbox.sh ran without WORKSPACE_ROOT"; fail=1
+  fi
+  rmdir "$ws_tmp"
+done
+# Images pinned by digest, never a bare tag (review note_1348 item 3).
+for f in scripts/mcp-sandbox.sh .gitlab/ci/mcp-tool-lock.yml; do
+  if grep -nE 'node:[0-9][A-Za-z0-9.-]*' "$f" | grep -v '@sha256:[0-9a-f]\{64\}' | grep -q .; then
+    echo "MCP-PIN: $f uses a node image without a @sha256 digest"; fail=1
+  fi
+done
+# The run journal is hash-chained (issue #14): edits, deletions, reordering
+# and (against a recorded head) truncation are detected. A red proof.
+if ! python3 skills/unattended-ops/scripts/journal-chain.py --self-test >/dev/null; then
+  echo "JOURNAL: skills/unattended-ops/scripts/journal-chain.py self-test failed"
+  fail=1
+fi
+
+# Mod status and the live-verification gate (issues #5 and #9).
+#
+# WHY: features shipped "tested in the kit, not yet seen live". Every mod is
+# experimental during the development stage (Armando, 2026-11-04), and one
+# leaves experimental only with a recorded live session per feature for its
+# current version. WHAT THIS PROVES: each mods/*/status.json is well-formed;
+# a `verified` mod has passing live_verification records for its current
+# plugin.json version, each pointing at an existing .ai/sessions/ record, and
+# a README with nothing left "not yet seen live"; templates stay
+# experimental. The --self-test is the red proof, run every time.
+# WHAT IT DOES NOT PROVE: that the recorded session really showed the feature
+# working; a human reads the session record at release-check step 3a.
+if ! python3 scripts/check-mod-status.py --self-test; then
+  echo "MOD STATUS: the live-verification gate no longer rejects its seeded cases"
+  fail=1
+fi
+python3 scripts/check-mod-status.py || fail=1
+
+# --------------------------------------------------------------------------
+# Agent eval suite (issue #10). WHY: role quality had no measurement. WHAT
+# THIS PROVES: the golden tasks load and name real agents, the mock run
+# scores 1.0, seeded bad answers lower every category and trip the
+# regression gate, and a missing key fails cleanly. Offline, no keys.
+# WHAT IT DOES NOT PROVE: how a real model scores; that is the scheduled
+# evals-live job.
+python3 evals/run.py --self-test || { echo "EVALS: self-test failed"; fail=1; }
+# Unattended-run sandbox, Level 1 (issue #11).
+# WHY: unattended runs executed on the dev host with user credentials.
+# WHAT THIS PROVES: the CI jobs are pinned to runner tag docker, run
+# assert-sandbox.sh, use id_tokens and no host credential or mount; the
+# proposed Vault policy is read-only on sigmarecon-projects/*/ai-toolbox/*
+# with an explicit deny on operator/*; the JWT role is bound to project 17
+# protected refs. The --self-tests are the red proofs.
+# WHAT IT DOES NOT PROVE: that Vault holds this policy (applied by hand) or
+# that egress is filtered (it is not; see docs/security/unattended-sandbox.md).
+python3 scripts/check-sandbox-ci.py --self-test || fail=1
+python3 scripts/check-sandbox-ci.py || fail=1
+# scrub-artifacts.sh removes a file holding a fetched value and fails.
+scrub_dir="$(mktemp -d)"
+printf 'x seeded-value-1234 y\n' > "$scrub_dir/leak"; printf 'clean\n' > "$scrub_dir/ok"
+if UNATTENDED_SECRETS="SCRUB_T=ai-toolbox/x#f" SCRUB_T=seeded-value-1234 bash scripts/sandbox/scrub-artifacts.sh "$scrub_dir" >/dev/null; then
+  echo "SANDBOX: scrub-artifacts did not fail on a leaked value"; fail=1
+fi
+{ [ ! -e "$scrub_dir/leak" ] && [ -e "$scrub_dir/ok" ]; } || { echo "SANDBOX: scrub-artifacts removed the wrong files"; fail=1; }
+rm -rf "$scrub_dir"
+python3 scripts/sandbox/vault-fetch.py --self-test || fail=1
+bash -n scripts/sandbox/assert-sandbox.sh || fail=1
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail

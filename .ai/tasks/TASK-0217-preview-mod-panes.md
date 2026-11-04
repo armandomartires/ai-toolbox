@@ -5,7 +5,7 @@
 - Status: in review
 - Owner: agent (Claude Code)
 - Created: 2026-11-03
-- Updated: 2026-11-03
+- Updated: 2026-11-04
 - Applies to: `scripts/`, `mods/agent-watch/preview/`, `mods/task-compass/` (0.9.1 → 0.9.2), the runbook
 - Source: the human, 2026-11-03: "sometimes the edits are live and sometimes they are not. How can we solve this inconsistency?", then "we need a better approach to preview the panels as we develop them", the proposal, "Yes, build it"
 
@@ -53,7 +53,7 @@ A pane being developed can be seen at once, at several sizes and on both surface
 ## Mandatory validations
 
 - [x] tests/test-mods.sh --mod agent-watch
-- [ ] tests/test-mods.sh --mod task-compass — 46 pass, 9 fail on this Windows clone, the same 9 at HEAD (project-workflow and layout tests); run it in WSL
+- [ ] tests/test-mods.sh --mod task-compass — 64 pass on this Windows clone (2026-11-04), but only with an uncommitted path fix in `layer.test.tsx`; ticked once that lands
 - [x] python3 scripts/check-mods.py
 
 ## Risks and rollback
@@ -75,3 +75,4 @@ Next: a mod change is previewed before its live look (`TASK-0218` makes this the
 ## Execution log
 
 - 2026-11-03 · Claude Code (Opus 5.5) · probes: console output dropped, a 60 kB failure message printed whole, `$.fs` absent in the kit; built and opened in the browser pane at `http://127.0.0.1:8765/`
+- 2026-11-04 · Claude Code (Opus 5.5) · board review: `tests/test-mods.sh --mod task-compass` → `PASS task-compass: 64 pass` on Windows, with an uncommitted `layer.test.tsx` path fix not made here; the human's preview-before-live look is still open

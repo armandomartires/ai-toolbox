@@ -51,6 +51,15 @@ add() { [ -n "$1" ] && { patterns+=("$1"); sources+=("$2"); }; return 0; }
 
 url="$(git remote get-url origin 2>/dev/null || true)"
 host="$(host_of "$url")"
+# In CI the runner may clone through a different (internal) URL, so the
+# origin host is not the public one. GitLab names the real host itself.
+if [ -n "${CI_SERVER_HOST:-}" ]; then
+  ci_host="$(printf '%s' "$CI_SERVER_HOST" | tr '[:upper:]' '[:lower:]')"
+  if [ "$ci_host" != "$host" ] && [[ "$PUBLIC_FORGES" != *" $ci_host "* ]]; then
+    add "$ci_host" "CI_SERVER_HOST"
+    [[ "${ci_host#*.}" == *.*.* ]] && add "${ci_host#*.}" "CI_SERVER_HOST, parent domain"
+  fi
+fi
 if [ -n "$host" ] && [[ "$PUBLIC_FORGES" != *" $host "* ]]; then
   add "$host" "origin host"
   if [[ ! "$host" =~ ^[0-9.]+$ ]] && [[ "$host" == *.* ]]; then
