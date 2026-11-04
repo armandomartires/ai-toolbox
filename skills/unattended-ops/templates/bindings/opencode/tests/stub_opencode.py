@@ -9,7 +9,8 @@ Environment:
   STUB_STATE     directory holding each agent's response counter
 
 A response is {"text": str|null, "raw": str, "stderr": str, "exit": int,
-"sh": [shell commands run first, with GIT_CALLER=stub], "auto": name}.
+"sh": [shell commands run first, with GIT_CALLER=stub], "auto": name,
+"tool_errors": [[tool, error text], ...] emitted as errored tool_use events}.
 Responses are consumed in order; the last one repeats. `sh` and `text` may
 contain {TASK} (the first `task TASK-nnnn`, or on a forge `task <issue number>`,
 in the prompt); `text` may contain
@@ -78,6 +79,9 @@ def main():
         events = [{"type": "step_start", "part": {}}]
         if text is not None:
             events.append({"type": "text", "part": {"text": text}})
+        for tool, error in resp.get("tool_errors", []):
+            events.append({"type": "tool_use", "part": {
+                "tool": tool, "state": {"status": "error", "error": error}}})
         events.append({"type": "step_finish", "part": {}})
         sys.stdout.write("".join(json.dumps(e) + "\n" for e in events))
     sys.stderr.write(resp.get("stderr", ""))

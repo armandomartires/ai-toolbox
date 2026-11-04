@@ -1,6 +1,14 @@
 # task-compass
 
+> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `status.json`.
+
 A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, and Claude's live tasks under it. The sprints come from a `GOALS.md` kept in the project's `.ai/` folder, or from a project-workflow `.ai/` plan (below). It draws in SIGMAorbital (`ADR-0043`): monochrome, colour for state only, uppercase labels, its Night ops or Daylight colours following your theme setting.
+
+| Desktop app | Terminal |
+|---|---|
+| ![The Compass pane in the desktop app: two sprints side by side, the current one in the middle with an in-progress story, Claude's live tasks under it, and stories in review, blocked, to do and backlog](docs/compass-desktop.png) | ![The same board in a terminal, drawn in cells](docs/compass-terminal.png) |
+
+*Drawn by the mod preview (`scripts/preview-mods.py`) from the test kit's own render of the `Compass pane` scene at 76×40 cells, Night ops colours.*
 
 - **Sprints side by side**: each sprint is a vertical rail, its stories dots down the rail in file order, the current sprint marked `◉` in white and placed in the middle. `‹ n PREV` and `n NEXT ›` say what doesn't fit; click them to scroll the sprints one at a time, and `↺ Sn/m` to go back to the current one. In the terminal, with the pane focused, `h`, `l` and `c` do the same.
 - **Progress** under each sprint's dot: `▰▰▰▱▱ 3/5` stories done, red and marked `LATE` once a sprint that is not done has run past the last date on its `Dates:` line.

@@ -30,6 +30,8 @@ from typing import Annotated, Any
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
+from gates import telemetry
+
 HANDLE = r"^[A-Za-z0-9._-]{1,128}$"
 NAME = r"^[A-Za-z0-9._-]{1,64}$"
 TERMINAL = {"PASSED", "FAILED", "SKIPPED", "TIMEOUT", "KILLED", "MISSING", "REFUSED"}
@@ -202,6 +204,13 @@ def start_gate(
     Args:
         name: A gate name the map declares. Anything else returns MISSING.
     """
+    with telemetry.tool_span("start_gate", name=name) as span:
+        out = _start_gate(name)
+        telemetry.record(span, out)
+        return out
+
+
+def _start_gate(name: str) -> dict[str, Any]:
     cfg = config()
     handle = "%s.%s-%d-%d" % (name, time.strftime("%Y%m%dT%H%M%S"), os.getpid(), next(_serial))
     d = _dir(cfg, handle)
@@ -250,12 +259,15 @@ async def wait_gate(
         handle: The handle start_gate returned.
         max_wait_seconds: The most this call may block, 0 to 420.
     """
-    d = _dir(config(), handle)
-    waited = 0.0
-    while d.is_dir() and not _terminal(d) and waited < max_wait_seconds:
-        await asyncio.sleep(0.5)
-        waited += 0.5
-    return summary(d)
+    with telemetry.tool_span("wait_gate", handle=handle) as span:
+        d = _dir(config(), handle)
+        waited = 0.0
+        while d.is_dir() and not _terminal(d) and waited < max_wait_seconds:
+            await asyncio.sleep(0.5)
+            waited += 0.5
+        out = summary(d)
+        telemetry.record(span, out)
+        return out
 
 
 @mcp.tool()

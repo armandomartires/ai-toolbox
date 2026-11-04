@@ -1,0 +1,14 @@
+# Issue #14: gates spans reach a real OpenTelemetry Collector (pinned by
+# version and SHA-256), and the gates/telemetry tests run with the SDK.
+# On the docker runner (tag `docker`, runner 3).
+otel-collector:
+  stage: test
+  image: python:3.11
+  tags: [docker]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - pip install -q uv==0.13.6
+    - (cd mcp-servers/gates && uv run --frozen pytest -q tests/test_telemetry.py)
+    - bash tests/otel/collector-check.sh
