@@ -2189,5 +2189,14 @@ if ! python3 scripts/check-mod-status.py --self-test; then
 fi
 python3 scripts/check-mod-status.py || fail=1
 
+# --------------------------------------------------------------------------
+# Agent eval suite (issue #10). WHY: role quality had no measurement. WHAT
+# THIS PROVES: the golden tasks load and name real agents, the mock run
+# scores 1.0, seeded bad answers lower every category and trip the
+# regression gate, and a missing key fails cleanly. Offline, no keys.
+# WHAT IT DOES NOT PROVE: how a real model scores; that is the scheduled
+# evals-live job.
+python3 evals/run.py --self-test || { echo "EVALS: self-test failed"; fail=1; }
+
 [ $fail -eq 0 ] && echo "validate.sh: OK"
 exit $fail
