@@ -35,6 +35,9 @@
 # whether Claude Code's settings list it from this checkout. A report, not a
 # gate: nothing in validate.sh or CI calls it (ADR-0009).
 #
+# Mod status (issue #5): every mod line names its status.json status, e.g.
+# [experimental]. A label only: what is deployed does not depend on it.
+#
 # Mods (TASK-0222). Claude Code loads a mod in development from the folders
 # CLAUDE_CODE_PLUGIN_DIRS names, an `env` entry of ~/.claude/settings.json.
 # The claude-code step sets it to every selected mod in THIS checkout, in
@@ -301,6 +304,15 @@ if os.path.exists(settings):
 env = data.get("env") if isinstance(data.get("env"), dict) else {}
 current = [e for e in str(env.get(KEY, "")).split(sep) if e.strip()]
 
+def mod_status(p):
+    # issue #5: a label only. Every mod is deployed as before; status.json
+    # says how far its features have been verified live.
+    try:
+        with open(os.path.join(p, "status.json"), encoding="utf-8") as f:
+            return json.load(f).get("status", "unknown")
+    except (OSError, ValueError):
+        return "unknown"
+
 if action == "status":
     for n, sel, p in mods:
         hits = [e for e in current if base(e) == n]
@@ -320,7 +332,7 @@ if action == "status":
             state += " (not selected)"
         elif state != "listed here":
             flag = "  MISSING"
-        print("%-12s %-18s %-8s %s%s" % ("claude-code", "mod:" + n, ver, state, flag))
+        print("%-12s %-18s %-8s %s%s  [%s]" % ("claude-code", "mod:" + n, ver, state, flag, mod_status(p)))
     sys.exit(0)
 
 kept, notes = [], []
@@ -373,6 +385,8 @@ listed = [n for n, sel, _ in mods if sel]
 if listed:
     print("mods listed: %s -> claude-code (%s in %s; from the next session)"
           % (", ".join(listed), KEY, settings))
+    print("mod status: %s (labels only; see docs/registry.md)"
+          % ", ".join("%s [%s]" % (n, mod_status(p)) for n, sel, p in mods if sel))
 PYMERGE
 }
 
