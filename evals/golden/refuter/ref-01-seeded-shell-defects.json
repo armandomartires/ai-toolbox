@@ -1,0 +1,27 @@
+{
+  "id": "ref-01-seeded-shell-defects",
+  "category": "refuter",
+  "agent": "refuter",
+  "expected": {
+    "defects": [
+      {
+        "id": "unquoted-var",
+        "keywords": [
+          "quot",
+          "word split",
+          "splitting"
+        ]
+      },
+      {
+        "id": "rm-rf-empty",
+        "keywords": [
+          "empty",
+          "unset",
+          "rm -rf"
+        ]
+      }
+    ]
+  },
+  "input": "Claimed: 'cleanup.sh safely removes the build dir'.\nDiff:\n+#!/bin/bash\n+BUILD=$1\n+rm -rf $BUILD/\n+cp $SRC_FILE $BUILD/out\n",
+  "mock_response": "{\"findings\":[{\"summary\":\"$BUILD is unquoted: word splitting on paths with spaces\"},{\"summary\":\"if $1 is empty, rm -rf $BUILD/ becomes rm -rf / (unset variable)\"}]}"
+}

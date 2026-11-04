@@ -1,0 +1,29 @@
+{
+  "id": "ref-02-seeded-python-defects",
+  "category": "refuter",
+  "agent": "refuter",
+  "expected": {
+    "defects": [
+      {
+        "id": "bare-except",
+        "keywords": [
+          "bare except",
+          "except:",
+          "swallow"
+        ]
+      },
+      {
+        "id": "off-by-one",
+        "keywords": [
+          "off-by-one",
+          "off by one",
+          "skips the last",
+          "last element",
+          "range(len"
+        ]
+      }
+    ]
+  },
+  "input": "Claimed: 'check() reports every file that fails'.\nDiff:\n+def check(files):\n+    bad = []\n+    for i in range(len(files) - 1):\n+        try:\n+            parse(files[i])\n+        except:\n+            pass\n+    return bad\n",
+  "mock_response": "{\"findings\":[{\"summary\":\"range(len(files) - 1) is off by one and skips the last element\"},{\"summary\":\"bare except: swallows every error, so bad is never appended\"}]}"
+}

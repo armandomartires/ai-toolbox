@@ -1,0 +1,52 @@
+# Agent eval suite (issue #10). See evals/README.md.
+#
+# evals-mock: the default. Replays canned responses, no network, no keys.
+#   Runs on every MR and on master pushes.
+# evals-live: real providers, ONLY on a scheduled pipeline on master. The
+#   keys (XAI_API_KEY, OPENAI_API_KEY) are protected, masked project
+#   variables, so they only exist on the protected master ref. They are read
+#   by evals/run.py from the environment and are never echoed: no `set -x`,
+#   no `env` dump, and the artifacts hold only scores.
+#
+# Sized for the `docker` runner (2 GB, 2 CPU): stdlib Python, one request at
+# a time, no build step.
+.evals-base:
+  stage: test
+  image: python:3.11-slim
+  tags: [docker]
+  interruptible: true
+  timeout: 30m
+
+evals-mock:
+  extends: .evals-base
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - python3 evals/run.py --self-test
+    - python3 evals/run.py --provider mock --out evals-mock.json --junit evals-mock.xml
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths: [evals-mock.json]
+    reports:
+      junit: evals-mock.xml
+
+evals-live:
+  extends: .evals-base
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  parallel:
+    matrix:
+      - EVAL_PROVIDER: [xai, openai]
+  script:
+    - python3 evals/run.py --provider "$EVAL_PROVIDER" --out "evals-$EVAL_PROVIDER.json" --junit "evals-$EVAL_PROVIDER.xml"
+  artifacts:
+    when: always
+    # Kept a year so scores can be tracked run over run.
+    expire_in: 1 year
+    paths: ["evals-$EVAL_PROVIDER.json"]
+    reports:
+      junit: "evals-$EVAL_PROVIDER.xml"

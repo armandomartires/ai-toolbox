@@ -13,3 +13,5 @@ include:
   - local: .gitlab/ci/gitleaks.yml
   # CycloneDX SBOM (issue #12).
   - local: .gitlab/ci/sbom.yml
+  # Agent eval suite (issue #10).
+  - local: .gitlab/ci/evals.yml

@@ -1,0 +1,29 @@
+{
+  "id": "ref-03-seeded-ci-defect",
+  "category": "refuter",
+  "agent": "refuter",
+  "expected": {
+    "defects": [
+      {
+        "id": "secret-echo",
+        "keywords": [
+          "echo",
+          "print",
+          "leak",
+          "log"
+        ]
+      },
+      {
+        "id": "unpinned-image",
+        "keywords": [
+          "latest",
+          "pin",
+          "digest",
+          "tag"
+        ]
+      }
+    ]
+  },
+  "input": "Claimed: 'the deploy job is safe to run on MRs'.\nDiff:\n+deploy:\n+  image: alpine:latest\n+  script:\n+    - echo \"token=$DEPLOY_TOKEN\"\n+    - ./deploy.sh\n",
+  "mock_response": "{\"findings\":[{\"summary\":\"echo prints $DEPLOY_TOKEN into the job log (secret leak)\"},{\"summary\":\"alpine:latest is not pinned by digest\"}]}"
+}
