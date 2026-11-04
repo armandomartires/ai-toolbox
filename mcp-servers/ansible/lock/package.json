@@ -1,0 +1,6 @@
+{
+  "name": "ansible-mcp-lock",
+  "private": true,
+  "description": "Pinned install of the external MCP server (issue #7). npm ci verifies every integrity hash in package-lock.json.",
+  "dependencies": {"@ansible/ansible-mcp-server": "26.6.0"}
+}
