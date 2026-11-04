@@ -78,7 +78,12 @@ def snapshot(server_dir: Path) -> dict:
     tl = m.get("tool_lock") or {}
     argv = tl.get("command") or pl.get("command") or m["launch"]["command"]
     cwd = str((server_dir / tl.get("cwd", pl.get("cwd", "."))).resolve())
-    env = dict(os.environ, **{k: os.path.expandvars(v) for k, v in tl.get("env", {}).items()})
+    # Minimal environment (review note_1348 item 4): third-party server code
+    # must not inherit CI or host secrets. Only PATH, HOME, LANG and the
+    # manifest's own tool_lock.env entries reach it.
+    env = {k: os.environ[k] for k in ("PATH", "LANG") if k in os.environ}
+    env["HOME"] = tempfile.gettempdir()
+    env.update({k: os.path.expandvars(v) for k, v in tl.get("env", {}).items()})
     tools = list_tools(argv, cwd, env)
     per = {t["name"]: tool_hash(t) for t in tools}
     return {"server": m["name"], "version": m["upstream"]["version"],
@@ -135,7 +140,8 @@ def self_test() -> int:
         d = Path(tmp)
         (d / "fake.py").write_text(FAKE)
         man = {"name": "fake", "upstream": {"version": "1"},
-               "launch": {"command": [sys.executable, "fake.py"]}}
+               "launch": {"command": [sys.executable, "fake.py"]},
+               "tool_lock": {"env": {"FAKE_DESC": "${FAKE_DESC}"}}}
         (d / "server.json").write_text(json.dumps(man))
         os.environ.pop("FAKE_DESC", None)
         if main(["approve", str(d)]) != 0 or main(["verify", str(d)]) != 0:
@@ -148,7 +154,18 @@ def self_test() -> int:
                 return 1
         finally:
             os.environ.pop("FAKE_DESC", None)
-    print("mcp-tool-lock self-test: OK (a changed description is detected)")
+        # A host variable not declared in tool_lock.env must not reach the server.
+        (d / "fake.py").write_text(FAKE.replace('os.environ.get("FAKE_DESC", "Read a file")',
+                                                'os.environ.get("MCP_LOCK_SELFTEST_SECRET", "Read a file")'))
+        main(["approve", str(d)])
+        os.environ["MCP_LOCK_SELFTEST_SECRET"] = "leak"
+        try:
+            if main(["verify", str(d)]) != 0:
+                print("self-test: a host environment variable reached the server")
+                return 1
+        finally:
+            os.environ.pop("MCP_LOCK_SELFTEST_SECRET", None)
+    print("mcp-tool-lock self-test: OK (a changed description is detected; host env is not passed)")
     return 0
 
 

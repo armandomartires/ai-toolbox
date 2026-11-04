@@ -2211,9 +2211,27 @@ for b in bad:
 sys.exit(1 if bad else 0)
 PY
   then fail=1; continue; fi
-  if ! scripts/mcp-sandbox.sh "$n" --print | grep -qx -- '--network'; then
+  ws_tmp="$(mktemp -d)"
+  printed="$(WORKSPACE_ROOT="$ws_tmp" scripts/mcp-sandbox.sh "$n" --print)" || { echo "MCP-PIN: mcp-sandbox.sh $n --print failed"; fail=1; }
+  if ! grep -qx -- '--network' <<<"$printed"; then
     echo "MCP-PIN: scripts/mcp-sandbox.sh $n does not set --network none"
     fail=1
+  fi
+  # Only the declared workspace is mounted, and the server sees it as /work.
+  grep -qx -- "$(cd "$ws_tmp" && pwd -P):/work" <<<"$printed" || { echo "MCP-PIN: $n does not mount WORKSPACE_ROOT at /work"; fail=1; }
+  grep -qx -- 'WORKSPACE_ROOT=/work' <<<"$printed" || { echo "MCP-PIN: $n does not remap WORKSPACE_ROOT"; fail=1; }
+  if WORKSPACE_ROOT="$HOME" scripts/mcp-sandbox.sh "$n" --print >/dev/null 2>&1; then
+    echo "MCP-PIN: mcp-sandbox.sh accepted WORKSPACE_ROOT=\$HOME"; fail=1
+  fi
+  if (unset WORKSPACE_ROOT; scripts/mcp-sandbox.sh "$n" --print >/dev/null 2>&1); then
+    echo "MCP-PIN: mcp-sandbox.sh ran without WORKSPACE_ROOT"; fail=1
+  fi
+  rmdir "$ws_tmp"
+done
+# Images pinned by digest, never a bare tag (review note_1348 item 3).
+for f in scripts/mcp-sandbox.sh .gitlab/ci/mcp-tool-lock.yml; do
+  if grep -nE 'node:[0-9][A-Za-z0-9.-]*' "$f" | grep -v '@sha256:[0-9a-f]\{64\}' | grep -q .; then
+    echo "MCP-PIN: $f uses a node image without a @sha256 digest"; fail=1
   fi
 done
 
