@@ -163,3 +163,17 @@ test('a queued task behind a session task handed off is waiting on its start_ses
   expect(stalledBy([task('H1', { status: 'blocked', handoff: true }), task('D3', { deps: ['H1'] })], task('D3', { deps: ['H1'] }))?.id).toBe('H1')
   expect(stalledBy([task('T2', { runAs: 'session', status: 'failed' }), task('D4', { deps: ['T2'] })], task('D4', { deps: ['T2'] }))?.id).toBe('T2')
 })
+
+test('a retry on a bigger model or effort is an escalation, refused past its limit (TASK-0224)', () => {
+  const failed = task('T1', { status: 'failed', requested: { model: 'haiku', effort: 'low' } })
+  const same = retryTask([failed], task('T1', { requested: { model: 'haiku', effort: 'low' } }), DEFAULT_LIMITS)
+  expect(same.ledger[0]?.escalations).toBe(0)
+  const up = retryTask([failed], task('T1', { requested: { model: 'sonnet', effort: 'low' } }), DEFAULT_LIMITS)
+  expect(up.ledger[0]?.escalations).toBe(1)
+  expect(up.ledger[0]?.notes.join(' ')).toContain('escalation 1 of 1: model haiku → sonnet')
+  const spent = { ...up.ledger[0]!, status: 'failed' as const }
+  const again = retryTask([spent], task('T1', { requested: { model: 'sonnet', effort: 'high' } }), DEFAULT_LIMITS)
+  expect(again.refused).toContain('used its 1 escalation(s)')
+  expect(again.refused).toContain('effort low → high')
+  expect(retryTask([spent], task('T1', { requested: { model: 'sonnet', effort: 'low' } }), DEFAULT_LIMITS).refused).toBeUndefined()
+})

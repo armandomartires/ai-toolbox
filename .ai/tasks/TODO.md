@@ -266,6 +266,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0221 — task-compass 0.10.0, agent-watch 0.9.0: drag handles size the Sprints and Sessions panels
 - [x] TASK-0223 — Every pane panel is resizable, from one shared panel; mods are built from shared parts
 - [x] TASK-0226 — task-orchestrator 0.5.2: fewer coordinator tokens
+- [x] TASK-0224 — task-orchestrator 0.5.3: model routing fixes
 
 ## Post-S9 (superseded by the promotion above)
 

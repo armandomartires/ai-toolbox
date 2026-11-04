@@ -21,7 +21,7 @@ test('the table routes extraction to haiku/low, implementation to sonnet/medium 
 test('a missing model falls back one step up the ladder, visibly, or blocks', () => {
   const out = decided(route({ taskClass: 'lookup' }, DEFAULT_CONFIG, { unavailable: ['haiku'] }))
   expect(out.model).toBe('sonnet')
-  expect(out.notes).toEqual(['model haiku is unavailable here: falling back to sonnet'])
+  expect(out.notes).toEqual(['model haiku is unavailable here: falling back up to sonnet, which costs more'])
   const blocked = route({ taskClass: 'architecture' }, DEFAULT_CONFIG, { unavailable: ['opus', 'fable'] })
   expect(isBlocked(blocked) && blocked.blocked).toContain('unavailable here and no model above it')
   // The ladder never falls back onto a gated model without the opt-in.
@@ -46,7 +46,7 @@ test('an effort outside the five levels is never sent, and xhigh, max and fable 
 test('the coordinator may override role, model and effort, each noted; unknown names block', () => {
   const out = decided(route({ taskClass: 'documentation', model: 'sonnet', effort: 'high', role: 'builder' }, DEFAULT_CONFIG, none))
   expect(out).toMatchObject({ role: 'builder', model: 'sonnet', effort: 'high' })
-  expect(out.notes).toHaveLength(3)
+  expect(out.notes).toHaveLength(4)
   expect(isBlocked(route({ taskClass: 'poetry' }, DEFAULT_CONFIG, none))).toBe(true)
   expect(isBlocked(route({ taskClass: 'lookup', role: 'wizard' }, DEFAULT_CONFIG, none))).toBe(true)
 })
@@ -99,4 +99,12 @@ test("a role's own profile holds the table's settings; other settings get a prof
   expect(roleOfProfile('builder')).toBe('builder')
   expect(roleOfProfile('risk-reviewer--claude-sonnet-5-5-1m-high')).toBe('risk-reviewer')
   expect(roleOfProfile('general-purpose')).toBeUndefined()
+})
+
+test('a role named over the table brings its own row settings, unless a model or effort is named too (TASK-0224)', () => {
+  const own = decided(route({ taskClass: 'lookup', role: 'debugger' }, DEFAULT_CONFIG, none))
+  expect(own).toMatchObject({ role: 'debugger', model: 'opus', effort: 'high' })
+  expect(own.notes).toContain("settings opus/high from role debugger's own row")
+  const named = decided(route({ taskClass: 'lookup', role: 'debugger', model: 'sonnet', effort: 'medium' }, DEFAULT_CONFIG, none))
+  expect(named).toMatchObject({ role: 'debugger', model: 'sonnet', effort: 'medium' })
 })

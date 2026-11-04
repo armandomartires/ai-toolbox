@@ -63,12 +63,21 @@ export const route = (request: RouteRequest, config: Config, availability: Avail
   if (request.role !== undefined) {
     if (!isRole(request.role)) return { blocked: `"${request.role}" is not a role (${ROLES.join(', ')})`, notes }
     role = request.role
-    if (role !== base.role) notes.push(`role ${role} requested over the table's ${base.role}`)
+    if (role !== base.role) {
+      notes.push(`role ${role} requested over the table's ${base.role}`)
+      // A role brings its own row's model and effort, unless those were named too (TASK-0224).
+      const own = Object.values(routesUnder(config)).find(one => one.role === role)
+      if (own && (own.model !== model || own.effort !== effort)) {
+        model = own.model
+        effort = own.effort
+        notes.push(`settings ${own.model}/${own.effort} from role ${role}'s own row`)
+      }
+    }
   }
   if (request.model !== undefined) {
     if (typeof request.model !== 'string' || !request.model.trim()) return { blocked: 'model must be an alias or id', notes }
+    if (request.model.trim() !== base.model) notes.push(`model ${request.model.trim()} requested over the table's ${base.model}`)
     model = request.model.trim()
-    if (model !== base.model) notes.push(`model ${model} requested over the table's ${base.model}`)
   }
   if (request.effort !== undefined) {
     if (!isEffort(request.effort)) return { blocked: `effort "${String(request.effort)}" is not one of ${EFFORTS.join('|')}; nothing was sent`, notes }
@@ -82,7 +91,7 @@ export const route = (request: RouteRequest, config: Config, availability: Avail
     if (next === undefined) return { blocked: `model ${model} is unavailable here and no model above it on the ladder is either`, notes }
     const gatedNext = gate(next, effort, config)
     if (gatedNext) return { blocked: `model ${model} is unavailable here; the fallback ${next} is gated: ${gatedNext}`, notes }
-    notes.push(`model ${model} is unavailable here: falling back to ${next}`)
+    notes.push(`model ${model} is unavailable here: falling back up to ${next}, which costs more`)
     model = next
   }
   return { taskClass: request.taskClass, role, model, effort, notes }

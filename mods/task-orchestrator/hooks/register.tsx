@@ -146,6 +146,13 @@ const statusLine = async ($: EngineInterface) => {
   $.ui.status(statusLineText(config.policy, activeCount(rows), queued))
 }
 
+/** What a profile taken through the Agent tool was registered with: its own name's settings, else its role's row. */
+const profileSettings = (name: string, role: Role, model: string | undefined): { model: string; effort: string } => {
+  const own = /--(.+)-(low|medium|high|xhigh|max)(?:-wt)?$/.exec(name)
+  const row = Object.values(routesUnder(config)).find(one => one.role === role)
+  return { model: model ?? own?.[1] ?? row?.model ?? 'profile', effort: own?.[2] ?? row?.effort ?? 'profile' }
+}
+
 /** The profile a task runs under (`profileName`): its role's own, or one for its settings. */
 const profileOf = (task: Pick<Task, 'role' | 'requested' | 'isolated'>): string => profileName(config, task.role, task.requested.model, task.requested.effort as Effort, task.isolated)
 
@@ -184,6 +191,10 @@ const registerProfiles = async ($: EngineInterface): Promise<string[]> => {
   }
   return problems
 }
+
+/** One line per class: its role's job and its settings now, so the coordinator classifies by meaning (TASK-0224). */
+const classGuide = (): string =>
+  Object.entries(routesUnder(config)).map(([taskClass, one]) => `- ${taskClass}: ${ROLE_PROFILES[one.role].description} (${one.model}/${one.effort}${ROLE_PROFILES[one.role].readOnly ? ', read-only' : ''})`).join('\n')
 
 /** The routing table as `/orchestrate` draws it. */
 const routingView = (): OrchestrateOutput['routes'] =>
@@ -269,7 +280,12 @@ const contractOf = (rows: Ledger, task: Task): string => {
     .map(dep => byId(rows, dep))
     .filter((dep): dep is Task => dep !== undefined && dep.report !== undefined)
     .map(dep => `- ${dep.id} (${dep.role}, ${dep.status}): ${dep.report!.findings || '(no findings line)'}`)
-  return buildContract(task, assignment, config.limits, ROLE_PROFILES[task.role].maxTurns, results)
+  const contract = buildContract(task, assignment, config.limits, ROLE_PROFILES[task.role].maxTurns, results)
+  // A session has no profile, so its role's prompt and the report shape travel in the assignment (TASK-0224).
+  return isSession(task) ? `${contract}
+
+## Your role and your report
+${ROLE_PROFILES[task.role].prompt}` : contract
 }
 
 /** HEAD, for an isolated worker: what its worktree holds. */
@@ -312,6 +328,11 @@ const handoffText = (task: Task, again = false): string[] => {
   return [`assignment for ${task.id} (the ${call} call's prompt, unchanged):`, task.prompt]
 }
 
+/** Whether a spawn's refusal says its model is not available, not merely mentions a model (TASK-0224). */
+const isModelUnavailable = (deny: string): boolean =>
+  /\bmodel\b[^.\n]*\b(not available|unavailable|not found|does not exist|not supported|unknown|invalid)\b/i.test(deny) ||
+  /\b(unknown|invalid|unsupported|unavailable) model\b/i.test(deny)
+
 /** Starts one queued task: its contract, its profile, its base revision, the spawn. */
 const start = async ($: EngineInterface, task: Task): Promise<void> => {
   // A session is never spawned by the mod: it is handed to the coordinator's start_session.
@@ -333,7 +354,7 @@ const start = async ($: EngineInterface, task: Task): Promise<void> => {
   if (ran.deny !== undefined && isNoVerdict(ran.deny)) ran = await spawn()
   if (ran.deny !== undefined) {
     if (isNoVerdict(ran.deny)) return settle($, task, { status: 'blocked', handoff: true, reason: handoffReason(task), endedAt: await $.clock.now() })
-    if (/model/i.test(ran.deny)) await update($, unavailable, list => (list.includes(task.requested.model) ? list : [...list, task.requested.model]))
+    if (isModelUnavailable(ran.deny)) await update($, unavailable, list => (list.includes(task.requested.model) ? list : [...list, task.requested.model]))
     return settle($, task, { status: 'blocked', reason: `spawn refused: ${ran.deny}`, endedAt: await $.clock.now() })
   }
   if (ran.model && ran.model !== task.requested.model) resolved.set(task.requested.model, ran.model)
@@ -390,7 +411,8 @@ const familyOf = (model: string): number => MODEL_LADDER.findIndex(alias => mode
 const sessionGate = async ($: EngineInterface, model: string, effort: Effort): Promise<string | undefined> => {
   const mine = await $.session.model().catch(() => '')
   const [want, have] = [familyOf(model), familyOf(mine)]
-  if (want >= 0 && have >= 0 && want > have) return `a session worker may not run above its coordinator: model "${model}" is above the coordinator's family (${mine}); the app would start it lower, in silence`
+  if (want < 0 || have < 0) return `a session worker's model family cannot be compared: "${model}" against the coordinator's "${mine}"; pass a model alias (haiku, sonnet, opus)`
+  if (want > have) return `a session worker may not run above its coordinator: model "${model}" is above the coordinator's family (${mine}); the app would start it lower, in silence`
   if (coordinatorEffort !== undefined && EFFORTS.includes(coordinatorEffort as Effort) && EFFORTS.indexOf(effort) > EFFORTS.indexOf(coordinatorEffort as Effort))
     return `a session worker may not run above its coordinator: effort "${effort}" is above the coordinator's "${coordinatorEffort}"; the app would start it lower, in silence`
   return undefined
@@ -745,7 +767,8 @@ export const register: Register = on => {
           type: 'object',
           properties: {
             id: { type: 'string', description: 'A short task id, unique in this run: T1, review-2.' },
-            class: { type: 'string', enum: [...TASK_CLASSES], description: 'The task class the routing table keys on.' },
+            class: { type: 'string', enum: [...TASK_CLASSES], description: `The task class the routing table keys on; pick by the work, not its wording:
+${classGuide()}` },
             objective: { type: 'string', description: 'What the worker must achieve, with the background it needs.' },
             inputs: { type: 'array', items: { type: 'string' }, description: 'Files, references and prior results to read.' },
             allowedFiles: { type: 'array', items: { type: 'string' }, description: 'Paths (files or directories) a writer may change; empty means the whole checkout, which also makes it the only writer.' },
@@ -896,14 +919,14 @@ export const register: Register = on => {
       isWriter: !profile.readOnly,
       isolated: false,
       status: 'running',
-      requested: { model: e.model ?? 'profile', effort: 'profile' },
+      requested: profileSettings(type.slice(PLUGIN.length + 1), role, e.model),
       resolvedModel: ran.model,
       agentId: ran.agentId,
       retries: 0,
       escalations: 0,
       createdAt: at,
       startedAt: at,
-      notes: ['spawned through the Agent tool, not dispatch: no allowed-files list, settings from the profile'],
+      notes: ['spawned through the Agent tool, not dispatch: no allowed-files list; requested is the profile settings, and an effort on the call itself is not visible to the mod'],
       prompt: '',
     }
     await update($, ledger, list => addTask(list, task).ledger)
@@ -974,7 +997,7 @@ export const register: Register = on => {
       if (task && !task.observed) {
         const at = await $.clock.now()
         // A worker taken through the Agent tool asked for its profile's effort, not a named one: nothing to compare.
-        const mismatch = e.effort === undefined || task.requested.effort === 'profile' ? undefined : effortMismatchNote(await read($, overrides), task.requested.model, task.requested.effort, String(e.effort), e.model)
+        const mismatch = e.effort === undefined || task.requested.effort === 'profile' || task.notes.some(one => one.startsWith('spawned through the Agent tool')) ? undefined : effortMismatchNote(await read($, overrides), task.requested.model, task.requested.effort, String(e.effort), e.model)
         await update($, ledger, rows => setTask(rows, task.id, { observed: { model: e.model, effort: e.effort === undefined ? 'none (model takes no effort)' : String(e.effort), at }, ...(mismatch ? { notes: [...task.notes, mismatch] } : {}) }))
       }
     }

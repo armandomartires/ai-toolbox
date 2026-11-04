@@ -487,6 +487,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0223-shared-resizable-panel.md
 - [?] TASK-0226 — task-orchestrator 0.5.2: fewer coordinator tokens
   .ai/tasks/TASK-0226-orchestrator-token-economy.md
+- [?] TASK-0224 — task-orchestrator 0.5.3: model routing fixes
+  .ai/tasks/TASK-0224-orchestrator-model-routing.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

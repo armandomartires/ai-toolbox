@@ -247,7 +247,7 @@ test('overrides are disclosed, a gated effort is refused, and an unavailable mod
   expect(String(first.result)).toContain('blocked → spawn refused: model haiku is not available')
   const second = await $.tool.call(dispatch({ id: 'L2', class: 'lookup', objective: 'Find it again' }))
   expect(String(second.result)).toContain('requested sonnet/low')
-  expect(String(second.result)).toContain('note: model haiku is unavailable here: falling back to sonnet')
+  expect(String(second.result)).toContain('note: model haiku is unavailable here: falling back up to sonnet, which costs more')
 })
 
 test('limits hold: three workers, queued fourth, no nesting, no overlapping writers, fenced tools', async ($, on) => {
@@ -973,7 +973,7 @@ test('get_session stating another effort than the requested one is noted as a mi
   expect(shown).toContain('effort mismatch: requested medium, observed high')
 })
 
-test('a worker spawned through the Agent tool has no requested effort to mismatch: its profile effort raises no note', async ($, on) => {
+test('a worker spawned through the Agent tool is requested at its profile settings, and raises no mismatch note', async ($, on) => {
   mock.clock(on)
   mock.store(on)
   mock.env(on, {})
@@ -984,7 +984,49 @@ test('a worker spawned through the Agent tool has no requested effort to mismatc
   for await (const _ of $.turn.step({ turnId: 't', index: 0, model: 'claude-haiku-4-5', effort: 'low', messageCount: 1, agentId: 'agent-1' })) { /* drained */ }
   const shown = await status($)
   expect(shown).toContain('D1')
+  expect(shown).toContain('requested haiku/low')
   expect(shown).not.toContain('effort mismatch')
+})
+
+test('the class field defines each class, and a session assignment carries its role and the report shape (TASK-0224)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { model: 'claude-opus-5-5' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const schema = world.tools.find(one => one.name === 'dispatch')?.inputSchema as { properties: { class: { description: string } } }
+  expect(schema.properties.class.description).toContain('- lookup: Targeted file discovery and straightforward code lookup. (haiku/low, read-only)')
+  expect(schema.properties.class.description).toContain('- architecture:')
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.prompt.submit({ text: 'run it as a session', context: [], origin: { kind: 'composer' } } as never)
+  const held = String((await $.tool.call(dispatch({ id: 'S1', class: 'review', objective: 'Review it', runAs: 'session' }))).result)
+  expect(held).toContain('## Your role and your report')
+  expect(held).toContain('Status: completed | partial | blocked | failed')
+  // A subagent's assignment does not repeat what its profile already carries.
+  await $.tool.call(dispatch({ id: 'A1', class: 'lookup', objective: 'Find it' }))
+  expect(world.spawned.at(-1)?.prompt).not.toContain('## Your role and your report')
+})
+
+test('a spawn refusal saying the model is not available still marks it unavailable (TASK-0224)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on, { denySpawn: 'haiku' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'U1', class: 'lookup', objective: 'Find it' }))
+  expect((await $.command.run({ command: 'orchestrate', args: 'models' })).text).toContain('refused: haiku')
+})
+
+test("a session model whose family cannot be compared with the coordinator's is refused, not passed (TASK-0224)", async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on, { model: 'claude-opus-5-5' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const got = String((await $.tool.call(dispatch({ id: 'S1', class: 'review', objective: 'Review it', runAs: 'session', model: 'custom-proxy-model' }))).result)
+  expect(got).toContain("model family cannot be compared")
 })
 
 test('a session whose events cannot be parsed is partial with no report read, its raw text quoted as such', async ($, on) => {

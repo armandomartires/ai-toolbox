@@ -2,6 +2,7 @@
 // escalations and the completion rules. The hooks module holds one in
 // $.state and calls these on it.
 
+import { EFFORTS, MODEL_LADDER } from './routing'
 import type { Limits } from './routing'
 import type { Report, Settings, Task, TaskStatus } from '../types'
 
@@ -133,6 +134,18 @@ const reaches = (ledger: Ledger, from: string, target: string, seen = new Set<st
  * A dispatch: a new task added, or, under the id of a retryable task, that task
  * queued again in its place as its next retry, its dependants still waiting on it.
  */
+/** The rung of a model alias or id on the ladder, or -1 when it names none. */
+export const modelRank = (model: string): number => MODEL_LADDER.findIndex(alias => model.toLowerCase().includes(alias))
+
+/** How a retry asks for more than the run before it, or undefined: a bigger model or a higher effort is an escalation. */
+export const escalationOf = (old: Settings, fresh: Settings): string | undefined => {
+  const steps = [
+    ...(modelRank(fresh.model) > modelRank(old.model) && modelRank(old.model) >= 0 ? [`model ${old.model} → ${fresh.model}`] : []),
+    ...(EFFORTS.indexOf(fresh.effort as never) > EFFORTS.indexOf(old.effort as never) && EFFORTS.indexOf(old.effort as never) >= 0 ? [`effort ${old.effort} → ${fresh.effort}`] : []),
+  ]
+  return steps.length ? steps.join(', ') : undefined
+}
+
 export const retryTask = (ledger: Ledger, fresh: Task, limits: Limits): { ledger: Ledger; refused?: string } => {
   const old = byId(ledger, fresh.id)
   if (!old) return addTask(ledger, fresh)
@@ -143,8 +156,15 @@ export const retryTask = (ledger: Ledger, fresh: Task, limits: Limits): { ledger
   if (missing.length) return { ledger, refused: `task ${fresh.id} depends on unknown task(s) ${missing.join(', ')}` }
   const cycle = fresh.deps.filter(dep => reaches(ledger, dep, fresh.id))
   if (cycle.length) return { ledger, refused: `task ${fresh.id} may not depend on ${cycle.join(', ')}: it waits on ${fresh.id}` }
+  // A retry on a bigger model or a higher effort is also an escalation, counted against its own limit (TASK-0224).
+  const raised = escalationOf(old.requested, fresh.requested)
+  if (raised) {
+    const spent = mayEscalate(old, limits)
+    if (spent) return { ledger, refused: `${spent} (this retry asks for ${raised})` }
+  }
   const retries = old.retries + 1
-  const task: Task = { ...fresh, retries, escalations: old.escalations, createdAt: old.createdAt, notes: [...fresh.notes, `retry ${retries} of ${limits.maxRetries} after ${old.status}`] }
+  const escalations = old.escalations + (raised ? 1 : 0)
+  const task: Task = { ...fresh, retries, escalations, createdAt: old.createdAt, notes: [...fresh.notes, `retry ${retries} of ${limits.maxRetries} after ${old.status}`, ...(raised ? [`escalation ${escalations} of ${limits.maxEscalations}: ${raised}`] : [])] }
   // Replaced, not merged: the old row's agent, report, reason and hand-off go.
   return { ledger: ledger.map(one => (one.id === fresh.id ? task : one)) }
 }
