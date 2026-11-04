@@ -305,6 +305,44 @@ class TestForgeTracker(Harness):
         self.assertIn("gitlab (group/app)", text)
         self.assertRegex(text, r"- #42 @[0-9a-f]+: update the issue from the snapshot")
 
+    def test_the_journal_is_hash_chained_and_an_edit_is_detected(self):
+        # Issue #14: every line links to the previous line's SHA-256.
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        path = os.path.join(self.repo, ".run", "r1", "journal.jsonl")
+        tool = os.path.join(HERE, "..", "..", "..", "..", "scripts", "journal-chain.py")
+        ok = subprocess.run([sys.executable, tool, "verify", path], capture_output=True, text=True)
+        self.assertEqual(ok.returncode, 0, ok.stdout)
+        self.assertEqual(self.journal()[0]["prev"], "0" * 64)
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+        lines[1] = lines[1].replace('"event": "', '"event": "x', 1)
+        with open(path, "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        bad = subprocess.run([sys.executable, tool, "verify", path], capture_output=True, text=True)
+        self.assertEqual(bad.returncode, 1, bad.stdout)
+        self.assertIn("line 3", bad.stdout)
+
+    def test_the_journal_head_is_recorded_and_checked_on_resume(self):
+        # Review note_1350 item 1: the anchor lives outside the journal (the
+        # handover and stdout), and a resume halts if the journal no longer
+        # chains up to it.
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        path = os.path.join(self.repo, ".run", "r1", "journal.jsonl")
+        tool = os.path.join(HERE, "..", "..", "..", "..", "scripts", "journal-chain.py")
+        head = subprocess.run([sys.executable, tool, "verify", path], capture_output=True,
+                              text=True).stdout.split()[-1]
+        self.assertIn("Journal head: %s" % head, self.handover())
+        self.assertIn("journal-head: %s" % head, self.proc.stdout)
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+        with open(path, "w") as fh:
+            fh.write("\n".join(lines[:-1]) + "\n")
+        self.assertEqual(self.run_driver(forge_agents()), 1, self.proc.stderr)
+        halts = [r for r in self.journal() if r.get("event") == "halt"]
+        self.assertTrue(halts and "head recorded in the handover" in halts[-1]["reason"], halts)
+
     def test_no_role_is_asked_to_run_glab_or_gh(self):
         self.make_forge()
         self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)

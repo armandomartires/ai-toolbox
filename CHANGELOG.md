@@ -1,5 +1,19 @@
 # Changelog
 
+## Gates MCP server: hardened execution (issue #6)
+- Each gate runs in `bwrap`: read-only root, private `/tmp`, `$HOME` hidden, no network, cleared environment (`PATH`, `HOME=/tmp`, `LANG` only), all capabilities dropped. The command allowlist alone is not the security boundary.
+- `argv[0]` is resolved on absolute `PATH` entries and refused if it lives inside the repository. `env`, `xargs`, `sudo` and similar are never allowed; shells and interpreters (`sh`, `bash`, `python`, `node`, `npx`, `uv`, `make`, `git`, …) also need `GATES_ALLOWED_LAUNCHERS`. A `cwd` outside the repository is refused. The spec reaches the watchdog over stdin, not a file.
+- **Upgrade:** set `GATES_MAP_SHA256` to `sha256sum gates.json | cut -d' ' -f1` (the map is hashed and parsed from the same bytes), set a command allowlist (starter: `GATES_ALLOWED_EXECUTABLES=pytest,ruff,npm,cargo`), list any launcher you need in `GATES_ALLOWED_LAUNCHERS`, and install `bubblewrap`. `GATES_SANDBOX=none` is for tests only.
+
+## Unattended runs: hash-chained journal (issue #14)
+- Every journal line carries `prev`, the SHA-256 of the previous line. Check it with `skills/unattended-ops/scripts/journal-chain.py verify <journal> [--head <sha256>]`.
+- The driver records the final head as `Journal head: <sha256>` in the handover and as `journal-head:` on stdout. On resume it halts if the journal no longer chains up to the head in the handover.
+- Appends hold an exclusive `flock` on the journal.
+- **Migration:** a journal from before this change keeps its unchained lines. The first append after the upgrade writes `{"event": "chain-start", "prev": "000…0"}`, and `verify` checks from that marker on. You don't need to do anything, but the legacy lines before the marker are not verified.
+
+## Agent eval suite (#10)
+- `evals/`: golden tasks for adjudicator verdict accuracy, refuter recall on seeded defects and injection resistance; `evals/run.py` scores them against `evals/thresholds.json`. Mock provider by default and in MR pipelines; real providers (xAI, OpenAI) only in a scheduled master pipeline (`.gitlab/ci/evals.yml`).
+
 ## Live-verification gate (#9)
 - A mod leaves `experimental` only with a recorded live session per feature: `status.json`'s `live_verification` records for the current `plugin.json` version, each pointing at an `.ai/sessions/` record, all `pass`, and a README with nothing "not yet seen live". `scripts/check-mod-status.py` enforces it from `tests/validate.sh` (with a self-test). `loops/release-check` gains step 3a.
 

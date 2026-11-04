@@ -2171,6 +2171,76 @@ if ! python3 scripts/sbom-add-external.py --self-test; then
 fi
 
 # --------------------------------------------------------------------------
+# External MCP servers are pinned and sandboxed (issue #7): a lockfile with an
+# integrity hash on every package, a tools.lock.json of hashed tool
+# definitions, a declared egress list, and a sandbox launch with no network.
+if ! python3 scripts/mcp-tool-lock.py --self-test >/dev/null; then
+  echo "MCP-PIN: scripts/mcp-tool-lock.py self-test failed"
+  fail=1
+fi
+for manifest in mcp-servers/*/server.json; do
+  d=$(dirname "$manifest"); n=$(basename "$d")
+  case "$n" in _*) continue ;; esac
+  if ! python3 - "$d" <<'PY'
+import json, os, sys
+d = sys.argv[1]
+m = json.load(open(os.path.join(d, "server.json")))
+bad = []
+pl = m.get("pinned_launch")
+if not pl:
+    bad.append("no pinned_launch (npx -y has no integrity check)")
+else:
+    lock = os.path.join(d, pl["cwd"], "package-lock.json")
+    if not os.path.isfile(lock):
+        bad.append("no %s" % lock)
+    else:
+        pk = json.load(open(lock)).get("packages", {})
+        miss = [k for k, v in pk.items() if k and not v.get("link") and not v.get("integrity")]
+        if miss:
+            bad.append("lockfile packages without integrity: %s" % ", ".join(miss[:5]))
+        want = "%s@%s" % (m["upstream"]["package"], m["upstream"]["version"])
+        got = pk.get("node_modules/" + m["upstream"]["package"], {}).get("version")
+        if got != m["upstream"]["version"]:
+            bad.append("lockfile has %s, manifest says %s" % (got, want))
+if not isinstance(m.get("egress"), dict) or not isinstance(m["egress"].get("allow"), list):
+    bad.append("no egress.allow list")
+if not os.path.isfile(os.path.join(d, "tools.lock.json")):
+    bad.append("no tools.lock.json (run scripts/mcp-tool-lock.py approve)")
+for b in bad:
+    print("MCP-PIN: %s: %s" % (d, b))
+sys.exit(1 if bad else 0)
+PY
+  then fail=1; continue; fi
+  ws_tmp="$(mktemp -d)"
+  printed="$(WORKSPACE_ROOT="$ws_tmp" scripts/mcp-sandbox.sh "$n" --print)" || { echo "MCP-PIN: mcp-sandbox.sh $n --print failed"; fail=1; }
+  if ! grep -qx -- '--network' <<<"$printed"; then
+    echo "MCP-PIN: scripts/mcp-sandbox.sh $n does not set --network none"
+    fail=1
+  fi
+  # Only the declared workspace is mounted, and the server sees it as /work.
+  grep -qx -- "$(cd "$ws_tmp" && pwd -P):/work" <<<"$printed" || { echo "MCP-PIN: $n does not mount WORKSPACE_ROOT at /work"; fail=1; }
+  grep -qx -- 'WORKSPACE_ROOT=/work' <<<"$printed" || { echo "MCP-PIN: $n does not remap WORKSPACE_ROOT"; fail=1; }
+  if WORKSPACE_ROOT="$HOME" scripts/mcp-sandbox.sh "$n" --print >/dev/null 2>&1; then
+    echo "MCP-PIN: mcp-sandbox.sh accepted WORKSPACE_ROOT=\$HOME"; fail=1
+  fi
+  if (unset WORKSPACE_ROOT; scripts/mcp-sandbox.sh "$n" --print >/dev/null 2>&1); then
+    echo "MCP-PIN: mcp-sandbox.sh ran without WORKSPACE_ROOT"; fail=1
+  fi
+  rmdir "$ws_tmp"
+done
+# Images pinned by digest, never a bare tag (review note_1348 item 3).
+for f in scripts/mcp-sandbox.sh .gitlab/ci/mcp-tool-lock.yml; do
+  if grep -nE 'node:[0-9][A-Za-z0-9.-]*' "$f" | grep -v '@sha256:[0-9a-f]\{64\}' | grep -q .; then
+    echo "MCP-PIN: $f uses a node image without a @sha256 digest"; fail=1
+  fi
+done
+# The run journal is hash-chained (issue #14): edits, deletions, reordering
+# and (against a recorded head) truncation are detected. A red proof.
+if ! python3 skills/unattended-ops/scripts/journal-chain.py --self-test >/dev/null; then
+  echo "JOURNAL: skills/unattended-ops/scripts/journal-chain.py self-test failed"
+  fail=1
+fi
+
 # Mod status and the live-verification gate (issues #5 and #9).
 #
 # WHY: features shipped "tested in the kit, not yet seen live". Every mod is
@@ -2190,6 +2260,13 @@ fi
 python3 scripts/check-mod-status.py || fail=1
 
 # --------------------------------------------------------------------------
+# Agent eval suite (issue #10). WHY: role quality had no measurement. WHAT
+# THIS PROVES: the golden tasks load and name real agents, the mock run
+# scores 1.0, seeded bad answers lower every category and trip the
+# regression gate, and a missing key fails cleanly. Offline, no keys.
+# WHAT IT DOES NOT PROVE: how a real model scores; that is the scheduled
+# evals-live job.
+python3 evals/run.py --self-test || { echo "EVALS: self-test failed"; fail=1; }
 # Unattended-run sandbox, Level 1 (issue #11).
 # WHY: unattended runs executed on the dev host with user credentials.
 # WHAT THIS PROVES: the CI jobs are pinned to runner tag docker, run
