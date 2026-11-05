@@ -89,6 +89,8 @@ A project with no `GOALS.md` (under `.ai/`, or a root one the mod has yet to cop
 
 ## Not yet verified
 
+Version 0.11.1 (`TASK-0231`): the board no longer holds a minimum height of the pane's rows, so what another mod contributes to the pane (agent-watch's Sessions panel and meter) sits directly under the board in either load order instead of below the visible pane.
+
 The handle drawn by the shared panel (`TASK-0223`) was seen live in a terminal (2026-11-04); not yet on the desktop, which drew the organization library's 0.9.1 while it was synced.
 
 Version 0.10.0 (`TASK-0221`), the board's resize handle, is tested in the mod test kit and was seen live on the desktop and in a terminal (2026-11-04): the handle on the frame's bottom edge, a drag resizes the panel, a double press goes back to automatic, the framed hint on hover. Not yet seen: the `↑`, `↓` and `r` keys.

@@ -1,5 +1,11 @@
 # Changelog
 
+## task-compass 0.11.1
+- agent-watch's meter and Sessions panel sit under the board in either load order (`TASK-0231`): the board's box no longer holds the pane's full rows (`minHeight`), which pushed them below the visible pane when agent-watch loaded first. Tested in the mod test kit; not yet seen live.
+
+## agent-watch 0.11.0
+- The band shows task-orchestrator's state while it is idle (`TASK-0230`): `ORCH <POLICY> · IDLE` with nothing else to show, and an `ORCH <POLICY>` label in the run and meter lines, dropped first when narrow. Tested in the mod test kit; not yet seen live.
+
 ## Live-verification gate (#9)
 - A mod leaves `experimental` only with a recorded live session per feature: `status.json`'s `live_verification` records for the current `plugin.json` version, each pointing at an `.ai/sessions/` record, all `pass`, and a README with nothing "not yet seen live". `scripts/check-mod-status.py` enforces it from `tests/validate.sh` (with a self-test). `loops/release-check` gains step 3a.
 

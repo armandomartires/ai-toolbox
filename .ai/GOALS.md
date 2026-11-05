@@ -497,6 +497,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0228-driver-tells-denials-from-errors.md
 - [x] TASK-0229 — task-compass's README shows the pane on the desktop and in a terminal (B-064)
   .ai/tasks/TASK-0229-compass-readme-screenshots.md
+- [?] TASK-0230 — agent-watch: the band above the prompt shows the orchestrator's state, idle included
+- [?] TASK-0231 — task-compass: the Sessions panel shows under the board in either load order
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

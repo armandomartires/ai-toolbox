@@ -136,13 +136,13 @@ test('the timeline shows sprints side by side with cards and tasks', async ($, o
     expect(await text(/1 task done/)).toBeDefined()
     expect(await text(/Render the dots/)).toBeDefined()
     // The dots keep their status colours outside the name's Button, and the
-    // tree fills the pane's rows. In progress is cyan; the current sprint's
+    // outermost Box sets no minHeight (TASK-0231). In progress is cyan; the current sprint's
     // mark is white, the one peak.
     expect((await ui.find({ type: 'Text', text: '◐' }))?.props.color).toBe(DARK.cyan)
     expect((await ui.find({ type: 'Text', text: '◉' }))?.props.color).toBe(DARK.white)
     expect((await ui.findAll({ type: 'Text' })).filter(one => one.props.dimColor).length).toBe(0)
     expect((await ui.find({ type: 'Button', text: /▸Draw the rails/ }))?.text).not.toContain('◐')
-    expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBe(40)
+    expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBeUndefined()
     // No card is open until a dot or its name is pressed.
     // (The bracketed Sprints panel is filled too, but as wide as the pane.)
     const isCard = (one: { type: string; props: Record<string, unknown> }) =>
@@ -586,7 +586,7 @@ test('the rail passes through the glyph\'s centre: on a desktop both are two cel
   await terminal.unmount()
 })
 
-test('the board is alone in its pane: it fills the pane\'s rows, draws at any height, and nothing below it is Compass\'s', async ($, on) => {
+test('the board is alone in its pane: its outermost Box sets no minHeight, draws at any height, and nothing below it is Compass\'s', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   engine(on)
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
@@ -594,8 +594,8 @@ test('the board is alone in its pane: it fills the pane\'s rows, draws at any he
   for (const surface of SURFACES) {
     for (const bodyRows of [10, 40, 120]) {
       const ui = await $.ui.mount({ ...PANE, surface, props: { ...PANE.props, scroll: { offset: 0, bodyRows } } })
-      // The pane's column is at least the pane tall, so the board's frame is not left floating in a taller pane.
-      expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBe(bodyRows)
+      // No minimum height of the pane's rows (TASK-0231): it would push a mod's contribution below the visible pane. This checks only the outermost Box; slot.test.tsx checks the contribution's path and preceding siblings. The board's columns size themselves to the rows.
+      expect((await ui.findAll({ type: 'Box' }))[0]?.props.minHeight).toBeUndefined()
       expect(await ui.find({ key: 'st2.1' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^SPRINTS$/ })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: /^SESSIONS$/ })).toBeUndefined()

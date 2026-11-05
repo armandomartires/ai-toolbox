@@ -28,7 +28,7 @@ Statuses map to fixed `GOALS.md` markers: plain item = backlog, `[ ]` todo, `[>]
 
 - The model reads the board from the `story` tool's description, re-described when `GOALS.md` changes.
 - The story tool is answered from the general `tool.call` hook by comparing `e.tool` with `mcp__task-compass__story`.
-- Cards open on a click on a dot's name, a plain `Button`; the dot stays a `Text` outside it. The open card sits in its column's flow under its story, so the rows below slide down. The tree fills the pane with `minHeight` of `e.props.scroll.bodyRows`, not the viewport's rows.
+- Cards open on a click on a dot's name, a plain `Button`; the dot stays a `Text` outside it. The open card sits in its column's flow under its story, so the rows below slide down. The tree sets no `minHeight` of `e.props.scroll.bodyRows` (it pushed a contributing mod's panel off the visible pane, TASK-0231); its outer Box takes `flexGrow={1}`.
 - On a desktop the rail is the left edge of a bordered `Box` clipped by a one-cell `overflow="hidden"` Box (`railRun`), and cards are four straight edges (`frame` from `sigma.tsx`); the terminal keeps `│` text.
 
 ## The resize handle

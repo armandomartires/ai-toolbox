@@ -72,7 +72,9 @@ const contributor: Register = on => {
     return (
       <Box flexDirection="column">
         {result as never}
-        <Text>CONTRIBUTED</Text>
+        <Box key="contribution">
+          <Text>CONTRIBUTED</Text>
+        </Box>
       </Box>
     )
   })
@@ -139,4 +141,46 @@ for (const surface of SURFACES) {
     expect(logged).toContain('task-compass: next(e) resolved object (type engine)')
     await ui.unmount()
   })
+
+  for (const [label, plugin] of [
+    ['compass first, then the contributor', AFTER_COMPASS],
+    ['the contributor first, then compass', BEFORE_COMPASS],
+  ] as const) {
+    // TASK-0231: a minHeight of the pane's full rows on an ancestor of the contribution, or on anything drawn before it
+    // (Compass's board box when the contributor is the outer hook and its contribution is a later sibling), pushed it below the visible pane.
+    test(`${label}: nothing on the way to the contribution, nor drawn before it, holds the pane's full rows (${surface})`, { plugins: [plugin] }, async ($, on) => {
+      engine(on)
+      await $.session.start({ cwd: '/p', surface, isInteractive: true })
+      const ui = await $.ui.mount({ ...PANE, surface })
+      const kids = (node: any): any[] => {
+        const c = node?.children
+        return (c === undefined ? [] : Array.isArray(c) ? c.flat(Infinity) : [c]).filter((x: any) => x && typeof x === 'object')
+      }
+      const path = (node: any, trail: any[]): any[] | undefined => {
+        if (node?.key === 'contribution' || node?.props?.key === 'contribution') return trail
+        for (const child of kids(node)) {
+          const found = path(child, [...trail, node])
+          if (found) return found
+        }
+      }
+      const drawn = await ui.drawn()
+      const ancestors = path(drawn, [])
+      expect(ancestors).toBeDefined()
+      for (const node of ancestors ?? []) expect(Number(node?.props?.minHeight ?? 0)).toBeLessThan(PANE.props.scroll.bodyRows)
+      // Every node drawn before the contribution at each level of the path, with its whole subtree.
+      const tall = (node: any): boolean => Number(node?.props?.minHeight ?? 0) >= PANE.props.scroll.bodyRows || kids(node).some(tall)
+      const trail = [...(ancestors ?? []), undefined]
+      let preceding = 0
+      ;(ancestors ?? []).forEach((node, i) => {
+        const siblings = kids(node)
+        const at = siblings.findIndex(c => c === trail[i + 1] || c?.key === 'contribution' || c?.props?.key === 'contribution')
+        for (const before of siblings.slice(0, at < 0 ? 0 : at)) {
+          preceding++
+          expect(tall(before)).toBe(false)
+        }
+      })
+      expect(preceding).toBeGreaterThan(0)
+      await ui.unmount()
+    })
+  }
 }
