@@ -545,6 +545,171 @@ test('the band never wraps: the objective is cut first, then WAIT ON, then the q
   for (const one of [wide, cut, noWait, none]) expect(one.width).toBeLessThanOrEqual(Math.max(20, one.columns))
 })
 
+// The orchestrator's switch on, nothing else; each is a literal, the kit evaluating an inline register without its closure.
+const orchOn: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.state.set({ plugin: 'task-orchestrator', key: 'enabled' } as const, true)
+    await $.state.set({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
+    return next(e)
+  })
+}
+const orchOnMidRun: Register = on => {
+  on('session.start', async ($, e, next) => {
+    const task = { requested: { model: 'sonnet', effort: 'medium' }, deps: [] as string[], createdAt: 500 }
+    await $.state.set({ plugin: 'task-orchestrator', key: 'enabled' } as const, true)
+    await $.state.set({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
+    await $.state.set({ plugin: 'task-orchestrator', key: 'ledger' } as const, [
+      { ...task, id: 'T1', role: 'builder', objective: 'Write the model', status: 'completed', startedAt: 600, endedAt: 700 },
+      { ...task, id: 'T3', role: 'builder', objective: 'Draw the band above the prompt', status: 'running', agentId: 'id-T3 builder', startedAt: 1_000 },
+      { ...task, id: 'T4', role: 'tester', objective: 'Test the band', status: 'queued', deps: ['T3'] },
+    ])
+    return next(e)
+  })
+}
+
+test('orchestration on with nothing to show draws ORCH <POLICY> · IDLE, and off leaves the band to the engine', { plugins: [{ name: 'task-orchestrator', register: orchOn }] }, async ($, on) => {
+  const said = engine(on, { value: [] })
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  let ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /ORCH BALANCED · IDLE/ }))?.props.color).toBe(DARK['text-3'])
+  expect(await ui.find({ text: /^engine$/ })).toBeUndefined()
+  const opens = said.opens.length
+  await ui.press({ key: 'band-orch' })
+  expect(said.opens.length).toBe(opens + 1)
+  await ui.unmount()
+
+  // A survey still holds the band.
+  ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, hasSurvey: true }, surface: 'terminal' })
+  expect((await ui.find({ type: 'Text' }))?.text).toBe('engine')
+  await ui.unmount()
+
+})
+
+test('orchestration off with nothing to show leaves the band to the engine', async ($, on) => {
+  engine(on, { value: [] })
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect((await ui.find({ type: 'Text' }))?.text).toBe('engine')
+  expect(await ui.find({ text: /ORCH/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('with a run open the band leads with ORCH <POLICY>, which goes before the objective is cut', { plugins: [{ name: 'task-orchestrator', register: orchOnMidRun }] }, async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  on('tool.call', () => ({ result: {} }))
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await clock.advance(5_000)
+  const at = async (columns: number) => {
+    const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: columns }, surface: 'terminal' })
+    const out = await bandTexts(ui)
+    await ui.unmount()
+    return { ...out, columns }
+  }
+  const wide = await at(120)
+  expect(wide.joined.indexOf('ORCH BALANCED')).toBe(0)
+  expect(wide.joined).toContain('T3 · builder · Draw the band above the prompt')
+  // Narrower: the label goes while the objective is still whole.
+  const narrower = await at(96)
+  expect(narrower.joined).not.toContain('ORCH')
+  expect(narrower.joined).toContain('T3 · builder · Draw the band above the prompt')
+  for (const one of [wide, narrower]) expect(one.width).toBeLessThanOrEqual(Math.max(20, one.columns))
+})
+
+test('with a task list and no run the band ends with ORCH <POLICY> while it is on, and drops it when narrow', { plugins: [{ name: 'task-orchestrator', register: orchOn }] }, async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  on('tool.call', () => ({ result: {} }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.tool.call({
+    tool: 'mcp__ccd_turn__update_plan',
+    items: [{ content: 'Draw the band', status: 'in_progress' }, { content: 'Test it', status: 'pending' }],
+  } as AppTool)
+  const at = async (columns: number) => {
+    const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: columns }, surface: 'terminal' })
+    const texts = (await ui.findAll({ type: 'Text' })).map(part => part.text)
+    await ui.unmount()
+    return texts
+  }
+  const wide = await at(80)
+  expect(wide.at(-1)).toBe('ORCH BALANCED')
+  expect(wide.join(' ')).toContain('Draw the band')
+  const narrow = await at(34)
+  expect(narrow.join(' ')).not.toContain('ORCH')
+  expect(narrow.join(' ')).toContain('Draw')
+})
+
+// A policy other than the default, to prove the label reads it.
+const orchQuality: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.state.set({ plugin: 'task-orchestrator', key: 'enabled' } as const, true)
+    await $.state.set({ plugin: 'task-orchestrator', key: 'policy' } as const, 'quality')
+    return next(e)
+  })
+}
+
+test('a finished task list ends with ORCH <POLICY> in the policy in force, and drops it before ALL DONE is cut when narrow', { plugins: [{ name: 'task-orchestrator', register: orchQuality }] }, async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  on('tool.call', () => ({ result: {} }))
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.tool.call({
+    tool: 'mcp__ccd_turn__update_plan',
+    items: [{ content: 'Draw the band', status: 'completed' }, { content: 'Test it', status: 'completed' }],
+  } as AppTool)
+  const at = async (columns: number) => {
+    const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: columns }, surface: 'terminal' })
+    const out = await bandTexts(ui)
+    await ui.unmount()
+    return { ...out, columns }
+  }
+  const wide = await at(80)
+  expect(wide.joined).toContain('ALL DONE')
+  expect(wide.joined).toContain('ORCH QUALITY')
+  expect(wide.joined).not.toContain('BALANCED')
+  const narrow = await at(34)
+  expect(narrow.joined).toContain('ALL DONE')
+  expect(narrow.joined).not.toContain('ORCH')
+  for (const one of [wide, narrow]) expect(one.width).toBeLessThanOrEqual(Math.max(20, one.columns))
+})
+
+test('a running agent with no task list and orchestration on: the meter fits its columns, and ORCH goes when there is no room', { plugins: [{ name: 'task-orchestrator', register: orchOn }] }, async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  on('tool.call', () => ({ result: {} }))
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  listed.value = [{ id: 'id-Find hooks', type: 'Explore', description: 'Find hooks', status: 'running' }]
+  const at = async (columns: number) => {
+    const ui = await $.ui.mount({ ...BAND, props: { ...BAND.props, bodyColumns: columns }, surface: 'terminal' })
+    const out = await bandTexts(ui)
+    await ui.unmount()
+    return { ...out, columns }
+  }
+  const wide = await at(80)
+  expect(wide.joined).toContain('1 running'.toUpperCase())
+  expect(wide.joined).toContain('ORCH BALANCED')
+  const narrow = await at(30)
+  expect(narrow.joined).toContain('1 running'.toUpperCase())
+  expect(narrow.joined).not.toContain('ORCH')
+  for (const one of [wide, narrow]) expect(one.width).toBeLessThanOrEqual(Math.max(20, one.columns))
+})
+
 test('the pane shows what a running agent is doing: its call, its calls, its tokens', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   const listed = { value: [] as AgentInfo[] }

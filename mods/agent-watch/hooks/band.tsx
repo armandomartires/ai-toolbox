@@ -17,6 +17,9 @@ const runs = atom({ plugin: 'agent-watch', key: 'runs' } as const, [])
 const tones = atom({ plugin: 'agent-watch', key: 'tones' } as const, {})
 // task-orchestrator's ledger, read and never written (types/index.d.ts, the mirror).
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
+// Its switch and policy, read the same way (the `enabled` and `policy` of the mirror).
+const enabled = atom({ plugin: 'task-orchestrator', key: 'enabled' } as const, false)
+const policy = atom({ plugin: 'task-orchestrator', key: 'policy' } as const, 'balanced')
 
 /** The widest the meter grows; it shrinks with the band. */
 const BAR_MAX = 20
@@ -40,11 +43,11 @@ const waitOf = (all: readonly { id: string; status: string; deps: string[] }[], 
  * and the glyph of each running agent, pulsing, in the tone of the session
  * that owns it. The one drawing both the band above the prompt and the
  * contribution to Compass's pane call (ADR-0048); undefined while there is no
- * task list and no agent runs. A declaration: the engine follows `$` past an
+ * task list, no agent runs and orchestration is off (on, the idle line `ORCH <POLICY> · IDLE`). A declaration: the engine follows `$` past an
  * import only into one.
  */
 export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'> | RenderInput<'Pane'>) {
-  const [list, rows, tick, at, all, held, orchTasks] = await Promise.all([
+  const [list, rows, tick, at, all, held, orchTasks, isOn, mode] = await Promise.all([
     read($, tasks),
     read($, agents),
     read($, frame),
@@ -52,11 +55,15 @@ export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'
     read($, runs),
     read($, tones),
     read($, ledger),
+    read($, enabled),
+    read($, policy),
   ])
   const running = rows.filter(row => row.status === 'running')
   const { done, total, current } = progressOf(list)
   const isRun = orchTasks.some(task => !isEnded(task))
-  if (total === 0 && running.length === 0 && !isRun) return undefined
+  if (total === 0 && running.length === 0 && !isRun && !isOn) return undefined
+  // The orchestrator's switch and policy, shown while it is on.
+  const orch = isOn ? `ORCH ${String(mode).toUpperCase()}` : ''
 
   const ui = $.ui.resolve(e as RenderInput<'AbovePrompt'>)
   const { Box, Button, Text } = ui
@@ -76,6 +83,17 @@ export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'
     </Button>
   ))
   const openPane = () => void $.ui.open({ id: PANE, title: TITLE })
+
+  // Orchestration on with nothing tracked: the band says it is on and idle.
+  if (total === 0 && running.length === 0 && !isRun) {
+    return (
+      <Box flexDirection="row">
+        <Button key="band-orch" plain onPress={openPane}>
+          {label(`${orch} · IDLE`)}
+        </Button>
+      </Box>
+    )
+  }
 
   if (isRun) {
     // The orchestrator's run is what the band follows: a mark per ledger task in the Sessions panel's own glyphs and colours, done of all, the task running, and what waits.
@@ -117,17 +135,24 @@ export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'
       [live.length > 1 ? `+${live.length - 1} RUNNING` : '', queued.length > 0 ? `${queued.length} QUEUED` : ''],
       [],
     ].map(parts => parts.filter(part => part !== '').join(' · '))
-    const used = (tail: string) => {
-      const parts = [shown.length, tally.length + 6, ...(time === '' ? [] : [time.length]), ...(tail === '' ? [] : [tail.length]), ...(otherWidth === 0 ? [] : [otherWidth])]
+    const used = (tail: string, withOrch = false) => {
+      const parts = [...(withOrch ? [orch.length] : []), shown.length, tally.length + 6, ...(time === '' ? [] : [time.length]), ...(tail === '' ? [] : [tail.length]), ...(otherWidth === 0 ? [] : [otherWidth])]
       return parts.reduce((sum, part) => sum + part, 0) + parts.length - 1
     }
     // The objective is cut first, then the wait, then the queue; the line never wraps.
     const fits = (tail: string) => cols - used(tail) - 1 - 1 >= head.length
     const tail = tails.find(fits) ?? ''
-    const name = first === undefined ? '' : fit(full, Math.max(4, cols - used(tail) - 2))
+    // The ORCH label goes first: it stays only while the whole objective fits beside it.
+    const hasOrch = orch !== '' && cols - used(tails[0] as string, true) - 2 >= full.length
+    const name = first === undefined ? '' : fit(full, Math.max(4, cols - used(tail, hasOrch) - 2))
 
     return (
       <Box flexDirection="row" columnGap={1}>
+        {hasOrch && (
+          <Button key="band-orch" plain onPress={openPane}>
+            {label(orch)}
+          </Button>
+        )}
         <Box flexShrink={0} flexDirection="row">
           {marks}
         </Box>
@@ -155,7 +180,10 @@ export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'
     )
   }
   const room = cols - width - count.length - 6 - running.length * 2 - 12
-  const step = isDone ? 'ALL DONE' : current ? fit(current, Math.max(8, room)) : ''
+  // The ORCH label closes the line, and goes when the step would be cut for it.
+  const text = isDone ? 'ALL DONE' : (current ?? '')
+  const hasOrch = orch !== '' && room - orch.length - 1 >= text.length
+  const step = isDone ? 'ALL DONE' : current ? fit(current, Math.max(8, room - (hasOrch ? orch.length + 1 : 0))) : ''
 
   return (
     <Box flexDirection="row">
@@ -174,6 +202,13 @@ export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'
         <Box flexShrink={0} flexDirection="row" marginLeft={total > 0 ? 1 : 0}>
           {icons}
           {label(`${running.length} running`)}
+        </Box>
+      )}
+      {hasOrch && (
+        <Box marginLeft={1}>
+          <Button key="band-orch" plain onPress={openPane}>
+            {label(orch)}
+          </Button>
         </Box>
       )}
     </Box>
