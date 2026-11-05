@@ -349,13 +349,13 @@ column; `tests/test-mods.sh` runs `claude plugin validate` and
 
 **Design.** Every mod draws in SIGMAorbital (`ADR-0043`) from
 `hooks/sigma.tsx`: its tokens, status glyphs and primitives, and, in its
-header, the rules every surface follows. `mods/_template/hooks/sigma.tsx`
+header, the rules every surface follows. `mods/_template/claude/hooks/sigma.tsx`
 is the one owner; each mod holds a byte-identical copy, which the gate
 checks. Change the owner, then copy it to every mod.
 
 **Shared parts first** (`ADR-0053`). A mod is built from the template's
 parts, and an element more than one mod could use (a panel, a control, a
-handle, a layout rule) is built in the owner, `mods/_template/hooks/`, and
+handle, a layout rule) is built in the owner, `mods/_template/claude/hooks/`, and
 copied out, never inside one mod. Before writing an element, look there:
 `kit()` in `sigma.tsx` (panels, stats, meters, badges, toggles, rules),
 `handle.tsx`. A rule that must hold for every mod gets a check in

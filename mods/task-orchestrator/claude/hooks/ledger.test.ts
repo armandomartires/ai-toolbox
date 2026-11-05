@@ -92,6 +92,14 @@ test('retries and escalations stop at their limits, and the run is done only whe
   expect(overall([task('b', { status: 'completed' }), task('r', { status: 'completed' })]).word).toBe('done')
 })
 
+test('a cancelled task neither fails nor blocks the run', () => {
+  expect(overall([task('b', { status: 'completed' }), task('c', { status: 'cancelled' })]).word).toBe('done')
+  expect(overall([task('c', { status: 'cancelled' })]).word).toBe('done')
+  expect(overall([task('b', { status: 'completed' }), task('c', { status: 'cancelled' }), task('f', { status: 'failed' })]).word).toBe('failed')
+  expect(overall([task('c', { status: 'cancelled' }), task('q', { status: 'queued' })]).word).toBe('running')
+  expect(overall([task('c', { status: 'cancelled' }), task('p', { status: 'partial' })]).word).toBe('partial')
+})
+
 const NO_VERDICT = 'The server-side auto mode classifier gave no verdict for Agent: the request that produced this action did not ask for one. Issue the action again once, as-is; if it is denied again, continue with other tasks that don\'t require it and tell the user that auto mode could not evaluate it.'
 
 test('auto mode\'s no-verdict deny is told from every other refusal', () => {

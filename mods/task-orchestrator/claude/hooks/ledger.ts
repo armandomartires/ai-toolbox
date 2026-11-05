@@ -99,18 +99,20 @@ export const runnable = (ledger: Ledger, limits: Limits, sessions = true): Task[
 
 export const setTask = (ledger: Ledger, id: string, patch: Partial<Task>): Ledger => ledger.map(task => (task.id === id ? { ...task, ...patch } : task))
 
-/** The word for the whole run: done only when nothing failed, blocked or stayed open. */
+/** The word for the whole run: done only when nothing failed, blocked or stayed open. A cancelled task neither fails nor blocks it. */
 export const overall = (ledger: Ledger): { word: 'done' | 'partial' | 'blocked' | 'failed' | 'running' | 'idle'; why: string } => {
   if (ledger.length === 0) return { word: 'idle', why: 'no task' }
   const open = ledger.filter(task => !ENDED.includes(task.status))
-  const failed = ledger.filter(task => task.status === 'failed' || task.status === 'cancelled')
+  const failed = ledger.filter(task => task.status === 'failed')
   const blocked = ledger.filter(task => task.status === 'blocked')
   const partial = ledger.filter(task => task.status === 'partial')
+  const cancelled = ledger.filter(task => task.status === 'cancelled')
   if (failed.length) return { word: 'failed', why: `${failed.map(task => `${task.id} (${task.role}) ${task.status}`).join(', ')}` }
   if (blocked.length) return { word: 'blocked', why: blocked.map(task => `${task.id} (${task.role})`).join(', ') }
   if (open.length) return { word: 'running', why: open.map(task => `${task.id} ${task.status}`).join(', ') }
   if (partial.length) return { word: 'partial', why: partial.map(task => `${task.id} (${task.role})`).join(', ') }
-  return { word: 'done', why: `${ledger.length} task(s) completed` }
+  const done = ledger.length - cancelled.length
+  return { word: 'done', why: cancelled.length ? `${done} task(s) completed, ${cancelled.length} cancelled` : `${ledger.length} task(s) completed` }
 }
 
 /**

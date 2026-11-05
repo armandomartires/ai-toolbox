@@ -149,11 +149,13 @@ inst --only alpha --only alpha
 check "S11 duplicates count once" "$(has "$out" 'selection: 1 of 6'; echo $?)" "$out"
 
 # S12-S17: mods in CLAUDE_CODE_PLUGIN_DIRS (TASK-0222). Added last, so the
-# counts above stay as they were.
+# counts above stay as they were. A mod's Claude Code plugin is
+# mods/<name>/claude (ADR-0054); a mod listed from before that layout
+# (mods/<name>, as ELSEWHERE below) is still recognised and replaced.
 for m in mod-x mod-y _template no-hooks; do
-  mkdir -p "$R/mods/$m/.claude-plugin"
-  printf '{"name": "%s", "version": "1.2.3"}\n' "$m" > "$R/mods/$m/.claude-plugin/plugin.json"
-  [ "$m" = no-hooks ] || mkdir -p "$R/mods/$m/hooks"
+  mkdir -p "$R/mods/$m/claude/.claude-plugin"
+  printf '{"name": "%s", "version": "1.2.3"}\n' "$m" > "$R/mods/$m/claude/.claude-plugin/plugin.json"
+  [ "$m" = no-hooks ] || mkdir -p "$R/mods/$m/claude/hooks"
 done
 SEP=":"; [ "$WIN" -eq 1 ] && SEP=";"
 winpath() { if [ "$WIN" -eq 1 ]; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
@@ -167,7 +169,7 @@ json.dump({"model": "opus", "env": {"OTHER": "kept",
            "permissions": {"allow": ["Bash(ls)"]}}, open(sys.argv[1], "w"), indent=2)
 EOF
 entries() { python3 -c "import json,sys;print('\n'.join(json.load(open(sys.argv[1])).get('env',{}).get('CLAUDE_CODE_PLUGIN_DIRS','').split(sys.argv[2])))" "$SET" "$SEP" | tr -d '\r'; }
-ours() { (cd "$R" && winpath "$(pwd)/mods/$1"); }
+ours() { (cd "$R" && winpath "$(pwd)/mods/$1/claude"); }
 
 inst --client claude-code
 e="$(entries)"
@@ -190,7 +192,7 @@ check "S15 deselected mods are unlisted; the foreign entry stays" "$([ "$e" = "$
 inst --status --only alpha
 check "S15 --status says 'not selected', not MISSING" "$(has "$out" 'absent (not selected)' && lacks "$out" MISSING; echo $?)" "$out"
 
-ELSEWHERE_X="$(winpath "$tmp/other-checkout/mods/mod-x")"
+ELSEWHERE_X="$(winpath "$tmp/other-checkout/mods/mod-x/claude")"
 ELSEWHERE_X="$ELSEWHERE_X" python3 -c "import json,os,sys;d=json.load(open(sys.argv[1]));d['env']['CLAUDE_CODE_PLUGIN_DIRS']=os.environ['ELSEWHERE_X'];json.dump(d,open(sys.argv[1],'w'),indent=2)" "$SET"
 inst --client claude-code --only alpha
 check "S16 a deselected mod listed from elsewhere is left and reported" "$([ "$(entries)" = "$ELSEWHERE_X" ] && has "$out" 'left in place'; echo $?)" "$out"

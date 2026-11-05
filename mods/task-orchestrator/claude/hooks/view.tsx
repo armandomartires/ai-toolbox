@@ -19,6 +19,8 @@ export type OrchestrateOutput = {
   isOn: boolean
   policy: string
   coordinator?: string
+  /** The coordinator's own effort, or `unknown`: shown beside its model. */
+  coordinatorEffort?: string
   run?: { word: string; why: string }
   tasks?: TaskView[]
   overrides?: string[]
@@ -82,6 +84,7 @@ export function renderOutput($: EngineInterface, e: RenderInput<'CommandOutput'>
             <Box flexDirection="row" columnGap={2}>
               {label('Coordinator')}
               {value(out.coordinator)}
+              <Text color={color('text-2')}>{`effort ${out.coordinatorEffort ?? 'unknown'}`}</Text>
             </Box>
           )}
           {out.tasks && out.tasks.length === 0 && <Text color={color('text-3')}>No task in the ledger.</Text>}

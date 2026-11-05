@@ -63,12 +63,13 @@ for d in mods/*/; do
   [ -z "$WANT" ] || [ "$WANT" = "$name" ] || continue
   matched=$((matched + 1))
   # Run from mods/ with a relative path, so a Windows CLI in WSL resolves it
-  # against its \\wsl.localhost working directory.
-  if ! out="$(cd mods && "$CLI" plugin validate "$name" 2>&1)"; then
+  # against its \\wsl.localhost working directory. A mod's Claude Code plugin is
+  # mods/<name>/claude (ADR-0054).
+  if ! out="$(cd mods && "$CLI" plugin validate "$name/claude" 2>&1)"; then
     printf '%s\n' "$out" | grep -E '^ *(>|×)' ; echo "FAIL $name: plugin validate"
     failed=$((failed + 1)); continue
   fi
-  if ! out="$(cd mods && "$CLI" plugin test "$name" 2>&1)"; then
+  if ! out="$(cd mods && "$CLI" plugin test "$name/claude" 2>&1)"; then
     printf '%s\n' "$out" | grep -E '\((fail)\)|error' ; echo "FAIL $name: plugin test"
     failed=$((failed + 1)); continue
   fi

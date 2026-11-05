@@ -4,6 +4,7 @@
 **Date**: 2026-10-26
 **Task**: `TASK-0177`
 **Amended 2026-11-04** on the human's choice (`TASK-0222`): see clause 4 and the last **Consequences** bullet.
+**Amended 2026-11-05** (`TASK-0233`, `ADR-0054`): clause 1 names the per-harness folder `mods/<name>/claude/`.
 
 ## Context
 
@@ -11,7 +12,7 @@ On 2026-10-26 the human asked to merge `claude-mods`, a folder outside any repos
 
 ## Decision
 
-1. **`mods/<name>/` is a component kind.** A mod is a Claude Code plugin folder: `.claude-plugin/plugin.json` whose `name` matches the directory, `hooks/hooks.json` naming its hooks modules, and a `README.md`. New mods copy `mods/_template/`. Rules: authoring guide, *Mods*.
+1. **`mods/<name>/` is a component kind.** A mod is a Claude Code plugin folder, `mods/<name>/claude/` (`ADR-0054`): `.claude-plugin/plugin.json` whose `name` matches the directory above it, `hooks/hooks.json` naming its hooks modules, and a `README.md` one level up. New mods copy `mods/_template/`. Rules: authoring guide, *Mods*.
 2. **Mods target Claude Code only.** That is the one client with the capability, so the portability rule (`AGENTS.md`, *Objective and scope*) is met by it alone.
 3. **The gate checks shape, offline.** The mod's own tests need a `claude` that supports mods, which the gate must not require, so they run in `tests/test-mods.sh`, outside the gate, like the MCP smoke test. A SKIP is not a pass.
 4. **The live copy loads from this checkout**, through `CLAUDE_CODE_PLUGIN_DIRS` in the host's `~/.claude/settings.json` (runbook, *Loading a mod in development*). `install.sh` copies and links no mod; since `TASK-0222` it writes that setting.

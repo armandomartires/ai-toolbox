@@ -51,3 +51,28 @@ test('the report parser reads the labelled lines, continuation lines included, a
   expect(parseReport('Status: done\nNext: nothing').status).toBe('unknown')
   expect(parseReport('no report at all')).toMatchObject({ status: 'unknown', findings: '', next: '' })
 })
+
+test('the report parser takes bullets, headings, bold labels and dash separators', () => {
+  expect(parseReport('- Status: completed\n- Findings: it works').status).toBe('completed')
+  const heading = parseReport('## Status\ncompleted\n\n## Findings\nthe flag parses')
+  expect(heading.status).toBe('completed')
+  expect(heading.findings).toBe('the flag parses')
+  const bold = parseReport('Status: partial\n**Checks actually run:** npm test → 3 pass\n**Evidence:** the log')
+  expect(bold.checks).toBe('npm test → 3 pass')
+  expect(bold.evidence).toBe('the log')
+  expect(parseReport('Checks run: tsc → clean').checks).toBe('tsc → clean')
+  expect(parseReport('Status — completed').status).toBe('completed')
+  expect(parseReport('Status – blocked\nNext – ask the person').next).toBe('ask the person')
+  expect(parseReport('* **Status**: failed').status).toBe('failed')
+})
+
+test('the report parser keeps what follows the status as findings when none are given, and keeps the vocabulary strict', () => {
+  const report = parseReport('Status: completed\nThe parser now reads bullets.\nTwo tests added.\nFiles: a.ts')
+  expect(report.status).toBe('completed')
+  expect(report.findings).toBe('The parser now reads bullets.\nTwo tests added.')
+  expect(report.files).toBe('a.ts')
+  // Findings the report gave are not overwritten.
+  expect(parseReport('Status: completed\nextra line\nFindings: real').findings).toBe('real')
+  expect(parseReport('Status: done').status).toBe('unknown')
+  expect(parseReport('## Status\nsuccess').status).toBe('unknown')
+})

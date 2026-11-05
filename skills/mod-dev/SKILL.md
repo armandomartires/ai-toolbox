@@ -28,7 +28,7 @@ mod. Run everything from inside the ai-toolbox checkout.
 | 1 | Plan | the task brief and Compass line (`project-workflow`) | the brief passes its schema; the human says build |
 | 2 | Scaffold | `scripts/mod-dev.sh scaffold <name>` | `check` → `OK` |
 | 3 | Load | `scripts/mod-dev.sh sync <name> [--session ID] [--watch]`; the person answers *Turn them on* once; the library copy is off | `status <name>` shows one loaded copy |
-| 4 | Build | edit `mods/<name>/hooks/`; `scripts/mod-dev.sh validate <name> [--strict]` | `Validation passed` |
+| 4 | Build | edit `mods/<name>/claude/hooks/`; `scripts/mod-dev.sh validate <name> [--strict]` | `Validation passed` |
 | 5 | Preview | `scripts/mod-dev.sh preview <name> [--serve 8765]`, then `build/preview/index.html` | every scene drawn, no failure |
 | 6 | Test | red-proof, then `scripts/mod-dev.sh test <name>` | `PASS`; `SKIP` is not a pass |
 | 7 | Live check | the human, in a real session on each surface | they saw it; the version line matches |

@@ -446,7 +446,8 @@ for f in loops/*/loop.md; do
   done
 done
 
-# Mods: manifest, hooks modules, contract and README (ADR-0040, TASK-0177).
+# Mods: manifest, hooks modules, contract and README, per harness folder
+# (ADR-0040, ADR-0054, TASK-0177).
 # Shape only and offline; the mods' own tests need a `claude` that supports
 # mods, so they run in tests/test-mods.sh, outside the gate. The API types
 # Claude Code lays into a loaded mod are generated per CLI version and
@@ -461,8 +462,8 @@ if ! CHECK_MODS_OUT="$(bash tests/test-check-mods.sh 2>&1)"; then
   printf '%s\n' "$CHECK_MODS_OUT"
   fail=1
 fi
-if [ -n "$(git ls-files 'mods/*/.claude-plugin/types/*')" ]; then
-  echo "MOD SHAPE: generated types are tracked under mods/*/.claude-plugin/types/ — git rm --cached them"
+if [ -n "$(git ls-files 'mods/*/claude/.claude-plugin/types/*')" ]; then
+  echo "MOD SHAPE: generated types are tracked under mods/*/claude/.claude-plugin/types/ — git rm --cached them"
   fail=1
 fi
 

@@ -37,7 +37,8 @@
 #
 # Mods (TASK-0222). Claude Code loads a mod in development from the folders
 # CLAUDE_CODE_PLUGIN_DIRS names, an `env` entry of ~/.claude/settings.json.
-# The claude-code step sets it to every selected mod in THIS checkout, in
+# A mod's Claude plugin is mods/<name>/claude (ADR-0054). The claude-code
+# step sets it to every selected mod in THIS checkout, in
 # this host's paths and separator (`;` and C:\ paths under Git Bash, `:`
 # elsewhere), and CLAUDE_CODE_PLUGIN_DIR_WATCH=1 when unset. Each host -
 # Windows, WSL, an SSH machine - has its own settings file, so run this
@@ -107,10 +108,11 @@ for d in mcp-servers/*; do
   n=$(basename "$d"); case "$n" in _template*) continue ;; esac
   { [ -f "$d/pyproject.toml" ] || [ -f "$d/server.json" ]; } && SERVER_NAMES="$SERVER_NAMES$n "
 done
-# A mod is a Claude Code plugin with a hooks module (ADR-0040).
+# A mod is a Claude Code plugin with a hooks module, under mods/<name>/claude/
+# (ADR-0040, ADR-0054).
 for d in mods/*; do
   n=$(basename "$d"); case "$n" in _template*) continue ;; esac
-  [ -f "$d/.claude-plugin/plugin.json" ] && [ -d "$d/hooks" ] && MOD_NAMES="$MOD_NAMES$n "
+  [ -f "$d/claude/.claude-plugin/plugin.json" ] && [ -d "$d/claude/hooks" ] && MOD_NAMES="$MOD_NAMES$n "
 done
 for n in $SKILL_NAMES $ROLE_NAMES $SERVER_NAMES $MOD_NAMES; do
   k=0
@@ -248,7 +250,7 @@ plugin_dirs() {
   local settings="$1" action="$2" sep=":" n p specs=""
   [ "$WINDOWS_LINKS" -eq 1 ] && sep=";"
   for n in $MOD_NAMES; do
-    p="$(pwd)/mods/$n"
+    p="$(pwd)/mods/$n/claude"
     [ "$WINDOWS_LINKS" -eq 1 ] && p="$(cygpath -w "$p")"
     if is_selected "$n"; then specs="$specs$n|1|$p"$'\n'; else specs="$specs$n|0|$p"$'\n'; fi
   done
@@ -274,9 +276,13 @@ def norm(p):
 
 
 def base(p):
-    # The last path part, by either separator: a WSL entry read on Windows
-    # and a Windows entry read in WSL both name their mod.
-    return p.strip().rstrip("\\/").replace("\\", "/").rsplit("/", 1)[-1]
+    # The mod an entry names, by either separator: a WSL entry read on Windows
+    # and a Windows entry read in WSL both name their mod. A mod's plugin
+    # folder is mods/<name>/claude (ADR-0054), so `claude` names its parent;
+    # an entry from before that layout, mods/<name>, names the mod too and is
+    # replaced.
+    parts = p.strip().rstrip("\\/").replace("\\", "/").split("/")
+    return parts[-2] if parts[-1] == "claude" and len(parts) > 1 else parts[-1]
 
 
 def mod_of(e):

@@ -1,6 +1,6 @@
 # task-compass
 
-> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `status.json`.
+> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `claude/status.json`.
 
 A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, and Claude's live tasks under it. The sprints come from a `GOALS.md` kept in the project's `.ai/` folder, or from a project-workflow `.ai/` plan (below). It draws in SIGMAorbital (`ADR-0043`): monochrome, colour for state only, uppercase labels, its Night ops or Daylight colours following your theme setting.
 
@@ -17,6 +17,15 @@ A Claude Code mod that keeps a **Compass** pane beside the chat: your project's 
 - **Fold a sprint**: under each sprint's progress bar `▾ HIDE` folds its stories and tasks to `▸ SHOW N`; in the terminal `k` folds the current sprint. On the desktop the rail runs through the centre of each sprint's circle.
 - **Resize the board** (0.10.0, `ADR-0052`; the shared panel's handle since 0.11.0, `ADR-0053`): drag the grip on the Sprints panel's bottom edge (`━━━━━━━━` in a terminal, a thick bar on the desktop) up or down and the board's columns follow, never under 9 rows, 6 of them columns; they fold their done stories into one dot past what you gave them, as on a short pane. Double-click the grip to go back to automatic, the height the pane gives it. Once a click has given the grip the focus, `↑` and `↓` move it a row and `r` resets it. The height holds for this session, on the terminal and the desktop separately. On mobile and in VS Code there is no handle and the board sizes itself.
 - **Contributions**: below the Sprints board the pane draws whatever another plugin adds to it (`ADR-0048`), whichever of the two loaded first (seen live with agent-watch innermost; the engine's own drawing beneath the pane is left out). [agent-watch](../agent-watch/README.md) adds its progress meter and its Sessions panel there (the status sunburst, KPI row and hierarchy table), and owns it: Compass has no Sessions panel, no Subagents list and no `s` hotkey of its own. Without agent-watch the pane is the board alone.
+
+## Portability
+
+The mod's Claude Code plugin is `claude/` (`ADR-0054`).
+
+| Harness | Status |
+|---|---|
+| Claude Code | Supported: `claude/`. |
+| OpenCode, Codex | Not planned: the mod is a UI (the Compass pane) drawn with Claude Code's mod engine, which no other harness has. No `core/` folder: it is added only when a second harness needs shared logic. |
 
 ## Install
 

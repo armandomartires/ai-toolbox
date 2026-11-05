@@ -9,7 +9,7 @@ import type { ClientModule, ClientPointerEvent } from 'claude-code'
  * below the line, seen live), so the hooks module draws the bar as an `Svg`
  * (`barSvg`) on the frame's bottom line and the region here draws only a hint.
  *
- * Shared, one owner (`mods/_template/hooks/handle.tsx`); each mod that sizes a
+ * Shared, one owner (`mods/_template/claude/hooks/handle.tsx`); each mod that sizes a
  * panel carries a byte-identical copy (`scripts/check-mods.py` rule 7).
  *
  * Posts `{ kind: 'move' | 'nudge', rows }` (the rows the panel should take) and

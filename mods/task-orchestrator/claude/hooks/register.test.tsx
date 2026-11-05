@@ -544,6 +544,8 @@ test('/orchestrate status and routing draw as panels in the host theme; the stat
     const ui = await $.ui.mount({ ...OUTPUT(status), surface })
     expect((await ui.find({ type: 'Text', text: /^ORCHESTRATOR$/ }))?.props.color).toBe(LIGHT['text-1'])
     expect(await ui.find({ text: /ON · BALANCED/ })).toBeDefined()
+    expect(await ui.find({ text: /effort unknown/ })).toBeDefined()
+    expect(await ui.find({ text: /effort unknown/ })).toBeDefined()
     expect((await ui.find({ type: 'Text', text: /^ RUNNING$/ }))?.props.color).toBe(LIGHT.cyan)
     expect((await ui.find({ type: 'Text', text: /^T1$/ }))?.props.tabular).toBe(true)
     expect(await ui.find({ text: /haiku\/low →/ })).toBeDefined()
@@ -1089,4 +1091,203 @@ test("before the coordinator's first request, the session gate uses the effort i
   expect(high).toContain('effort "high" is above the coordinator\'s "medium"')
   const medium = String((await $.tool.call(dispatch({ id: 'S2', class: 'review', objective: 'Review it', runAs: 'session', effort: 'medium' }))).result)
   expect(medium).not.toContain('above the coordinator')
+})
+
+const COLLECT = 'mcp__task-orchestrator__collect'
+
+test('a collect whose wait is aborted answers with the rows known so far and says to call again (0.5.5)', async ($, on) => {
+  let now = 1_000
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  // The sleep rejects, as an abort does, after the clock moved on 700 ms.
+  on('clock.now', () => ({ value: now }))
+  on('clock.sleep', () => {
+    now += 700
+    throw new Error('aborted')
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser' }))
+  const got = await $.tool.call({ tool: COLLECT, ids: ['T1'] } as never)
+  expect(got.deny).toBeUndefined()
+  const text = String(got.result)
+  expect(text).toContain('T1 → scout')
+  expect(text).toContain('still running: do not poll')
+  expect(text).toContain('collect interrupted after 700 ms: call again')
+  expect(text).toContain('run: running')
+})
+
+test('a collect of a task behind the concurrency cap returns at once, names the reason and says not to poll (0.5.5)', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  for (const id of ['S1', 'S2', 'S3', 'S4']) await $.tool.call(dispatch({ id, class: 'lookup', objective: `look ${id}` }))
+  const before = clock.now()
+  const got = String((await $.tool.call({ tool: COLLECT, ids: ['S4'], timeoutMs: 600_000 } as never)).result)
+  expect(clock.now() - before).toBeLessThan(1_000)
+  expect(got).toContain('S4 → scout')
+  expect(got).toContain('behind the concurrency cap: 3 running')
+  expect(got).toContain('do not poll')
+  expect(got).not.toContain('S1 → scout')
+})
+
+test("a queued session task waiting for the person's turn is named so, and a collect does not sleep on it (0.5.5)", async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'look' }))
+  await $.tool.call(session('R1', { deps: ['T1'] }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  const before = clock.now()
+  const got = String((await $.tool.call({ tool: COLLECT, ids: ['R1'], timeoutMs: 600_000 } as never)).result)
+  expect(clock.now() - before).toBeLessThan(1_000)
+  expect(got).toContain("waiting for the person's turn")
+  expect(got).toContain('do not poll')
+})
+
+test('ids that include an unknown one name it in one line beside the known ones (0.5.5)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'look' }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  const mixed = String((await $.tool.call({ tool: COLLECT, ids: ['T1', 'nope', 'ghost'] } as never)).result)
+  expect(mixed).toContain('no task named nope, ghost')
+  expect(mixed).toContain('T1 → scout')
+  expect(mixed).toContain('findings: found')
+  // All unknown: the old answer, unchanged.
+  expect(String((await $.tool.call({ tool: COLLECT, ids: ['nope'] } as never)).result)).toBe('no task named nope')
+})
+
+test('/orchestrate reset clears the ledger, and is refused while a task runs (0.5.5)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'look' }))
+  const refused = ((await $.command.run({ command: 'orchestrate', args: 'reset' } as never)) as { text: string }).text
+  expect(refused).toContain('reset refused: 1 task(s) still running (T1)')
+  expect(await status($)).toContain('T1 → scout [agent-1]')
+
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('failed'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(await status($)).toContain('run: failed')
+  const cleared = ((await $.command.run({ command: 'orchestrate', args: 'reset' } as never)) as { text: string }).text
+  expect(cleared).toContain('reset: 1 task(s) cleared')
+  const after = await status($)
+  expect(after).toContain('run: idle (no task)')
+  expect(after).toContain('No task in the ledger.')
+  expect(String((await $.tool.call({ tool: COLLECT } as never)).result)).toBe('No task in the ledger.')
+  // The id is free again.
+  expect(String((await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'look again' }))).result)).toContain('T1 → scout [agent-2]')
+})
+
+test('reset forgets what was printed once: a hand-off prints its assignment again after it (0.5.5)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on, { noVerdict: 99 })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  expect(String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find it' }))).result)).toContain('# Assignment H1')
+  expect(String((await $.tool.call({ tool: COLLECT } as never)).result)).toContain('assignment for H1: printed earlier')
+  await $.command.run({ command: 'orchestrate', args: 'reset' } as never)
+  expect(String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find it' }))).result)).toContain('# Assignment H1')
+})
+
+test('a cancelled task neither fails nor blocks the run, and status names the coordinator effort (0.5.5)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'look' }))
+  expect(await status($)).toContain('coordinator: claude-fable-5-1 / effort unknown')
+  await coordinatorStep($, 'high')
+  expect(await status($)).toContain('coordinator: claude-fable-5-1 / effort high')
+  expect(((await $.command.run({ command: 'orchestrate', args: 'cancel T1' } as never)) as { text: string }).text).toContain('T1 cancelled')
+  const after = await status($)
+  expect(after).not.toContain('run: failed')
+  expect(after).toContain('run: done')
+  expect(after).toContain('T1 → scout')
+  expect(after).toContain('cancelled')
+  const panel = ((await $.command.run({ command: 'orchestrate', args: 'status' } as never)) as { text: string }).text
+  expect(panel).toContain('coordinator: claude-fable-5-1 / effort high')
+})
+
+test("a session whose last event is a tool event still has its assistant's last message read as the report (0.5.5)", async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const ended = ['Status: completed', 'Findings: built it', 'Next: review it'].join(String.fromCharCode(10))
+  const events = [{ role: 'user', text: 'the assignment' }, { role: 'assistant', text: ended }, { type: 'tool_result', text: 'the hook said: session stopped' }, { role: 'system', text: 'session ended' }]
+  engine(on, { session: e => (e.tool === 'mcp__ccd_session__start_session' ? STARTED(1) : e.tool === 'mcp__ccd_session_mgmt__get_session' ? ASKED('{"isRunning":false}') : ASKED(JSON.stringify({ events }))) })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await say($, PERSON)
+  await $.tool.call(startSession({ prompt: byLine(String((await $.tool.call(session('T1'))).result), '# Assignment T1') }))
+  const got = String((await $.tool.call({ tool: COLLECT, ids: ['T1'] } as never)).result)
+  expect(got).toContain('→ completed → review it')
+  expect(got).toContain('findings: built it')
+  expect(got).not.toContain('the hook said')
+})
+
+test('get_session that lacks the model or effort on one read is read again until both are stated (0.5.5)', { timeoutMs: 20_000 }, async ($, on) => {
+  const clock = mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const stated = ['{"isRunning":true}', '{"isRunning":true,"model":"claude-sonnet-5-5"}', '{"isRunning":true,"model":"claude-sonnet-5-5","effort":"medium"}']
+  let read = 0
+  engine(on, { session: e => (e.tool === 'mcp__ccd_session__start_session' ? STARTED(1) : ASKED(stated[Math.min(read, stated.length - 1)] ?? '')) })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await say($, PERSON)
+  await $.tool.call(startSession({ prompt: byLine(String((await $.tool.call(session('T1'))).result), '# Assignment T1') }))
+  const collectOnce = async () => {
+    const pending = $.tool.call({ tool: COLLECT, ids: ['T1'], timeoutMs: 600_000 } as never)
+    await clock.advance(12_000)
+    await pending
+  }
+  await collectOnce()
+  expect(await status($)).toContain('T1 → reviewer [local_00000001-aaaa-4bbb-8ccc-000000000001] → requested sonnet/medium → unverified → running')
+  // A first read that stated nothing wrote its note; a later read that states both still counts.
+  read = 2
+  await collectOnce()
+  expect(await status($)).toContain('observed claude-sonnet-5-5/medium')
+})
+
+test('a start_session the app refuses twice prints the assignment once: the refusal is a note, not a new end (0.5.5)', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  const answers: unknown[] = [REFUSED('not on this turn'), REFUSED('not on this turn again')]
+  engine(on, { session: () => answers.shift() })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await say($, PERSON)
+  const first = String((await $.tool.call(session('T1'))).result)
+  expect(first).toContain('# Assignment T1')
+  const prompt = byLine(first, '# Assignment T1')
+  await clock.advance(5_000)
+  await $.tool.call(startSession({ prompt }))
+  await clock.advance(5_000)
+  await $.tool.call(startSession({ prompt }))
+  const shown = await status($)
+  expect(shown).toContain('T1 → reviewer → requested sonnet/medium → unverified → blocked → start_session refused: not on this turn again')
+  const got = String((await $.tool.call({ tool: COLLECT } as never)).result)
+  expect(got).not.toContain('# Assignment T1')
+  expect(got).toContain('assignment for T1: printed earlier')
+  expect(got).toContain('start_session refused: not on this turn again')
 })

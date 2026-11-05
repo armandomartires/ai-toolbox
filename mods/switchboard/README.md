@@ -1,6 +1,6 @@
 # switchboard
 
-> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `status.json`.
+> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `claude/status.json`.
 
 A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or connectors** off and on, per project, from a **Switchboard** pane beside the chat or the `/switchboard` command. Something turned off is refused when called and, where the engine lets a mod, hidden from what the model reads, so it cannot be picked by mistake. Everything is on until you turn it off.
 
@@ -15,7 +15,7 @@ A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or
 
 `/switchboard` opens it, a SIGMAorbital panel (`ADR-0043`) whose colours follow your theme setting. Three sections: **Mods** open, **Skills** and **Connectors** behind their header (press it to open or close), each header with its count and how many are off. Every row is SIGMAorbital's **Toggle**: a square switch, then the name in capitals and its state word. On, the track and knob are bright with the knob at the right (`[ ■]`, ON). Off, they are grey with the knob at the left (`[■ ]`, OFF). Press anywhere on the row to flip that item. switchboard's own row is a dimmed toggle that reads ALWAYS ON.
 
-- **Topics.** Inside Mods and Skills, rows sit under topic sub-headers: an uppercase grey label, its count (with `n OFF` when some are off) and a rule. A mod's topic is the `category` of its `.claude-plugin/plugin.json` (`planning`, `observability`); a mod with none is under **OTHER**. A skill's topic is the plugin before the `:` of `plugin:skill` (`legal` for `legal:brief`); a skill with no plugin is under **STANDALONE**. Topics are alphabetical with OTHER and STANDALONE last, rows alphabetical inside. Press a topic's header to collapse or expand it; topics start open. Connectors stay one flat list, and toggling stays per row.
+- **Topics.** Inside Mods and Skills, rows sit under topic sub-headers: an uppercase grey label, its count (with `n OFF` when some are off) and a rule. A mod's topic is the `category` of its `claude/.claude-plugin/plugin.json` (`planning`, `observability`); a mod with none is under **OTHER**. A skill's topic is the plugin before the `:` of `plugin:skill` (`legal` for `legal:brief`); a skill with no plugin is under **STANDALONE**. Topics are alphabetical with OTHER and STANDALONE last, rows alphabetical inside. Press a topic's header to collapse or expand it; topics start open. Connectors stay one flat list, and toggling stays per row.
 - **Resize the panel** (0.6.0, `ADR-0053`): drag the grip on the panel's bottom edge up or down and the panel takes that many rows, never under 4; what does not fit is cut. Double-click the grip to go back to automatic; once a click has given it the focus, `↑` and `↓` move it a row and `r` resets it. The height holds for this session, on the terminal and the desktop separately. On mobile and in VS Code there is no handle.
 - **Mods** lists every mod (a plugin with a hooks module) in the folders `CLAUDE_CODE_PLUGIN_DIRS` names, and any of your own that loads after switchboard. A plugin that only ships skills or servers is not listed: it has nothing to refuse. Managed and built-in plugins are not listed or touched. switchboard's own row says *ALWAYS ON*.
 - A mod whose toggle this session cannot apply says so in its row, in amber with `▲`: *off from the next session* (it is running) or *on from the next session* (switchboard refused it at load).
@@ -25,6 +25,15 @@ A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or
 ## Not yet verified
 
 Version 0.6.0 (`TASK-0223`), the resize handle, is tested in the mod test kit; not yet seen live.
+
+## Portability
+
+The mod's Claude Code plugin is `claude/` (`ADR-0054`).
+
+| Harness | Status |
+|---|---|
+| Claude Code | Supported: `claude/`. |
+| OpenCode, Codex | Not planned: the mod is a UI (the Switchboard pane) and switches off what Claude Code's engine lets a mod refuse, which no other harness has. No `core/` folder: it is added only when a second harness needs shared logic. |
 
 ## Install
 

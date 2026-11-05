@@ -114,7 +114,7 @@ print("%s\t%s\texternal" % (m.get("name", "?"),
       fi
       ;;
     mod)
-      [ -f "$d/.claude-plugin/plugin.json" ] || return 1
+      [ -f "$d/claude/.claude-plugin/plugin.json" ] || return 1
       python3 -c '
 import json, sys
 m = json.load(open(sys.argv[1]))
@@ -124,7 +124,7 @@ try:
 except (OSError, ValueError):
     pass
 print("%s\t%s\t%s" % (m.get("name", "?"), m.get("description", "").replace("\n", " "), st))
-' "$d/.claude-plugin/plugin.json" "$d/status.json"
+' "$d/claude/.claude-plugin/plugin.json" "$d/claude/status.json"
       ;;
   esac
 }

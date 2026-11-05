@@ -1,7 +1,7 @@
 // SIGMAorbital for mods: the design system's tokens, status vocabulary and
 // drawing primitives, as the engine's Box/Text trees can carry them (ADR-0043).
 //
-// ONE OWNER: mods/_template/hooks/sigma.tsx. Every other mods/*/hooks/sigma.tsx
+// ONE OWNER: mods/_template/claude/hooks/sigma.tsx. Every other mods/*/claude/hooks/sigma.tsx
 // is a byte-identical copy, because the sandbox cannot share a module between
 // mods; tests/validate.sh (scripts/check-mods.py, rule 7) fails on a copy that
 // differs. Change it here, then copy it to every mod.

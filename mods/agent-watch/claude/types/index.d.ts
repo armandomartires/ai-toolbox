@@ -81,7 +81,7 @@ export type BackgroundTask = {
   endedAt?: number
 }
 
-// MIRROR of mods/task-orchestrator/types/index.d.ts, its one owner: the part of
+// MIRROR of mods/task-orchestrator/claude/types/index.d.ts, its one owner: the part of
 // its contract agent-watch reads, and never writes. Each `Orch<Name>` below is
 // the owner's `<Name>`, every field copied verbatim, so a change there fails
 // the gate (scripts/check-mods.py, rule 8) until this agrees.

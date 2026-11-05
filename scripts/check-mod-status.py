@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Mod status and the live-verification gate (issues #5 and #9).
 
-Every mods/*/status.json says `experimental` or `verified`. A mod may be
+Every mods/*/claude/status.json says `experimental` or `verified`. A mod may be
 `verified` only when its live_verification list proves, for the version in
-its .claude-plugin/plugin.json, that each feature was seen working in a real
+its claude/.claude-plugin/plugin.json, that each feature was seen working in a real
 session:
 
   {"feature": "...", "version": "0.6.0", "date": "YYYY-MM-DD",
@@ -16,7 +16,7 @@ Gate for `verified`:
   - every record's `session` file exists (the recorded live session);
   - at least one record for the current plugin.json version, and every
     record for that version has result "pass";
-  - the README states `Status: verified.` and no longer lists anything
+  - the mod's README (mods/<name>/README.md) states `Status: verified.` and no longer lists anything
     "not yet seen live" or "not yet verified".
 `_template*` mods must stay experimental, so a new mod starts there.
 Records may be kept while experimental; their shape is checked either way.
@@ -39,7 +39,8 @@ UNVERIFIED = re.compile(r"not yet (seen live|verified|seen)|## Not yet verified"
 def check_mod(root, d):
     bad = []
     name = os.path.basename(d)
-    sp = os.path.join(d, "status.json")
+    plugin = os.path.join(d, "claude")  # the Claude Code plugin (ADR-0054)
+    sp = os.path.join(plugin, "status.json")
     try:
         st = json.load(open(sp, encoding="utf-8"))
     except (OSError, ValueError) as e:
@@ -76,7 +77,7 @@ def check_mod(root, d):
         bad.append(f"{sp}: a template stays experimental, so a new mod starts there")
     if status == "verified":
         try:
-            ver = json.load(open(os.path.join(d, ".claude-plugin", "plugin.json"), encoding="utf-8")).get("version")
+            ver = json.load(open(os.path.join(plugin, ".claude-plugin", "plugin.json"), encoding="utf-8")).get("version")
         except (OSError, ValueError):
             ver = None
         cur = [r for r in recs if isinstance(r, dict) and r.get("version") == ver]
@@ -99,9 +100,9 @@ def check(root="."):
 def self_test():
     def mk(root, status, recs, readme_extra="", version="1.0.0"):
         d = os.path.join(root, "mods", "m")
-        os.makedirs(os.path.join(d, ".claude-plugin"), exist_ok=True)
-        json.dump({"name": "m", "version": version}, open(os.path.join(d, ".claude-plugin", "plugin.json"), "w"))
-        json.dump({"status": status, "live_verification": recs}, open(os.path.join(d, "status.json"), "w"))
+        os.makedirs(os.path.join(d, "claude", ".claude-plugin"), exist_ok=True)
+        json.dump({"name": "m", "version": version}, open(os.path.join(d, "claude", ".claude-plugin", "plugin.json"), "w"))
+        json.dump({"status": status, "live_verification": recs}, open(os.path.join(d, "claude", "status.json"), "w"))
         open(os.path.join(d, "README.md"), "w").write(f"# m\n\nStatus: {status}.\n{readme_extra}")
     rec = {"feature": "pane", "version": "1.0.0", "date": "2026-11-04", "client": "desktop",
            "session": ".ai/sessions/S.md", "verified_by": "armando", "result": "pass"}

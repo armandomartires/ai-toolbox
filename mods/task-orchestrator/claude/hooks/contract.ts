@@ -60,22 +60,47 @@ export const assignmentId = (prompt: unknown): string | undefined =>
 
 const FIELDS = ['status', 'findings', 'files', 'checks', 'evidence', 'risks', 'next'] as const
 
+type Field = (typeof FIELDS)[number]
+
+/** Label spellings that name a field: `Checks run` and `Checks actually run` are `checks`. */
+const LABELS: Record<string, Field> = {
+  status: 'status',
+  findings: 'findings',
+  files: 'files',
+  checks: 'checks',
+  'checks run': 'checks',
+  'checks actually run': 'checks',
+  evidence: 'evidence',
+  risks: 'risks',
+  next: 'next',
+}
+
+// A label line: an optional `#`s, `-`, `*` or bold prefix, the label, then `:` (bold or not), ` — ` or ` – `; or the label alone as a heading.
+const LABEL_LINE = /^(?:#{1,6}\s*|[-*]\s+)?(?:\*\*|__)?\s*([A-Za-z]+(?: [A-Za-z]+){0,2})\s*(?:(?:\*\*|__)?\s*:\s*(?:\*\*|__)?|\s+[—–-]\s+|(?:\*\*|__)?\s*$)\s*(.*)$/
+
 /** Reads the report's labelled lines out of a worker's answer; what is missing is empty. */
 export const parseReport = (text: string): Report => {
-  const out: Record<(typeof FIELDS)[number], string> = { status: '', findings: '', files: '', checks: '', evidence: '', risks: '', next: '' }
-  let current: (typeof FIELDS)[number] | undefined
+  const out: Record<Field, string> = { status: '', findings: '', files: '', checks: '', evidence: '', risks: '', next: '' }
+  let current: Field | undefined
+  let statusExtra = ''
   for (const raw of text.split('\n')) {
-    // `Status: x`, `**Status:** x` and `**Status**: x` are one label.
-    const line = raw.trim().replace(/^\**\s*([A-Za-z]+)\s*:?\s*\**\s*:?\s*/, (_, label: string) => `${label}: `)
-    const match = /^(status|findings|files|checks|evidence|risks|next): (.*)$/i.exec(line)
-    if (match && /^\**\s*[A-Za-z]+\s*:?\s*\**\s*:/.test(raw.trim())) {
-      current = match[1]!.toLowerCase() as (typeof FIELDS)[number]
-      out[current] = match[2]!.trim()
-    } else if (current && current !== 'status') {
-      out[current] = `${out[current]}\n${raw.trim()}`.trim()
+    const trimmed = raw.trim()
+    const found = LABEL_LINE.exec(trimmed)
+    const field = found ? LABELS[found[1]!.toLowerCase().replace(/\s+/g, ' ')] : undefined
+    if (found && field) {
+      current = field
+      out[field] = found[2]!.replace(/^(?:\*\*|__)\s*/, '').replace(/(?:\*\*|__)\s*$/, '').trim()
+    } else if (current === 'status') {
+      // `## Status` then the word on the next line: the first line is the status itself.
+      if (trimmed && !out.status) out.status = trimmed
+      else if (trimmed) statusExtra = `${statusExtra}\n${trimmed}`.trim()
+    } else if (current) {
+      out[current] = `${out[current]}\n${trimmed}`.trim()
     }
   }
-  const word = out.status.toLowerCase().split(/[^a-z]+/)[0]
+  // What follows the status word is kept as findings when the report gave none.
+  if (!out.findings && statusExtra) out.findings = statusExtra
+  const word = out.status.toLowerCase().replace(/^[^a-z]+/, '').split(/[^a-z]+/)[0]
   const status: Report['status'] = word === 'completed' || word === 'partial' || word === 'blocked' || word === 'failed' ? word : 'unknown'
   return { ...out, status }
 }

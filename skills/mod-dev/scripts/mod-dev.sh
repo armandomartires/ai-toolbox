@@ -7,7 +7,7 @@
 #   check                         stage 2/8: python3 scripts/check-mods.py
 #   scaffold <name>               stage 2: copy mods/_template to mods/<name>,
 #                                 rename it, regenerate the registry, check
-#   validate <name> [--strict]    stage 4: claude plugin validate mods/<name>
+#   validate <name> [--strict]    stage 4: claude plugin validate mods/<name>/claude
 #   sync [<name>...] [--session ID] [--watch]
 #                                 stage 3: scripts/dev-mods.py (copy, never link)
 #   preview [<name>...] [--serve PORT]
@@ -37,7 +37,7 @@ if [ -z "$CLI" ]; then
   for c in claude claude.exe; do command -v "$c" >/dev/null 2>&1 && { CLI="$c"; break; }; done
 fi
 
-mod_exists() { [ -f "mods/$1/.claude-plugin/plugin.json" ]; }
+mod_exists() { [ -f "mods/$1/claude/.claude-plugin/plugin.json" ]; }
 need_mod() {
   [ -n "${1:-}" ] || { echo "mod-dev: a mod name is required" >&2; exit 2; }
   mod_exists "$1" || { echo "mod-dev: no mod named '$1' under mods/" >&2; exit 2; }
@@ -64,7 +64,7 @@ s = open(p, encoding="utf-8").read().replace("my-mod", name)
 open(p, "w", encoding="utf-8", newline="\n").write(s)
 PY
   done
-  f="mods/$name/.claude-plugin/plugin.json"
+  f="mods/$name/claude/.claude-plugin/plugin.json"
   "$PY" - "$f" "$name" <<'PY'
 import json, sys
 p, name = sys.argv[1], sys.argv[2]
@@ -84,7 +84,7 @@ cmd_validate() {
   [ -n "$CLI" ] || { echo "SKIP validate $1: no claude on PATH (set CLAUDE_BIN)"; return 3; }
   name="$1"; shift
   # From mods/ with a relative path, so a Windows CLI in WSL resolves it (tests/test-mods.sh does the same).
-  (cd mods && "$CLI" plugin validate "$name" "$@")
+  (cd mods && "$CLI" plugin validate "$name/claude" "$@")
 }
 
 cmd_sync() { "$PY" scripts/dev-mods.py "$@"; }
@@ -103,7 +103,7 @@ cmd_status() {
     case "$name" in _template*) continue ;; esac
     [ -z "${1:-}" ] || [ "$1" = "$name" ] || continue
     echo "$name"
-    echo "  manifest   $(manifest_version "$d.claude-plugin/plugin.json")  (mods/$name)"
+    echo "  manifest   $(manifest_version "${d}claude/.claude-plugin/plugin.json")  (mods/$name/claude)"
     if [ -n "$list" ]; then
       # Each entry: a line with the id, then Version:/Path:/Status: lines until the next blank line.
       printf '%s\n' "$list" | awk -v n="$name" '

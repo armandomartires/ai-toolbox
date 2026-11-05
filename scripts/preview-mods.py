@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Preview a mod's panes in a browser, from the trees the test kit draws.
 
-Each mod may hold preview scenes in `preview/*.scene.tsx`, built on the scene
-kit (`scripts/preview/scene-kit.ts`, copied into the mod's preview/ folder as
+Each mod may hold preview scenes in `claude/preview/*.scene.tsx`, built on the scene
+kit (`scripts/preview/scene-kit.ts`, copied into the mod's claude/preview/ folder as
 `scene-kit.ts`): a scene seeds the mod's state as its tests do, and the kit
 mounts the pane at each size and surface asked for, applies presses, and hands
 the drawn tree out. The test kit has no files and swallows console output, so
@@ -19,7 +19,7 @@ Served, the page can also ask for one drawing at another size, or after a press
 (POST /run with a scene request); the server runs that scene alone and answers
 with its tree. Output: build/preview/index.html (open it, or the served URL).
 task-compass's scenes read this repo's own .ai/GOALS.md, copied in as
-preview/goals.fixture.ts.
+claude/preview/goals.fixture.ts.
 """
 import argparse
 import http.server
@@ -41,6 +41,7 @@ except ImportError:
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODS = os.path.join(ROOT, "mods")
+# A mod's Claude Code plugin is mods/<name>/claude (ADR-0054): its hooks, types, manifest and preview/.
 OUT = os.path.join(ROOT, "build", "preview")
 PAGE_DIR = os.path.join(ROOT, "scripts", "preview")
 PAGE_FILES = ("index.html", "style.css", "render.js", "app.js", "snapshot.js")
@@ -52,11 +53,15 @@ MARK = re.compile(r"@@PREVIEW@@(.*?)@@END@@", re.S)
 KIT_BANNER = "// Copied by scripts/preview-mods.py from scripts/preview/scene-kit.ts: edit that file, never this copy.\n"
 
 
+def plugin_dir(mod):
+    return os.path.join(MODS, mod, "claude")
+
+
 def mods_with_scenes():
     return sorted(
         name for name in os.listdir(MODS)
-        if os.path.isdir(os.path.join(MODS, name, "preview"))
-        and any(f.endswith(".scene.tsx") for f in os.listdir(os.path.join(MODS, name, "preview")))
+        if os.path.isdir(os.path.join(plugin_dir(name), "preview"))
+        and any(f.endswith(".scene.tsx") for f in os.listdir(os.path.join(plugin_dir(name), "preview")))
     )
 
 
@@ -64,7 +69,7 @@ def refresh_kit(mod):
     """The mod's preview/scene-kit.ts is the shared one, banner first."""
     with open(SCENE_KIT, encoding="utf-8") as f:
         wanted = KIT_BANNER + f.read().replace("\r\n", "\n")
-    path = os.path.join(MODS, mod, "preview", "scene-kit.ts")
+    path = os.path.join(plugin_dir(mod), "preview", "scene-kit.ts")
     current = open(path, encoding="utf-8").read().replace("\r\n", "\n") if os.path.exists(path) else None
     if current != wanted:
         with open(path, "w", encoding="utf-8", newline="\n") as f:
@@ -74,7 +79,7 @@ def refresh_kit(mod):
 def scratch_copy(mod, request):
     """The mod without its tests or generated types, its scenes renamed as tests, the request written beside them."""
     refresh_kit(mod)
-    src, dst = os.path.join(MODS, mod), os.path.join(SCRATCH, mod)
+    src, dst = plugin_dir(mod), os.path.join(SCRATCH, mod)
     shutil.rmtree(dst, ignore_errors=True)
 
     def ignore(folder, names):
@@ -110,7 +115,7 @@ def build(mod, request=None):
         drawings.extend(json.loads(urllib.parse.unquote(chunk)))
     errors = [("%s: %s · %s: %s" % (mod, one["scene"], one["surface"], one["error"])) for one in drawings if one.get("error")]
     if preview_snapshots is not None and request is None:
-        preview_snapshots.compare(os.path.join(MODS, mod), drawings)
+        preview_snapshots.compare(plugin_dir(mod), drawings)
     if not drawings:
         errors.append("%s: no drawing came back; the kit said:\n%s" % (mod, text[-4000:]))
     return drawings, errors
@@ -175,7 +180,7 @@ def build_all(mods):
 def snapshot(mods):
     """The newest mtime under each watched place."""
     seen = {}
-    for place in [os.path.join(MODS, m) for m in mods] + [GOALS, PAGE_DIR]:
+    for place in [plugin_dir(m) for m in mods] + [GOALS, PAGE_DIR]:
         newest = 0.0
         for folder, dirs, files in os.walk(place) if os.path.isdir(place) else [("", [], [place])]:
             dirs[:] = [d for d in dirs if d not in ("types", "node_modules", ".git")]
@@ -276,7 +281,7 @@ def main():
     args = parser.parse_args()
     mods = args.mods or mods_with_scenes()
     if not mods:
-        sys.exit("no mod has preview/*.scene.tsx")
+        sys.exit("no mod has claude/preview/*.scene.tsx")
     ok = build_all(mods)
     if args.snapshot or args.check:
         if preview_snapshots is None:
@@ -286,10 +291,10 @@ def main():
             drawings = (read_json(os.path.join(store, mod + ".json")) or {"scenes": []})["scenes"]
             # A failed build writes no snapshot and removes none: an errored or empty run would poison or wipe them.
             if args.snapshot and ok:
-                preview_snapshots.write(os.path.join(MODS, mod), drawings)
+                preview_snapshots.write(plugin_dir(mod), drawings)
             elif args.snapshot:
                 print("%s: not snapshotted, the build failed" % mod, file=sys.stderr)
-            elif not preview_snapshots.check(os.path.join(MODS, mod), drawings):
+            elif not preview_snapshots.check(plugin_dir(mod), drawings):
                 ok = False
         sys.exit(0 if ok else 1)
     if not args.serve:
@@ -303,7 +308,7 @@ def main():
         mods = args.mods or mods_with_scenes()
         now = snapshot(mods)
         if now != last:
-            changed = [m for m in mods if now.get(os.path.join(MODS, m)) != last.get(os.path.join(MODS, m))]
+            changed = [m for m in mods if now.get(plugin_dir(m)) != last.get(plugin_dir(m))]
             # The board or the page itself changed: every mod again.
             last = now
             with Handler.lock:

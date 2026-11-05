@@ -42,6 +42,8 @@ const CONFIG_FILE = `.claude/${PLUGIN}.json`
 const POLL_MS = 1_000
 /** What collect leaves of its hook's budget for the answer after the last sleep. */
 const ANSWER_MARGIN_MS = 1_500
+/** A hook's budget when the engine states none (an unmetered `next`): the ten seconds a hook has. */
+const HOOK_BUDGET_MS = 10_000
 
 /** The config in force: defaults, then the override files, then the person's live choices. */
 let config: Config = DEFAULT_CONFIG
@@ -242,6 +244,7 @@ const statusAnswer = async ($: EngineInterface): Promise<string> => {
     isOn: await read($, enabled),
     policy: config.policy,
     coordinator: await $.session.model().catch(() => 'unknown'),
+    coordinatorEffort: coordinatorEffort ?? 'unknown',
     run: overall(rows),
     tasks: rows.map(task => ({
       id: task.id,
@@ -269,6 +272,7 @@ const statusText = async ($: EngineInterface): Promise<string> => {
   const word = overall(rows)
   return [
     `task-orchestrator ${on ? 'on' : 'off'}, policy ${config.policy}; coordinator model ${coordinator} (its effort is the session's, which this mod never changes)`,
+    `coordinator: ${coordinator} / effort ${coordinatorEffort ?? 'unknown'}`,
     `run: ${word.word} (${word.why})${tokenLine(rows)}`,
     'tasks:',
     summary(rows),
@@ -533,10 +537,16 @@ const lastMessage = (text: string): string | undefined => {
   try {
     const data: unknown = JSON.parse(text)
     const events = Array.isArray(data) ? data : isRecord(data) && Array.isArray(data.events) ? data.events : undefined
+    // The assistant's last words are the report; a tool or system event after them (a hook's note, a result) is not.
+    let fallback: string | undefined
     for (let at = (events?.length ?? 0) - 1; events && at >= 0; at--) {
       const said = eventText(events[at])
-      if (said) return said
+      if (!said) continue
+      const event = events[at]
+      if (isRecord(event) && (event.role === 'assistant' || event.type === 'assistant')) return said
+      fallback ??= said
     }
+    if (fallback !== undefined) return fallback
   } catch {
     // not JSON: the text itself, below
   }
@@ -553,6 +563,7 @@ const sessionReads = (task: Task, why: string): string[] => [
   `  - ${TOOL.listEvents} with session_id "${task.sessionId}" (its last message)`,
 ]
 
+const UNSTATED = "get_session did not state the session's model and effort"
 const MODEL_IN = /\bmodel"?\s*[:=]\s*"?([A-Za-z0-9._[\]-]+)/i
 const EFFORT_IN = /\beffort(?:Level)?"?\s*[:=]\s*"?([a-z]+)/i
 
@@ -562,10 +573,14 @@ const EFFORT_IN = /\beffort(?:Level)?"?\s*[:=]\s*"?([a-z]+)/i
  */
 const confirmSettings = async ($: EngineInterface, task: Task, text: string): Promise<void> => {
   const now = byId(await read($, ledger), task.id) ?? task
-  if (now.observed || now.notes.some(one => one.startsWith('get_session'))) return
+  if (now.observed) return
   const model = MODEL_IN.exec(text)?.[1]
   const effort = EFFORT_IN.exec(text)?.[1]?.toLowerCase()
-  if (!model || !effort) return settle($, now, { notes: [...now.notes, "get_session did not state the session's model and effort: unverified"] })
+  // Every read tries again until both are stated; the note that says so is written once.
+  if (!model || !effort) {
+    if (now.notes.some(one => one.startsWith(UNSTATED))) return
+    return settle($, now, { notes: [...now.notes, `${UNSTATED}: unverified`] })
+  }
   const odd = [
     ...(!model.toLowerCase().includes(now.requested.model.toLowerCase()) ? [`model ${model} is not the requested ${now.requested.model}`] : []),
   ]
@@ -606,39 +621,73 @@ const refreshSession = async ($: EngineInterface, task: Task, afterEnd: Task[]):
   return []
 }
 
+/** Why a queued task has not started, in the words collect prints: the person's turn, the cap, or what it waits on. */
+const queuedWhy = (rows: Ledger, task: Task): string => {
+  if (task.reason === WAITING) return WAITING
+  const blocker = startBlocker(rows, task, config.limits)
+  if (blocker === undefined) return isSession(task) ? WAITING : 'a slot is free: it starts with the next call'
+  if (/workers already running/.test(blocker)) {
+    // The cap counts a handed-off session too: it holds its slot.
+    const held = rows.filter(one => one.id !== task.id && (one.status === 'running' || (isSession(one) && one.status === 'blocked' && one.handoff === true))).length
+    return `behind the concurrency cap: ${held} running`
+  }
+  return blocker
+}
+
 const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { remainingMs: number; signal: AbortSignal }): Promise<{ result: string }> => {
   const ids = strings(input.ids)
   const timeoutMs = typeof input.timeoutMs === 'number' && input.timeoutMs > 0 ? Math.min(input.timeoutMs, config.limits.collectTimeoutMs) : config.limits.collectTimeoutMs
-  // Every `$.clock.sleep` is billed to the hook's ten-second budget, the one
-  // `$` call that is: past it the hook is skipped and the call goes unanswered
-  // (B-065). So the wait ends while the budget still holds the answer.
-  const deadline = (await $.clock.now()) + Math.max(0, Math.min(timeoutMs, wait.remainingMs - ANSWER_MARGIN_MS))
+  // An unmetered `next` states no budget (Infinity): the hook still has its ten seconds.
+  const budgetMs = Number.isFinite(wait.remainingMs) ? wait.remainingMs : HOOK_BUDGET_MS
   const targets = (rows: Ledger) => (ids.length ? rows.filter(task => ids.includes(task.id)) : rows)
   // Session tasks the mod's own reads were refused for: not waited on, their two calls printed.
   const unread = new Map<string, string[]>()
   // Tasks whose start was refused after a session ended in this call: shown even when not asked for.
   const afterEnd: Task[] = []
-  for (let pass = 0; ; pass++) {
-    // A running session is read through the app, once a pass, never past the wait's end (the first pass always).
-    for (const task of targets(await read($, ledger)).filter(one => isSession(one) && one.status === 'running' && one.sessionId && !unread.has(one.id))) {
-      if (pass > 0 && (await $.clock.now()) >= deadline) break
-      const why = await refreshSession($, task, afterEnd)
-      if (why.length) unread.set(task.id, why)
+  let startedAt = 0
+  let interrupted: string | undefined
+  try {
+    // Every `$.clock.sleep` is billed to the hook's ten-second budget, the one
+    // `$` call that is: past it the hook is skipped and the call goes unanswered
+    // (B-065). So the wait ends while the budget still holds the answer.
+    startedAt = await $.clock.now()
+    const deadline = startedAt + Math.max(0, Math.min(timeoutMs, budgetMs - ANSWER_MARGIN_MS))
+    for (let pass = 0; ; pass++) {
+      // A running session is read through the app, once a pass, never past the wait's end (the first pass always).
+      for (const task of targets(await read($, ledger)).filter(one => isSession(one) && one.status === 'running' && one.sessionId && !unread.has(one.id))) {
+        if (pass > 0 && (await $.clock.now()) >= deadline) break
+        const why = await refreshSession($, task, afterEnd)
+        if (why.length) unread.set(task.id, why)
+      }
+      const rows = await read($, ledger)
+      // Only what can end inside the wait is waited on: a running task, or a queued one that starts now. A task behind
+      // the cap, or waiting for the person's turn, would hold the whole wait for nothing.
+      const startable = new Set(runnable(rows, config.limits, personTurn).map(one => one.id))
+      const pending = targets(rows).filter(task => !unread.has(task.id) && (task.status === 'running' || (task.status === 'queued' && startable.has(task.id))))
+      const now = await $.clock.now()
+      if (!pending.length || now >= deadline) break
+      await $.clock.sleep(Math.min(POLL_MS, deadline - now), { signal: wait.signal })
     }
-    const rows = await read($, ledger)
-    // A task stuck behind one that ended without completing would wait out the timeout.
-    const pending = targets(rows).filter(task => !ENDED.includes(task.status) && !stalledBy(rows, task) && !handoffRoot(rows, task) && !unread.has(task.id))
-    const now = await $.clock.now()
-    if (!pending.length || now >= deadline) break
-    await $.clock.sleep(Math.min(POLL_MS, deadline - now), { signal: wait.signal })
+  } catch {
+    // An abort (the hook's own budget or the dispatch) or any other throw: the rows known so far are the answer.
+    let at = startedAt
+    try {
+      at = await $.clock.now()
+    } catch {
+      // the clock is gone too: the wait is reported as zero
+    }
+    interrupted = `collect interrupted after ${Math.max(0, at - startedAt)} ms: call again`
   }
   const rows = await read($, ledger)
   const chosen = targets(rows)
   const extra = afterEnd.map(one => byId(rows, one.id)).filter((one): one is Task => one !== undefined && !chosen.some(task => task.id === one.id))
   if (!chosen.length) return { result: ids.length ? `no task named ${ids.join(', ')}` : 'No task in the ledger.' }
+  const unknown = ids.filter(one => !rows.some(task => task.id === one))
+  const startableNow = new Set(runnable(rows, config.limits, personTurn).map(one => one.id))
   const word = overall(rows)
   return {
     result: [
+      ...(unknown.length ? [`no task named ${unknown.join(', ')}`] : []),
       ...[...chosen, ...extra].map(task => {
         // A report named by id prints in full; otherwise only the first time (TASK-0226).
         const again = ids.includes(task.id)
@@ -655,11 +704,14 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { r
             const root = stalledBy(rows, task)
             const handed = root ? undefined : handoffRoot(rows, task)
             if (handed) return [`  waiting: ${handoffWaitText(task, handed)}`]
-            return root ? [`  stalled: ${stallText(task, root)}`] : []
+            if (root) return [`  stalled: ${stallText(task, root)}`]
+            // Queued and unable to start: said with its reason, and not waited on.
+            return task.status === 'queued' && !startableNow.has(task.id) ? [`  queued, not started: ${queuedWhy(rows, task)}; do not poll: end your turn or do other work, and collect it once when its note arrives`] : []
           })(),
           ...handoffText(task, again),
         ].join('\n')
       }),
+      ...(interrupted ? [interrupted] : []),
       `run: ${word.word} (${word.why})${tokenLine(rows)}`,
     ].join('\n'),
   }
@@ -681,6 +733,19 @@ const cancelTask = async ($: EngineInterface, task: Task): Promise<string> => {
   }
   await settle($, task, { status: 'cancelled', handoff: undefined, reason: 'cancelled by the person', endedAt: await $.clock.now() })
   return `${task.id} cancelled`
+}
+
+/** `/orchestrate reset`: an empty ledger, nothing refused, nothing printed yet; refused while a task runs. */
+const answerReset = async ($: EngineInterface): Promise<string> => {
+  const rows = await read($, ledger)
+  const running = rows.filter(task => task.status === 'running')
+  if (running.length) return `reset refused: ${running.length} task(s) still running (${running.map(task => task.id).join(', ')}); cancel them first with /orchestrate cancel, or wait for them to end`
+  await update($, ledger, () => [])
+  await update($, unavailable, () => [])
+  assignments.clear()
+  delivered.clear()
+  await statusLine($)
+  return `reset: ${rows.length} task(s) cleared from the ledger, the refused models and the printed-once record forgotten; run: idle`
 }
 
 const answerCancel = async ($: EngineInterface, which: string): Promise<string> => {
@@ -710,6 +775,9 @@ const callMismatch = (task: Task, input: DispatchInput): string | undefined => {
   return problems.length ? problems.join('; ') : undefined
 }
 
+/** The task's notes with one more, unless the last note already says it; its `endedAt` stays, so the assignment prints once. */
+const withNote = (task: Task, text: string): string[] => (task.notes.at(-1) === text ? task.notes : [...task.notes, text])
+
 /**
  * The coordinator's start_session for a session task, adopted into its row by
  * the assignment header in its prompt (ADR-0050 clause 3): the call goes
@@ -732,12 +800,12 @@ const adoptSession = async ($: EngineInterface, input: DispatchInput, next: (inp
   const refused = refusedCall(ran)
   // A refusal of the app's own, in its words: the row stays blocked, waiting for a call that passes.
   if (refused !== undefined) {
-    if (isRecord(ran) && typeof ran.deny !== 'string') await settle($, held, { reason: `start_session refused: ${refused}`, endedAt: await $.clock.now() })
+    if (isRecord(ran) && typeof ran.deny !== 'string') await settle($, held, { reason: `start_session refused: ${refused}`, notes: withNote(held, `start_session refused: ${refused}`) })
     return ran
   }
   const sessionId = sessionIdIn(answerText(ran))
   if (!sessionId) {
-    await settle($, held, { reason: `start_session answered, but its session id was not found in the answer: find the session in the sidebar; ${held.id} stays handed off`, endedAt: await $.clock.now() })
+    await settle($, held, { reason: `start_session answered, but its session id was not found in the answer: find the session in the sidebar; ${held.id} stays handed off`, notes: withNote(held, 'start_session answered, but its session id was not found in the answer') })
     return ran
   }
   const at = await $.clock.now()
@@ -790,7 +858,7 @@ export const register: Register = on => {
     coordinatorEffort = settingsEffort(settings, await $.session.model().catch(() => ''), env)
     for (const one of refused) $.ui.log(`${PLUGIN}: ${one}`)
     try {
-      await $.command.register({ name: 'orchestrate', description: 'Lead-coordinator mode: on, off, status, policy, routing, models, opt-in, providers, cancel', argumentHint: 'on|off|status|policy <economy|balanced|quality>|routing|models|opt-in <high-effort|frontier> [off]|providers [enable|disable <id>]|cancel [<task>|all]' })
+      await $.command.register({ name: 'orchestrate', description: 'Lead-coordinator mode: on, off, status, policy, routing, models, opt-in, providers, cancel, reset', argumentHint: 'on|off|status|policy <economy|balanced|quality>|routing|models|opt-in <high-effort|frontier> [off]|providers [enable|disable <id>]|cancel [<task>|all]|reset' })
       await $.tool.register({
         name: 'dispatch',
         description: `Delegate one bounded task to a real isolated subagent (or, with runAs "session", a Code-tab session you start by the hand-off the answer names) chosen by the routing table (model and effort per task class), under the orchestrator's limits: ${config.limits.maxConcurrent} concurrent workers, workers never delegate, one non-isolated writer at a time, ${config.limits.maxRetries} retries and ${config.limits.maxEscalations} escalation per task. Returns the task's line; the report arrives through collect, once the task's end note arrives (never poll). Only while /orchestrate is on, whose context holds the coordinator protocol.`,
@@ -889,8 +957,10 @@ ${classGuide()}` },
         return { text: await setProvider($, args, await envOf($)) }
       case 'cancel':
         return { text: await answerCancel($, args[0] ?? 'all') }
+      case 'reset':
+        return { text: await answerReset($) }
       default:
-        return { text: 'usage: /orchestrate on|off|status|policy <name>|routing|models|opt-in <what> [off]|providers [enable|disable <id>]|cancel [<task>|all]' }
+        return { text: 'usage: /orchestrate on|off|status|policy <name>|routing|models|opt-in <what> [off]|providers [enable|disable <id>]|cancel [<task>|all]|reset' }
     }
   })
 
@@ -1017,7 +1087,11 @@ ${classGuide()}` },
       }
     }
     return next(e)
-  }).catch(($, e, next) => (next.called ? next(e) : e.agentId ? { deny: `${PLUGIN}: the worker fence failed, so the call is refused` } : next(e)))
+  }).catch(($, e, next) => {
+    // A collect is answered even when its own code threw: it never falls through to a tool nobody implements.
+    if (String(e.tool) === TOOL.collect) return { result: 'collect failed before it could read the ledger: call again' }
+    return next.called ? next(e) : e.agentId ? { deny: `${PLUGIN}: the worker fence failed, so the call is refused` } : next(e)
+  })
 
   // The one place the effective settings are visible: a worker's model request.
   on('turn.step', async function* ($, e, next) {

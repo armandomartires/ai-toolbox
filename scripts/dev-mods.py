@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Copy the repo's mods into a Claude Code session's dev-mods folder, as files.
 
+A mod's Claude Code plugin is mods/<name>/claude (ADR-0054); it is that
+folder's files that are copied, as ~/.claude/dev-mods/<session id>/<name>.
+
 A session that hot-reloads mods watches its own folder,
 ~/.claude/dev-mods/<session id>/; a link (junction or symlink) into the repo
 does not reliably make the watch see an edit behind it, so a mod loaded that
@@ -95,12 +98,12 @@ def main():
     parser.add_argument("--session", help="the session id whose dev-mods folder to fill (default: the newest)")
     parser.add_argument("--watch", action="store_true", help="keep mirroring every second")
     args = parser.parse_args()
-    mods = args.mods or sorted(d for d in os.listdir(MODS) if not d.startswith("_") and os.path.isfile(os.path.join(MODS, d, ".claude-plugin", "plugin.json")))
+    mods = args.mods or sorted(d for d in os.listdir(MODS) if not d.startswith("_") and os.path.isfile(os.path.join(MODS, d, "claude", ".claude-plugin", "plugin.json")))
     target = session_folder(args.session)
     print("dev-mods folder: %s" % target, flush=True)
     while True:
         for mod in mods:
-            n = mirror(os.path.join(MODS, mod), os.path.join(target, mod))
+            n = mirror(os.path.join(MODS, mod, "claude"), os.path.join(target, mod))
             if n:
                 print("%s: %d file(s) copied or removed" % (mod, n), flush=True)
         if not args.watch:

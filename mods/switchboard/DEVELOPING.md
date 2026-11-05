@@ -4,8 +4,10 @@
 
 ## Modules
 
+The Claude Code plugin is `mods/switchboard/claude/` (`ADR-0054`); the paths below are relative to it, and `README.md` and this file stay one level up.
+
 - `hooks/model.ts`: pure logic: `asNames`, `isOff`, `toggle`, `setOff`, `addSeen`, `refusal`, `pendingNote`, `pluginDirs`, `isProtected`, `isIdName`, `toolHints`, `shownName`, the server names (`serverOfTool`, `serverOfProvider`, `toolSpelling`, `offName`), the skill listing (`listedSkills`, `dropSkills`), the topics (`skillTopic`, `modTopic`, `groupRows`, `groupKey`: a mod's topic is its manifest's `category`, a skill's its plugin prefix, `Other` and `Standalone` last), and the command (`parseArgs`, `listText`, `listData`, both grouped by topic). Tested in `model.test.ts`.
-- `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
+- `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/claude/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
 - `hooks/store.ts`: `loadOff`, `syncOff`, `saveOff`: `$.store` under `off:<project root>` is the truth, mirrored into `$.state` `off` for the pane. A toggle invalidates `prompt.attachment` and `tool.describe`, so the next turn reads it.
 - `hooks/kinds/mods.ts` (`plugin.register`), `kinds/skills.ts` (`prompt.attachment` `skill_listing`, `tool.call` on `Skill`, `skill.prompt`), `kinds/connectors.ts` (`tool.describe`, `tool.call`): one hook set per kind, each recording what it sees into `$.state` `seen`.
 - `hooks/inventory.ts`: `readManifest` (a folder's `name` and optional `category`, also read by `plugin.register` from the event's `root`) and `modsFromPluginDirs`: the mods `CLAUDE_CODE_PLUGIN_DIRS` names, by each folder's `plugin.json`, only where `hooks/hooks.json` exists, their categories kept in `$.state` `topics`; `refreshInventory`: those, plus the skills and MCP servers of `$.session.usage({ breakdown: 'summary' })` with up to three tool names per server (`$.state` `hints`), and `$.tool.list()`. Run at `session.start` and on `/switchboard` and `list`.
@@ -31,7 +33,7 @@
 - **A skill listing entry is `- <name>: <description>`**, its description possibly running over unindented lines up to the next entry; a plugin's skill is named `plugin:skill`, so a name ends at the first colon followed by a space.
 - **A server has two spellings**: `claude.ai Gmail` in `/mcp` and `tool.describe`'s provider (`mcp:claude.ai Gmail`), `claude_ai_Gmail` in its tools' names. `isOff` compares the tool-name spelling; `offName` gives back the one it was turned off by.
 - **Gating hooks have no `.catch`** on purpose: a judge that fails lets the call or plugin through, the safe way for a convenience switch to fail.
-- **Headless checks**: `claude -p "/switchboard ..." --plugin-dir mods/switchboard --output-format stream-json --verbose` runs the command with no model call; its `system/init` line lists the servers, plugins and skills, and `--debug-file` shows each hook's verdict.
+- **Headless checks**: `claude -p "/switchboard ..." --plugin-dir mods/switchboard/claude --output-format stream-json --verbose` runs the command with no model call; its `system/init` line lists the servers, plugins and skills, and `--debug-file` shows each hook's verdict.
 
 ## The resize handle
 

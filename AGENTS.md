@@ -31,7 +31,7 @@ ADR-0039, ADR-0040). Out of scope: application code, public services, secrets.
   Python 3.10+, FastMCP, one tool per concern, tests required) or external
   (`server.json` wiring an upstream package; no vendored source).
 - Mods: Claude Code plugins in TypeScript (ADR-0040), built from shared parts in
-  `mods/_template/hooks/` (ADR-0053). Rules: `docs/development/authoring-guide.md`.
+  `mods/_template/claude/hooks/` (ADR-0053). Rules: `docs/development/authoring-guide.md`.
 
 ## Commands
 - Validate: `tests/validate.sh` (Bash, `python3` ≥ 3.11), the mandatory gate:

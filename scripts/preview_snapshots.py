@@ -1,6 +1,6 @@
 """Committed snapshots of each preview drawing, and what changed since.
 
-One JSON file per drawing under mods/<mod>/preview/snapshots/, named
+One JSON file per drawing under mods/<mod>/claude/preview/snapshots/, named
 `<scene slug>.<surface>.<columns>x<rows>.json`. The tree is normalised: keys in
 sorted order, and the per-run `handle` number of every `press` stripped (the
 test kit hands out a fresh one on each run). Used by scripts/preview-mods.py:
@@ -17,7 +17,13 @@ def slug(text):
     return re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-") or "scene"
 
 
-def folder(mod_dir):
+def _name(mod_dir):
+    """The mod's name: the plugin folder is mods/<mod>/claude, so `claude` names its parent."""
+    parts = os.path.normpath(mod_dir).replace(os.sep, "/").split("/")
+    return parts[-2] if parts[-1] == "claude" and len(parts) > 1 else parts[-1]
+
+
+def folder(mod_dir):  # mod_dir is the mod's plugin folder, mods/<mod>/claude (ADR-0054)
     return os.path.join(mod_dir, "preview", "snapshots")
 
 
@@ -125,7 +131,7 @@ def kept(drawings):
 def write(mod_dir, drawings):
     """Writes every drawing's snapshot, and removes stale snapshot files; refused while any drawing errored."""
     if any(d.get("error") for d in drawings):
-        print("%s: not snapshotted, a drawing errored" % os.path.basename(mod_dir))
+        print("%s: not snapshotted, a drawing errored" % _name(mod_dir))
         return
     out = folder(mod_dir)
     os.makedirs(out, exist_ok=True)
@@ -137,12 +143,12 @@ def write(mod_dir, drawings):
     for name in os.listdir(out):
         if name.endswith(".json") and name not in keep:
             os.remove(os.path.join(out, name))
-    print("%s: %d snapshot(s) written" % (os.path.basename(mod_dir), len(keep)))
+    print("%s: %d snapshot(s) written" % (_name(mod_dir), len(keep)))
 
 
 def check(mod_dir, drawings):
     """Prints a line per difference; True when every drawing matches and no snapshot is orphaned."""
-    mod = os.path.basename(mod_dir)
+    mod = _name(mod_dir)
     ok = True
     for d in kept(drawings):
         why = _difference(mod_dir, d)

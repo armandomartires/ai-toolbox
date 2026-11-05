@@ -55,4 +55,8 @@ node_modules/
 /install.selection
 # The API types and tsconfig Claude Code lays into a mod it loads from a
 # watched folder: generated per CLI version (ADR-0040).
-/mods/*/.claude-plugin/types/
+/mods/*/claude/.claude-plugin/types/
+
+# Written by a Mermaid diagram tool for GitHub Copilot (mermaid-ai-skills); not part of this repo.
+.github/copilot-instructions.md
+.github/instructions/

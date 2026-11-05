@@ -3,6 +3,7 @@
 **Status**: proposed (clause 1, the drawing, superseded by ADR-0053 clause 2)
 **Date**: 2026-11-03
 **Sprint / task**: `Post-S10`, `TASK-0221`
+**Paths amended 2026-11-05** (`TASK-0233`, `ADR-0054`): a mod's plugin files moved to `mods/<name>/claude/`; the paths below name the new places.
 
 ## Context
 
@@ -13,7 +14,7 @@ A spike (`TASK-0221`, 2026-11-03) dragged a one-row `Client` live on both surfac
 ## Decision
 
 1. **Each mod draws the handle for its own panel and keeps that panel's height in its own `$.state`.** Compass draws `sprints-handle` under the Sprints panel and stores `sprintsRows`; agent-watch draws `sessions-handle` under the Sessions panel in Compass's pane and stores `sessionsRows`. Neither reads the other's state, and nothing is added to the slot `ADR-0048` defines.
-2. **One surface module, one owner.** `mods/_template/hooks/handle.tsx` draws the grip, turns a drag, a double press and the keys into posts (`{ kind: 'move' | 'nudge', rows }`, `{ kind: 'reset' }`), and exports `heldRows`, which a mod's `ui.message` hook uses to read a post. Each mod that sizes a panel carries a byte-identical copy, gated by `scripts/check-mods.py` rule 7 as `sigma.tsx` is.
+2. **One surface module, one owner.** `mods/_template/claude/hooks/handle.tsx` draws the grip, turns a drag, a double press and the keys into posts (`{ kind: 'move' | 'nudge', rows }`, `{ kind: 'reset' }`), and exports `heldRows`, which a mod's `ui.message` hook uses to read a post. Each mod that sizes a panel carries a byte-identical copy, gated by `scripts/check-mods.py` rule 7 as `sigma.tsx` is.
 3. **A held height is a row budget the panel already has.** Compass's is the board's `room` and its columns' height; agent-watch's is `sessionsLayout`'s `rows` and its panel body's minimum height. A panel dragged small folds exactly as it does on a short pane. Each mod clamps to its own floor: 6 rows for the board's columns, 12 for the Sessions panel.
 4. **Per session and per surface, never in `$.store`.** The value is keyed by `terminal` or `desktop`, since a desktop row is not a terminal cell. A new session starts automatic. A double press, or `r` once the handle has the focus, goes back to automatic.
 5. **No handle where there is no `Client`.** Mobile and vscode draw no handle, ignore a held height and keep the automatic layout.

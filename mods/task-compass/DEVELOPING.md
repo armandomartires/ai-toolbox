@@ -4,8 +4,10 @@
 
 ## Modules
 
-- `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
-- `hooks/handle.tsx`: the resize handle's surface module, `heldRows`, `hintText` and the desktop bar, a byte-identical copy of `mods/_template/hooks/handle.tsx` (`ADR-0052`, `ADR-0053`); `sigma.tsx` imports it, so never edit it here.
+The Claude Code plugin is `mods/task-compass/claude/` (`ADR-0054`); the paths below are relative to it, and `README.md` and this file stay one level up.
+
+- `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/claude/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
+- `hooks/handle.tsx`: the resize handle's surface module, `heldRows`, `hintText` and the desktop bar, a byte-identical copy of `mods/_template/claude/hooks/handle.tsx` (`ADR-0052`, `ADR-0053`); `sigma.tsx` imports it, so never edit it here.
 - `hooks/model.ts`: pure logic (parse sprints, status table `STATUS` on SIGMAorbital tokens, `setStoryStatus`, `applyPlan`, `guessStory`, `wrap`). Tested directly in `register.test.tsx`.
 - `hooks/rails.ts`: pure layout of the pane: `focusOf`, `carousel`, `columnRows` (rows, cards, progress, folding), sprint dates. Tested directly in `rails.test.ts`.
 - `hooks/view.tsx`: the `ui.render` pane, drawing what `rails.ts` lays out, and `registerPane` and its slot (below), and `renderOutput`, `/compass` and `/goals` drawn as panels from the results `register.tsx` keeps with `remember`.

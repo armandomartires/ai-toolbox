@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Prove scripts/check-mods.py's rules 7 and 8 offline. Rule 7 (TASK-0188,
-# ADR-0043): every mods/*/hooks/sigma.tsx is a byte-identical copy of the
+# Prove scripts/check-mods.py's rules 0, 7 and 8 offline. Rule 0 (TASK-0233,
+# ADR-0054): a mod has claude/.claude-plugin/plugin.json, and a core/ folder
+# imports no harness API. Rule 7 (TASK-0188,
+# ADR-0043): every mods/*/claude/hooks/sigma.tsx is a byte-identical copy of the
 # template's, and a mod whose hooks draw carries one; the table held
 # hooks/sessions.ts too until ADR-0048 (TASK-0207). Rule 8 (TASK-0193,
 # ADR-0044): a mod that reads another mod's $.state mirrors that part of the
@@ -15,7 +17,7 @@
 # without its owner, and ignores a file outside its table (S7); rule 8 passes an agreeing mirror and fails a field the
 # owner lacks or types otherwise, a union that differs, a state key the
 # owner lacks, and another mod's state read with no mirror. WHAT IT DOES
-# NOT PROVE: that the module is right (mods/_template/hooks/sigma.test.tsx),
+# NOT PROVE: that the module is right (mods/_template/claude/hooks/sigma.test.tsx),
 # or that a reader handles the owner's values (each mod's own tests, run by
 # tests/test-mods.sh).
 #
@@ -36,54 +38,54 @@ check() {  # check <name> <condition-exit-status> [detail]
 
 # mod <root> <dir> <register body>: a mod that passes rules 1 to 6.
 mod() {
-  local d="$1/mods/$2"
-  mkdir -p "$d/.claude-plugin" "$d/hooks"
-  printf '{"name": "%s", "description": "A mod."}\n' "${3:-$2}" > "$d/.claude-plugin/plugin.json"
-  printf '{"modules": ["./register.tsx"]}\n' > "$d/hooks/hooks.json"
-  printf '%s\n' "${4:-export const register = () => {}}" > "$d/hooks/register.tsx"
+  local d="$1/mods/$2" p="$1/mods/$2/claude"
+  mkdir -p "$p/.claude-plugin" "$p/hooks"
+  printf '{"name": "%s", "description": "A mod."}\n' "${3:-$2}" > "$p/.claude-plugin/plugin.json"
+  printf '{"modules": ["./register.tsx"]}\n' > "$p/hooks/hooks.json"
+  printf '%s\n' "${4:-export const register = () => {}}" > "$p/hooks/register.tsx"
   echo "# $2" > "$d/README.md"
 }
 # root <name>: a root whose template owns a sigma.tsx.
 root() {
   local r="$tmp/$1"
   mod "$r" _template my-mod
-  echo "export const SIGMA = 'v2'" > "$r/mods/_template/hooks/sigma.tsx"
+  echo "export const SIGMA = 'v2'" > "$r/mods/_template/claude/hooks/sigma.tsx"
   echo "$r"
 }
 run() { out="$(python3 "$script" "$1" 2>&1)"; rc=$?; }
 DRAW="on('ui.render', { component: 'Pane' }, () => null)"
 
-r="$(root same)"; mod "$r" pane pane "$DRAW"; cp "$r/mods/_template/hooks/sigma.tsx" "$r/mods/pane/hooks/"
+r="$(root same)"; mod "$r" pane pane "$DRAW"; cp "$r/mods/_template/claude/hooks/sigma.tsx" "$r/mods/pane/claude/hooks/"
 run "$r"; check "S1 an identical copy passes" "$rc" "$out"
 
 r="$(root plain)"; mod "$r" quiet
 run "$r"; check "S2 a mod that draws nothing needs no copy" "$rc" "$out"
 
-r="$(root differs)"; mod "$r" pane pane "$DRAW"; echo "export const SIGMA = 'v1'" > "$r/mods/pane/hooks/sigma.tsx"
+r="$(root differs)"; mod "$r" pane pane "$DRAW"; echo "export const SIGMA = 'v1'" > "$r/mods/pane/claude/hooks/sigma.tsx"
 run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane: hooks/sigma.tsx differs from its owner"* ]]
 check "S3 a differing copy fails, naming the mod" $? "$out"
 
 r="$(root missing)"; mod "$r" pane pane "$DRAW"
-run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane: draws (ui.render) without hooks/sigma.tsx; cp mods/_template/hooks/sigma.tsx"* ]]
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane: draws (ui.render) without hooks/sigma.tsx; cp mods/_template/claude/hooks/sigma.tsx"* ]]
 check "S4 a drawing mod without a copy fails, with the cp to run" $? "$out"
 
-r="$(root test-only)"; mod "$r" pane; echo "$DRAW" > "$r/mods/pane/hooks/view.test.tsx"
+r="$(root test-only)"; mod "$r" pane; echo "$DRAW" > "$r/mods/pane/claude/hooks/view.test.tsx"
 run "$r"; check "S5 a test file that draws does not count" "$rc" "$out"
 
-r="$(root orphan)"; mod "$r" pane; echo "x" > "$r/mods/pane/hooks/sigma.tsx"; rm "$r/mods/_template/hooks/sigma.tsx"
-run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"owner mods/_template/hooks/sigma.tsx is missing"* ]]
+r="$(root orphan)"; mod "$r" pane; echo "x" > "$r/mods/pane/claude/hooks/sigma.tsx"; rm "$r/mods/_template/claude/hooks/sigma.tsx"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"owner mods/_template/claude/hooks/sigma.tsx is missing"* ]]
 check "S6 a copy without its owner fails" $? "$out"
 
 # A file outside rule 7's table is not checked (ADR-0048 dropped hooks/sessions.ts from it).
-r="$(root sess-free)"; mod "$r" agent-watch; echo "export const tree = 1" > "$r/mods/agent-watch/hooks/sessions.ts"
-mod "$r" pane; echo "export const tree = 2" > "$r/mods/pane/hooks/sessions.ts"
+r="$(root sess-free)"; mod "$r" agent-watch; echo "export const tree = 1" > "$r/mods/agent-watch/claude/hooks/sessions.ts"
+mod "$r" pane; echo "export const tree = 2" > "$r/mods/pane/claude/hooks/sessions.ts"
 run "$r"; check "S7 a sessions.ts that differs between mods passes: it is no shared module" "$rc" "$out"
 
 # owner <root>: a mod "own" whose contract a reader mirrors.
 owner() {
   mod "$1" own
-  mkdir -p "$1/mods/own/types"
-  cat > "$1/mods/own/types/index.d.ts" <<'EOF'
+  mkdir -p "$1/mods/own/claude/types"
+  cat > "$1/mods/own/claude/types/index.d.ts" <<'EOF'
 export type Status = 'queued' | 'done'
 
 export type Job = {
@@ -107,15 +109,15 @@ EOF
 # MIRROR comment.
 reader() {
   local note union key
-  note='// MIRROR of mods/own/types/index.d.ts. Each `Own<Name>` is the owner'"'"'s `<Name>`.'
+  note='// MIRROR of mods/own/claude/types/index.d.ts. Each `Own<Name>` is the owner'"'"'s `<Name>`.'
   [ $# -ge 5 ] && note="$5"
   union="${3:-}"; [ -n "$union" ] || union="'queued' | 'done'"
   key="${4:-}"; [ -n "$key" ] || key='jobs: OwnJob[]'
   mod "$1" reader
-  mkdir -p "$1/mods/reader/types"
+  mkdir -p "$1/mods/reader/claude/types"
   printf '%s\n' "$note" "export type OwnStatus = $union" "" "export type OwnJob = {" "$2" "}" "" \
     "declare module 'claude-code' {" "  interface PluginState {" "    'own': {" "      $key" "    }" "  }" "}" \
-    > "$1/mods/reader/types/index.d.ts"
+    > "$1/mods/reader/claude/types/index.d.ts"
 }
 mirror_root() { local r; r="$(root "$1")"; owner "$r"; echo "$r"; }
 
@@ -138,7 +140,7 @@ check "M4 a union that differs from the owner's fails" $? "$out"
 
 r="$(mirror_root key)"; reader "$r" "  id: string" "" "jobs: OwnJob[]
       paused: boolean"
-run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"reads \$.state 'own'.paused, which mods/own/types/index.d.ts does not declare"* ]]
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"reads \$.state 'own'.paused, which mods/own/claude/types/index.d.ts does not declare"* ]]
 check "M5 a state key the owner lacks fails" $? "$out"
 
 r="$(mirror_root unmirrored)"; reader "$r" "  id: string" "" "" "// reads own's jobs"
@@ -148,23 +150,23 @@ check "M6 another mod's state read with no mirror fails" $? "$out"
 # A manifest's optional category: kebab-case passes; an empty, upper-case or non-string one fails.
 for c in '"category": "task-planning"'; do
   r="$(root cat-ok)"; mod "$r" pane
-  printf '{"name": "pane", "description": "A mod.", %s}\n' "$c" > "$r/mods/pane/.claude-plugin/plugin.json"
+  printf '{"name": "pane", "description": "A mod.", %s}\n' "$c" > "$r/mods/pane/claude/.claude-plugin/plugin.json"
   run "$r"; check "C1 a kebab-case category passes" "$rc" "$out"
 done
 i=1
 for c in '"category": ""' '"category": "Planning"' '"category": "two words"' '"category": 3'; do
   i=$((i + 1))
   r="$(root "cat-bad$i")"; mod "$r" pane
-  printf '{"name": "pane", "description": "A mod.", %s}\n' "$c" > "$r/mods/pane/.claude-plugin/plugin.json"
+  printf '{"name": "pane", "description": "A mod.", %s}\n' "$c" > "$r/mods/pane/claude/.claude-plugin/plugin.json"
   run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"plugin.json category"*"lowercase kebab-case"* ]]
   check "C$i a bad category fails ($c)" $? "$out"
 done
 
 # Rule 7's import and rule 9 (ADR-0053), once the template owns a handle.tsx: a root <name> whose template owns both.
-hroot() { local r; r="$(root "$1")"; echo "export default 1" > "$r/mods/_template/hooks/handle.tsx"; echo "$r"; }
-both() { cp "$1/mods/_template/hooks/sigma.tsx" "$1/mods/_template/hooks/handle.tsx" "$1/mods/$2/hooks/"; }
+hroot() { local r; r="$(root "$1")"; echo "export default 1" > "$r/mods/_template/claude/hooks/handle.tsx"; echo "$r"; }
+both() { cp "$1/mods/_template/claude/hooks/sigma.tsx" "$1/mods/_template/claude/hooks/handle.tsx" "$1/mods/$2/claude/hooks/"; }
 
-r="$(hroot no-handle)"; mod "$r" pane pane "$DRAW"; cp "$r/mods/_template/hooks/sigma.tsx" "$r/mods/pane/hooks/"; echo "const x = { resize: 1 }" >> "$r/mods/pane/hooks/register.tsx"
+r="$(hroot no-handle)"; mod "$r" pane pane "$DRAW"; cp "$r/mods/_template/claude/hooks/sigma.tsx" "$r/mods/pane/claude/hooks/"; echo "const x = { resize: 1 }" >> "$r/mods/pane/claude/hooks/register.tsx"
 run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane: carries hooks/sigma.tsx without hooks/handle.tsx"* ]]
 check "H1 a sigma.tsx without the handle.tsx it imports fails, with the cp to run" $? "$out"
 
@@ -172,11 +174,44 @@ r="$(hroot no-resize)"; mod "$r" pane pane "$DRAW"; both "$r" pane
 run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane: draws a Pane whose panels take no resize handle"* ]]
 check "H2 a mod that draws a Pane with no resizable panel fails" $? "$out"
 
-r="$(hroot resized)"; mod "$r" pane pane "$DRAW"; both "$r" pane; echo "const x = { resize: 1 }" >> "$r/mods/pane/hooks/register.tsx"
+r="$(hroot resized)"; mod "$r" pane pane "$DRAW"; both "$r" pane; echo "const x = { resize: 1 }" >> "$r/mods/pane/claude/hooks/register.tsx"
 run "$r"; check "H3 a Pane with a resizable panel passes" "$rc" "$out"
 
 r="$(hroot output-only)"; mod "$r" rows rows "on('ui.render', { component: 'CommandOutput' }, () => null)"; both "$r" rows
 run "$r"; check "H4 a mod that draws no Pane needs no resize" "$rc" "$out"
+
+# Rule 0 (ADR-0054): a mod's Claude Code plugin is claude/, and core/ imports no harness API.
+r="$(root no-claude)"; mkdir -p "$r/mods/bare"; echo "# bare" > "$r/mods/bare/README.md"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/bare: missing claude/"* ]] && [[ "$out" == *"claude/.claude-plugin/plugin.json"* ]]
+check "G1 a mod without claude/.claude-plugin/plugin.json fails" $? "$out"
+
+r="$(root old-layout)"; mod "$r" pane; mkdir -p "$r/mods/pane/.claude-plugin"; mv "$r/mods/pane/claude/.claude-plugin/plugin.json" "$r/mods/pane/.claude-plugin/"; rmdir "$r/mods/pane/claude/.claude-plugin"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane/claude/.claude-plugin/plugin.json: missing manifest"* ]]
+check "G2 a plugin.json left outside claude/ fails" $? "$out"
+
+core() {  # core <root> <file body>: a mod "pane" with a core/model.ts
+  mod "$1" pane; mkdir -p "$1/mods/pane/core"; printf '%s
+' "$2" > "$1/mods/pane/core/model.ts"
+}
+r="$(root core-pure)"; core "$r" "import { route } from './router'
+export const x = route"
+run "$r"; check "G3 a core/ that imports only itself passes" "$rc" "$out"
+
+r="$(root core-claude)"; core "$r" "import { register } from '../claude/hooks/register'"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane/core/model.ts: core/ must import no harness API"*"claude/ folder"* ]]
+check "G4 a core/ that imports from claude/ fails" $? "$out"
+
+r="$(root core-pkg)"; core "$r" "import { atom } from 'claude-code'"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"core/ must import no harness API"*"harness package claude-code"* ]]
+check "G5 a core/ that imports the claude-code package fails" $? "$out"
+
+r="$(root core-opencode)"; core "$r" "const p = require('@opencode-ai/plugin')"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"harness package @opencode-ai/plugin"* ]]
+check "G6 a core/ that requires an OpenCode package fails" $? "$out"
+
+r="$(root core-comment)"; core "$r" "// import { atom } from 'claude-code' stays a comment
+export const y = 1"
+run "$r"; check "G7 a harness import named only in a comment passes" "$rc" "$out"
 
 echo "test-check-mods.sh: $((cases - fails))/$cases passed"
 [ "$fails" -eq 0 ]

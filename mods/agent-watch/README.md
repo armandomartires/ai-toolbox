@@ -1,6 +1,6 @@
 # agent-watch
 
-> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `status.json`.
+> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `claude/status.json`.
 
 A Claude Code mod that keeps an **Agents** pane beside the chat: this session and its sub-sessions as a status dashboard, with the subagents each owns, animated while they work. A meter above the prompt shows how far Claude's task list has come. It draws in SIGMAorbital (`ADR-0043`): monochrome, uppercase labels, its Night ops or Daylight colours following your theme setting. Colour says **state**, never which session owns a row (`ADR-0046` clause 1, which `ADR-0047` clause 2 extends to this mod).
 
@@ -40,6 +40,15 @@ Version 0.8.0 (`TASK-0215`), the band following the run, is tested in the mod te
 Version 0.7.0 (`TASK-0208`), background tasks, was seen live in a terminal session (2026-11-02): a background `sleep 90; exit 3` drew `B01 · shell · Live check sleep` RUNNING with `1 RUNNING` and no agent, in the Agents pane and in Compass's, then FAILED with `EXIT 3` at `1m30s` from its notification. Under `cc-plugin-sec-default` the `classic.Stop` and `classic.SubagentStop` hooks are skipped, so the in-flight reconciliation does not run there. Not yet seen: a stopped task's or a monitor's row in the pane, and a command backgrounded with Ctrl+B or at its timeout.
 
 Version 0.6.0 (`TASK-0207`) is tested in the mod test kit and was seen in a live terminal session with both mods loaded: the contribution draws in Compass's pane (the meter's glyph and count, then the Sessions panel, following a running agent), the engine answers `engine` at the bottom of a Pane's chain, which both mods drop, and the pane scrolls. In the desktop app (2026-11-02) the Agents pane draws the panel, a press on a row of the contributed panel selects it and the meter's progress bar draws in Compass. Not yet seen: the load order with agent-watch first.
+
+## Portability
+
+The mod's Claude Code plugin is `claude/` (`ADR-0054`).
+
+| Harness | Status |
+|---|---|
+| Claude Code | Supported: `claude/`. |
+| OpenCode, Codex | Not planned: the mod is a UI (the Agents pane, the band above the prompt, toasts), drawn with Claude Code's mod engine, which no other harness has. No `core/` folder: it is added only when a second harness needs shared logic. |
 
 ## Install
 

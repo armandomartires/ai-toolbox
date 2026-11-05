@@ -1,10 +1,19 @@
 # task-orchestrator
 
-> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `status.json`.
+> **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `claude/status.json`.
 
 Turns the session into a lead coordinator. While it is on, the main conversation plans and divides the work and delegates the substantive parts to **real, isolated subagents** (or, when the person asks for sessions, to Code-tab sessions) through a `dispatch` tool: each worker runs under a registered profile whose **model and effort come from a routing table** keyed by task class, inside limits the mod enforces in code (three concurrent workers, no nesting, one non-isolated writer at a time, writes only inside allowed files, two retries and one escalation per task). The worker's report comes back through `collect`; `status` shows every task with its **requested** model and effort beside what the runtime **observed**, and the host's overrides that may alter them. Claude Code only, 2.1.308 or later; terminal and desktop.
 
 Workers are subagents by default: each gets its own context and tools, runs in the background and answers once. You can open a worker's transcript from the tasks list, but it is not a conversation of its own. A task the person asks to run as a session is different: a Code-tab session the person can open and talk to (see *Session workers*). With [agent-watch](../agent-watch/README.md) installed, its Agents pane draws the run as an `ORCH` sub-session: each task, queued ones included, with its state and a `TASKS` bar.
+
+## Portability
+
+The mod's Claude Code plugin is `claude/` (`ADR-0054`).
+
+| Harness | Status |
+|---|---|
+| Claude Code | Supported: `claude/`. |
+| OpenCode, Codex | Not yet. The routing and dispatch logic (`routing.ts`, `router.ts`, `ledger.ts`, `contract.ts`: pure, no engine call) is a candidate for a `core/` folder; the hooks, the panels and `register.tsx` stay Claude-only. `core/` is added only when a second harness needs it, and then imports no harness API. |
 
 ## Install
 

@@ -501,6 +501,10 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
 - [?] TASK-0231 — task-compass: the Sessions panel shows under the board in either load order
 - [x] TASK-0232 — agent-watch 0.11.1: the STATE cell's glyph and word on one line
   .ai/tasks/TASK-0232-state-cell-one-line.md
+- [x] TASK-0233 — Per-harness mod layout: mods/<name>/claude/ today, core/ and other harnesses later (ADR-0054)
+  .ai/tasks/TASK-0233-per-harness-mod-layout.md
+- [>] TASK-0234 — task-orchestrator 0.5.5: collect always answers, and about the right tasks
+  .ai/tasks/TASK-0234-orchestrator-collect-always-answers.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
