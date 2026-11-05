@@ -1,5 +1,8 @@
 # Changelog
 
+## agent-watch 0.11.1
+- The Sessions table's STATE cell draws its glyph and word on one line on the desktop (`TASK-0232`), as the SESSION column does.
+
 ## task-compass 0.11.1
 - agent-watch's meter and Sessions panel sit under the board in either load order (`TASK-0231`): the board's box no longer holds the pane's full rows (`minHeight`), which pushed them below the visible pane when agent-watch loaded first. Tested in the mod test kit; not yet seen live.
 

@@ -27,7 +27,7 @@ const COL = { state: 11, steps: 7, time: 6, tok: 6 }
 /** The rows the KPI row (a label, a value and a caption, and the margin above) and the selected-element panel take. */
 const KPI_ROWS = 4
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it under the table, so the person sees which copy draws the panel. */
-export const VERSION = '0.11.0'
+export const VERSION = '0.11.1'
 const PANEL_ROWS = 9
 /** The compact strip's rows: its margin and its line. */
 const STRIP_ROWS = 2
@@ -306,10 +306,15 @@ export async function renderSessions(
         </Box>
         {column(
           COL.state,
-          <>
-            <Text color={color(tone)} {...fill}>{stateGlyph(one.status, one.badge)}</Text>
-            <Text color={color(tone)} size="caption" {...fill}>{` ${stateWord(one.status, one.badge)}`}</Text>
-          </>,
+          // The glyph and its word on one line, as the SESSION column draws its glyph and name: each part a box that does not shrink, a gap between them and no leading space for a desktop to wrap at.
+          <Box flexDirection="row" columnGap={1} alignItems="center">
+            <Box flexShrink={0}>
+              <Text color={color(tone)} {...fill}>{stateGlyph(one.status, one.badge)}</Text>
+            </Box>
+            <Box flexShrink={0}>
+              <Text color={color(tone)} size="caption" wrap="truncate-end" {...fill}>{stateWord(one.status, one.badge)}</Text>
+            </Box>
+          </Box>,
         )}
         {column(COL.steps, <Text color={color('text-1')} tabular {...fill}>{steps}</Text>)}
         {column(COL.time, <Text color={color('text-3')} tabular size="caption" {...fill}>{time}</Text>)}

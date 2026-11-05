@@ -499,6 +499,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0229-compass-readme-screenshots.md
 - [?] TASK-0230 — agent-watch: the band above the prompt shows the orchestrator's state, idle included
 - [?] TASK-0231 — task-compass: the Sessions panel shows under the board in either load order
+- [x] TASK-0232 — agent-watch 0.11.1: the STATE cell's glyph and word on one line
+  .ai/tasks/TASK-0232-state-cell-one-line.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

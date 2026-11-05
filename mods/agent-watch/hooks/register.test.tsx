@@ -143,7 +143,7 @@ test('a Workflow run is a sub-session coloured by its state, never a session ton
   ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ text: /^2\/2$/ })).toBeDefined()
   // The failed agent's state cell, in red.
-  expect((await ui.findAll({ type: 'Text', text: /^ FAILED$/ })).map(one => one.props.color)).toContain(DARK.red)
+  expect((await ui.findAll({ type: 'Text', text: /^ ?FAILED$/ })).map(one => one.props.color)).toContain(DARK.red)
   expect(said.toasts).toEqual(['GENERAL-PURPOSE · review:perf · FAILED 00:00:01'])
   await ui.unmount()
 })
