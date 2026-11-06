@@ -94,7 +94,7 @@ test('retries and escalations stop at their limits, and the run is done only whe
 
 test('a cancelled task neither fails nor blocks the run', () => {
   expect(overall([task('b', { status: 'completed' }), task('c', { status: 'cancelled' })]).word).toBe('done')
-  expect(overall([task('c', { status: 'cancelled' })]).word).toBe('done')
+  expect(overall([task('c', { status: 'cancelled' })]).word).toBe('idle')
   expect(overall([task('b', { status: 'completed' }), task('c', { status: 'cancelled' }), task('f', { status: 'failed' })]).word).toBe('failed')
   expect(overall([task('c', { status: 'cancelled' }), task('q', { status: 'queued' })]).word).toBe('running')
   expect(overall([task('c', { status: 'cancelled' }), task('p', { status: 'partial' })]).word).toBe('partial')
@@ -184,4 +184,17 @@ test('a retry on a bigger model or effort is an escalation, refused past its lim
   expect(again.refused).toContain('used its 1 escalation(s)')
   expect(again.refused).toContain('effort low → high')
   expect(retryTask([spent], task('T1', { requested: { model: 'sonnet', effort: 'low' } }), DEFAULT_LIMITS).refused).toBeUndefined()
+})
+
+test('a dependant of a cancelled task makes the run blocked, naming it; an all-cancelled ledger is idle', () => {
+  const stalled: Ledger = [task('T1', { status: 'cancelled' }), task('D1', { deps: ['T1'] })]
+  const word = overall(stalled)
+  expect(word.word).toBe('blocked')
+  expect(word.why).toContain('T1')
+  expect(word.why).toContain('D1')
+  expect(overall([task('T1', { status: 'cancelled' }), task('T2', { status: 'cancelled' })]).word).toBe('idle')
+  // A cancelled task beside a completed one is still a finished run.
+  expect(overall([task('T1', { status: 'cancelled' }), task('T2', { status: 'completed' })]).word).toBe('done')
+  // Its dependant waiting on a running task is running, not blocked.
+  expect(overall([running('T1'), task('D1', { deps: ['T1'] })]).word).toBe('running')
 })

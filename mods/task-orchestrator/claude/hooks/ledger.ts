@@ -109,8 +109,15 @@ export const overall = (ledger: Ledger): { word: 'done' | 'partial' | 'blocked' 
   const cancelled = ledger.filter(task => task.status === 'cancelled')
   if (failed.length) return { word: 'failed', why: `${failed.map(task => `${task.id} (${task.role}) ${task.status}`).join(', ')}` }
   if (blocked.length) return { word: 'blocked', why: blocked.map(task => `${task.id} (${task.role})`).join(', ') }
+  // A queued task stuck behind a task that ended without completing (a cancelled one too) cannot run: the run is blocked, not running.
+  for (const task of open) {
+    const root = stalledBy(ledger, task)
+    if (root) return { word: 'blocked', why: `${task.id} is stalled by ${root.id} (${root.status})` }
+  }
   if (open.length) return { word: 'running', why: open.map(task => `${task.id} ${task.status}`).join(', ') }
   if (partial.length) return { word: 'partial', why: partial.map(task => `${task.id} (${task.role})`).join(', ') }
+  // Nothing completed and nothing is left: the person cancelled it all, which is not a finished run.
+  if (cancelled.length === ledger.length) return { word: 'idle', why: `${cancelled.length} task(s) cancelled` }
   const done = ledger.length - cancelled.length
   return { word: 'done', why: cancelled.length ? `${done} task(s) completed, ${cancelled.length} cancelled` : `${ledger.length} task(s) completed` }
 }

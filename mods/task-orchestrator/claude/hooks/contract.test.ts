@@ -76,3 +76,15 @@ test('the report parser keeps what follows the status as findings when none are 
   expect(parseReport('Status: done').status).toBe('unknown')
   expect(parseReport('## Status\nsuccess').status).toBe('unknown')
 })
+
+test('a bullet or bare label inside a section does not cut it short; a plain label always wins', () => {
+  const report = parseReport('Status: completed\nFindings: the parser is fixed\n- Next: wire it\nRisks\nNext: y')
+  expect(report.findings).toBe('the parser is fixed\n- Next: wire it\nRisks')
+  expect(report.next).toBe('y')
+  expect(report.risks).toBe('')
+  // A report written wholly in bullets still reads, and a bare heading names an empty field.
+  const bullets = parseReport('- Status: completed\n- Findings: ok\n- Next: ship')
+  expect(bullets.findings).toBe('ok')
+  expect(bullets.next).toBe('ship')
+  expect(parseReport('Status: completed\n## Findings\nok\n## Next\nship').next).toBe('ship')
+})

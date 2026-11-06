@@ -82,13 +82,19 @@ const LABEL_LINE = /^(?:#{1,6}\s*|[-*]\s+)?(?:\*\*|__)?\s*([A-Za-z]+(?: [A-Za-z]
 export const parseReport = (text: string): Report => {
   const out: Record<Field, string> = { status: '', findings: '', files: '', checks: '', evidence: '', risks: '', next: '' }
   let current: Field | undefined
+  let currentStrong = false
   let statusExtra = ''
   for (const raw of text.split('\n')) {
     const trimmed = raw.trim()
     const found = LABEL_LINE.exec(trimmed)
     const field = found ? LABELS[found[1]!.toLowerCase().replace(/\s+/g, ' ')] : undefined
-    if (found && field) {
+    // A bullet or a bare heading names a field only when that field is still empty and it does not sit inside a non-empty
+    // section a plain, bold or `#` label began (a findings bullet "- Next: x" is findings); such a strong label always wins.
+    const weak = found !== null && (/^[-*]\s+/.test(trimmed) || (!trimmed.includes(':') && !found[2] && !/^(?:#|\*\*|__)/.test(trimmed)))
+    const inside = current !== undefined && current !== 'status' && currentStrong && out[current] !== ''
+    if (found && field && !(weak && (out[field] || inside))) {
       current = field
+      currentStrong = !weak
       out[field] = found[2]!.replace(/^(?:\*\*|__)\s*/, '').replace(/(?:\*\*|__)\s*$/, '').trim()
     } else if (current === 'status') {
       // `## Status` then the word on the next line: the first line is the status itself.
