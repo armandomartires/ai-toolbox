@@ -13,3 +13,13 @@ include:
   - local: .gitlab/ci/gitleaks.yml
   # CycloneDX SBOM (issue #12).
   - local: .gitlab/ci/sbom.yml
+  # Agent eval suite (issue #10).
+  - local: .gitlab/ci/evals.yml
+  # External MCP server lockfiles and tool-definition hashes (issue #7).
+  - local: .gitlab/ci/mcp-tool-lock.yml
+  # Gates allowlist, hash pinning and sandbox tests (issue #6).
+  - local: .gitlab/ci/gates-sandbox.yml
+  # OpenTelemetry spans reach a collector (issue #14).
+  - local: .gitlab/ci/otel.yml
+  # Unattended runs in a throwaway container (issue #11).
+  - local: .gitlab/ci/unattended-sandbox.yml

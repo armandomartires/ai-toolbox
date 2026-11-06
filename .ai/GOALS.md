@@ -509,6 +509,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0235-gate-passes-on-windows.md
 - [>] TASK-0236 — task-orchestrator 0.5.6: collect waits for sessions only
   .ai/tasks/TASK-0236-orchestrator-collect-no-wait.md
+- [x] TASK-0237 — The merged gate checks from origin pass on a Windows host
+  .ai/tasks/TASK-0237-remote-gate-checks-on-windows.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

@@ -17,6 +17,8 @@
 #
 # Usage: tests/test-private-names.sh [path/to/check-private-names.sh]
 set -uo pipefail
+# The cases set up their own origin; the CI host would add patterns (#11).
+unset CI_SERVER_HOST
 here="$(cd "$(dirname "$0")/.." && pwd)"
 script="${1:-$here/scripts/check-private-names.sh}"
 [ -f "$script" ] || { echo "FAIL: no script at $script"; exit 1; }

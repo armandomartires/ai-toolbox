@@ -1,0 +1,10 @@
+{
+  "id": "adj-03-unevidenced-attempt2-park",
+  "category": "adjudicator",
+  "agent": "adjudicator",
+  "expected": {
+    "verdict": "park"
+  },
+  "input": "Task T-103 acceptance criteria: (1) the deploy symlink resolves to mods/bar.\nImplementer report: 'symlink created'.\nGate evidence: none; the gate runner could not resolve the path outside the worktree.\nRefutation: criterion 1 unevidenced.\nAttempt: 2 (attempt 1 was retried for the same missing evidence).",
+  "mock_response": "{\"verdict\":\"park\",\"reasoning\":\"Still unevidenced after a retry; needs a human.\",\"overrides\":[]}"
+}

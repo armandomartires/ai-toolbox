@@ -1,0 +1,19 @@
+{
+  "all": "6e19387771c972c172beb45c3fd29ee80f8a2b0b83aef2d409b30b32b79f4293",
+  "server": "graphify",
+  "tools": {
+    "answer_graph": "8d0f65882e04323e3c41d85546e5db92db007bdfe0036703117a976405b68c06",
+    "first_hop_summary": "baae9eab463be505a1a8578476921647b6228b6f3fa2a90010c9a128e0a8d6c2",
+    "get_community": "b07c26631f9d3bd4dc3e97367d5a342780944185c51e87402da180060502f8cb",
+    "get_neighbors": "d7c9008a931303e3f1825dc7299113e451f1cccd59a98079ac3acd5483550b3f",
+    "get_node": "1e4b629073bfc2092ae76571f7c552f9b3dc761139c885ac4b17e0ea7d05bde6",
+    "god_nodes": "2fe18973857e70d8013bdc900f7dffda482524fd4dea0081da1439c8ff1bcb14",
+    "graph_stats": "a35cd981ffa82c23b48db5c9dd5314929af4eda02263b9325b9bc75aebee6a85",
+    "query_graph": "bfc2f0a9fc7cc6cbe65e8c8625886fa9f944bd02cb6df01eb32a713752914237",
+    "recommend_commits": "2e288e788a9faf8c6fd2c1c876ee15f7a9d56ed380ea38c33364bac34951f4d5",
+    "review_analysis": "c790514590df2f6e52eb1a3d2eddefbc56cda05c5292937891186d0bfeeea525",
+    "review_delta": "7cc5a19dcdbeb99b62f8dc71f318cebddf046216be821761d3d79954015e0e0d",
+    "shortest_path": "3389cd5b3a5cd7491926b3524efd65b42b45956d53d1986a30970c70687e41e4"
+  },
+  "version": "0.18.0"
+}

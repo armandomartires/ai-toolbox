@@ -1,0 +1,20 @@
+# External MCP servers: lockfile install and tool-definition drift (issue #7).
+# On the docker runner (tag `docker`, runner 3). `npm ci` fails on any
+# integrity mismatch; mcp-tool-lock.py verify fails on any added, removed or
+# changed tool definition against the reviewed tools.lock.json. Network is
+# needed here only for the npm registry download.
+mcp-tool-lock:
+  stage: test
+  image: node:24-bookworm@sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eba493c3508124d413
+  tags: [docker]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - python3 --version && node --version
+    - |
+      set -e
+      for d in mcp-servers/ansible mcp-servers/graphify; do
+        (cd "$d/lock" && npm ci --ignore-scripts --no-audit --no-fund)
+        python3 scripts/mcp-tool-lock.py verify "$d"
+      done

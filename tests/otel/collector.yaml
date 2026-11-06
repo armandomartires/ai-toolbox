@@ -1,0 +1,14 @@
+# Minimal collector for the CI proof that gates spans reach a collector (issue #14).
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4318
+exporters:
+  debug:
+    verbosity: detailed
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]

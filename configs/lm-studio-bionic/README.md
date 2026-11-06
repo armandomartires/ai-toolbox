@@ -512,7 +512,11 @@ The lesson worth keeping:
 >
 > **Required environment:** `GATES_MAP` (the consuming repository's gate map)
 > and `GATES_RUN_ROOT` (state, logs and the evidence file `gates.txt`; keep it
-> gitignored). Optional: `GATES_REPO_ROOT`, `GATES_TIMEOUT_SECONDS`.
+> gitignored), `GATES_MAP_SHA256` (the approved map's SHA-256; a changed map
+> is refused) and `GATES_ALLOWED_EXECUTABLES` (comma-separated; a gate naming
+> any other executable is REFUSED). Optional: `GATES_REPO_ROOT`,
+> `GATES_TIMEOUT_SECONDS`, `GATES_SANDBOX` (`bwrap` by default: no network,
+> read-only filesystem; `none` is an explicit opt-out). Issue #6.
 >
 > **Launch form, for reference only:** `uv --directory <absolute path to
 > mcp-servers/gates> run gates` — cwd-independent, so it is the form a client
