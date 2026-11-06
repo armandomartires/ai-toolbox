@@ -1098,7 +1098,8 @@ test('a collect whose wait is aborted answers with the rows known so far and say
   let now = 1_000
   mock.store(on)
   mock.env(on, {})
-  engine(on)
+  // Only a session is slept on (0.5.6): a running one, read through the app.
+  engine(on, { session: e => (e.tool === 'mcp__ccd_session__start_session' ? STARTED(1) : ASKED('{"isRunning":true}')) })
   // The sleep rejects, as an abort does, after the clock moved on 700 ms.
   on('clock.now', () => ({ value: now }))
   on('clock.sleep', () => {
@@ -1107,11 +1108,12 @@ test('a collect whose wait is aborted answers with the rows known so far and say
   })
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser' }))
+  await say($, PERSON)
+  await $.tool.call(startSession({ prompt: byLine(String((await $.tool.call(session('T1'))).result), '# Assignment T1') }))
   const got = await $.tool.call({ tool: COLLECT, ids: ['T1'] } as never)
   expect(got.deny).toBeUndefined()
   const text = String(got.result)
-  expect(text).toContain('T1 → scout')
+  expect(text).toContain('T1 → reviewer')
   expect(text).toContain('still running: call again once')
   expect(text).not.toContain('do not poll')
   expect(text).toMatch(/collect stopped after 700 ms \(.+\): call again/)
@@ -1229,30 +1231,70 @@ test('a cancelled task neither fails nor blocks the run, and status names the co
   expect(panel).toContain('coordinator: claude-fable-5-1 / effort high')
 })
 
-test('a collect of a queued task whose dependency runs waits for it, and shows the task started when the dependency ends (0.5.5)', async ($, on) => {
-  let now = 1_000
-  let sleeps = 0
+test('a collect on a running subagent answers within one clock tick: its end cannot be seen inside the wait (0.5.6)', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
   mock.store(on)
   mock.env(on, {})
   engine(on)
-  // Each sleep moves the clock on a second; the dependency's turn ends during the third, the task it started during the fifth.
-  on('clock.now', () => ({ value: now }))
-  on('clock.sleep', async () => {
-    now += 1_000
-    sleeps++
-    if (sleeps === 3) await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
-    if (sleeps === 5) await $.turn.complete({ agentId: 'agent-2', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't2' })
-    return { value: undefined }
-  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'look' }))
+  // 0.5.5 slept on it for about 8.5 s; a subagent's turn.complete reaches the mod only after this hook has answered.
+  const before = clock.now()
+  const got = String((await $.tool.call({ tool: COLLECT, ids: ['T1'], timeoutMs: 600_000 } as never)).result)
+  expect(clock.now() - before).toBeLessThan(1_000)
+  expect(got).toContain('T1 → scout [agent-1]')
+  expect(got).toContain('still running: do not poll')
+  // The end note is what to wait for: once it has arrived, one collect prints the report.
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(String((await $.tool.call({ tool: COLLECT, ids: ['T1'] } as never)).result)).toContain('findings: found')
+})
+
+test('a collect of a queued task behind a running subagent answers at once with what it waits on (0.5.6)', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
   await $.tool.call(dispatch({ id: 'T', class: 'lookup', objective: 'look' }))
   await $.tool.call(dispatch({ id: 'R', class: 'lookup', objective: 'read what T found', deps: ['T'] }))
+  // 0.5.5 waited on R because T ran; T cannot end inside the wait, so R cannot start inside it either.
+  const before = clock.now()
   const got = String((await $.tool.call({ tool: COLLECT, ids: ['R'], timeoutMs: 600_000 } as never)).result)
-  expect(sleeps).toBeGreaterThanOrEqual(3)
-  expect(got).toContain('R → scout [agent-2]')
-  expect(got).toContain('→ completed')
+  expect(clock.now() - before).toBeLessThan(1_000)
+  expect(got).toContain('R → scout')
+  expect(got).toContain('queued, not started: waiting on T')
+  expect(got).toContain('do not poll')
+})
+
+test('a collect of a queued task behind a running session waits for the session, and shows the task started when it ends (0.5.6)', { timeoutMs: 20_000 }, async ($, on) => {
+  const clock = mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  let reads = 0
+  const done = ['Status: completed', 'Findings: built it', 'Files: none', 'Checks: none run', 'Evidence: read', 'Risks: none', 'Next: review it'].join(String.fromCharCode(10))
+  const world = engine(on, {
+    // The session is read once a pass; it has ended by the third read.
+    session: e => (e.tool === 'mcp__ccd_session__start_session' ? STARTED(1) : e.tool === 'mcp__ccd_session_mgmt__get_session' ? ASKED(`{"isRunning":${++reads < 3}}`) : ASKED(JSON.stringify({ events: [{ role: 'assistant', text: done }] }))),
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await say($, PERSON)
+  await $.tool.call(startSession({ prompt: byLine(String((await $.tool.call(session('T1'))).result), '# Assignment T1') }))
+  await $.tool.call(dispatch({ id: 'R', class: 'lookup', objective: 'read what T1 found', deps: ['T1'] }))
+  expect(world.spawned).toHaveLength(0)
+  const before = clock.now()
+  const pending = $.tool.call({ tool: COLLECT, ids: ['R'], timeoutMs: 600_000 } as never)
+  await clock.advance(12_000)
+  const got = String((await pending).result)
+  // T1 is not among the ids, but R waits on it: it was read each pass until it ended, and R started then.
+  expect(reads).toBe(3)
+  expect(clock.now() - before).toBeGreaterThanOrEqual(2_000)
+  expect(world.spawned.map(one => one.name)).toEqual(['R'])
+  expect(got).toContain('R → scout [agent-1]')
   expect(got).not.toContain('queued, not started')
+  expect(await status($)).toContain('T1 → reviewer [local_00000001-aaaa-4bbb-8ccc-000000000001] → requested sonnet/medium → unverified → completed → review it')
 })
 
 test('/orchestrate reset is refused while a hand-off waits for the coordinator, and names it (0.5.5)', async ($, on) => {

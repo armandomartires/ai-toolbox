@@ -635,19 +635,20 @@ const queuedWhy = (rows: Ledger, task: Task): string => {
 }
 
 /**
- * Whether a collect's wait can see the task end or start: it runs (and was read), it starts now, or it waits only on
- * tasks that are themselves pending (a queued task behind a running dependency). The cap and the person's turn are not waited on.
+ * Whether a collect's wait can see the task end: only a running session, read through the app each pass, can end inside
+ * it. A subagent's `turn.complete` reaches the mod only after the coordinator's hook has answered (seen live, 2026-11-05),
+ * so a running subagent is never waited on. A queued task is pending only behind dependencies that are all pending
+ * themselves (behind a running session). The cap and the person's turn are not waited on either.
  */
-const isPending = (rows: Ledger, task: Task, startable: ReadonlySet<string>, unread: ReadonlyMap<string, string[]>, path: ReadonlySet<string> = new Set()): boolean => {
+const isPending = (rows: Ledger, task: Task, unread: ReadonlyMap<string, string[]>, path: ReadonlySet<string> = new Set()): boolean => {
   if (unread.has(task.id)) return false
-  if (task.status === 'running') return true
+  if (task.status === 'running') return isSession(task) && task.sessionId !== undefined
   if (task.status !== 'queued' || path.has(task.id)) return false
-  if (startable.has(task.id)) return true
   if (isSession(task) && !personTurn) return false
   if (!startBlocker(rows, task, config.limits)?.startsWith('waiting on')) return false
   const below = new Set(path).add(task.id)
   const waits = task.deps.map(dep => byId(rows, dep)).filter((dep): dep is Task => dep !== undefined && dep.status !== 'completed')
-  return waits.length > 0 && waits.every(dep => isPending(rows, dep, startable, unread, below))
+  return waits.length > 0 && waits.every(dep => isPending(rows, dep, unread, below))
 }
 
 const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { remainingMs: number; signal: AbortSignal }): Promise<{ result: string }> => {
@@ -656,6 +657,20 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { r
   // An unmetered `next` states no budget (Infinity): the hook still has its ten seconds.
   const budgetMs = Number.isFinite(wait.remainingMs) ? wait.remainingMs : HOOK_BUDGET_MS
   const targets = (rows: Ledger) => (ids.length ? rows.filter(task => ids.includes(task.id)) : rows)
+  // The targets and every task they wait on, so a session a named task is queued behind is read during the wait too.
+  const related = (rows: Ledger): Task[] => {
+    const seen = new Map<string, Task>()
+    const visit = (task: Task) => {
+      if (seen.has(task.id)) return
+      seen.set(task.id, task)
+      for (const dep of task.deps) {
+        const one = byId(rows, dep)
+        if (one) visit(one)
+      }
+    }
+    for (const task of targets(rows)) visit(task)
+    return [...seen.values()]
+  }
   // Session tasks the mod's own reads were refused for: not waited on, their two calls printed.
   const unread = new Map<string, string[]>()
   // Tasks whose start was refused after a session ended in this call: shown even when not asked for.
@@ -670,16 +685,16 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { r
     const deadline = startedAt + Math.max(0, Math.min(timeoutMs, budgetMs - ANSWER_MARGIN_MS))
     for (let pass = 0; ; pass++) {
       // A running session is read through the app, once a pass, never past the wait's end (the first pass always).
-      for (const task of targets(await read($, ledger)).filter(one => isSession(one) && one.status === 'running' && one.sessionId && !unread.has(one.id))) {
+      for (const task of related(await read($, ledger)).filter(one => isSession(one) && one.status === 'running' && one.sessionId && !unread.has(one.id))) {
         if (pass > 0 && (await $.clock.now()) >= deadline) break
         const why = await refreshSession($, task, afterEnd)
         if (why.length) unread.set(task.id, why)
       }
       const rows = await read($, ledger)
-      // Only what can end inside the wait is waited on: a running task, a queued one that starts now, or one queued behind
-      // running dependencies. A task behind the cap, or waiting for the person's turn, would hold the whole wait for nothing.
-      const startable = new Set(runnable(rows, config.limits, personTurn).map(one => one.id))
-      const pending = targets(rows).filter(task => isPending(rows, task, startable, unread))
+      // Only what can end inside the wait is waited on: a running session, or a task queued behind one. A subagent cannot
+      // end inside the wait (its end note is what to wait for), and a task behind the cap or the person's turn would hold
+      // the whole wait for nothing: with no session pending, collect answers at once.
+      const pending = targets(rows).filter(task => isPending(rows, task, unread))
       const now = await $.clock.now()
       if (!pending.length || now >= deadline) break
       await $.clock.sleep(Math.min(POLL_MS, deadline - now), { signal: wait.signal })
