@@ -1541,7 +1541,11 @@ if [ -e skills/unattended-ops/references/verdicts.md ]; then
   # untracked file has no diff, so the git form would have passed
   # vacuously for exactly as long as the file went uncommitted — a check
   # that cannot fail, which is this repo's most-repeated lesson.
-  elif ! cmp -s "$STANDARD" "$STANDARD.check"; then
+  # Compared with every CR dropped: under core.autocrlf a Windows checkout
+  # hands the generator CRLF sources, so the fresh copy differs from the
+  # tracked file by line endings alone and a byte-exact cmp failed there
+  # on every commit (TASK-0235). Content differences still fail.
+  elif ! cmp -s <(tr -d '\r' < "$STANDARD") <(tr -d '\r' < "$STANDARD.check"); then
     echo "STANDARD: $STANDARD is stale against references/verdicts.md and"
     echo "STANDARD: references/evidence.md — run scripts/sync-decision-standard.sh"
     echo "STANDARD: and commit the result"

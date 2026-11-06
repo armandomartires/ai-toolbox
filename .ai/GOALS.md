@@ -505,6 +505,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0233-per-harness-mod-layout.md
 - [>] TASK-0234 — task-orchestrator 0.5.5: collect always answers, and about the right tasks
   .ai/tasks/TASK-0234-orchestrator-collect-always-answers.md
+- [x] TASK-0235 — The repository gate passes on a Windows host
+  .ai/tasks/TASK-0235-gate-passes-on-windows.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

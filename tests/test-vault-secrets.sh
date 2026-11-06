@@ -49,8 +49,13 @@
 # TASK-0227 adds T56-T57: on Windows an AppRole file is judged by its access
 # list, not its mode, which Python reports as 666 there for every file. T56
 # runs the deciding rule on any platform; T57 reads real access lists and
-# runs only on Windows, where this suite does not reach it yet (its login
-# cases wait on a prompt there), so TASK-0227's brief records a direct run.
+# runs only on Windows.
+#
+# On Windows (Git Bash) every case runs, with three platform-gated adaptations:
+# "private" and "others can read" mean the access list there, as they do in the
+# script (private(), loosen(), tighten()); the throwaway home is USERPROFILE as
+# well as HOME, because Python finds ~ through USERPROFILE there; and the gh shim
+# is also built as gh.exe, the only name a bare `gh` resolves to there.
 #
 # Usage: tests/test-vault-secrets.sh [path/to/vault_secrets.py]   (a copy, for red proofs)
 set -euo pipefail
@@ -285,6 +290,10 @@ BASE_ENV = {k: v for k, v in os.environ.items()
             if not k.startswith("VAULT_") and k not in ("GITHUB_TOKEN", "GITLAB_TOKEN", "PUSH_TOKEN")}
 BASE_ENV.update({"HOME": HOME, "VAULT_USER": "tester",
                  "VAULT_ADDR": "http://127.0.0.1:%d" % server.server_address[1]})
+if os.name == "nt":
+    # Python finds ~ through USERPROFILE on Windows, never HOME: without this the
+    # script under test logs in to, and out of, the real ~/.vault-token.
+    BASE_ENV["USERPROFILE"] = HOME
 
 
 def run(args, stdin="", env=None, cwd=None):
@@ -344,6 +353,48 @@ def taken():
     return r
 
 
+_mod = []
+
+
+def script_mod():
+    """The script under test, imported once."""
+    if not _mod:
+        sys.dont_write_bytecode = True  # leave no __pycache__ in the skill
+        spec = importlib.util.spec_from_file_location("vault_secrets", SCRIPT)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        _mod.append(m)
+    return _mod[0]
+
+
+def private(path):
+    """Only its owner can read PATH: mode 600. On Windows, where Python reports
+    every file as 666, an access list that grants read to nobody besides the
+    owner, SYSTEM and Administrators -- the script's own rule (TASK-0227)."""
+    if not os.path.exists(path):
+        return False
+    if os.name == "nt":
+        m = script_mod()
+        return m.windows_other_readers(*m.windows_read_grants(path)) == []
+    return stat.S_IMODE(os.stat(path).st_mode) == 0o600
+
+
+def loosen(path):
+    """Let others read PATH: mode 644; on Windows, a read grant to Everyone."""
+    if os.name == "nt":
+        subprocess.run(["icacls", path, "/grant", "*S-1-1-0:R"], check=True, capture_output=True)
+    else:
+        os.chmod(path, 0o644)
+
+
+def tighten(path):
+    """Undo loosen(): mode 600; on Windows, drop the Everyone grant again."""
+    if os.name == "nt":
+        subprocess.run(["icacls", path, "/remove:g", "*S-1-1-0"], check=True, capture_output=True)
+    else:
+        os.chmod(path, 0o600)
+
+
 try:
     # T1 - LDAP login stores the read-only child, never the LDAP token.
     clear_tok(); taken()
@@ -351,7 +402,7 @@ try:
     creates = [x for x in taken() if x[1] == "auth/token/create"]
     check("T1 ldap login exits 0", p.returncode == 0, p.stderr.strip())
     check("T1 stored token is the read-only child, not the LDAP token", tok() == CHILD, "stored: " + label(tok()))
-    check("T1 token file is mode 600", tok() is not None and stat.S_IMODE(os.stat(TOKFILE).st_mode) == 0o600)
+    check("T1 token file is mode 600", tok() is not None and private(TOKFILE))
     check("T1 the child is created by the LDAP token with workstation-read only",
           len(creates) == 1 and creates[0][2] == PARENT and creates[0][3]["policies"] == ["workstation-read"])
 
@@ -460,6 +511,8 @@ try:
         with open(path, "w", encoding="utf-8") as fh:
             json.dump({"role_id": ROLE_ID, "secret_id": secret_id}, fh)
         os.chmod(path, mode)
+        if os.name == "nt" and mode & 0o077:
+            loosen(path)  # a mode never reaches a Windows access list
         return path
     APPROLE, LOOSE, BADSID = cred("app.approle", SECRET_ID, 0o600), cred("loose.approle", SECRET_ID, 0o644), \
         cred("bad.approle", "sid-wrong", 0o600)
@@ -491,7 +544,8 @@ try:
     p = run(["exec", "--map", MAP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN"),
             env=dict(approle, VAULT_APPROLE_FILE=LOOSE))
     check("T19 a credential file readable by others is refused before any login",
-          p.returncode == 1 and "readable by group or others" in p.stderr and probe() is None
+          p.returncode == 1 and probe() is None
+          and ("can be read by S-1-1-0" if os.name == "nt" else "readable by group or others") in p.stderr
           and not any(x[1] == "auth/approle/login" for x in taken()), p.stderr.strip())
 
     p = run(["exec", "--map", MAP, "GITHUB_TOKEN"] + probe_cmd("GITHUB_TOKEN"),
@@ -605,7 +659,7 @@ try:
     envfile = os.path.join(P, ".env")
     check("T31 local put writes .env", p.returncode == 0 and "DEMO_TOKEN=%s\n" % LOCAL_VALUE == read(P, ".env"),
           p.stderr.strip())
-    check("T31 .env is mode 600", os.path.exists(envfile) and stat.S_IMODE(os.stat(envfile).st_mode) == 0o600)
+    check("T31 .env is mode 600", private(envfile))
     p = run(["put", "DEMO_TOKEN"], stdin=LOCAL_VALUE2 + "\n", cwd=P)
     check("T31 a second put replaces the line, never duplicates it",
           p.returncode == 0 and read(P, ".env") == "DEMO_TOKEN=%s\n" % LOCAL_VALUE2)
@@ -640,11 +694,12 @@ try:
           p.returncode == 0 and ".env: git-ignored" in p.stdout and "DEMO_TOKEN: set in .env" in p.stdout,
           (p.stdout + p.stderr).strip())
     if os.path.exists(envfile):
-        os.chmod(envfile, 0o644)
+        loosen(envfile)
     p = run(["check"], cwd=P)
-    check("T34 local check fails on a .env others can read", p.returncode == 1 and "mode 644" in p.stdout)
+    check("T34 local check fails on a .env others can read", p.returncode == 1
+          and ("can be read by S-1-1-0" if os.name == "nt" else "mode 644") in p.stdout)
     if os.path.exists(envfile):
-        os.chmod(envfile, 0o600)
+        tighten(envfile)
     with open(os.path.join(P, ".env.example"), "a", encoding="utf-8") as fh:
         fh.write("THIRD_TOKEN=\n")
     p = run(["check"], cwd=P)
@@ -749,6 +804,24 @@ try:
                  "    json.dump({'argv': args, 'stdin': sys.stdin.read()}, open(%r, 'w'))\n"
                  % (sys.executable, GH_LOG))
     os.chmod(os.path.join(shim_dir, "gh"), 0o755)
+    if os.name == "nt":
+        # subprocess on Windows resolves a bare `gh` to gh.exe only -- no #! line,
+        # no PATHEXT -- so the real gh would run instead of the shim above. Wrap
+        # the shim as pip builds a console script: pip's launcher, a #! line
+        # naming this Python, then a zip whose __main__.py is the shim.
+        import platform
+        import zipfile
+        pip_spec = importlib.util.find_spec("pip")
+        if pip_spec is None:
+            raise SystemExit("test-vault-secrets: the Windows gh shim needs pip's launcher (python -m ensurepip)")
+        launcher = os.path.join(os.path.dirname(pip_spec.origin), "_vendor", "distlib",
+                                "t64-arm.exe" if platform.machine().lower() in ("arm64", "aarch64")
+                                else "t64.exe" if sys.maxsize > 2 ** 32 else "t32.exe")
+        packed = io.BytesIO()
+        with zipfile.ZipFile(packed, "w") as z:
+            z.write(os.path.join(shim_dir, "gh"), "__main__.py")
+        with open(launcher, "rb") as fh, open(os.path.join(shim_dir, "gh.exe"), "wb") as out:
+            out.write(fh.read() + b'#!"' + os.fsencode(sys.executable) + b'"\r\n' + packed.getvalue())
     shim = {"PATH": shim_dir + os.pathsep + os.environ.get("PATH", "")}
     G, L = os.path.join(WORK, "p-github"), os.path.join(WORK, "p-gitlab")
     for d in (G, L):
@@ -893,10 +966,7 @@ try:
     check("T15 no password, token or value in any output (%d runs)" % len(outputs), not leaked, ", ".join(leaked))
 
     # T16 - the repo's own map: well-formed, and documented in .env.example.
-    sys.dont_write_bytecode = True  # leave no __pycache__ in the skill
-    spec = importlib.util.spec_from_file_location("vault_secrets", SCRIPT)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    mod = script_mod()
 
     # T27 - the Windows path: run the command, wait for it, exit with its status.
     def spawned(command):

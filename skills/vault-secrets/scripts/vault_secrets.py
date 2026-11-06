@@ -47,8 +47,9 @@ Configuration, from the environment:
                      as soon as the values are fetched (ADR-0031).
   VAULT_TOKEN        use this token instead of logging in or ~/.vault-token.
   VAULT_SECRETS_MAPS colon-separated map files, used when no --map is given
-                     (default: secrets.map). --map may be repeated; a variable
-                     mapped twice is an error.
+                     (default: secrets.map). On Windows ';' separates too, and
+                     the colon of a drive letter (as in C:/x) does not.
+                     --map may be repeated; a variable mapped twice is an error.
   GITLAB_URL         gitlab backend: the instance. http:// needs --allow-http.
   GITLAB_TOKEN       gitlab backend: a token with api scope (else a prompt).
 
@@ -96,6 +97,15 @@ ENV_LINE = re.compile(r"^(?:export\s+)?(?P<var>[A-Z_][A-Z0-9_]*)=(?P<value>.*)$"
 EXAMPLE_NAME = re.compile(r"(?m)^([A-Z_][A-Z0-9_]*)=")
 # Appended together, in this order: `!.env.example` must come after `.env.*`.
 GITIGNORE_LINES = (".env", ".env.*", "!.env.example")
+
+
+def prompt_secret(prompt):
+    """getpass's hidden prompt. Windows getpass reads the console, never a pipe,
+    so there a piped stdin gives one line instead; elsewhere getpass already
+    falls back to stdin when there is no terminal, so it is left to do that."""
+    if os.name != "nt" or sys.stdin.isatty():
+        return getpass.getpass(prompt)
+    return sys.stdin.readline().rstrip("\r\n")
 
 
 def die(msg, code=EXIT_FAIL):
@@ -238,11 +248,23 @@ def load_map(path):
     return entries
 
 
+# Windows: ';' (os.pathsep) separates, and so does every ':' except a drive
+# letter's -- one letter at the start of a piece -- so C:/a.map;D:/b.map:C:/c.map and the
+# documented secrets.map:other.map both split as meant.
+WINDOWS_MAP_SEP = re.compile(r";|(?<!^[A-Za-z])(?<![;:][A-Za-z]):")
+
+
+def split_maps(value):
+    """VAULT_SECRETS_MAPS as paths: colon-separated; on Windows see WINDOWS_MAP_SEP."""
+    pieces = WINDOWS_MAP_SEP.split(value) if os.name == "nt" else value.split(":")
+    return [p for p in pieces if p]
+
+
 def map_paths(args):
     if args.map:
         paths = args.map
     elif os.environ.get("VAULT_SECRETS_MAPS"):
-        paths = [p for p in os.environ["VAULT_SECRETS_MAPS"].split(":") if p]
+        paths = split_maps(os.environ["VAULT_SECRETS_MAPS"])
     else:
         paths = ["secrets.map"]
     return [os.path.expanduser(p) for p in paths]
@@ -516,7 +538,18 @@ def check_local():
     else:
         print("%s: NOT git-ignored -- run `vault_secrets.py init`" % ENV_FILE)
         ok = False
-    if os.name != "nt" and os.path.exists(ENV_FILE):
+    if os.path.exists(ENV_FILE) and os.name == "nt":
+        # Python reports every Windows file as mode 666: judge its access list
+        # instead, as approle_login does (TASK-0227).
+        try:
+            others, fix = windows_exposure(os.path.abspath(ENV_FILE))
+        except OSError as e:
+            others, fix = ["unknown (cannot read its access list: %s)" % e], "icacls to check it"
+        if others:
+            print("%s: can be read by %s, besides its owner, SYSTEM and Administrators -- run %s"
+                  % (ENV_FILE, ", ".join(others), fix))
+            ok = False
+    elif os.path.exists(ENV_FILE):
         mode = stat.S_IMODE(os.stat(ENV_FILE).st_mode)
         if mode & 0o077:
             print("%s: readable by group or others (mode %03o) -- chmod 600 it" % (ENV_FILE, mode))
@@ -592,7 +625,7 @@ class GitLab:
             print("warning: http:// -- the GitLab token crosses the network in cleartext", file=sys.stderr)
         self.base = "%s/api/v4/projects/%s/variables" % (url, urllib.parse.quote(conf["gitlab_project"], safe=""))
         self.project = conf["gitlab_project"]
-        self.token = os.environ.get("GITLAB_TOKEN") or getpass.getpass(
+        self.token = os.environ.get("GITLAB_TOKEN") or prompt_secret(
             "GitLab token with api scope on %s (held in memory): " % self.project).strip()
         if not self.token:
             die("empty token")
@@ -738,7 +771,7 @@ def admin_token(vault):
         die("an AppRole identity cannot provision: log in as the Vault admin (ldap or token)")
     if method() == "ldap":
         return ldap_login(vault), True
-    token = getpass.getpass("Vault admin token (held in memory, never stored): ").strip()
+    token = prompt_secret("Vault admin token (held in memory, never stored): ").strip()
     if not token:
         die("empty token")
     return token, False
@@ -780,7 +813,7 @@ def cmd_provision(args):
 
 def read_value(var):
     if sys.stdin.isatty():
-        value = getpass.getpass("Value for %s (hidden): " % var)
+        value = prompt_secret("Value for %s (hidden): " % var)
     else:
         value = sys.stdin.read().rstrip("\r\n")
     if not value:
@@ -880,6 +913,20 @@ def windows_other_readers(owner, readers):
     return sorted({r for r in readers if r != owner and r not in WINDOWS_TRUSTED})
 
 
+def windows_exposure(path):
+    """(who besides the owner, SYSTEM and Administrators may read PATH, the
+    icacls command that leaves it to its owner); ([], None) when it is private.
+    OSError when the access list cannot be read."""
+    others = windows_other_readers(*windows_read_grants(path))
+    if not others:
+        return [], None
+    # /grant:r replaces only the named account's grants, so every other
+    # explicit reader is removed by name too.
+    remove = "".join(" /remove:g *%s" % o for o in others if o.startswith("S-"))
+    return others, 'icacls "%s" /inheritance:r /grant:r "%s:F"%s' % (
+        path, os.environ.get("USERNAME") or "<you>", remove)
+
+
 def approle_login(vault):
     """A short-lived token from the AppRole credential file, held in memory only."""
     path = os.path.expanduser(os.environ.get("VAULT_APPROLE_FILE") or "")
@@ -892,16 +939,12 @@ def approle_login(vault):
     # Checked before the file is even read.
     if os.name == "nt":
         try:
-            others = windows_other_readers(*windows_read_grants(path))
+            others, fix = windows_exposure(path)
         except OSError as e:
             die("cannot read the access list of %s (%s): refusing to trust it" % (path, e))
         if others:
-            # /grant:r replaces only the named account's grants, so every other
-            # explicit reader is removed by name too.
-            remove = "".join(" /remove:g *%s" % o for o in others if o.startswith("S-"))
-            die("%s can be read by %s, besides its owner, SYSTEM and Administrators: run "
-                "icacls \"%s\" /inheritance:r /grant:r \"%s:F\"%s"
-                % (path, ", ".join(others), path, os.environ.get("USERNAME") or "<you>", remove))
+            die("%s can be read by %s, besides its owner, SYSTEM and Administrators: run %s"
+                % (path, ", ".join(others), fix))
     elif mode & 0o077:
         # On /mnt/c every file reads as 0777, so a credential copied there is
         # refused rather than trusted.
@@ -924,7 +967,7 @@ def ldap_login(vault):
     """A token for the user's own LDAP login, held in memory only."""
     user = os.environ.get("VAULT_USER") or getpass.getuser()
     mount = os.environ.get("VAULT_AUTH_MOUNT") or "ldap"
-    password = getpass.getpass("Password for %s: " % user)
+    password = prompt_secret("Password for %s: " % user)
     if not password:
         die("empty password")
     try:
@@ -952,7 +995,7 @@ def cmd_login(args):
               "command logs in for itself." % info.get("policies"))
         return
     if method() == "token":
-        token = getpass.getpass("Vault token: ").strip()
+        token = prompt_secret("Vault token: ").strip()
         if not token:
             die("empty token")
         info = lookup(vault, token)
@@ -1100,7 +1143,7 @@ def writer_token(vault):
         return approle_login(vault), True
     if method() == "ldap":
         return ldap_login(vault), True
-    return getpass.getpass("Vault token with write access: ").strip(), False
+    return prompt_secret("Vault token with write access: ").strip(), False
 
 
 def write_value(vault, token, entries, var, value=None):

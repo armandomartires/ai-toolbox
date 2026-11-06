@@ -23,7 +23,12 @@
 # needs.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-REPO=$(pwd -P)
+# Spell REPO the way `git worktree list` does, or the `worktree $path`
+# matches below never succeed. Git for Windows prints C:/Users/..., while Git
+# Bash's `pwd -P` says /c/Users/... - every `remove` then failed with "no such
+# worktree" there. `pwd -W` exists only in MSYS/Git Bash; on Linux and WSL it
+# fails and REPO is `pwd -P`, the form git prints on those hosts.
+REPO=$(pwd -W 2>/dev/null || pwd -P)
 BRANCH_PREFIX="agent/"
 # Sibling of the repo, never inside it: validate.sh and sync-registry.sh glob
 # component directories, and `git status` would see a nested tree. Keeping it

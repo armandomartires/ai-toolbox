@@ -145,9 +145,17 @@ R="$(mkrepo outside)"
 conf_set "$R" skill_dir ../elsewhere
 expect 2 "skill_dir with .. is refused" "inside the repository" -- "$PUB" render --repo "$R"
 mkdir -p "$TMP/elsewhere/scripts"; : > "$TMP/elsewhere/scripts/build-dashboard.sh"; : > "$TMP/elsewhere/scripts/publish-dashboard.sh"
-ln -s "$TMP/elsewhere" "$R/linked"
-conf_set "$R" skill_dir linked
-expect 2 "skill_dir symlinked out of the repo is refused" "resolves outside the repository" -- "$PUB" render --repo "$R"
+# Git Bash's `ln -s` silently COPIES the target unless MSYS asks for a native
+# link, and a copy is an untracked directory inside the repo: the case then
+# met the "not tracked" refusal and never the symlink one. nativestrict makes
+# ln fail instead of copying; the MSYS variable means nothing to Linux's ln.
+if MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict" ln -s "$TMP/elsewhere" "$R/linked" 2>/dev/null &&
+   [ -L "$R/linked" ]; then
+  conf_set "$R" skill_dir linked
+  expect 2 "skill_dir symlinked out of the repo is refused" "resolves outside the repository" -- "$PUB" render --repo "$R"
+else
+  echo "SKIP  skill_dir symlinked out of the repo is refused (this host cannot create a symlink; on Windows enable Developer Mode)"
+fi
 
 R="$(mkrepo untracked)"
 mkdir -p "$R/other/scripts"; : > "$R/other/scripts/build-dashboard.sh"; : > "$R/other/scripts/publish-dashboard.sh"
