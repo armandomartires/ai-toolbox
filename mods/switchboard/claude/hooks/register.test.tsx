@@ -342,3 +342,20 @@ test('the Switchboard panel has the resize handle on its bottom edge: a drag hol
   expect(await phone.findAll({ type: 'Client' })).toHaveLength(0)
   await phone.unmount()
 })
+
+test('/switchboard theme light pins Daylight for the next render; a bad value answers with usage', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'dark' } as ConfigRow] }))
+  await start($)
+
+  const bad = await off($, 'theme blue')
+  expect(bad.text).toBe('Unknown theme "blue". Usage: /switchboard [list | on|off mod|skill|connector <name> | theme dark|light|auto]')
+
+  const pinned = await off($, 'theme light')
+  expect(pinned.text).toBe('Colours: Daylight (pinned; "theme auto" follows the theme setting again)')
+  const { text } = await off($, 'list')
+  const ui = await $.ui.mount({ ...OUTPUT(text), surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /^MODS$/ }))?.props.color).toBe(TOKENS.light['text-1'])
+  await ui.unmount()
+})

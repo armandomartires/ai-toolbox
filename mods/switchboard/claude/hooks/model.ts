@@ -194,7 +194,7 @@ export const parseArgs = (args: string): Ask => {
   return { kind: 'usage', why: `unknown: ${words[0]}` }
 }
 
-export const USAGE = 'Usage: /switchboard [list | on|off mod|skill|connector <name>]'
+export const USAGE = 'Usage: /switchboard [list | on|off mod|skill|connector <name> | theme dark|light|auto]'
 
 /** A server name that is only an id, as the desktop names the connectors it hosts. */
 export const isIdName = (name: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)

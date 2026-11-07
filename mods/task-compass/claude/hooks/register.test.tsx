@@ -452,8 +452,20 @@ test('the board has a SIGMAorbital title bar', async ($, on) => {
 const fold = (n: number) => `fold-s${n}`
 const SHORT = { ...PANE.props, scroll: { offset: 0, bodyRows: 56 } }
 
-/** A Button's label: the text of the Text inside it. */
-const labelOf = async (ui: { find: (q: Record<string, unknown>) => Promise<{ text?: string } | undefined> }, key: string) => (await ui.find({ type: 'Button', key }))?.text
+/** Blanks: what a desktop's overlay Button holds over its words (TASK-0241). */
+const BLANK = /^ *$/
+/** A pressable's words: the Button itself where its text is the words (the terminal), else the Text drawn just before it, which its blank Button lies over (a desktop). */
+const wordsNodeAt = <T extends { type: string; text?: string }>(all: T[], at: number): T | undefined => {
+  const button = all[at]
+  if (button === undefined) return undefined
+  if (!BLANK.test(button.text ?? '')) return button
+  return all.slice(0, at).reverse().find(one => one.type === 'Text' && !BLANK.test(one.text ?? ''))
+}
+/** A Button's label: the text of the Text inside it, or on a desktop the words its blank Button lies over (TASK-0241). */
+const labelOf = async (ui: { findAll: (q: Record<string, unknown>) => Promise<{ type: string; key?: unknown; text?: string }[]> }, key: string) => {
+  const all = await ui.findAll({})
+  return wordsNodeAt(all, all.findIndex(one => one.type === 'Button' && one.key === key))?.text
+}
 
 test('a sprint\'s toggle hangs directly under that sprint\'s progress line, as a line-strong Button: `k` on the terminal for the current sprint', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
@@ -468,8 +480,10 @@ test('a sprint\'s toggle hangs directly under that sprint\'s progress line, as a
       const button = all.findIndex(one => one.key === fold(n))
       expect(progress).toBeGreaterThan(-1)
       expect(button).toBeGreaterThan(progress)
-      // Nothing with a label or a press sits between the progress line and the toggle: only the rail's own cells.
-      expect(all.slice(progress + 1, button).filter(one => one.type === 'Button' || (one.type === 'Text' && one.text !== '│' && one.text !== ''))).toEqual([])
+      // Nothing with a label or a press sits between the progress line and the toggle: only the rail's own cells,
+      // and on a desktop the toggle's own words, a Text its Button is laid over (TASK-0241).
+      const words = surface === 'desktop' ? wordsNodeAt(all, button) : undefined
+      expect(all.slice(progress + 1, button).filter(one => one !== words && (one.type === 'Button' || (one.type === 'Text' && one.text !== '│' && one.text !== '')))).toEqual([])
       expect(all[button]?.type).toBe('Button')
       expect(((await ui.find({ type: 'Button', key: fold(n) }))?.children?.[0] as { props: { color: string } }).props.color).toBe(DARK['line-strong'])
       expect(await labelOf(ui, fold(n))).toBe('▾ HIDE')
@@ -614,4 +628,22 @@ test('a desktop prints the version after the legend; a terminal does not', async
   const terminal = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await terminal.find({ text: /^COMPASS / })).toBeUndefined()
   await terminal.unmount()
+})
+
+test('/compass theme light pins Daylight for the next render; a bad value answers with usage', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  engine(on)
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'dark' } as ConfigRow] }))
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+
+  const bad = (await $.command.run({ command: 'compass', args: 'theme' } as never)) as { text: string }
+  expect(bad.text).toBe('Theme needs a value. Usage: /compass theme dark|light|auto')
+
+  const pinned = (await $.command.run({ command: 'compass', args: 'theme light' } as never)) as { text: string }
+  expect(pinned.text).toBe('Colours: Daylight (pinned; "theme auto" follows the theme setting again)')
+  const { text } = (await $.command.run({ command: 'compass', args: '' } as never)) as { text: string }
+  const ui = await $.ui.mount({ ...OUTPUT('compass', text), surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /^COMPASS$/ }))?.props.color).toBe(TOKENS.light['text-1'])
+  await ui.unmount()
 })

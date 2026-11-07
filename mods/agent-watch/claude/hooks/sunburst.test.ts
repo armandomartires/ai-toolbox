@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { agentKey, runKey, sessionTree } from './sessions'
 import type { AgentRow, OrchTask } from './sessions'
 import { TOKENS } from './sigma'
-import { arcs, chartAgents, chartFailed, chartRunning, inkOn, rollupOf, stateGlyph, stateTone, stateWord, sunburstCells, sunburstSvg } from './sunburst'
+import { arcs, chartAgents, chartFailed, chartRunning, dayFill, inkOn, rollupOf, stateGlyph, stateTone, stateWord, sunburstCells, sunburstSvg } from './sunburst'
 import type { Arc } from './sunburst'
 
 const near = (a: number, b: number) => expect(Math.abs(a - b) < 1e-9).toBe(true)
@@ -654,4 +654,73 @@ test('on a small chart the selection and a waiting outline keep a visible stroke
   const widths = [...small.matchAll(/stroke="#ffffff" stroke-width="([\d.]+)"/g)].map(m => Number(m[1]))
   expect(widths.length).toBeGreaterThan(0)
   for (const w of widths) expect(w >= 1.5).toBe(true)
+})
+
+// Daylight, as SIGMAorbital draws a chart (TASK-0241). WCAG's contrast, computed here apart from the module's own.
+const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+const lum = (hex: string) => {
+  const v = parseInt(hex.slice(1), 16)
+  return 0.2126 * lin(((v >> 16) & 255) / 255) + 0.7152 * lin(((v >> 8) & 255) / 255) + 0.0722 * lin((v & 255) / 255)
+}
+const ratio = (a: string, b: string) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05)
+/** Every `<text>` of an SVG: where it is, its fill, its words. */
+const texts = (svg: string) => Array.from(svg.matchAll(/<text x="([\d.]+)" y="([\d.]+)"[^>]*? fill="(#[0-9a-f]{6})"[^>]*>([^<]*)/g), m => ({ x: Number(m[1]), y: Number(m[2]), fill: m[3]!, body: m[4]! }))
+const daylightChart = () => [
+  mk('c', 0, 0, 1, { tone: 'text-1', status: 'completed' }),
+  mk('run', 1, 0, 0.25, { code: 'S01', progress: { done: 2, total: 5 } }),
+  mk('deep', 2, 0, 0.25, { code: 'A01', parent: 'run' }),
+  mk('deeper', 3, 0, 0.25, { code: 'A02', parent: 'deep' }),
+  mk('fail', 1, 0.5, 0.75, { tone: 'red', status: 'failed', code: 'B03', glyph: '◆' }),
+  mk('wait', 1, 0.75, 1, { tone: 'text-3', status: 'queued', code: 'T3', glyph: '□' }),
+]
+
+test('Daylight: slices are opaque, on 1.5px gaps in surface, a deeper ring the colour above it at 62% then 36%', () => {
+  const light = TOKENS.light
+  const list = daylightChart()
+  const svg = sunburstSvg(list, 300, 'light')
+  const of = (key: string) => sectors(svg)[list.findIndex(arc => arc.key === key)]!
+  // The depth steps: the state's colour mixed into surface at 1, 0.62 and 0.36.
+  expect(dayFill('cyan', 1)).toBe(light.cyan)
+  const red = (hex: string) => parseInt(hex.slice(1, 3), 16)
+  expect(Math.abs(red(dayFill('cyan', 2)) - (0 * 0.62 + red(light.surface) * 0.38))).toBeLessThanOrEqual(1)
+  expect(Math.abs(red(dayFill('cyan', 3)) - (0 * 0.36 + red(light.surface) * 0.64))).toBeLessThanOrEqual(1)
+  expect(of('run')).toContain(`fill="${light.cyan}"`)
+  expect(of('deep')).toContain(`fill="${dayFill('cyan', 2)}"`)
+  expect(of('deeper')).toContain(`fill="${dayFill('cyan', 3)}"`)
+  // Status colours for status only: a failed slice red, a waiting one outlined in its tone on surface.
+  expect(of('fail')).toContain(`fill="${light.red}"`)
+  expect(of('wait')).toContain(`fill="${light.surface}" stroke="${light['text-3']}"`)
+  // The gap: each filled slice's stroke, 1.5px of surface; no fill is see-through.
+  for (const key of ['run', 'deep', 'deeper', 'fail']) expect(of(key), key).toContain(`stroke="${light.surface}" stroke-width="1.5"`)
+  expect(svg).not.toContain('fill-opacity')
+  // Night ops draws as it did: no surface gap, the state at an opacity.
+  const dark = sunburstSvg(list, 300, 'dark')
+  expect(dark).not.toContain(`stroke="${TOKENS.dark.surface}"`)
+  expect(dark).toContain('fill-opacity="0.85"')
+})
+
+test('Daylight: a label on a fill is on-ink at 4.5:1 or more; else it sits off the fill, on a surface plate, in text-1 and text-3', () => {
+  const light = TOKENS.light
+  const svg = sunburstSvg(daylightChart(), 900, 'light')
+  const label = (body: string) => texts(svg).find(one => one.body === body)!
+  // On a full fill: on-ink (bg), at 4.5:1 or more on it.
+  for (const [code, fill] of [['S01', light.cyan], ['B03', light.red]] as const) {
+    expect(label(code).fill, code).toBe(light['on-ink'])
+    expect(ratio(label(code).fill, fill)).toBeGreaterThanOrEqual(4.5)
+  }
+  // On a 62% or 36% fill on-ink falls under 4.5:1, so the label is off it: a surface plate, the code text-1, its steps text-3.
+  for (const code of ['A01', 'A02']) {
+    expect(ratio(light['on-ink'], dayFill('cyan', code === 'A01' ? 2 : 3))).toBeLessThan(4.5)
+    expect(label(code).fill, code).toBe(light['text-1'])
+    const plate = new RegExp(`<rect [^>]*fill="${light.surface}"/><text x="${label(code).x}" y="[\\d.]+"[^>]*>${code}</text>`)
+    expect(svg, code).toMatch(plate)
+  }
+  // A waiting slice is no fill: its label is text-1 on surface.
+  expect(label('T3').fill).toBe(light['text-1'])
+  // Every word in the chart is a Daylight text token, on-ink or a status colour, and holds 4.5:1 on surface or on its fill.
+  const allowed = new Set([light['text-1'], light['text-2'], light['text-3'], light['on-ink'], light.cyan, light.amber, light.red])
+  for (const one of texts(svg)) {
+    expect(allowed.has(one.fill), `${one.body} ${one.fill}`).toBe(true)
+    if (one.fill !== light['on-ink']) expect(ratio(one.fill, light.surface), one.body).toBeGreaterThanOrEqual(4.5)
+  }
 })

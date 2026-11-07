@@ -30,3 +30,7 @@ A mod draws `Box`/`Text`/`Button` trees, not HTML. A colour is a host theme key 
 - The host cannot carry the design's four typefaces, radius or the background grid. Panels are a title, a rule and a body; a card is a square frame; a `bracketed` panel is the design's region frame (surface fill, a `line` border and `text-1` corner brackets clipped from the border's own edges, `TASK-0199`); `stats` is its Readout row of stat blocks, the host's `title` size standing in for Orbitron.
 - A change to the module is one edit in the template and a copy to every mod, enforced by the gate.
 - The command-output cache lives in the mod's memory, so a reload or a resumed session draws older rows as text.
+
+## Note 2026-11-07 (TASK-0240, B-072)
+
+The desktop app's light/dark switch does not reach the `theme` config row, so a mod following that row stays in Night ops. A per-mod pin in `$.store` (key `theme`, `dark` or `light`) is the manual override: each mod's command takes `theme dark|light|auto`; a pin wins over the host's setting and survives a `config.set` of `theme`, and `auto` removes it so the setting is followed again.

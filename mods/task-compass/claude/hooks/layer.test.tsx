@@ -20,6 +20,13 @@ const PANE = {
 const T004 = 'S087_NetBoxNetworkModel.T004_SiteToSiteTunnel.md'
 
 /**
+ * A path as the fixtures key it. The engine resolves every `$.fs` path before
+ * it reaches an fs hook, so on Windows the mod's `/q/.ai/30.ROADMAP.md`
+ * arrives as `C:\q\.ai\30.ROADMAP.md`; elsewhere it arrives unchanged.
+ */
+const posix = (path: string) => path.replace(/^[a-z]:/i, '').replace(/\\/g, '/')
+
+/**
  * The engine beneath the mod: a sigma-infrastructure folder in memory at /q,
  * its `.ai/` layer from the structure-only fixtures, with every read and
  * write recorded.
@@ -48,31 +55,35 @@ const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
   })
   on('session.cwd', () => ({ value: '/q' }))
   on('fs.stat', (_, e) => {
-    const file = files.get(e.path)
+    const file = files.get(posix(e.path))
     if (!file) throw new Error('ENOENT')
     return { value: { kind: 'file', size: file.text.length, mtimeMs: file.mtime, isLink: false } }
   })
-  on('fs.exists', (_, e) => ({ value: files.has(e.path) }))
-  on('fs.list', (_, e) => ({
-    value: [...files.entries()]
-      .filter(([path]) => path.startsWith(`${e.path}/`) && !path.slice(e.path.length + 1).includes('/'))
-      .map(([path, file]) => ({
-        name: path.slice(e.path.length + 1),
-        kind: 'file' as const,
-        size: file.text.length,
-        mtimeMs: file.mtime,
-        isLink: false,
-      })),
-  }))
+  on('fs.exists', (_, e) => ({ value: files.has(posix(e.path)) }))
+  on('fs.list', (_, e) => {
+    const dir = posix(e.path)
+
+    return {
+      value: [...files.entries()]
+        .filter(([path]) => path.startsWith(`${dir}/`) && !path.slice(dir.length + 1).includes('/'))
+        .map(([path, file]) => ({
+          name: path.slice(dir.length + 1),
+          kind: 'file' as const,
+          size: file.text.length,
+          mtimeMs: file.mtime,
+          isLink: false,
+        })),
+    }
+  })
   on('fs.read', (_, e) => {
-    log.reads.push(e.path)
-    const file = files.get(e.path)
+    log.reads.push(posix(e.path))
+    const file = files.get(posix(e.path))
     if (!file) throw new Error('ENOENT')
     return { value: file.text }
   })
   on('fs.write', (_, e) => {
-    log.writes.push(e.path)
-    put(e.path, e.text)
+    log.writes.push(posix(e.path))
+    put(posix(e.path), e.text)
     return { value: undefined }
   })
   on('session.start', (_, e) => ({ cwd: e.cwd }))
@@ -153,8 +164,11 @@ test('an edited brief shows within a tick, and only changed briefs are read agai
   const dotOf = async (name: RegExp) => {
     const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
     const all = await ui.findAll({})
-    const at = all.findIndex(one => one.type === 'Button' && name.test(one.text))
-    const dot = all.slice(0, Math.max(0, at)).reverse().find(one => one.type === 'Text')?.text
+    // A desktop's Button is blanks laid over the name, the name itself a Text before it (TASK-0241).
+    const blank = /^ *$/
+    const wordsOf = (i: number) => (blank.test(all[i]?.text ?? '') ? all.slice(0, i).reverse().find(one => one.type === 'Text' && !blank.test(one.text ?? ''))?.text : all[i]?.text) ?? ''
+    const at = all.findIndex((one, i) => one.type === 'Button' && name.test(wordsOf(i)))
+    const dot = all.slice(0, Math.max(0, at)).reverse().find(one => one.type === 'Text' && !name.test(one.text ?? ''))?.text
     await ui.unmount()
     return at < 0 ? undefined : dot
   }

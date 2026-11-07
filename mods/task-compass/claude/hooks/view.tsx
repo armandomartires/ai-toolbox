@@ -5,7 +5,7 @@ import type { Sprint, Status } from '../types'
 import { fit, STATUS, STATUSES } from './model'
 import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, drawnRows, focusOf, isRailRow, RAIL_GUTTER, sprintLabel } from './rails'
 import type { Row } from './rails'
-import { color, heldOf, kit, recall, resizeAnswer } from './sigma'
+import { color, controlToken, heldOf, kit, recall, resizeAnswer } from './sigma'
 
 // The same $.state values register.tsx writes: the engine lists a module's
 // reads and writes from atoms declared in that file.
@@ -125,7 +125,7 @@ const noteBelow = ($: EngineInterface, said: string) => {
 const isEngineElement = (value: unknown) => typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'engine'
 
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it after the legend, so the person sees which copy draws the board. */
-export const VERSION = '0.11.1'
+export const VERSION = '0.12.1'
 
 /** The Compass pane: the sprint carousel and its legend, then what another mod contributes (ADR-0048). */
 export const registerPane = (on: On) => {
@@ -145,8 +145,8 @@ export const registerPane = (on: On) => {
     if (!isRejected) noteBelow($, resolved === undefined ? 'resolved nothing' : `resolved ${typeof resolved}${typeof resolved === 'object' && resolved !== null ? ` (type ${String((resolved as { type?: unknown }).type)})` : ''}`)
     const contributed = isEngineElement(resolved) ? undefined : resolved
     const ui = $.ui.resolve(e)
-    const { Box, Button, Text } = ui
-    const { frame, panel } = kit(ui, e.surface)
+    const { Box, Text } = ui
+    const { frame, panel, pressable } = kit(ui, e.surface)
     const [sprintList, declared, taskList, at, where, opened, scrolled, from, foldedList, heldRowsMap] = await Promise.all([
       read($, sprints),
       read($, focus),
@@ -175,12 +175,10 @@ export const registerPane = (on: On) => {
     const { first, centred, later, columnWidth, cardWidth, inner } = view
     const shown = sprintList.slice(first, first + view.count)
     const folds = new Set(foldedList)
-    // A fold toggle: a plain Button in `line-strong` (`▾ HIDE` open, `▸ SHOW …` folded), with its hotkey on the terminal only.
-    const foldButton = (key: string, hotkey: string | undefined, text: string, flip: () => void) => (
-      <Button key={key} plain hotkey={isTerminal ? hotkey : undefined} onPress={flip}>
-        <Text color={color('line-strong')}>{text}</Text>
-      </Button>
-    )
+    // A fold toggle (`▾ HIDE` open, `▸ SHOW …` folded) in the control token, with its hotkey on the terminal only.
+    // Every press here is a `pressable`: a desktop draws a Button's words in its own colour, so there they are a Text beside it (TASK-0241).
+    const foldButton = (key: string, hotkey: string | undefined, text: string, flip: () => void) =>
+      pressable({ key, label: text, token: controlToken(), hotkey: isTerminal ? hotkey : undefined, onPress: flip }, <Text color={color(controlToken())}>{text}</Text>)
     const flipSprint = (n: number) => () => void update($, foldedSprints, now => (now.includes(n) ? now.filter(one => one !== n) : [...now, n]))
     // `k` folds the current sprint's rows, the one the carousel centres.
     const currentN = sprintList[cur]?.n
@@ -260,16 +258,16 @@ export const registerPane = (on: On) => {
 
       // The name is the press that opens the card, or closes it. The dot
       // stays a Text beside it: a desktop draws a Button as a native one,
-      // whose label loses the colors of the Texts in it.
+      // whose label loses the colors of the Texts in it; there the name is
+      // a Text too, the press laid over it (`pressable`, TASK-0241).
       const key = row.key
       const toggle = () => void update($, openCard, open => (open === key ? null : key))
+      const nameToken = row.textColor ?? (row.bold ? 'text-1' : row.dim ? 'text-3' : 'text-2')
       const dot = (
         <Box flexDirection="row">
           {prefix}
           {glyph}
-          <Button key={key} plain onPress={toggle}>
-            {name ?? ' '}
-          </Button>
+          {pressable({ key, label: row.text || ' ', token: nameToken, onPress: toggle }, name ?? ' ')}
         </Box>
       )
       if (opened !== key) return dot
@@ -346,23 +344,17 @@ export const registerPane = (on: On) => {
     const header = (
       <Box flexDirection="row" justifyContent="space-between">
         {first > 0 ? (
-          <Button key="earlier" plain hotkey={isTerminal ? 'h' : undefined} onPress={scrollTo(first - 1)}>
-            <Text color={color('text-2')}>{`‹ ${first} PREV`}</Text>
-          </Button>
+          pressable({ key: 'earlier', label: `‹ ${first} PREV`, token: 'text-2', hotkey: isTerminal ? 'h' : undefined, onPress: scrollTo(first - 1) }, <Text color={color('text-2')}>{`‹ ${first} PREV`}</Text>)
         ) : (
           <Text> </Text>
         )}
         {first === centred ? (
           <Text color={color('text-3')} tabular>{title.toUpperCase()}</Text>
         ) : (
-          <Button key="current" plain hotkey={isTerminal ? 'c' : undefined} onPress={scrollTo(null)}>
-            <Text color={color('text-2')}>{`↺ ${title.toUpperCase()}`}</Text>
-          </Button>
+          pressable({ key: 'current', label: `↺ ${title.toUpperCase()}`, token: 'text-2', hotkey: isTerminal ? 'c' : undefined, onPress: scrollTo(null) }, <Text color={color('text-2')}>{`↺ ${title.toUpperCase()}`}</Text>)
         )}
         {later > 0 ? (
-          <Button key="later" plain hotkey={isTerminal ? 'l' : undefined} onPress={scrollTo(first + 1)}>
-            <Text color={color('text-2')}>{`${later} NEXT ›`}</Text>
-          </Button>
+          pressable({ key: 'later', label: `${later} NEXT ›`, token: 'text-2', hotkey: isTerminal ? 'l' : undefined, onPress: scrollTo(first + 1) }, <Text color={color('text-2')}>{`${later} NEXT ›`}</Text>)
         ) : (
           <Text> </Text>
         )}

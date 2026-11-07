@@ -507,7 +507,7 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0234-orchestrator-collect-always-answers.md
 - [x] TASK-0235 — The repository gate passes on a Windows host
   .ai/tasks/TASK-0235-gate-passes-on-windows.md
-- [>] TASK-0236 — task-orchestrator 0.5.6: collect waits for sessions only
+- [x] TASK-0236 — task-orchestrator 0.5.6: collect waits for sessions only
   .ai/tasks/TASK-0236-orchestrator-collect-no-wait.md
 - [x] TASK-0237 — The merged gate checks from origin pass on a Windows host
   .ai/tasks/TASK-0237-remote-gate-checks-on-windows.md
@@ -519,6 +519,10 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0249-background-powershell-and-step-progress.md
 - [x] TASK-0250 — agent-watch 0.12.1: each session keeps its rows under its own store key
   .ai/tasks/TASK-0250-agent-watch-rows-per-session.md
+- [x] TASK-0240 — Every mod takes a theme argument: dark, light or auto
+  .ai/tasks/TASK-0240-mods-theme-argument.md
+- [x] TASK-0241 — agent-watch and task-compass read cleanly in Daylight, as SIGMAorbital specifies
+  .ai/tasks/TASK-0241-daylight-readability.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
@@ -537,4 +541,6 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - B-070 A Codex equivalent of a mod: `mods/<name>/codex/`, a plugin bundle
   .ai/planning/BACKLOG.md
 - B-071 A pane that lists every repo mod's loaded version beside its manifest
+  .ai/planning/BACKLOG.md
+- B-072 Mods cannot follow the desktop app's light/dark switch: no signal reaches a hook
   .ai/planning/BACKLOG.md

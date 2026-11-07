@@ -1176,3 +1176,22 @@ test("session.start deletes other sessions' rows not written for a week, and not
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   expect([...store.keys()].sort()).toEqual(['agent-watch:other', 'agent-watch:rows:sess-new'])
 })
+
+test('/agent-watch theme light pins Daylight for the next render; a bad value answers with usage', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'dark' } as ConfigRow] }))
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: false })
+
+  const bad = (await $.command.run({ command: 'agent-watch', args: 'theme blue' } as never)) as { text: string }
+  expect(bad.text).toBe('Unknown theme "blue". Usage: /agent-watch theme dark|light|auto')
+
+  const pinned = (await $.command.run({ command: 'agent-watch', args: 'theme light' } as never)) as { text: string }
+  expect(pinned.text).toBe('Colours: Daylight (pinned; "theme auto" follows the theme setting again)')
+  const { text } = (await $.command.run({ command: 'agent-watch', args: '' } as never)) as { text: string }
+  const ui = await $.ui.mount({ ...OUTPUT(text), surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /^AGENTS$/ }))?.props.color).toBe(TOKENS.light['text-1'])
+  await ui.unmount()
+})

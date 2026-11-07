@@ -11,7 +11,7 @@ import { gate, isBlocked, route } from './router'
 import { DEFAULT_CONFIG, EFFORTS, MODEL_LADDER, POLICIES, READ_ONLY_TOOLS, ROLE_PROFILES, TASK_CLASSES, WORKER_DENIED_TOOLS, WRITER_TOOLS, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
 import type { Config, Effort, Limits, Policy, Role, TaskClass } from './routing'
 import { keep, restore } from './keep'
-import { remember, syncTheme, watchTheme } from './sigma'
+import { THEME_USAGE, remember, setTheme, syncTheme, themeArg, watchTheme } from './sigma'
 import { renderOutput, statusLineText } from './view'
 import type { OrchestrateOutput } from './view'
 
@@ -1014,7 +1014,7 @@ export const register: Register = on => {
     coordinatorEffort = settingsEffort(settings, await $.session.model().catch(() => ''), env)
     for (const one of refused) $.ui.log(`${PLUGIN}: ${one}`)
     try {
-      await $.command.register({ name: 'orchestrate', description: 'Lead-coordinator mode: on, off, status, policy, routing, models, opt-in, providers, cancel, reset', argumentHint: 'on|off|status|policy <economy|balanced|quality>|routing|models|opt-in <high-effort|frontier> [off]|providers [enable|disable <id>]|cancel [<task>|all]|reset' })
+      await $.command.register({ name: 'orchestrate', description: 'Lead-coordinator mode: on, off, status, policy, routing, models, opt-in, providers, cancel, reset, theme', argumentHint: 'on|off|status|policy <economy|balanced|quality>|routing|models|opt-in <high-effort|frontier> [off]|providers [enable|disable <id>]|cancel [<task>|all]|reset|theme dark|light|auto' })
       await $.tool.register({
         name: 'dispatch',
         description: `Delegate one bounded task to a real isolated subagent (or, with runAs "session", a Code-tab session you start by the hand-off the answer names) chosen by the routing table (model and effort per task class), under the orchestrator's limits: ${config.limits.maxConcurrent} concurrent workers, workers never delegate, one non-isolated writer at a time, ${config.limits.maxRetries} retries and ${config.limits.maxEscalations} escalation per task. Returns the task's line; the report arrives through collect, once the task's end note arrives (never poll). Only while /orchestrate is on, whose context holds the coordinator protocol.`,
@@ -1116,8 +1116,14 @@ ${classGuide()}` },
         return { text: await answerCancel($, args[0] ?? 'all') }
       case 'reset':
         return { text: await answerReset($) }
+      case 'theme': {
+        // Pins the panels' colours by hand (`auto` follows the theme setting again).
+        const theme = themeArg(e.args)
+        if (theme === undefined) return { text: `usage: /orchestrate ${THEME_USAGE}` }
+        return { text: 'error' in theme ? `${theme.error}. Usage: /orchestrate ${THEME_USAGE}` : await setTheme($, theme.choice) }
+      }
       default:
-        return { text: 'usage: /orchestrate on|off|status|policy <name>|routing|models|opt-in <what> [off]|providers [enable|disable <id>]|cancel [<task>|all]|reset' }
+        return { text: 'usage: /orchestrate on|off|status|policy <name>|routing|models|opt-in <what> [off]|providers [enable|disable <id>]|cancel [<task>|all]|reset|theme dark|light|auto' }
     }
   })
 

@@ -52,8 +52,13 @@ test('the pane is the Sessions panel: this session, the ORCH run, a Workflow run
     expect(await text(/2 CALLS/)).toBeDefined()
     expect(await text(/Explore · review:tests/)).toBeDefined()
     // A row is pressed to select it, so its key is the row's.
-    expect((await ui.find({ type: 'Button', text: /Explore · Scan docs/ }))?.key).toBe('row-id-Scan docs')
-    expect((await ui.find({ type: 'Button', text: /T2 · reviewer/ }))?.key).toBe('row-task-T2')
+    // A desktop's Button is blanks laid over the row's name, the name itself a Text before it (TASK-0241).
+    const rowFor = async (name: RegExp) => {
+      const all = await ui.findAll({})
+      return all.find((one, i) => one.type === 'Button' && name.test(wordsNodeAt(all, i)?.text ?? ''))
+    }
+    expect((await rowFor(/Explore · Scan docs/))?.key).toBe('row-id-Scan docs')
+    expect((await rowFor(/T2 · reviewer/))?.key).toBe('row-task-T2')
     // Heads are bold.
     expect((await ui.findAll({ type: 'Text', text: /^THIS SESSION$/ })).map(one => one.props.weight)).toContain('bold')
     await ui.unmount()
@@ -490,7 +495,8 @@ test('the pane draws the screenshot of 2026-10-29: this session idle, ORCH BALAN
   listed.value = RUN.map(one => ({ id: `id-${one.id}`, type: `task-orchestrator:${one.role}`, description: one.id, status: 'completed', name: one.id, spawnedBy: 'task-orchestrator' }) as AgentInfo)
   await clock.advance(549_000)
   const ui = await mount($, 'desktop')
-  const nodes = await ui.findAll({ type: 'Text' })
+  // A desktop's pressable lays a Button of blanks over its words (TASK-0241): the words are read, the blanks are not.
+  const nodes = (await ui.findAll({ type: 'Text' })).filter(one => !/^ +$/.test(one.text ?? ''))
   // The pane is read top to bottom with one cursor, so each part is found where it belongs:
   // a word that the SELECTED panel or the legend repeats cannot stand in for a part that is gone.
   // `seq` finds consecutive Texts (a string is exact, a RegExp is a test) at or after `from`.
@@ -577,4 +583,67 @@ test('a desktop prints the version under the table; a terminal does not', TREE, 
   const terminal = await mount($, 'terminal')
   expect(await terminal.find({ text: /^AGENT-WATCH / })).toBeUndefined()
   await terminal.unmount()
+})
+
+// Daylight on a desktop (TASK-0241): every word the panel draws is a Daylight text token or a status colour at
+// 4.5:1 or more, and no Button carries words, since a desktop draws a Button's label in its own colour.
+/** Blanks: what a desktop's overlay Button holds over its words (TASK-0241). */
+const BLANK = /^ *$/
+/** A pressable's words: the Button itself where its text is the words (the terminal), else the Text drawn just before it, which its blank Button lies over (a desktop). */
+const wordsNodeAt = <T extends { type: string; text?: string }>(all: T[], at: number): T | undefined => {
+  const button = all[at]
+  if (button === undefined) return undefined
+  if (!BLANK.test(button.text ?? '')) return button
+  return all.slice(0, at).reverse().find(one => one.type === 'Text' && !BLANK.test(one.text ?? ''))
+}
+const dayLin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+const dayLum = (hex: string) => {
+  const v = parseInt(hex.slice(1), 16)
+  return 0.2126 * dayLin(((v >> 16) & 255) / 255) + 0.7152 * dayLin(((v >> 8) & 255) / 255) + 0.0722 * dayLin((v & 255) / 255)
+}
+/** WCAG's contrast of two hex colours, computed here apart from the mod's own. */
+const dayRatio = (a: string, b: string) => (Math.max(dayLum(a), dayLum(b)) + 0.05) / (Math.min(dayLum(a), dayLum(b)) + 0.05)
+
+test('Daylight on a desktop: the table, its toggle, the KPI row, the selected panel and OPEN TRANSCRIPT are text tokens at 4.5:1; no Button carries words', TREE, async ($, on) => {
+  const LIGHT = TOKENS.light
+  const READABLE = new Set([LIGHT['text-1'], LIGHT['text-2'], LIGHT['text-3'], LIGHT.white, LIGHT.cyan, LIGHT.amber, LIGHT.red, LIGHT.green])
+  mock.store(on)
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'dark' }] }) as never)
+  await populate($, on)
+  await $.command.run({ command: 'agent-watch', args: 'theme light' } as never)
+  const ui = await mount($, 'desktop')
+  // A member selected: its row on the raised fill, and the selected panel with OPEN TRANSCRIPT.
+  await ui.press({ key: 'row-id-Scan docs' })
+  const tree = await ui.findAll({})
+  const keys = tree.filter(one => one.type === 'Button').map(one => String(one.key))
+  for (const key of ['row-id-Scan docs', 'toggle-list', 'transcript']) expect(keys, key).toContain(key)
+  const all = await ui.findAll({ type: 'Text' })
+  tree.forEach((button, at) => {
+    if (button.type !== 'Button') return
+    // No overlay Button carries words of its own, in `label` or in its text: a desktop draws them, a second copy over the words
+    // (ghosting, seen live). The mod sets no `label`; the engine fills it from the one string child, the blanks.
+    expect(String(button.props.label ?? ''), String(button.key)).toMatch(BLANK)
+    expect(button.text, String(button.key)).toMatch(/^ +$/)
+    // Its words are the Text just before it, in a readable token.
+    const shown = wordsNodeAt(tree, at)
+    expect(shown?.type, String(button.key)).toBe('Text')
+    expect(READABLE.has(String(shown?.props.color)), `${shown?.text} ${shown?.props.color}`).toBe(true)
+  })
+  expect((await ui.find({ type: 'Text', text: '▾ HIDE' }))?.props.color).toBe(LIGHT['text-3'])
+  expect((await ui.find({ type: 'Text', text: 'OPEN TRANSCRIPT' }))?.props.color).toBe(LIGHT['text-1'])
+  // Every Text the panel sets a colour on, its words and not a meter's empty segments (`▱`, a line drawn in glyphs):
+  // a readable token, 4.5:1 on surface and on its own fill.
+  const coloured = all.filter(one => one.props.color !== undefined && !/^[▱│─]+$/.test(one.text ?? ''))
+  expect(coloured.length).toBeGreaterThan(30)
+  for (const one of coloured) {
+    const hex = String(one.props.color)
+    expect(READABLE.has(hex), `${JSON.stringify(one.text)} ${hex}`).toBe(true)
+    expect(dayRatio(hex, LIGHT.surface), `${JSON.stringify(one.text)} on surface`).toBeGreaterThanOrEqual(4.5)
+    if (one.props.backgroundColor !== undefined) expect(dayRatio(hex, String(one.props.backgroundColor)), `${JSON.stringify(one.text)} on its fill`).toBeGreaterThanOrEqual(4.5)
+  }
+  // The sunburst is drawn in Daylight: opaque slices on surface gaps.
+  const source = String((await ui.find({ type: 'Svg' }))?.props.source)
+  expect(source).toContain(`stroke="${LIGHT.surface}"`)
+  expect(source).not.toContain('fill-opacity')
+  await ui.unmount()
 })

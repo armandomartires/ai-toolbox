@@ -2,7 +2,7 @@
 
 > **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `claude/status.json`.
 
-A Claude Code mod that keeps an **Agents** pane beside the chat: this session and its sub-sessions as a status dashboard, with the subagents each owns, animated while they work. A meter above the prompt shows how far Claude's task list has come. It draws in SIGMAorbital (`ADR-0043`): monochrome, uppercase labels, its Night ops or Daylight colours following your theme setting. Colour says **state**, never which session owns a row (`ADR-0046` clause 1, which `ADR-0047` clause 2 extends to this mod).
+A Claude Code mod that keeps an **Agents** pane beside the chat: this session and its sub-sessions as a status dashboard, with the subagents each owns, animated while they work. A meter above the prompt shows how far Claude's task list has come. It draws in SIGMAorbital (`ADR-0043`): monochrome, uppercase labels, its Night ops or Daylight colours following your theme setting, or pinned by hand with `/agent-watch theme dark|light|auto`. Colour says **state**, never which session owns a row (`ADR-0046` clause 1, which `ADR-0047` clause 2 extends to this mod).
 
 - **A SESSIONS panel** (`ADR-0047`), the whole of the Agents pane, in a bracketed frame headed `N RUNNING`:
   - A **KPI row**: PROGRESS with its steps, AGENTS and how many run, TOKENS, and FAILED (agents and background tasks), red only above 0.
@@ -51,6 +51,8 @@ A Claude Code mod that keeps an **Agents** pane beside the chat: this session an
 Lines printed within 200 ms reach the mod as one event, and each of its lines is read.
 
 ## Not yet verified
+
+Version 0.13.1: Daylight reads on a desktop (`TASK-0241`): pressable words are drawn as text outside a blank native button, and the sunburst follows SIGMAorbital in Daylight. Version 0.13.0: `/agent-watch theme dark|light|auto` (`TASK-0240`).
 
 Version 0.12.0: step progress of a background run (above). Tested in the mod test kit. Proved live in a desktop session before it was built (2.1.318): a Monitor's per-line event reaches the mod's `prompt.submit` hook with origin `task-notification`, as `<event>step 1/3 lint ok</event>` with no `<status>`, and its expiry arrives the same way as `<event>[Monitor expired after 3m …]</event>`. Until 0.12.0 the mod took a Monitor's first event for its end and drew the monitor done.
 

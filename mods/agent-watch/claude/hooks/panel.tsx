@@ -5,7 +5,7 @@ import type { AgentRow, BackgroundTask, OrchPolicy, OrchTask, Task, WorkflowRun 
 import { elapsed, fit, headCaption, trimTree } from './model'
 import { drawnBackground, memberCaption, sessionTree, tokensText } from './sessions'
 import type { Member, SessionNode } from './sessions'
-import { color, hms, kit, theme } from './sigma'
+import { color, controlToken, hms, kit, theme } from './sigma'
 import type { Token } from './sigma'
 import { arcs, chartAgents, chartFailed, chartRunning, rollupOf, stateGlyph, stateTone, stateWord, sunburstCells, sunburstSvg } from './sunburst'
 
@@ -27,7 +27,7 @@ const COL = { state: 11, steps: 7, time: 6, tok: 6 }
 /** The rows the KPI row (a label, a value and a caption, and the margin above) and the selected-element panel take. */
 const KPI_ROWS = 4
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it under the table, so the person sees which copy draws the panel. */
-export const VERSION = '0.12.1'
+export const VERSION = '0.13.1'
 const PANEL_ROWS = 9
 /** The compact strip's rows: its margin and its line. */
 const STRIP_ROWS = 2
@@ -210,10 +210,10 @@ export async function renderSessions(
   resize?: { key: string; held?: number },
 ) {
   const ui = $.ui.resolve(e)
-  const { Box, Button, Text } = ui
+  const { Box, Text } = ui
   // `Raster` is the terminal's alone and `Svg` the remote surfaces'; each is drawn only on its own.
   const { Raster, Svg } = ui as unknown as Record<'Raster' | 'Svg', (props: Record<string, unknown>) => never>
-  const { label, meter, panel, stats, value } = kit(ui, e.surface)
+  const { label, meter, panel, pressable, stats, value } = kit(ui, e.surface)
   const [picked, isListFolded] = await Promise.all([read($, selected), read($, listCollapsed)])
   const isTerminal = e.surface === 'terminal'
   const cols = Math.max(COLUMNS_MIN, e.props.bodyColumns)
@@ -254,12 +254,10 @@ export async function renderSessions(
   })
   const { hasChart, hasKpi, hasSelected, chartGap, headGap, chartPx, chartColumns, chartWidth } = layout
 
-  // A fold toggle: a plain Button in `line-strong` (`▾ HIDE` open, `▸ SHOW …` folded), with its hotkey on the terminal only.
-  const foldButton = (key: string, hotkey: string | undefined, text: string, flip: () => void) => (
-    <Button key={key} plain hotkey={isTerminal ? hotkey : undefined} onPress={flip}>
-      <Text color={color('line-strong')}>{text}</Text>
-    </Button>
-  )
+  // A fold toggle (`▾ HIDE` open, `▸ SHOW …` folded) in the control token, with its hotkey on the terminal only.
+  // Every press here is a `pressable`: a desktop draws a Button's words in its own colour, so there they are a Text beside it (TASK-0241).
+  const foldButton = (key: string, hotkey: string | undefined, text: string, flip: () => void) =>
+    pressable({ key, label: text, token: controlToken(), hotkey: isTerminal ? hotkey : undefined, onPress: flip }, <Text color={color(controlToken())}>{text}</Text>)
   const flipList = () => void update($, listCollapsed, now => !now)
 
   // The Sessions tree as the hierarchy table (ADR-0046): one row per session
@@ -286,6 +284,7 @@ export async function renderSessions(
     const name = fit(`${isViewed ? '▸' : ''}${one.name}`, Math.max(8, body - indent.length - 2 - fixedCols - 1 - (code === '' ? 0 : code.length + 3)))
     const fill = isSelected ? { backgroundColor: color('raised') } : {}
     const press = () => void update($, selected, now => (now === one.key ? null : one.key))
+    const nameToken: Token = one.isActive || isViewed || isSelected ? 'text-1' : 'text-2'
     const steps = arc !== undefined && arc.progress.total > 0 ? `${arc.progress.done}/${arc.progress.total}` : ''
     const time = arc !== undefined && arc.duration > 0 ? elapsed(arc.duration) : ''
     const tokens = arc !== undefined && arc.tokens > 0 ? tokensText(arc.tokens) : ''
@@ -300,9 +299,10 @@ export async function renderSessions(
           </Box>
         )}
         <Box flexGrow={1} flexShrink={1}>
-          <Button key={`row-${one.key}`} plain onPress={press}>
-            <Text color={color(one.isActive || isViewed || isSelected ? 'text-1' : 'text-2')} weight={one.kind === 'session' ? 'bold' : undefined} wrap="truncate-end" {...fill}>{name}</Text>
-          </Button>
+          {pressable(
+            { key: `row-${one.key}`, label: name, token: nameToken, onPress: press },
+            <Text color={color(nameToken)} weight={one.kind === 'session' ? 'bold' : undefined} wrap="truncate-end" {...fill}>{name}</Text>,
+          )}
         </Box>
         {column(
           COL.state,
@@ -397,6 +397,8 @@ export async function renderSessions(
   const oneAgent = lookup.get(current)
   const isOneViewed = oneAgent !== undefined && oneAgent === viewing
   const openOne = () => void $.ui.view(isOneViewed ? {} : { agentId: oneAgent })
+  const transcriptWords = isOneViewed ? 'CLOSE TRANSCRIPT' : 'OPEN TRANSCRIPT'
+  const transcript = pressable({ key: 'transcript', label: transcriptWords, token: 'text-1', onPress: openOne }, <Text color={color('text-1')} weight="semibold">{transcriptWords}</Text>)
   const selectedPanel =
     one === undefined || oneArc === undefined
       ? null
@@ -426,9 +428,7 @@ export async function renderSessions(
               <Box flexDirection="row" columnGap={1}>{label('Children')}{value(one.children > 0 ? String(one.children) : '—')}</Box>
             </Box>
             {oneAgent !== undefined && (
-              <Button key="transcript" plain onPress={openOne}>
-                <Text color={color('text-1')} weight="semibold">{isOneViewed ? 'CLOSE TRANSCRIPT' : 'OPEN TRANSCRIPT'}</Text>
-              </Button>
+              transcript
             )}
           </Box>,
         )
@@ -449,9 +449,7 @@ export async function renderSessions(
               <Text color={color('text-3')} size="caption" tabular>{` · ${one.done}/${one.total} · ${tokensText(one.tokens)} TOK`}</Text>
             </Box>
             {oneAgent !== undefined && (
-              <Button key="transcript" plain onPress={openOne}>
-                <Text color={color('text-1')} weight="semibold">{isOneViewed ? 'CLOSE TRANSCRIPT' : 'OPEN TRANSCRIPT'}</Text>
-              </Button>
+              transcript
             )}
           </Box>
         )

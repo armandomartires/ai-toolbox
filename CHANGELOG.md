@@ -1,5 +1,11 @@
 # Changelog
 
+## agent-watch 0.13.1, task-compass 0.12.1
+- Daylight reads on a desktop (`TASK-0241`). A desktop draws a `Button` natively, its label in the desktop's own colour whatever the `Text`s in it say, so the Compass Sprints rows, `‹ PREV`, `NEXT ›`, `↺`, the fold toggles and agent-watch's table rows and `OPEN TRANSCRIPT` drew near-white on Daylight's light panel. The shared `sigma.tsx` gains `kit().pressable`: on a desktop the words are a `Text` in their token and the Button is laid over them with a blank label; the terminal keeps its Buttons. A control's words take `controlToken()`: `text-3` in Daylight (its `line-strong` is 3.7:1, a line), `line-strong` in Night ops as before. The Daylight sunburst follows SIGMAorbital: opaque slices in their state's colour stepped by depth (100%, 62%, 36%) on 1.5px `surface` gaps, a label on a fill in `on-ink` where it holds 4.5:1 and otherwise on a `surface` plate in text-1 and text-3; Night ops draws as before. Tested in the mod test kit (contrast of every Text in both panes); not yet seen live: that a press lands through the overlay and the blank Button paints nothing.
+
+## agent-watch 0.13.0, task-compass 0.12.0, switchboard 0.7.0, task-orchestrator 0.5.9
+- Every mod's command takes `theme dark|light|auto` (`/agent-watch`, `/compass`, `/switchboard`, `/orchestrate`) to set its SIGMAorbital colours by hand, because the desktop app's light/dark switch does not reach the `theme` setting the mods follow (`TASK-0240`, `B-072`). The pin is kept in the mod's `$.store`, wins over the setting and survives a change of it; `auto` follows the setting again. The shared `sigma.tsx` gains `themeArg`, `setTheme` and `THEME_USAGE`. Tested in the mod test kit.
+
 ## agent-watch 0.12.1
 - Each session keeps its rows under its own store key, `agent-watch:rows:<session id>` (`TASK-0250`). Under the one shared key of 0.11.2 to 0.12.0 the last session to write won, so with two sessions loading the mod a `/reload-plugins --force` could restore nothing of its own (seen live 2026-11-07). Rows under the shared key are still restored for their own session and moved; kept rows not written for a week are deleted at `session.start`. Tested in the mod test kit (169).
 

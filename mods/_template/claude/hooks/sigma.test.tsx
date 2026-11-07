@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 import type { ConfigRow, On } from 'claude-code'
 
-import { IDENTITY, STATUS, TOKENS, agentState, elapsed, hms, kit, recall, remember, segments, themeOf } from './sigma'
+import { IDENTITY, STATUS, TOKENS, agentState, elapsed, hms, kit, recall, remember, segments, themeArg, themeOf, THEME_USAGE } from './sigma'
 
 test('every token has a hex in both themes, aliases resolved', () => {
   for (const id of ['dark', 'light'] as const) {
@@ -246,4 +246,92 @@ test('stats: a straight divider in line between the blocks, none after the last'
   const all = await term.findAll({ type: 'Text' })
   expect(all[all.length - 1]?.text).toBe('THREE')
   await term.unmount()
+})
+
+test('themeArg reads a leading theme word: not a theme command, a choice, or an error', () => {
+  expect(THEME_USAGE).toBe('theme dark|light|auto')
+  expect(themeArg('')).toBeUndefined()
+  expect(themeArg('Ada')).toBeUndefined()
+  expect(themeArg('themes light')).toBeUndefined()
+  expect(themeArg('theme light')).toEqual({ choice: 'light' })
+  expect(themeArg('  theme   dark ')).toEqual({ choice: 'dark' })
+  expect(themeArg('theme auto')).toEqual({ choice: 'auto' })
+  expect(themeArg('theme')).toEqual({ error: 'Theme needs a value' })
+  expect(themeArg('theme blue')).toEqual({ error: 'Unknown theme "blue"' })
+  expect(themeArg('theme light now')).toEqual({ error: 'Unknown theme "light now"' })
+  expect(themeArg('Theme Light')).toEqual({ choice: 'light' })
+  expect(themeArg('THEME auto')).toEqual({ choice: 'auto' })
+})
+
+const withStore = (on: On, entries: Record<string, unknown> = {}) => {
+  const store = new Map(Object.entries(entries))
+  on('store.get', (_, e) => ({ value: store.get(e.key) }))
+  on('store.set', (_, e) => {
+    store.set(e.key, e.value)
+    return { value: undefined }
+  })
+  on('store.delete', (_, e) => {
+    store.delete(e.key)
+    return { value: undefined }
+  })
+  return store
+}
+
+/** The template's own `/hello`, which answers `theme ...` through setTheme. */
+const wire = (on: On, themeRow: { value: string | Error }) => {
+  engine(on, themeRow)
+  return withStore(on)
+}
+/** The colour the next render draws a title in: the module lives in the engine, so it is read off a drawn row. */
+const title = async ($: Parameters<Parameters<typeof test>[1]>[0]) => {
+  const { text } = (await $.command.run({ command: 'hello', args: 'Ada' } as never)) as { text: string }
+  const ui = await $.ui.mount({ ...OUTPUT(text), surface: 'terminal' })
+  const found = (await ui.find({ type: 'Text', text: /^GREETING$/ }))?.props.color
+  await ui.unmount()
+  return found
+}
+const start = ($: Parameters<Parameters<typeof test>[1]>[0]) =>
+  $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+const tone = async ($: Parameters<Parameters<typeof test>[1]>[0], args: string) =>
+  ((await $.command.run({ command: 'hello', args } as never)) as { text: string }).text
+
+test('a theme is pinned and unpinned by hand, and a pin survives a change of the theme setting', async ($, on) => {
+  const store = wire(on, { value: 'dark' })
+  await start($)
+  expect((await title($))).toBe(TOKENS.dark['text-1'])
+
+  expect(await tone($, 'theme light')).toBe('Colours: Daylight (pinned; "theme auto" follows the theme setting again)')
+  expect(store.get('theme')).toBe('light')
+  expect((await title($))).toBe(TOKENS.light['text-1'])
+
+  await $.config.set({ key: 'theme', value: 'dark' } as never)
+  expect((await title($))).toBe(TOKENS.light['text-1'])
+
+  // Unpinned, the last setting seen (dark) comes back at once.
+  expect(await tone($, 'theme auto')).toContain('following the theme setting')
+  expect(store.has('theme')).toBe(false)
+  expect((await title($))).toBe(TOKENS.dark['text-1'])
+
+  await $.config.set({ key: 'theme', value: 'light' } as never)
+  expect((await title($))).toBe(TOKENS.light['text-1'])
+  await tone($, 'theme auto')
+})
+
+test('syncTheme reads the pin from the store: dark or light pins, anything else does not', async ($, on) => {
+  const themeRow = { value: 'light' as string | Error }
+  const store = wire(on, themeRow)
+  store.set('theme', 'dark')
+  await start($)
+  expect((await title($))).toBe(TOKENS.dark['text-1'])
+  store.set('theme', 'light')
+  themeRow.value = 'dark'
+  await start($)
+  expect((await title($))).toBe(TOKENS.light['text-1'])
+  store.set('theme', 'auto')
+  await start($)
+  expect((await title($))).toBe(TOKENS.dark['text-1'])
+  store.delete('theme')
+  themeRow.value = 'light'
+  await start($)
+  expect((await title($))).toBe(TOKENS.light['text-1'])
 })

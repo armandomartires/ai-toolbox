@@ -6,6 +6,9 @@
 // mods; tests/validate.sh (scripts/check-mods.py, rule 7) fails on a copy that
 // differs. Change it here, then copy it to every mod.
 //
+// The theme follows the host's `theme` setting; `theme dark|light|auto` on a
+// mod's command pins it by hand in `$.store` (setTheme, ADR-0043).
+//
 // Source: the SIGMAorbital Design System artifact, project/tokens.json v2
 // (themes Night ops and Daylight), its README and components/bundle.css.
 //
@@ -16,7 +19,8 @@
 // - Colour is for state only: cyan nominal or running, amber caution, red
 //   critical. Always beside its glyph or word. Green only for a signed
 //   positive delta. Violet is a data series, never a state.
-// - Line, not fill: rules and frames in `line`, controls in `line-strong`.
+// - Line, not fill: rules and frames in `line`, controls in `line-strong`
+//   (a control's words in `controlToken()`: text-3 in Daylight, TASK-0241).
 //   A fill (`raised`) marks only the active or selected element.
 // - Square: a desktop rounds every Box border, so frames and rules are drawn
 //   as edges clipped from a bordered Box (`rule`, `frame`, a bracketed panel).
@@ -100,6 +104,11 @@ const build = (i: 0 | 1) => {
 export const TOKENS: Record<ThemeId, Record<Token, string>> = { dark: build(0), light: build(1) }
 
 let current: ThemeId = 'dark'
+// A pin set by hand (`theme dark|light`) wins over the host's setting, which
+// the desktop's light/dark switch does not reach (B-072). `host` is the
+// setting as last seen, so `theme auto` can fall back to it.
+let pinned: ThemeId | undefined
+let host: ThemeId = 'dark'
 
 /** The SIGMAorbital theme for the host's `theme` setting: any light family is Daylight, the rest Night ops. */
 export const themeOf = (value: ConfigValue | undefined): ThemeId =>
@@ -110,29 +119,82 @@ export const theme = () => current
 /** A token's hex in the current theme. */
 export const color = (token: Token) => TOKENS[current][token]
 
-/** Reads the host's theme setting; a failed read keeps Night ops, the brand theme. */
+const STORE_THEME = 'theme'
+const pinOf = (value: unknown): ThemeId | undefined => (value === 'dark' || value === 'light' ? value : undefined)
+
+/** Reads the host's theme setting and this mod's pin; a failed read keeps Night ops, the brand theme. */
 // A function declaration, not an arrow: the engine follows `$` past an
 // import only into one, which a bundle of the module keeps as written.
 export async function syncTheme($: EngineInterface) {
   try {
-    current = themeOf((await $.config.list()).find(row => row.key === 'theme')?.value)
+    host = themeOf((await $.config.list()).find(row => row.key === 'theme')?.value)
   } catch {
-    current = 'dark'
+    host = 'dark'
   }
+  try {
+    pinned = pinOf(await $.store.get(STORE_THEME))
+  } catch {
+    pinned = undefined
+  }
+  current = pinned ?? host
+  // A reload restarts this module's variables; what was drawn before it redraws in the pin.
+  $.ui.invalidate('ui.render')
   return current
 }
 
-/** Follows a change of the theme setting, observed and never denied, and redraws. */
+/** Follows a change of the theme setting, observed and never denied, and redraws; a pin stays. */
 export function watchTheme(on: On) {
   on('config.set', { key: 'theme' }, async ($, e, next) => {
     const done = await next(e)
     if (done.deny === undefined) {
-      current = themeOf(done.value)
+      host = themeOf(done.value)
+      if (pinned === undefined) current = host
       $.ui.invalidate('ui.render')
     }
     return done
   })
 }
+
+export const THEME_USAGE = 'theme dark|light|auto'
+
+/** A command's `theme ...` argument: undefined when it is not one, else the choice or the error. */
+export const themeArg = (args: string): { choice: 'dark' | 'light' | 'auto' } | { error: string } | undefined => {
+  const words = args.trim().toLowerCase().split(/\s+/)
+  if (words[0] !== 'theme') return undefined
+  const choice = words[1]
+  if (words.length === 2 && (choice === 'dark' || choice === 'light' || choice === 'auto')) return { choice }
+  return { error: words.length === 1 ? 'Theme needs a value' : `Unknown theme "${words.slice(1).join(' ')}"` }
+}
+
+/** Pins the colours (`dark`, `light`) or follows the theme setting again (`auto`), redraws, and answers in a line. */
+// A function declaration for the same reason as syncTheme.
+export async function setTheme($: EngineInterface, choice: 'dark' | 'light' | 'auto') {
+  let isSaved = true
+  if (choice === 'auto') {
+    pinned = undefined
+    await $.store.delete(STORE_THEME).catch(() => (isSaved = false))
+  } else {
+    pinned = choice
+    await $.store.set(STORE_THEME, choice).catch(() => (isSaved = false))
+  }
+  current = pinned ?? host
+  $.ui.invalidate('ui.render')
+  const name = current === 'light' ? 'Daylight' : 'Night ops'
+  const unsaved = isSaved ? '' : '; not saved, so a restart forgets it'
+  return pinned
+    ? `Colours: ${name} (pinned; "theme auto" follows the theme setting again${unsaved})`
+    : `Colours: ${name} (following the theme setting${unsaved})`
+}
+
+/**
+ * The token of a control's words (a fold toggle's `▾ HIDE`): `line-strong` in Night ops, as drawn since the
+ * mods took SIGMAorbital; `text-3` in Daylight, whose `line-strong` is a line (3.7:1 on `surface`), never text,
+ * and every text token holds 4.5:1 (tokens v3, TASK-0241).
+ */
+export const controlToken = (): Token => (current === 'light' ? 'text-3' : 'line-strong')
+
+/** A blank the width of a digit (U+2007): a desktop's pressable lays these over the words it presses (`kit().pressable`). */
+const FIGURE_SPACE = ' '
 
 /** The four states of the design, and offline: a glyph, a colour, a default word. */
 export type Status = 'nominal' | 'info' | 'caution' | 'critical' | 'offline'
@@ -653,5 +715,34 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
     )
   }
 
-  return { rule, frame, label, value, stat, stats, badge, meter, panel, toggle, innerWidth }
+  /**
+   * Words the person presses, `shown` (Texts in their tokens), with `label` naming the control and `token` the
+   * first Text's colour. The terminal draws a plain Button holding them, in their colours, as before.
+   *
+   * A desktop draws a Button as its own native control and its label in the desktop's colour, whatever the Texts
+   * in it say (authoring guide; the engine types: "a desktop a native button", no colour prop): near-white on a
+   * dark desktop, unreadable on Daylight's `surface` (TASK-0241). There the words are drawn outside any Button, in
+   * their tokens, and the Button is laid over them, absolute and clipped to their row: its label blank (figure
+   * spaces, one per character of `label`), and no `label` prop, which a desktop draws as the button's own text
+   * over the words (a doubled, offset label, seen live 2026-11-07); `key` addresses it. Unverified until seen live: that a press lands on the Button
+   * through the overlay (a `Client` in an absolute Box takes the pointer, ADR-0053), and that a blank plain Button
+   * paints nothing over the words at rest.
+   */
+  const pressable = (opts: { key: string; label: string; token: Token; hotkey?: string; onPress: () => void }, shown: RenderChildren) =>
+    isTerminal ? (
+      <Button key={opts.key} plain hotkey={opts.hotkey} onPress={opts.onPress}>
+        {shown}
+      </Button>
+    ) : (
+      <Box flexDirection="row" flexShrink={1}>
+        {shown}
+        <Box position="absolute" top={0} left={0} width="100%" height={1} overflow="hidden">
+          <Button key={opts.key} plain hotkey={opts.hotkey} onPress={opts.onPress}>
+            <Text color={color(opts.token)}>{FIGURE_SPACE.repeat(Math.max(1, Array.from(opts.label).length))}</Text>
+          </Button>
+        </Box>
+      </Box>
+    )
+
+  return { rule, frame, label, value, stat, stats, badge, meter, panel, toggle, pressable, innerWidth }
 }

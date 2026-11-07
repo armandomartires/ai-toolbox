@@ -15,7 +15,7 @@ import {
 import type { PlanUpdate } from './model'
 import { briefName, layoutOf, parseRoadmap, planSprints, ROADMAP_FILE, taskIdOf } from './plan'
 import type { BriefFile } from './plan'
-import { remember, syncTheme, watchTheme } from './sigma'
+import { THEME_USAGE, remember, setTheme, syncTheme, themeArg, watchTheme } from './sigma'
 import { PANE, goalsRow, registerPane } from './view'
 import type { CompassOutput, GoalsOutput } from './view'
 
@@ -351,6 +351,7 @@ export const register: Register = on => {
     await $.command.register({
       name: 'compass',
       description: 'Open the Compass pane: sprints, stories and the live task list',
+      argumentHint: `[${THEME_USAGE}]`,
     })
     await $.command.register({
       name: 'goals',
@@ -378,7 +379,12 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('command.run', { command: 'compass' }, async $ => {
+  on('command.run', { command: 'compass' }, async ($, e) => {
+    // `theme dark|light|auto` pins the colours by hand, before anything else.
+    const theme = themeArg(e.args)
+    if (theme !== undefined) {
+      return { text: 'error' in theme ? `${theme.error}. Usage: /compass ${THEME_USAGE}` : await setTheme($, theme.choice) }
+    }
     const { isPlaced } = await $.ui.open({ id: PANE, title: TITLE })
     const list = await read($, sprints)
     const out: CompassOutput = { isPlaced, sprints: list.length, stories: list.reduce((sum, one) => sum + one.stories.length, 0) }

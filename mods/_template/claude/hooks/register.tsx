@@ -1,7 +1,7 @@
 import { atom, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import { kit, recall, remember, syncTheme, watchTheme } from './sigma'
+import { kit, recall, remember, setTheme, syncTheme, themeArg, THEME_USAGE, watchTheme } from './sigma'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
 // in that same file, so each module declares the atoms it uses.
@@ -21,12 +21,17 @@ export const register: Register = on => {
 
   on('session.start', async ($, e, next) => {
     await syncTheme($)
-    await $.command.register({ name: 'hello', description: 'Say hello from my-mod', argumentHint: '[name]' })
+    await $.command.register({ name: 'hello', description: 'Say hello from my-mod', argumentHint: `[name] | ${THEME_USAGE}` })
 
     return next(e)
   })
 
   on('command.run', { command: 'hello' }, async ($, e) => {
+    // `theme dark|light|auto` pins the colours by hand, before any other argument.
+    const theme = themeArg(e.args)
+    if (theme !== undefined) {
+      return { text: 'error' in theme ? `${theme.error}. Usage: /hello ${THEME_USAGE}` : await setTheme($, theme.choice) }
+    }
     const count = await update($, greeted, n => n + 1)
 
     return { text: remember<Hello>(greeting(e.args, count), { name: e.args.trim(), count }) }

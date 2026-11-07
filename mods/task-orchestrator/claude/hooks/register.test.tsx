@@ -1601,3 +1601,22 @@ test('a run stored by another session is never restored (TASK-0238)', async ($, 
   expect(text).not.toContain('T9')
   expect(text).not.toContain('models refused this session')
 })
+
+test('/orchestrate theme light pins Daylight for the next render; a bad value answers with usage', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  mock.store(on)
+  mock.env(on, { HOME: '/home/x' })
+  engine(on)
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'dark' } as ConfigRow] }))
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+
+  const bad = (await $.command.run({ command: 'orchestrate', args: 'theme blue' } as never)) as { text: string }
+  expect(bad.text).toBe('Unknown theme "blue". Usage: /orchestrate theme dark|light|auto')
+
+  const pinned = (await $.command.run({ command: 'orchestrate', args: 'theme light' } as never)) as { text: string }
+  expect(pinned.text).toBe('Colours: Daylight (pinned; "theme auto" follows the theme setting again)')
+  const status = ((await $.command.run({ command: 'orchestrate', args: 'status' } as never)) as { text: string }).text
+  const ui = await $.ui.mount({ ...OUTPUT(status), surface: 'terminal' })
+  expect((await ui.find({ type: 'Text', text: /^ORCHESTRATOR$/ }))?.props.color).toBe(TOKENS.light['text-1'])
+  await ui.unmount()
+})

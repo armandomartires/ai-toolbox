@@ -6,7 +6,7 @@ import { registerMods } from './kinds/mods'
 import { registerSkills } from './kinds/skills'
 import { refreshInventory } from './inventory'
 import { USAGE, listData, listText, parseArgs, takesEffect } from './model'
-import { remember, syncTheme, watchTheme } from './sigma'
+import { remember, setTheme, syncTheme, themeArg, watchTheme } from './sigma'
 import { loadOff, saveOff, syncOff } from './store'
 import { PANE, TITLE, renderOutput, renderPane, sizePanels } from './view'
 
@@ -28,7 +28,7 @@ export const register: Register = on => {
     await $.command.register({
       name: 'switchboard',
       description: 'Turn mods, skills and connectors on or off for this project',
-      argumentHint: '[list | on|off mod|skill|connector <name>]',
+      argumentHint: '[list | on|off mod|skill|connector <name> | theme dark|light|auto]',
     })
     await syncOff($).catch(() => undefined)
     await refreshInventory($).catch(() => undefined)
@@ -37,6 +37,9 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'switchboard' }, async ($, e) => {
+    // `theme dark|light|auto` pins the colours by hand, before any other argument.
+    const theme = themeArg(e.args)
+    if (theme !== undefined) return { text: 'error' in theme ? `${theme.error}. ${USAGE}` : await setTheme($, theme.choice) }
     const ask = parseArgs(e.args)
     if (ask.kind === 'usage') return { text: `${ask.why}. ${USAGE}` }
     if (ask.kind === 'list') {

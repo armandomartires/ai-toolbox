@@ -2,7 +2,7 @@
 
 > **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `claude/status.json`.
 
-A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, and Claude's live tasks under it. The sprints come from a `GOALS.md` kept in the project's `.ai/` folder, or from a project-workflow `.ai/` plan (below). It draws in SIGMAorbital (`ADR-0043`): monochrome, colour for state only, uppercase labels, its Night ops or Daylight colours following your theme setting.
+A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, and Claude's live tasks under it. The sprints come from a `GOALS.md` kept in the project's `.ai/` folder, or from a project-workflow `.ai/` plan (below). It draws in SIGMAorbital (`ADR-0043`): monochrome, colour for state only, uppercase labels, its Night ops or Daylight colours following your theme setting, or pinned by hand with `/compass theme dark|light|auto`.
 
 | Desktop app | Terminal |
 |---|---|
@@ -48,7 +48,7 @@ Mods need Claude Code 2.1.308 or later. The pane reads `.ai/GOALS.md`; `/goals i
 | Blocked | `- [!] Story` | ◆ | red |
 | Done | `- [x] Story` | ● | bright (`text-1`) |
 
-The colours are SIGMAorbital's Night ops or Daylight values, picked by your theme setting.
+The colours are SIGMAorbital's Night ops or Daylight values, picked by your theme setting, or pinned with `/compass theme dark|light|auto` (`auto` follows the setting again).
 
 ## GOALS.md
 

@@ -32,7 +32,7 @@ import {
   watchText,
 } from './model'
 import { keep, restore } from './keep'
-import { remember, syncTheme, watchTheme } from './sigma'
+import { THEME_USAGE, remember, setTheme, syncTheme, themeArg, watchTheme } from './sigma'
 import { PANE, TITLE } from './names'
 import { COMPASS_PANE, contributeSessions, renderOutput, renderPane, sizeSessions } from './view'
 import type { AgentRow } from '../types'
@@ -122,7 +122,7 @@ export const register: Register = on => {
     // it the pane waits undrawn. `/agents` is a name Claude Code ships, so the
     // command is `/agent-watch`.
     void $.ui.open({ id: PANE, title: TITLE })
-    await $.command.register({ name: 'agent-watch', description: 'Open the Agents pane: the subagents of this session' })
+    await $.command.register({ name: 'agent-watch', description: 'Open the Agents pane: the subagents of this session', argumentHint: `[${THEME_USAGE}]` })
     await refresh($).catch(() => undefined)
 
     let tick = 0
@@ -153,7 +153,12 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('command.run', { command: 'agent-watch' }, async $ => {
+  on('command.run', { command: 'agent-watch' }, async ($, e) => {
+    // `theme dark|light|auto` pins the colours by hand, before anything else.
+    const theme = themeArg(e.args)
+    if (theme !== undefined) {
+      return { text: 'error' in theme ? `${theme.error}. Usage: /agent-watch ${THEME_USAGE}` : await setTheme($, theme.choice) }
+    }
     const { isPlaced } = await $.ui.open({ id: PANE, title: TITLE })
     const rows = await read($, agents)
     const out = {

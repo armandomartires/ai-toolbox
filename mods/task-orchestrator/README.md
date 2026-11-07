@@ -34,6 +34,7 @@ Orchestration starts **off**. `/orchestrate on` turns it on for this project's s
 ## Usage
 
 - `/orchestrate status`: on or off, policy, the coordinator's model and effort (`coordinator: <model> / effort <x>`), every task as `id → worker [agent id] → requested model/effort → observed … → status → next`, blockers, and the overrides in force. In the transcript it draws as SIGMAorbital panels (`ADR-0043`): ORCHESTRATOR with the run and a row per task, its state as glyph and word (queued grey, running cyan, done bright, failed red, blocked or partial amber), and OVERRIDES IN FORCE; the model reads the same text as before.
+- `/orchestrate theme dark|light|auto`: pins the panels' SIGMAorbital colours (Night ops or Daylight) by hand; `auto` follows the theme setting again, which is the default.
 - `/orchestrate policy economy|balanced|quality`: picks the policy; the worker profiles are registered again under it. `balanced` is the brief's table (haiku/low for extraction and lookup, sonnet/medium for exploration, implementation and tests, sonnet/high for review, opus/high for architecture, debugging and risk review); `economy` lowers exploration, documentation, review, architecture and debugging one step, never risk review; `quality` raises lookup, exploration, documentation, implementation, tests and review.
 - `/orchestrate routing`: the table under the current policy, with the model ids spawns resolved the aliases to so far, drawn as a ROUTING panel.
 - `/orchestrate models`: the alias resolutions seen this session and the models a spawn refused.

@@ -271,6 +271,18 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0227 — vault-secrets 2.3.1: judge an AppRole file on Windows by its access list
 - [x] TASK-0228 — The OpenCode driver tells a permission denial from another tool error (B-067)
 - [x] TASK-0229 — task-compass's README shows the pane on the desktop and in a terminal (B-064)
+- [ ] TASK-0230 — agent-watch: the band above the prompt shows the orchestrator's state, idle included
+- [ ] TASK-0231 — task-compass: the Sessions panel shows under the board in either load order
+- [x] TASK-0232 — agent-watch 0.11.1: the STATE cell's glyph and word on one line
+- [x] TASK-0233 — Per-harness mod layout: mods/<name>/claude/ today, core/ and other harnesses later (ADR-0054)
+- [x] TASK-0234 — task-orchestrator 0.5.5: collect always answers, and about the right tasks
+- [x] TASK-0235 — The repository gate passes on a Windows host
+- [x] TASK-0236 — task-orchestrator 0.5.6: collect waits for sessions only
+- [x] TASK-0237 — The merged gate checks from origin pass on a Windows host
+- [x] TASK-0238 — agent-watch 0.11.2, task-orchestrator 0.5.7: the rows survive a forced plugin reload
+- [x] TASK-0239 — task-orchestrator 0.5.8: ledger writes race-free, worker text framed, state scoped, the hand-off a first-class state
+- [x] TASK-0240 — Every mod takes a theme argument: dark, light or auto
+- [x] TASK-0241 — agent-watch and task-compass read cleanly in Daylight, as SIGMAorbital specifies
 - [x] TASK-0249 — agent-watch 0.11.3, 0.12.0: PowerShell background shells, and step progress of a background run
 - [x] TASK-0250 — agent-watch 0.12.1: each session keeps its rows under its own store key
 

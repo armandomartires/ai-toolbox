@@ -333,6 +333,20 @@ export const inkOn = (theme: ThemeId, fill: Token, opacity: number): string => {
   return contrast(luminance(colors.bg), under) >= contrast(luminance(colors['text-1']), under) ? colors.bg : colors['text-1']
 }
 
+/** The contrast of two hex colours, WCAG's ratio: 1 to 21. */
+export const contrastOf = (a: string, b: string) => contrast(luminance(a), luminance(b))
+
+/**
+ * Daylight's slice fill (SIGMAorbital, TASK-0241): its state's colour, mixed into `surface` by depth: full on the
+ * first ring, 62% on the second, 36% beyond, so a deeper ring is the colour of the one above it stepped down.
+ * Opaque, so what is drawn on it can be measured.
+ */
+export const DEPTH_STRENGTH = [1, 1, 0.62, 0.36] as const
+export const dayFill = (tone: Token, depth: number) => mix(TOKENS.light[tone], TOKENS.light.surface, DEPTH_STRENGTH[Math.min(depth, 3)]!)
+
+/** The least contrast text holds on its ground (tokens v3). */
+const TEXT_MIN = 4.5
+
 /** An arc's state as drawn: running solid, waiting outlined, ended dimmed; the centre disc is never dimmed. */
 const stateOf = (arc: Arc) => {
   if (arc.depth === 0) return 'run'
@@ -375,6 +389,11 @@ const text = (x: number, y: number, size: number, fill: string, body: string, ex
  * steps and time; each ring sector is filled by state, with a progress arc on
  * a track just outside it, its name and steps inside when they fit, and a
  * pulsing glyph outside a failed or blocked one; a `<title>` each.
+ *
+ * Daylight follows SIGMAorbital's chart rules (TASK-0241): each slice opaque in its state's colour stepped by
+ * depth (`dayFill`), on a 1.5px gap in `surface` (its stroke); a waiting slice outlined on `surface`. A label on
+ * a fill is `on-ink` where that holds 4.5:1, else it sits off the fill, on a `surface` plate, in text-1 (the
+ * code) and text-3 (the steps). Night ops draws as it did.
  */
 export const sunburstSvg = (list: readonly Arc[], size: number, theme: ThemeId, opts: Opts = {}): string => {
   const colors = TOKENS[theme]
@@ -390,6 +409,7 @@ export const sunburstSvg = (list: readonly Arc[], size: number, theme: ThemeId, 
   const fontPx = Math.max(7, 7.5 * k)
   const charW = fontPx * 0.64
   const glyphPx = Math.max(7, 8 * k)
+  const isDay = theme === 'light'
   const draw = (rich: boolean) => {
     const parts: string[] = []
     const extras: string[] = []
@@ -399,15 +419,17 @@ export const sunburstSvg = (list: readonly Arc[], size: number, theme: ThemeId, 
       const kind = stateKind(arc.status, arc.badge)
       const chosen = isSelected(arc, opts)
       // The selection and a waiting outline keep a visible floor on a small chart; the selection stays the widest stroke.
-      const stroke = chosen ? ` stroke="${colors.white}" stroke-width="${n(Math.max(1.5, 2 * k))}"` : state === 'wait' ? ` stroke="${tone}" stroke-width="${n(Math.max(1, 1.5 * k))}"` : arc.depth === 0 ? ` stroke="${tone}" stroke-width="${n(1.5 * k)}"` : ''
+      const stroke = chosen ? ` stroke="${colors.white}" stroke-width="${n(Math.max(1.5, 2 * k))}"` : state === 'wait' ? ` stroke="${tone}" stroke-width="${n(Math.max(1, 1.5 * k))}"` : arc.depth === 0 ? ` stroke="${tone}" stroke-width="${n(1.5 * k)}"` : isDay ? ` stroke="${colors.surface}" stroke-width="${n(gap)}"` : ''
       const title = `<title>${esc(`${arc.code === '' || arc.name.startsWith(`${arc.code} ·`) ? '' : `${arc.code} · `}${arc.name.toUpperCase()} — ${wordOf(arc.status, arc.badge)} · ${arc.progress.done}/${arc.progress.total} STEPS · ${hms(arc.duration)} · ${tokensText(arc.tokens)} TOK`)}</title>`
       const inner = arc.depth === 0 ? 0 : core + (arc.depth - 1) * width + (arc.depth === 1 ? 3 * k : 0)
       const out = arc.depth === 0 ? core : core + arc.depth * width - room
-      const pad = arc.depth === 0 || arc.end - arc.start >= 0.9999 ? 0 : Math.min((gap / 2 / Math.max(1, (inner + out) / 2)) / TAU, (arc.end - arc.start) / 4)
+      // Daylight's gap is the slice's own `surface` stroke; Night ops cuts it from the angle.
+      const pad = isDay || arc.depth === 0 || arc.end - arc.start >= 0.9999 ? 0 : Math.min((gap / 2 / Math.max(1, (inner + out) / 2)) / TAU, (arc.end - arc.start) / 4)
       const from = arc.start + pad
       const to = arc.end - pad
-      const fill = arc.depth === 0 ? colors.raised : tone
-      const opacity = arc.depth === 0 ? '' : state === 'wait' ? ' fill-opacity="0"' : state === 'run' ? ' fill-opacity="0.85"' : ' fill-opacity="0.5"'
+      // Daylight: opaque, a waiting slice on `surface`; Night ops: the state's colour at an opacity.
+      const fill = arc.depth === 0 ? colors.raised : !isDay ? tone : state === 'wait' ? colors.surface : dayFill(arc.tone, arc.depth)
+      const opacity = arc.depth === 0 || isDay ? '' : state === 'wait' ? ' fill-opacity="0"' : state === 'run' ? ' fill-opacity="0.85"' : ' fill-opacity="0.5"'
       parts.push(`<path d="${sector(half, half, inner, out, from, to)}" fill="${fill}"${opacity}${stroke} fill-rule="evenodd">${rich ? title : ''}</path>`)
       if (arc.depth === 0) continue
 
@@ -429,10 +451,22 @@ export const sunburstSvg = (list: readonly Arc[], size: number, theme: ThemeId, 
       if (high >= 20 * k && across >= 22 * k) {
         const label = arc.code === '' ? fit(arc.name.toUpperCase(), across - 6 * k, charW) : arc.code.length * charW <= across - 6 * k ? arc.code : ''
         if (label !== '') {
-          const ink = state === 'wait' ? colors['text-2'] : inkOn(theme, arc.tone, state === 'run' ? 0.85 : 0.5)
           const cx = half + radius * Math.sin(phi)
           const cy = half - radius * Math.cos(phi)
-          extras.push(text(cx, cy - fontPx * 0.6, fontPx, ink, esc(label)) + text(cx, cy + fontPx * 0.6, fontPx, ink, `${arc.progress.done}/${arc.progress.total}`))
+          const steps = `${arc.progress.done}/${arc.progress.total}`
+          if (!isDay) {
+            const ink = state === 'wait' ? colors['text-2'] : inkOn(theme, arc.tone, state === 'run' ? 0.85 : 0.5)
+            extras.push(text(cx, cy - fontPx * 0.6, fontPx, ink, esc(label)) + text(cx, cy + fontPx * 0.6, fontPx, ink, steps))
+          } else {
+            // On the fill in on-ink where it holds 4.5:1; else off it, on a `surface` plate (a waiting slice already is).
+            const onFill = state !== 'wait' && contrastOf(colors['on-ink'], fill) >= TEXT_MIN
+            if (!onFill && state !== 'wait') {
+              const w = Math.max(Array.from(label).length, steps.length) * charW + 4 * k
+              const h = fontPx * 2.4
+              extras.push(`<rect x="${n(cx - w / 2)}" y="${n(cy - h / 2)}" width="${n(w)}" height="${n(h)}" fill="${colors.surface}"/>`)
+            }
+            extras.push(text(cx, cy - fontPx * 0.6, fontPx, onFill ? colors['on-ink'] : colors['text-1'], esc(label)) + text(cx, cy + fontPx * 0.6, fontPx, onFill ? colors['on-ink'] : colors['text-3'], steps))
+          }
         }
       }
       // A failed or blocked sector gets a static glyph outside it; a running one a ● that pulses, the only motion there is.
@@ -469,7 +503,7 @@ export const sunburstSvg = (list: readonly Arc[], size: number, theme: ThemeId, 
   if (bare.length <= SVG_MAX) return bare
 
   // Still too long: a summary, the centre disc and the running count.
-  const summary = `<circle cx="${n(half)}" cy="${n(half)}" r="${n(core)}" fill="${colors[list[0]?.tone ?? 'cyan']}"/><text x="${n(half)}" y="${n(half)}" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="${n(core * 0.9)}" fill="${colors['text-1']}">${chartRunning(list)}</text>`
+  const summary = `<circle cx="${n(half)}" cy="${n(half)}" r="${n(core)}" fill="${colors[list[0]?.tone ?? 'cyan']}"/><text x="${n(half)}" y="${n(half)}" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="${n(core * 0.9)}" fill="${isDay ? colors['on-ink'] : colors['text-1']}">${chartRunning(list)}</text>`
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(size)} ${n(size)}" width="${n(size)}" height="${n(size)}">${summary}</svg>`
 }
