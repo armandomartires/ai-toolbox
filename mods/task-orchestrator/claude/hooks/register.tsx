@@ -1,16 +1,15 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { COORDINATOR_PROTOCOL, assignmentId, buildContract, parseReport } from './contract'
+import { COORDINATOR_PROTOCOL, assignmentId, buildContract, parseReport, quotedFindings } from './contract'
 import type { Assignment } from './contract'
-import { ENDED, activeCount, addTask, auditRow, blockers, byAgent, byId, handoffRoot, handoffWaitText, isNoVerdict, isSession, line, overall, retryTask, runTokens, runnable, tokensText, usageTokens, setTask, stallText, stalledBy, startBlocker, summary, WRITE_TOOLS, writeBlocker } from './ledger'
+import { ENDED, activeCount, addTask, auditRow, blockers, byAgent, byId, handoffRoot, handoffWaitText, holdsSlot, isNoVerdict, isSession, line, overall, retryTask, runTokens, runnable, tokensText, usageTokens, setTask, stallText, stalledBy, startBlocker, summary, WRITE_TOOLS, writeBlocker } from './ledger'
 import type { Ledger, Task } from './ledger'
-import { detectOverrides, effortMismatchNote, OVERRIDE_ENV, overridesText } from './overrides'
+import { detectOverrides, effortMismatchNote, overridesText } from './overrides'
 import { enableBlocker, providerById, providersText } from './providers'
 import { gate, isBlocked, route } from './router'
-import type { Decision } from './router'
 import { DEFAULT_CONFIG, EFFORTS, MODEL_LADDER, POLICIES, READ_ONLY_TOOLS, ROLE_PROFILES, TASK_CLASSES, WORKER_DENIED_TOOLS, WRITER_TOOLS, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
-import type { Config, Effort, Policy, Role, TaskClass } from './routing'
+import type { Config, Effort, Limits, Policy, Role, TaskClass } from './routing'
 import { keep, restore } from './keep'
 import { remember, syncTheme, watchTheme } from './sigma'
 import { renderOutput, statusLineText } from './view'
@@ -40,7 +39,10 @@ const TOOL = {
   listEvents: 'mcp__ccd_session_mgmt__list_events',
   stopSession: 'mcp__ccd_session_mgmt__stop_session',
 } as const
+/** The settings are kept per project: `<prefix>:<project key>`, the key the normalised cwd (TASK-0239). */
 const STORE_SETTINGS = `${PLUGIN}:settings`
+/** The store key this project's settings live under, set at load. */
+let settingsKey = STORE_SETTINGS
 const STORE_AUDIT = `${PLUGIN}:audit`
 const AUDIT_ROWS = 200
 const CONFIG_FILE = `.claude/${PLUGIN}.json`
@@ -50,8 +52,14 @@ const ANSWER_MARGIN_MS = 1_500
 /** A hook's budget when the engine states none (an unmetered `next`): the ten seconds a hook has. */
 const HOOK_BUDGET_MS = 10_000
 
-/** The config in force: defaults, then the override files, then the person's live choices. */
+/** The config in force: defaults, the home file, the store, the person's live choices, then the project file's narrowing. */
 let config: Config = DEFAULT_CONFIG
+/** The config the store may hold: everything in force but the project file, which is never persisted (TASK-0239). */
+let trusted: Config = DEFAULT_CONFIG
+/** Auto mode gave a plugin spawn no verdict this session: every later start hands off at once, no spawn tried. */
+let noVerdictSeen = false
+/** What the config files said that was not taken, shown by status so a project file's attempt is seen (TASK-0239). */
+let configRefused: string[] = []
 /** What each profile was last registered with, so a dispatch re-registers only on a change. */
 const registered = new Map<string, string>()
 /** Resolved aliases seen from spawns this session, alias → id. */
@@ -124,34 +132,69 @@ const envOf = async ($: EngineInterface): Promise<Record<string, string | undefi
   return out
 }
 
-/** Defaults ← `~/.claude/task-orchestrator.json` ← `<cwd>/.claude/task-orchestrator.json` ← the store. */
+/** A project's store key part: its cwd with backslashes as slashes and no trailing slash. */
+const projectKey = (cwd: string): string => cwd.replace(/\\/g, '/').replace(/\/+$/, '')
+
+/**
+ * What a repository's own `.claude/task-orchestrator.json` may do to the config in force: narrow it. Its `optIn` is
+ * refused (the opt-in is the person's, from the home file or `/orchestrate opt-in`), and a limit above the one in force
+ * is refused: a cloned repository must not widen what runs, nor what it costs (TASK-0239).
+ */
+const projectOverride = (base: Config, file: unknown): { config: Config; refused: string[] } => {
+  if (!isRecord(file)) return mergeConfig(base, file)
+  const refused: string[] = []
+  const { optIn, limits, ...rest } = file
+  if (optIn !== undefined) refused.push('optIn is accepted from the home file or /orchestrate opt-in only')
+  const narrowed: Record<string, unknown> = {}
+  if (isRecord(limits)) {
+    // The known limits, as own keys: a `__proto__` key out of JSON.parse would otherwise set the prototype of `narrowed`.
+    for (const key of Object.keys(base.limits) as (keyof Limits)[]) {
+      if (!Object.prototype.hasOwnProperty.call(limits, key)) continue
+      const value = limits[key]
+      const inForce = base.limits[key]
+      if (typeof value === 'number' && typeof inForce === 'number' && value > inForce) refused.push(`limits.${key} ${value} is above the ${inForce} in force; a project file may only lower a limit`)
+      else narrowed[key] = value
+    }
+  }
+  const merged = mergeConfig(base, { ...rest, ...(isRecord(limits) ? { limits: narrowed } : limits !== undefined ? { limits } : {}) })
+  return { config: merged.config, refused: [...refused, ...merged.refused] }
+}
+
+/** Defaults ← `~/.claude/task-orchestrator.json` ← this project's store entry (the trusted config) ← `<cwd>/.claude/task-orchestrator.json`, narrowing only. */
 const loadConfig = async ($: EngineInterface, env: Record<string, string | undefined>): Promise<string[]> => {
   const refused: string[] = []
   let next: Config = DEFAULT_CONFIG
   const home = env.HOME
   const cwd = await $.session.cwd().catch(() => '')
-  for (const path of [home ? `${home}/${CONFIG_FILE}` : undefined, cwd ? `${cwd}/${CONFIG_FILE}` : undefined]) {
-    if (!path) continue
-    const file = await readJson($, path)
-    if (file === undefined) continue
-    const merged = mergeConfig(next, file)
+  settingsKey = `${STORE_SETTINGS}:${cwd ? projectKey(cwd) : '(no cwd)'}`
+  const homeFile = home ? await readJson($, `${home}/${CONFIG_FILE}`) : undefined
+  if (homeFile !== undefined) {
+    const merged = mergeConfig(next, homeFile)
     next = merged.config
-    refused.push(...merged.refused.map(one => `${path}: ${one}`))
+    refused.push(...merged.refused.map(one => `${home}/${CONFIG_FILE}: ${one}`))
   }
-  const stored = await $.store.get(STORE_SETTINGS).catch(() => undefined)
+  const stored = await $.store.get(settingsKey).catch(() => undefined)
   if (isRecord(stored)) {
     const merged = mergeConfig(next, { policy: stored.policy, optIn: stored.optIn, providers: stored.providers })
     next = merged.config
     if (stored.enabled === true) await update($, enabled, () => true)
+  }
+  trusted = next
+  const projectFile = cwd ? await readJson($, `${cwd}/${CONFIG_FILE}`) : undefined
+  if (projectFile !== undefined) {
+    const merged = projectOverride(next, projectFile)
+    next = merged.config
+    refused.push(...merged.refused.map(one => `${cwd}/${CONFIG_FILE}: ${one}`))
   }
   config = next
   await update($, policy, () => config.policy)
   return refused
 }
 
+/** The store holds the trusted config only: policy, opt-in and providers as the person set them, never a project file's. */
 const saveSettings = async ($: EngineInterface) => {
   const on = await read($, enabled)
-  await $.store.set(STORE_SETTINGS, { enabled: on, policy: config.policy, optIn: config.optIn, providers: config.providers }).catch(() => undefined)
+  await $.store.set(settingsKey, { enabled: on, policy: trusted.policy, optIn: trusted.optIn, providers: trusted.providers }).catch(() => undefined)
 }
 
 const audit = async ($: EngineInterface, task: Task) => {
@@ -277,6 +320,7 @@ const statusText = async ($: EngineInterface): Promise<string> => {
   const word = overall(rows)
   return [
     `task-orchestrator ${on ? 'on' : 'off'}, policy ${config.policy}`,
+    ...(configRefused.length ? ['config refused (not taken from a file):', ...configRefused.map(one => `- ${one}`)] : []),
     `coordinator: ${coordinator} / effort ${coordinatorEffort ?? 'unknown'} (the session's own; this mod never changes it)`,
     `run: ${word.word} (${word.why})${tokenLine(rows)}`,
     'tasks:',
@@ -288,11 +332,22 @@ const statusText = async ($: EngineInterface): Promise<string> => {
   ].join('\n')
 }
 
-const settle = async ($: EngineInterface, task: Task, patch: Partial<Task>) => {
-  await update($, ledger, rows => setTask(rows, task.id, patch)).then(() => keep($, assignments))
+/**
+ * Patches a task's row over the rows as they are now, inside the updater. With `when`, only while the row still has
+ * that status (a compare-and-set: a cancel, an end or another tick that got there first wins); returns whether it did.
+ */
+const settle = async ($: EngineInterface, task: Task, patch: Partial<Task>, when?: Task['status']): Promise<boolean> => {
+  let applied = false
+  await update($, ledger, rows => {
+    const row = byId(rows, task.id)
+    applied = row !== undefined && (when === undefined || row.status === when)
+    return applied ? setTask(rows, task.id, patch) : rows
+  }).then(() => keep($, assignments))
+  if (!applied) return false
   const now = byId(await read($, ledger), task.id)
   if (now) await audit($, now)
   await statusLine($)
+  return true
 }
 
 
@@ -301,7 +356,7 @@ const contractOf = (rows: Ledger, task: Task): string => {
   const results = task.deps
     .map(dep => byId(rows, dep))
     .filter((dep): dep is Task => dep !== undefined && dep.report !== undefined)
-    .map(dep => `- ${dep.id} (${dep.role}, ${dep.status}): ${dep.report!.findings || '(no findings line)'}`)
+    .map(dep => quotedFindings(dep, dep.report!.findings))
   const contract = buildContract(task, assignment, config.limits, ROLE_PROFILES[task.role].maxTurns, results)
   // A session has no profile, so its role's prompt and the report shape travel in the assignment (TASK-0224).
   return isSession(task) ? `${contract}
@@ -360,34 +415,57 @@ const start = async ($: EngineInterface, task: Task): Promise<void> => {
   // A session is never spawned by the mod: it is handed to the coordinator's start_session.
   if (isSession(task)) {
     task = { ...task, prompt: contractOf(await read($, ledger), task) }
-    return settle($, task, { status: 'blocked', handoff: true, prompt: task.prompt, reason: sessionHandoffReason(task), endedAt: await $.clock.now() })
+    await settle($, task, { status: 'blocked', handoff: true, prompt: task.prompt, reason: sessionHandoffReason(task), endedAt: await $.clock.now() }, 'queued')
+    return
   }
   const name = profileOf(task)
   const problem = await ensureProfile($, name, task.role, task.requested.model, task.requested.effort as Effort, task.isolated)
-  if (problem) return settle($, task, { status: 'blocked', reason: problem, endedAt: await $.clock.now() })
+  if (problem) {
+    await settle($, task, { status: 'blocked', reason: problem, endedAt: await $.clock.now() }, 'queued')
+    return
+  }
   task = { ...task, prompt: contractOf(await read($, ledger), task) }
   const baseRevision = await baseOf($, task)
   const at = await $.clock.now()
-  await update($, ledger, rows => setTask(rows, task.id, { status: 'running', startedAt: at, baseRevision, prompt: task.prompt })).then(() => keep($, assignments))
+  // The claim: queued → running only while it is still queued, so two ticks start it once and a cancel in between holds.
+  if (!(await settle($, task, { status: 'running', startedAt: at, baseRevision, prompt: task.prompt }, 'queued'))) return
+  const handOff = async () => { await settle($, task, { status: 'blocked', handoff: true, reason: handoffReason(task), endedAt: await $.clock.now() }, 'running') }
+  // Auto mode judged a plugin spawn once this session and gave no verdict: it gives none to the next either (TASK-0239).
+  if (noVerdictSeen) return handOff()
   const spawn = () => $.agent.spawn({ subagentType: `${PLUGIN}:${name}`, prompt: task.prompt, description: task.description, model: task.requested.model, name: task.id }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }) as { deny: string })
   let ran = await spawn()
   // Auto mode's no-verdict deny asks for the action again once, as-is: the
   // same call through the same check, nothing added to it.
   if (ran.deny !== undefined && isNoVerdict(ran.deny)) ran = await spawn()
   if (ran.deny !== undefined) {
-    if (isNoVerdict(ran.deny)) return settle($, task, { status: 'blocked', handoff: true, reason: handoffReason(task), endedAt: await $.clock.now() })
+    if (isNoVerdict(ran.deny)) {
+      noVerdictSeen = true
+      return handOff()
+    }
     if (isModelUnavailable(ran.deny)) await update($, unavailable, list => (list.includes(task.requested.model) ? list : [...list, task.requested.model])).then(() => keep($, assignments))
-    return settle($, task, { status: 'blocked', reason: `spawn refused: ${ran.deny}`, endedAt: await $.clock.now() })
+    await settle($, task, { status: 'blocked', reason: `spawn refused: ${ran.deny}`, endedAt: await $.clock.now() }, 'running')
+    return
   }
   if (ran.model && ran.model !== task.requested.model) resolved.set(task.requested.model, ran.model)
-  await settle($, task, { agentId: ran.agentId, resolvedModel: ran.model })
+  // Cancelled while the spawn was in flight: the row stays cancelled; the worker is stopped by the id it just got.
+  if (!(await settle($, task, { agentId: ran.agentId, resolvedModel: ran.model }, 'running')) && ran.agentId)
+    await $.tool.call({ tool: 'TaskStop', task_id: ran.agentId }).catch(() => undefined)
 }
 
 /**
  * Starts whatever may run now, one after the other; returns the tasks whose start was refused.
  * `sessions`: whether a session task may be handed off now, which only a call made inside a turn the person started may say.
  */
-const tick = async ($: EngineInterface, sessions: boolean): Promise<Task[]> => {
+/** The tick in flight: ticks run one after the other, so two hooks that free a slot together do not both start the same task. */
+let ticking: Promise<unknown> = Promise.resolve()
+
+const tick = ($: EngineInterface, sessions: boolean): Promise<Task[]> => {
+  const run = ticking.then(() => tickNow($, sessions), () => tickNow($, sessions))
+  ticking = run.catch(() => undefined)
+  return run
+}
+
+const tickNow = async ($: EngineInterface, sessions: boolean): Promise<Task[]> => {
   const refused: Task[] = []
   if (!(await read($, enabled))) return refused
   for (;;) {
@@ -417,12 +495,16 @@ const note = async ($: EngineInterface, text: string) =>
 const ended = async ($: EngineInterface, id: string, how: { sessions: boolean; notify: boolean }): Promise<Task[]> => {
   const task = byId(await read($, ledger), id)
   if (!task) return []
-  $.ui.toast(`${task.id} · ${task.role.toUpperCase()} · ${task.status.toUpperCase()}${task.report?.next ? ` · ${task.report.next}` : ''}`)
-  if (how.notify) await note($, `${line(task)}. Call collect for the report.`)
+  // The toast and the note carry the mod's own words only: a worker's text is read through collect (TASK-0239).
+  $.ui.toast(`${task.id} · ${task.role.toUpperCase()} · ${task.status.toUpperCase()}`)
+  if (how.notify) await note($, `${plain(task)}. Call collect for the report.`)
   const refused = await tick($, how.sessions)
-  if (how.notify) for (const one of refused) await note($, `${line(one)}. Call collect for what to do.`)
+  if (how.notify) for (const one of refused) await note($, `${plain(one)}. Call collect for what to do.`)
   return refused
 }
+
+/** A task's id, role and status, nothing a worker wrote. */
+const plain = (task: Task): string => `${task.id} → ${task.role} → ${task.status}`
 
 type DispatchInput = Record<string, unknown>
 
@@ -473,7 +555,6 @@ const answerDispatch = async ($: EngineInterface, input: DispatchInput): Promise
     const above = await sessionGate($, decision.model, decision.effort)
     if (above) return { result: `blocked: ${id}: ${above}` }
   }
-  const rows = await read($, ledger)
   const deps = strings(input.deps)
   const isWriter = input.isWriter === true || !ROLE_PROFILES[decision.role].readOnly
   const assignment: Assignment = {
@@ -503,11 +584,24 @@ const answerDispatch = async ($: EngineInterface, input: DispatchInput): Promise
     notes: [...decision.notes],
     prompt: '',
   }
-  // Under the id of a task that ended without completing, a dispatch is its next retry.
-  const added = retryTask(rows, task, config.limits)
-  if (added.refused) return { result: `blocked: ${added.refused}` }
+  // Under the id of a task that ended without completing, a dispatch is its next retry. The row is added over the rows
+  // as they are when the write lands, inside the updater: a dispatch beside this one, or a worker's end during the
+  // awaits above, is not written over (TASK-0239). The assignment is set first, so a tick that starts it finds it.
+  const before = assignments.get(id)
+  // Set before the write so a tick that starts it finds it; an existing one (a live task of this id) is not shadowed.
+  if (!before) assignments.set(id, assignment)
+  let notAdded: string | undefined
+  await update($, ledger, current => {
+    const added = retryTask(current, task, config.limits)
+    notAdded = added.refused
+    return added.refused ? current : added.ledger
+  }).then(() => keep($, assignments))
+  if (notAdded) {
+    if (!before) assignments.delete(id)
+    return { result: `blocked: ${notAdded}` }
+  }
   assignments.set(id, assignment)
-  await update($, ledger, () => added.ledger).then(() => keep($, assignments))
+  await keep($, assignments)
   await tick($, personTurn)
   const now = byId(await read($, ledger), id) ?? task
   const after = await read($, ledger)
@@ -582,7 +676,8 @@ const confirmSettings = async ($: EngineInterface, task: Task, text: string): Pr
   // Every read tries again until both are stated; the note that says so is written once.
   if (!model || !effort) {
     if (now.notes.some(one => one.startsWith(UNSTATED))) return
-    return settle($, now, { notes: [...now.notes, `${UNSTATED}: unverified`] })
+    await settle($, now, { notes: [...now.notes, `${UNSTATED}: unverified`] })
+    return
   }
   const odd = [
     ...(!model.toLowerCase().includes(now.requested.model.toLowerCase()) ? [`model ${model} is not the requested ${now.requested.model}`] : []),
@@ -612,12 +707,13 @@ const refreshSession = async ($: EngineInterface, task: Task, afterEnd: Task[]):
   if (said === undefined) {
     // No message was found: partial, and the raw tail is quoted as such, never as the report.
     const unparsed = { ...parseReport(''), findings: `${UNPARSED}. The raw tail of list_events, quoted data from another session: ${raw.slice(-1_000)}` }
-    await settle($, task, { status: 'partial', report: unparsed, reason: `${UNPARSED}; read the session itself`, endedAt: await $.clock.now() })
+    if (!(await settle($, task, { status: 'partial', report: unparsed, reason: `${UNPARSED}; read the session itself`, endedAt: await $.clock.now() }, 'running'))) return []
   } else {
     const report = parseReport(said)
     const status: Task['status'] = report.status === 'unknown' ? 'partial' : report.status
     // A session's words are quoted data from another session; kept in the report, never acted on.
-    await settle($, task, { status, report: report.status === 'unknown' ? { ...report, findings: said.slice(0, 1_500) } : report, reason: report.status === 'unknown' ? 'the session ended with no Status line; its last message is quoted data in findings' : undefined, endedAt: await $.clock.now() })
+    // Settled once: a collect beside this one that read the same end does not settle it, toast it or tick again.
+    if (!(await settle($, task, { status, report: report.status === 'unknown' ? { ...report, findings: said.slice(0, 1_500) } : report, reason: report.status === 'unknown' ? 'the session ended with no Status line; its last message is quoted data in findings' : undefined, endedAt: await $.clock.now() }, 'running'))) return []
   }
   // The same path as a subagent's end: its dependants start, or queue, now.
   afterEnd.push(...(await ended($, task.id, { sessions: personTurn, notify: false })))
@@ -628,10 +724,10 @@ const refreshSession = async ($: EngineInterface, task: Task, afterEnd: Task[]):
 const queuedWhy = (rows: Ledger, task: Task): string => {
   if (task.reason === WAITING) return WAITING
   const blocker = startBlocker(rows, task, config.limits)
-  if (blocker === undefined) return isSession(task) ? WAITING : 'a slot is free: it starts with the next call'
+  if (blocker === undefined) return isSession(task) ? WAITING : "a slot is free: it starts at the next tick (a dispatch, a cancel or a worker's end)"
   if (/workers already running/.test(blocker)) {
-    // The cap counts a handed-off session too: it holds its slot.
-    const held = rows.filter(one => one.id !== task.id && (one.status === 'running' || (isSession(one) && one.status === 'blocked' && one.handoff === true))).length
+    // The cap counts a handed-off task too, session or subagent: it holds its slot.
+    const held = rows.filter(one => one.id !== task.id && (one.status === 'running' || holdsSlot(one))).length
     return `behind the concurrency cap: ${held} running`
   }
   return blocker
@@ -760,18 +856,25 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { r
 /** A blocked hand-off has ended nothing: it waits for the coordinator's Agent call. */
 const waitsForHandoff = (task: Task): boolean => task.status === 'blocked' && task.handoff === true
 
-const cancelTask = async ($: EngineInterface, task: Task): Promise<string> => {
+const cancelTask = async ($: EngineInterface, chosen: Task): Promise<string> => {
+  // The row as it is now, not as the caller's list had it: a tick may have claimed it since.
+  const task = byId(await read($, ledger), chosen.id) ?? chosen
   if (ENDED.includes(task.status) && !waitsForHandoff(task)) return `${task.id} already ${task.status}`
+  // Claimed by a tick, its spawn still in flight: there is no worker to stop yet, and the start that follows would
+  // write its id over a cancel. The row is left as it is; the next cancel finds the id (TASK-0239).
+  if (task.status === 'running' && !task.agentId && !task.sessionId) return `${task.id}: still starting; cancel again in a moment`
   if (task.status === 'running' && task.agentId) {
     const stopped = await $.tool.call({ tool: 'TaskStop', task_id: task.agentId }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }))
-    if ('deny' in stopped && stopped.deny !== undefined) return `${task.id}: stop refused (${stopped.deny}); the worker keeps running`
+    const refused = refusedCall(stopped)
+    if (refused !== undefined) return `${task.id}: stop refused (${refused}); the worker keeps running`
   }
   if (task.status === 'running' && task.sessionId) {
     const stopped = await $.tool.call({ tool: TOOL.stopSession, session_id: task.sessionId } as never).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }))
     const refused = refusedCall(stopped)
     if (refused !== undefined) return `${task.id}: stop refused (${refused}); the session keeps running: stop it yourself with ${TOOL.stopSession} and session_id "${task.sessionId}"`
   }
-  await settle($, task, { status: 'cancelled', handoff: undefined, reason: 'cancelled by the person', endedAt: await $.clock.now() })
+  // Only the row as it was: a worker that ended meanwhile keeps its end.
+  if (!(await settle($, task, { status: 'cancelled', handoff: undefined, reason: 'cancelled by the person', endedAt: await $.clock.now() }, task.status))) return `${task.id} ended before the cancel; collect it`
   return `${task.id} cancelled`
 }
 
@@ -797,6 +900,9 @@ const answerCancel = async ($: EngineInterface, which: string): Promise<string> 
   if (!chosen.length) return which === 'all' || which === '' ? 'nothing to cancel' : `no task named ${which}`
   const lines: string[] = []
   for (const task of chosen) lines.push(await cancelTask($, task))
+  // A cancel frees a slot: what queued behind the cap starts now, not at some later call (TASK-0239).
+  const started = (await tick($, personTurn)).filter(task => task.handoff)
+  for (const task of started) lines.push(`${line(task)}`, ...(task.reason ? [task.reason] : []), ...handoffText(task))
   return lines.join('\n')
 }
 
@@ -852,7 +958,7 @@ const adoptSession = async ($: EngineInterface, input: DispatchInput, next: (inp
     return ran
   }
   const at = await $.clock.now()
-  await settle($, held, { status: 'running', handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, sessionId, notes: [...held.notes, 'started by the coordinator\'s start_session call, adopted by its assignment header'] })
+  await settle($, held, { status: 'running', handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, sessionId, notes: [...held.notes, 'started by the coordinator\'s start_session call, adopted by its assignment header'] }, 'blocked')
   return ran
 }
 
@@ -861,6 +967,7 @@ const setOptIn = async ($: EngineInterface, args: string[]): Promise<string> => 
   const key = what === 'high-effort' ? 'highEffort' : what === 'frontier' ? 'frontier' : undefined
   if (!key) return 'usage: /orchestrate opt-in high-effort|frontier [off]'
   config = { ...config, optIn: { ...config.optIn, [key]: state !== 'off' } }
+  trusted = { ...trusted, optIn: { ...trusted.optIn, [key]: state !== 'off' } }
   await saveSettings($)
   return `${what} ${state !== 'off' ? 'enabled' : 'disabled'} for this project's sessions (stored). ${key === 'frontier' ? 'A frontier worker costs the most of any; dispatch one only when a task demonstrably needs it.' : 'xhigh and max are never the default; escalate to them one step at a time.'}`
 }
@@ -872,6 +979,7 @@ const setProvider = async ($: EngineInterface, args: string[], env: Record<strin
   if (!provider) return `usage: /orchestrate providers enable|disable <${['openai', 'grok'].join('|')}>`
   if (action === 'disable') {
     config = { ...config, providers: { ...config.providers, [provider.id]: { enabled: false } } }
+    trusted = { ...trusted, providers: { ...trusted.providers, [provider.id]: { enabled: false } } }
     await saveSettings($)
     return `${provider.id} disabled`
   }
@@ -879,6 +987,7 @@ const setProvider = async ($: EngineInterface, args: string[], env: Record<strin
   const blocker = enableBlocker(provider, env)
   if (blocker) return `not enabled: ${blocker}\nDisclosure, for when an adapter exists: ${provider.disclosure}`
   config = { ...config, providers: { ...config.providers, [provider.id]: { enabled: true } } }
+  trusted = { ...trusted, providers: { ...trusted.providers, [provider.id]: { enabled: true } } }
   await saveSettings($)
   return `${provider.id} enabled. ${provider.disclosure}`
 }
@@ -891,10 +1000,12 @@ export const register: Register = on => {
     personTurn = false
     coordinatorEffort = undefined
     protocolSent = false
+    noVerdictSeen = false
     delivered.clear()
     await syncTheme($)
     const env = await envOf($)
     const refused = await loadConfig($, env)
+    configRefused = refused
     // After a forced reload the ledger is empty: this session's run comes back from the store.
     await restore($, assignments).catch(() => undefined)
     const settings = await $.settings.read().catch(() => undefined)
@@ -983,6 +1094,7 @@ ${classGuide()}` },
         const next = args[0]
         if (!next || !(POLICIES as readonly string[]).includes(next)) return { text: `usage: /orchestrate policy <${POLICIES.join('|')}>\n${routingTable()}` }
         config = { ...config, policy: next as Policy }
+        trusted = { ...trusted, policy: next as Policy }
         await update($, policy, () => config.policy)
         await saveSettings($)
         for (const problem of await registerProfiles($)) $.ui.log(`${PLUGIN}: ${problem}`)
@@ -1046,7 +1158,7 @@ ${classGuide()}` },
       const ran = await next(e)
       if (ran.deny !== undefined || !ran.agentId) return ran
       const at = await $.clock.now()
-      await settle($, held, { status: 'running', handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, agentId: ran.agentId, resolvedModel: ran.model, baseRevision: await baseOf($, held), notes: [...held.notes, 'started by the coordinator\'s Agent call: auto mode gave the orchestrator\'s spawn no verdict'] })
+      await settle($, held, { status: 'running', handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, agentId: ran.agentId, resolvedModel: ran.model, baseRevision: await baseOf($, held), notes: [...held.notes, 'started by the coordinator\'s Agent call: auto mode gave the orchestrator\'s spawn no verdict'] }, 'blocked')
       return ran
     }
     if (activeCount(rows) >= config.limits.maxConcurrent) return { deny: `${config.limits.maxConcurrent} workers are already running; dispatch it through the orchestrator's dispatch tool, which queues it` }
@@ -1085,6 +1197,13 @@ ${classGuide()}` },
   // Also the one place a session that starts with orchestration on gets the protocol, once (TASK-0226).
   on('prompt.submit', async ($, e, next) => {
     personTurn = isPersonTurn(e.origin)
+    // A session whose first prompt is an assignment is a worker: it gets no protocol and is not a coordinator, whatever
+    // the project's store says (the settings are per project, and a worker session shares the project) (TASK-0239).
+    if (!protocolSent && /^\s*# Assignment /.test(String(e.text ?? ''))) {
+      protocolSent = true
+      await update($, enabled, () => false)
+      return next(e)
+    }
     if (!(await read($, enabled))) return next(e)
     const extra: string[] = []
     if (!protocolSent) {
@@ -1171,7 +1290,7 @@ ${classGuide()}` },
     const status: Task['status'] = e.reason !== 'answer' ? 'failed' : report.status === 'unknown' ? 'partial' : report.status
     const reason = e.reason !== 'answer' ? `the worker's turn ended by ${e.reason}` : report.status === 'unknown' ? 'the worker gave no Status line; read its report' : undefined
     const hint = reclassifyHint(task, status)
-    await settle($, task, { status, report, reason, endedAt: await $.clock.now(), ...(hint ? { notes: [...task.notes, hint] } : {}) })
+    if (!(await settle($, task, { status, report, reason, endedAt: await $.clock.now(), ...(hint ? { notes: [...task.notes, hint] } : {}) }, 'running'))) return done
     // A worker's end is in no turn of the person's: a session task behind it waits for their next prompt.
     await ended($, task.id, { sessions: false, notify: true })
     return done

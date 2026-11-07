@@ -17,8 +17,11 @@ import type { Ledger } from './ledger'
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 const unavailable = atom({ plugin: 'task-orchestrator', key: 'unavailable' } as const, [])
 
-/** The store key the run is kept under. */
+/** The store key prefix a run is kept under: `<prefix>:<session id>`, one entry per session, so two sessions of one person never write over each other (TASK-0239). */
 export const STORE_RUN = 'task-orchestrator:run'
+
+/** The store key of a session's run. */
+export const runKey = (sessionId: string): string => `${STORE_RUN}:${sessionId}`
 
 /** What the store holds: the session the run belongs to, its rows, the refused models and each task's assignment. */
 export type KeptRun = {
@@ -46,7 +49,7 @@ export async function keep($: EngineInterface, assignments: ReadonlyMap<string, 
   const text = JSON.stringify(kept)
   if (text === lastKept) return
   lastKept = text
-  await $.store.set(STORE_RUN, kept).catch(() => undefined)
+  await $.store.set(runKey(sessionId), kept).catch(() => undefined)
 }
 
 /**
@@ -58,7 +61,7 @@ export async function restore($: EngineInterface, assignments: Map<string, Assig
   sessionId = await $.session.id().catch(() => undefined)
   lastKept = undefined
   if (sessionId === undefined) return false
-  const held = await $.store.get(STORE_RUN).catch(() => undefined)
+  const held = await $.store.get(runKey(sessionId)).catch(() => undefined)
   if (!isKept(held) || held.sessionId !== sessionId) return false
   if ((await read($, ledger)).length !== 0) return false
   await update($, ledger, () => held.ledger)

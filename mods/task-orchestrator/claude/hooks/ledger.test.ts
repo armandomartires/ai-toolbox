@@ -167,9 +167,23 @@ test('a queued task behind a session task handed off is waiting on its start_ses
   // Through a second dependant too.
   const deeper = task('D2', { deps: ['D1'] })
   expect(handoffRoot([...ledger, deeper], deeper)?.id).toBe('T1')
-  // A subagent hand-off, or a session that failed, stays a stall to retry.
-  expect(stalledBy([task('H1', { status: 'blocked', handoff: true }), task('D3', { deps: ['H1'] })], task('D3', { deps: ['H1'] }))?.id).toBe('H1')
+  // A subagent hand-off waits for the coordinator's Agent call the same way (TASK-0239); a session that failed stays a stall to retry.
+  const subHanded: Ledger = [task('H1', { status: 'blocked', handoff: true }), task('D3', { deps: ['H1'] })]
+  expect(stalledBy(subHanded, subHanded[1]!)).toBeUndefined()
+  expect(handoffRoot(subHanded, subHanded[1]!)?.id).toBe('H1')
+  expect(startBlocker(subHanded, subHanded[1]!, DEFAULT_LIMITS)).toBe('waiting on H1 (handed off, awaiting the Agent call)')
+  expect(blockers(subHanded, DEFAULT_LIMITS)).toEqual(['D3: waits on H1 (handed off): its Agent call is not made yet; make the call its hand-off names, or cancel D3'])
   expect(stalledBy([task('T2', { runAs: 'session', status: 'failed' }), task('D4', { deps: ['T2'] })], task('D4', { deps: ['T2'] }))?.id).toBe('T2')
+})
+
+test('a hand-off of either kind holds its slot and the writer lock, and the run is running, not blocked (TASK-0239)', () => {
+  const handed = [task('H1', { status: 'blocked', handoff: true }), task('H2', { status: 'blocked', handoff: true }), task('H3', { runAs: 'session', status: 'blocked', handoff: true })]
+  expect(startBlocker(handed, task('T4'), DEFAULT_LIMITS)).toBe('3 workers already running')
+  expect(overall(handed)).toEqual({ word: 'running', why: 'H1 handed off, H2 handed off, H3 handed off' })
+  const writer = [task('W1', { role: 'builder', isWriter: true, status: 'blocked', handoff: true })]
+  expect(startBlocker(writer, task('W2', { role: 'builder', isWriter: true }), DEFAULT_LIMITS)).toBe('writer W1 is running in the same checkout; one writer at a time without isolation')
+  // Adopting the hand-off itself is not blocked by its own row.
+  expect(startBlocker(writer, { ...writer[0]!, status: 'queued' }, DEFAULT_LIMITS)).toBeUndefined()
 })
 
 test('a retry on a bigger model or effort is an escalation, refused past its limit (TASK-0224)', () => {

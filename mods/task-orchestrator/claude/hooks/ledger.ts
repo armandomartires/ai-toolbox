@@ -43,10 +43,11 @@ export const isActive = (task: Task): boolean => task.status === 'running'
 
 export const activeCount = (ledger: Ledger): number => ledger.filter(isActive).length
 
-/** A session task handed off, waiting for the coordinator's start_session, holds its slot: no more are handed off than the cap lets run. */
-const holdsSlot = (task: Task): boolean => isSession(task) && task.status === 'blocked' && task.handoff === true
+/** A task handed off, session or subagent, waits for the coordinator's own call and holds its slot: no more are handed off than the cap lets run. */
+export const holdsSlot = (task: Task): boolean => isHandedOff(task)
 
-export const activeWriters = (ledger: Ledger): Task[] => ledger.filter(task => isActive(task) && task.isWriter && !isSession(task))
+/** A running writer, and a handed-off one: the call that starts it is coming, so it holds the one-writer rule too. A session has a worktree of its own. */
+export const activeWriters = (ledger: Ledger): Task[] => ledger.filter(task => (isActive(task) || isHandedOff(task)) && task.isWriter && !isSession(task))
 
 export const addTask = (ledger: Ledger, task: Task): { ledger: Ledger; refused?: string } => {
   if (byId(ledger, task.id)) return { ledger, refused: `task ${task.id} already exists` }
@@ -61,15 +62,16 @@ export const startBlocker = (ledger: Ledger, task: Task, limits: Limits): string
   const deps = task.deps.map(dep => byId(ledger, dep))
   const waiting = deps.filter(dep => dep && dep.status !== 'completed')
   if (waiting.length) {
-    // A session task handed off has failed nothing: it waits for the coordinator's start_session call.
-    const failed = waiting.filter(dep => dep && ENDED.includes(dep.status) && !(isSession(dep) && isHandedOff(dep)))
+    // A task handed off has failed nothing: it waits for the coordinator's own call (start_session, or the Agent call).
+    const failed = waiting.filter(dep => dep && ENDED.includes(dep.status) && !isHandedOff(dep))
     if (failed.length) return `dependency ${failed.map(dep => `${dep!.id} (${dep!.status})`).join(', ')} did not complete`
-    return `waiting on ${waiting.map(dep => (isSession(dep!) && isHandedOff(dep!) ? `${dep!.id} (handed off, awaiting start_session)` : dep!.id)).join(', ')}`
+    return `waiting on ${waiting.map(dep => (isHandedOff(dep!) ? `${dep!.id} (handed off, awaiting ${isSession(dep!) ? 'start_session' : 'the Agent call'})` : dep!.id)).join(', ')}`
   }
   if (ledger.filter(other => other.id !== task.id && (isActive(other) || holdsSlot(other))).length >= limits.maxConcurrent) return `${limits.maxConcurrent} workers already running`
   // A session worker has a worktree of its own and lands by rebase: no fence, no one-writer rule.
   if (task.isWriter && !isSession(task)) {
     for (const other of activeWriters(ledger)) {
+      if (other.id === task.id) continue
       if (!task.isolated || !other.isolated) {
         if (!task.isolated && !other.isolated) return `writer ${other.id} is running in the same checkout; one writer at a time without isolation`
         return `writer ${other.id} is running without isolation`
@@ -102,9 +104,10 @@ export const setTask = (ledger: Ledger, id: string, patch: Partial<Task>): Ledge
 /** The word for the whole run: done only when nothing failed, blocked or stayed open. A cancelled task neither fails nor blocks it. */
 export const overall = (ledger: Ledger): { word: 'done' | 'partial' | 'blocked' | 'failed' | 'running' | 'idle'; why: string } => {
   if (ledger.length === 0) return { word: 'idle', why: 'no task' }
-  const open = ledger.filter(task => !ENDED.includes(task.status))
+  // A task handed off waits for the coordinator's own call: the run is still going, not blocked.
+  const open = ledger.filter(task => !ENDED.includes(task.status) || isHandedOff(task))
   const failed = ledger.filter(task => task.status === 'failed')
-  const blocked = ledger.filter(task => task.status === 'blocked')
+  const blocked = ledger.filter(task => task.status === 'blocked' && !isHandedOff(task))
   const partial = ledger.filter(task => task.status === 'partial')
   const cancelled = ledger.filter(task => task.status === 'cancelled')
   if (failed.length) return { word: 'failed', why: `${failed.map(task => `${task.id} (${task.role}) ${task.status}`).join(', ')}` }
@@ -114,7 +117,7 @@ export const overall = (ledger: Ledger): { word: 'done' | 'partial' | 'blocked' 
     const root = stalledBy(ledger, task)
     if (root) return { word: 'blocked', why: `${task.id} is stalled by ${root.id} (${root.status})` }
   }
-  if (open.length) return { word: 'running', why: open.map(task => `${task.id} ${task.status}`).join(', ') }
+  if (open.length) return { word: 'running', why: open.map(task => `${task.id} ${isHandedOff(task) ? 'handed off' : task.status}`).join(', ') }
   if (partial.length) return { word: 'partial', why: partial.map(task => `${task.id} (${task.role})`).join(', ') }
   // Nothing completed and nothing is left: the person cancelled it all, which is not a finished run.
   if (cancelled.length === ledger.length) return { word: 'idle', why: `${cancelled.length} task(s) cancelled` }
@@ -187,8 +190,8 @@ export const stalledBy = (ledger: Ledger, task: Task, seen = new Set<string>()):
   for (const dep of task.deps.map(id => byId(ledger, id))) {
     if (!dep || seen.has(dep.id)) continue
     seen.add(dep.id)
-    // Not stalled: a handed-off session task is not retried, it is started by the coordinator's call.
-    if (isSession(dep) && isHandedOff(dep)) continue
+    // Not stalled: a handed-off task is not retried, it is started by the coordinator's call.
+    if (isHandedOff(dep)) continue
     if (ENDED.includes(dep.status) && dep.status !== 'completed') return dep
     const deeper = stalledBy(ledger, dep, seen)
     if (deeper) return deeper
@@ -196,22 +199,22 @@ export const stalledBy = (ledger: Ledger, task: Task, seen = new Set<string>()):
   return undefined
 }
 
-/** The handed-off session task a queued one waits behind, directly or through its own dependencies. */
+/** The handed-off task (session or subagent) a queued one waits behind, directly or through its own dependencies. */
 export const handoffRoot = (ledger: Ledger, task: Task, seen = new Set<string>()): Task | undefined => {
   if (task.status !== 'queued') return undefined
   for (const dep of task.deps.map(id => byId(ledger, id))) {
     if (!dep || seen.has(dep.id)) continue
     seen.add(dep.id)
-    if (isSession(dep) && isHandedOff(dep)) return dep
+    if (isHandedOff(dep)) return dep
     const deeper = handoffRoot(ledger, dep, seen)
     if (deeper) return deeper
   }
   return undefined
 }
 
-/** What a task behind a handed-off session task says: no retry, the start_session call. */
+/** What a task behind a handed-off task says: no retry, the call its hand-off names. */
 export const handoffWaitText = (task: Task, root: Task): string =>
-  `waits on ${root.id} (handed off): its start_session call is not made yet; make the call its hand-off names, or cancel ${task.id}`
+  `waits on ${root.id} (handed off): its ${isSession(root) ? 'start_session' : 'Agent'} call is not made yet; make the call its hand-off names, or cancel ${task.id}`
 
 /** What a stalled task says: what it waits on and the two ways out. */
 export const stallText = (task: Task, root: Task): string =>
