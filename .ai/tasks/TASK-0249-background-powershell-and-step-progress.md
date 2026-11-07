@@ -48,7 +48,7 @@ A background PowerShell command is a shell row like a Bash one. A background run
 - [x] The row shows `n/m` in its STEPS cell and arc, `n/m STEPS · <last>` or `· FAIL <label>` in its caption, and the FAILED badge from the first `FAIL` on
 - [x] README *How a run reports its steps*, DEVELOPING, plugin.json and the pane's version line 0.12.0, CHANGELOG
 - [x] Live: a 3-step PowerShell script in the background with a Monitor tailing its output file filled the row 1/3 → 3/3 and ended `failed`, exit 1, `FAIL typecheck` (read from the store's rows)
-- [ ] Live, by the human: the same seen in the Agents pane on the desktop
+- [x] Live, by the human: the same seen in the Agents pane on the desktop (2026-11-07, a 3-step demo run: `1/3 · lint`, `2/3` FAILED with `FAIL typecheck`, `3/3`, `EXIT 1`; the human: "looks ok")
 
 ## Mandatory validations
 
@@ -69,7 +69,7 @@ A background PowerShell command is a shell row like a Bash one. A background run
 |----------|-----------|
 | agent-watch | 0.12.0, committed |
 
-Next: the human looks at a step-reporting run in the Agents pane on the desktop; `.ai/GOALS.md`, `TODO.md` and `CURRENT_STATE.md` were left out of this commit because another session holds uncommitted edits to them.
+Next: none. `.ai/GOALS.md`, `TODO.md` and `CURRENT_STATE.md` were recorded in a second commit, since another session held uncommitted edits to them.
 
 ## Execution log
 
