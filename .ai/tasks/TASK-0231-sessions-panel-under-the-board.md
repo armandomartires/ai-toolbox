@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-05
-- Updated: 2026-11-05
+- Updated: 2026-11-07
 - Applies to: `mods/task-compass/`
 - Source: the human, 2026-11-04: "Why is it that the Agents `Sessions` panel isn't showing in the Compass tab?"
 
@@ -38,7 +38,7 @@ agent-watch's meter and Sessions panel (ADR-0048) sit directly under the Compass
 
 - [x] No ancestor of the contribution has a `minHeight` of the pane's rows, in either order, on either surface (`slot.test.tsx`, 4 cases)
 - [x] `plugin.json` and `VERSION` read 0.11.1
-- [ ] Seen live: the Sessions panel under the board on the desktop
+- [x] Seen live: the Sessions panel under the board on the desktop (the person, 2026-11-07: Sprints, then the meter line, then SESSIONS with its KPI row and sunburst, no empty space between)
 
 ## Mandatory validations
 
@@ -56,10 +56,11 @@ agent-watch's meter and Sessions panel (ADR-0048) sit directly under the Compass
 |----------|-----------|
 | task-compass | 0.11.1 |
 
-Next: a live look after a reload, then done.
+Done 2026-11-07.
 
 ## Execution log
 
 - 2026-11-05 · Claude Code (Opus 5.5, orchestrated) · D1 traced the missing panel to the board's `minHeight`; T5 replaced it with `flexGrow={1}`; R3 found the slot test missed the sibling case; T6 extended it and proved it red on the old code
   - Evidence: with `minHeight` restored, 4 slot tests fail; with the fix, `PASS task-compass:  68 pass`
   - Evidence: `python scripts/check-mods.py` → `OK (5 mods)`
+- 2026-11-07 · the person · live check on the desktop after `/reload-plugins --force`: the Sessions panel sits directly under the Compass board (COMPASS 0.12.1, agent-watch 0.13.1); closed
