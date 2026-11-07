@@ -467,7 +467,7 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0212-collect-within-budget.md
 - [x] TASK-0214 — task-orchestrator cancels a handed-off task (B-068)
   .ai/tasks/TASK-0214-cancel-a-handoff.md
-- [?] TASK-0215 — agent-watch 0.8.0: the band follows the run
+- [x] TASK-0215 — agent-watch 0.8.0: the band follows the run
   .ai/tasks/TASK-0215-agent-watch-band-follows-the-run.md
 - [x] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
   .ai/tasks/TASK-0216-agent-watch-gap-and-kpis.md

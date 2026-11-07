@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: in progress
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-03
-- Updated: 2026-11-03
+- Updated: 2026-11-07
 - Applies to: `mods/agent-watch/` (0.7.0 → 0.8.0)
 - Source: the human's screenshots of 2026-11-03 (band `7/7 STEPS · ALL DONE · 1 RUNNING` beside a Sessions panel at `S01 · ORCH BALANCED 4/7`, T3 running, T4 and R3 queued) and "the bar is not as clear as the Sessions panel, what can we improve?"; the proposal; "Yes, do it here"
 
@@ -49,7 +49,7 @@ The band above the prompt says what the Sessions panel says: while a task-orches
 - [x] With no run, the band is unchanged, except it no longer says `ALL DONE` while an agent runs
 - [x] The panel's top row is not DONE while a member runs or is queued
 - [x] The band's running mark is the legend's `●`
-- [ ] Seen live in the desktop app's band during an orchestrator run
+- [x] Seen live in the desktop app's band during an orchestrator run (the person, 2026-11-07: `6/10 TASKS · ● E2 · investigator · … · 26s · +2 RUNNING · 1 QUEUED · WAIT ON E1`, S01 RUNNING in the panel, never ALL DONE)
 
 ## Mandatory validations
 
@@ -68,9 +68,10 @@ The band above the prompt says what the Sessions panel says: while a task-orches
 |----------|-----------|
 | `mods/agent-watch/` | 0.7.0 → 0.8.0: `band.tsx` follows the ledger (marks, `n/m TASKS`, the running task, `N QUEUED · WAIT ON`), `sessions.ts` never DONE with an open member, README |
 
-Next: the live look at the band in the desktop app (`TASK-0216` found the library's task-compass 0.8.0 hid the panel).
+Done 2026-11-07.
 
 ## Execution log
 
 - 2026-11-03 · Claude Code (Opus 5.5) · opened from the human's screenshots; dispatched to an isolated builder beside TASK-0201
 - 2026-11-03 · Claude Code (Opus 5.5) · A1 built it in its own worktree (130 pass; 5 tests failed at 0.7.0's `band.tsx` and `sessions.ts`); its diff copied into the checkout; RA1 not ready (no-run ALL DONE rule, a member-less open sub-session, a final-state test gap); A2 fixed the last two and the scope records the first, each new test red-proved; RA2 ready; `tests/test-mods.sh --mod agent-watch` 131 pass, `check-mods.py` OK (5 mods), run by the coordinator; the live check is the human's
+- 2026-11-07 · the person · live check on the desktop over a ten-task ledger (five scouts done, three investigators running, two queued): the band read `5/8 TASKS`, then `6/10 TASKS`, named the running task with role and elapsed time, said `+2 RUNNING · 1 QUEUED · WAIT ON E1`, drew the legend's `●`, and fell back to the task list once every task ended; the panel's S01 row read RUNNING, then QUEUED, never DONE while a member was open; closed
