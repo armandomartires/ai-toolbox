@@ -285,6 +285,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0241 — agent-watch and task-compass read cleanly in Daylight, as SIGMAorbital specifies
 - [x] TASK-0249 — agent-watch 0.11.3, 0.12.0: PowerShell background shells, and step progress of a background run
 - [x] TASK-0250 — agent-watch 0.12.1: each session keeps its rows under its own store key
+- [x] TASK-0252 — Pressable overlays no longer paint the desktop's `…` over their words
 
 - [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
 

@@ -98,6 +98,8 @@ A project with no `GOALS.md` (under `.ai/`, or a root one the mod has yet to cop
 
 ## Not yet verified
 
+Version 0.12.2 (`TASK-0252`): a Sprints row's press is a blank sized to the name as drawn, cut by `fit`, not to the whole name, and the blank button sits in a box that does not shrink, so the desktop paints no `…` over the name, `‹ PREV`, `NEXT ›` or a fold toggle. Tested in the mod test kit; the kit draws no native button, so only the desktop shows that the mark is gone and a press still lands.
+
 Version 0.11.1 (`TASK-0231`): the board no longer holds a minimum height of the pane's rows, so what another mod contributes to the pane (agent-watch's Sessions panel and meter) sits directly under the board in either load order instead of below the visible pane.
 
 The handle drawn by the shared panel (`TASK-0223`) was seen live in a terminal (2026-11-04); not yet on the desktop, which drew the organization library's 0.9.1 while it was synced.

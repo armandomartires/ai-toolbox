@@ -335,3 +335,30 @@ test('syncTheme reads the pin from the store: dark or light pins, anything else 
   await start($)
   expect((await title($))).toBe(TOKENS.light['text-1'])
 })
+
+test('a pressable on a desktop: its words a Text, a blank Button over them no longer than its label, held in a Box that does not shrink; the terminal keeps its Button', async ($, on) => {
+  // A desktop cuts a native Button's label wider than the Button and paints `…` over the words (TASK-0252).
+  on('ui.render', ($, e) => {
+    const ui = $.ui.resolve(e)
+    const { pressable } = kit(ui, e.surface)
+    return pressable({ key: 'fold', label: '▾ HIDE', token: 'text-3', onPress: () => {} }, <ui.Text color="#000000">▾ HIDE</ui.Text>)
+  })
+  const PANE = { plugin: 'my-mod', component: 'Pane', requestId: 'press', props: { title: 'x', isFocused: false, bodyColumns: 30, placement: 'dock', scroll: { offset: 0, bodyRows: 10 }, view: {} } } as const
+
+  const desk = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const all = await desk.findAll({})
+  const at = all.findIndex(one => one.type === 'Button')
+  const button = all[at]
+  expect(button?.key).toBe('fold')
+  expect(button?.text).toBe(' '.repeat(Array.from('▾ HIDE').length))
+  expect(all[at - 1]?.type).toBe('Box')
+  expect(all[at - 1]?.props.flexShrink).toBe(0)
+  expect(all[at - 2]?.props).toMatchObject({ position: 'absolute', overflow: 'hidden', height: 1 })
+  expect((await desk.find({ type: 'Text', text: '▾ HIDE' }))?.props.color).toBe('#000000')
+  await desk.unmount()
+
+  const term = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await term.find({ type: 'Button' }))?.text).toBe('▾ HIDE')
+  expect(await term.find({ type: 'Box', text: / / })).toBeUndefined()
+  await term.unmount()
+})

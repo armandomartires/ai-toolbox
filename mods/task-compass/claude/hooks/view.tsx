@@ -125,7 +125,7 @@ const noteBelow = ($: EngineInterface, said: string) => {
 const isEngineElement = (value: unknown) => typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'engine'
 
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it after the legend, so the person sees which copy draws the board. */
-export const VERSION = '0.12.1'
+export const VERSION = '0.12.2'
 
 /** The Compass pane: the sprint carousel and its legend, then what another mod contributes (ADR-0048). */
 export const registerPane = (on: On) => {
@@ -228,13 +228,15 @@ export const registerPane = (on: On) => {
       ) : null
       // Brightness is the hierarchy: the focus and the current sprint in
       // text-1, a finished or parked one in text-3, the rest text-2.
+      // The words as drawn, cut by `fit`: a pressable's blank is sized to these, never to the uncut name (TASK-0252).
+      const nameText = row.text ? `${row.glyph && isTerminal ? ' ' : ''}${fit(row.text, Math.max(4, columnWidth - row.prefix.length - 3))}` : ''
       const name = row.text ? (
         <Text
           color={color(row.textColor ?? (row.bold ? 'text-1' : row.dim ? 'text-3' : 'text-2'))}
           weight={row.bold ? 'semibold' : undefined}
           wrap="truncate-end"
         >
-          {`${row.glyph && isTerminal ? ' ' : ''}${fit(row.text, Math.max(4, columnWidth - row.prefix.length - 3))}`}
+          {nameText}
         </Text>
       ) : null
       if (row.fold) {
@@ -267,7 +269,7 @@ export const registerPane = (on: On) => {
         <Box flexDirection="row">
           {prefix}
           {glyph}
-          {pressable({ key, label: row.text || ' ', token: nameToken, onPress: toggle }, name ?? ' ')}
+          {pressable({ key, label: nameText || ' ', token: nameToken, onPress: toggle }, name ?? ' ')}
         </Box>
       )
       if (opened !== key) return dot

@@ -716,8 +716,9 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
   }
 
   /**
-   * Words the person presses, `shown` (Texts in their tokens), with `label` naming the control and `token` the
-   * first Text's colour. The terminal draws a plain Button holding them, in their colours, as before.
+   * Words the person presses, `shown` (Texts in their tokens), with `label` the words exactly as `shown` draws them
+   * (after any `fit`, never the uncut text) and `token` the first Text's colour. The terminal draws a plain Button
+   * holding them, in their colours, as before.
    *
    * A desktop draws a Button as its own native control and its label in the desktop's colour, whatever the Texts
    * in it say (authoring guide; the engine types: "a desktop a native button", no colour prop): near-white on a
@@ -727,6 +728,12 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
    * over the words (a doubled, offset label, seen live 2026-11-07); `key` addresses it. Unverified until seen live: that a press lands on the Button
    * through the overlay (a `Client` in an absolute Box takes the pointer, ADR-0053), and that a blank plain Button
    * paints nothing over the words at rest.
+   *
+   * A desktop cuts a native Button's label that is wider than the Button and paints its own `…` at the cut, over
+   * the words (seen live 2026-11-07, TASK-0252): a blank longer than the words (`label` the uncut text), or one as
+   * long whose figure spaces and the button's padding outrun the words' proportional glyphs (`HIDE`). So the blank
+   * is never longer than `label`, and the Button sits in a Box that does not shrink (`flexShrink` 0): it keeps the
+   * width of its blank, so there is nothing to cut, and the overlay's clip hides what passes the words.
    */
   const pressable = (opts: { key: string; label: string; token: Token; hotkey?: string; onPress: () => void }, shown: RenderChildren) =>
     isTerminal ? (
@@ -737,9 +744,11 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
       <Box flexDirection="row" flexShrink={1}>
         {shown}
         <Box position="absolute" top={0} left={0} width="100%" height={1} overflow="hidden">
-          <Button key={opts.key} plain hotkey={opts.hotkey} onPress={opts.onPress}>
-            <Text color={color(opts.token)}>{FIGURE_SPACE.repeat(Math.max(1, Array.from(opts.label).length))}</Text>
-          </Button>
+          <Box flexShrink={0}>
+            <Button key={opts.key} plain hotkey={opts.hotkey} onPress={opts.onPress}>
+              <Text color={color(opts.token)}>{FIGURE_SPACE.repeat(Math.max(1, Array.from(opts.label).length))}</Text>
+            </Button>
+          </Box>
         </Box>
       </Box>
     )

@@ -523,6 +523,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0240-mods-theme-argument.md
 - [x] TASK-0241 — agent-watch and task-compass read cleanly in Daylight, as SIGMAorbital specifies
   .ai/tasks/TASK-0241-daylight-readability.md
+- [x] TASK-0252 — Pressable overlays no longer paint the desktop's `…` over their words
+  .ai/tasks/TASK-0252-pressable-overlay-ellipsis.md
 
 - [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
   .ai/tasks/TASK-0259-vault-session-project-tokens.md

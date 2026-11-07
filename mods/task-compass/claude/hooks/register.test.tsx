@@ -647,3 +647,80 @@ test('/compass theme light pins Daylight for the next render; a bad value answer
   expect((await ui.find({ type: 'Text', text: /^COMPASS$/ }))?.props.color).toBe(TOKENS.light['text-1'])
   await ui.unmount()
 })
+
+// Pressable overlays (TASK-0252): a desktop truncates a native Button's label that is wider than its box and paints
+// its own `…` at the cut, over the words the overlay lies on (seen live 2026-11-07: `B-057 Unexercised: secrets.p…`
+// and `HIDE` with a dot through it). Every overlay's blank is no longer than the words it lies over, and its Button
+// sits in a Box that does not shrink, so the desktop never cuts the blank: what passes the words is clipped instead.
+type DrawnNode = { type?: string; key?: unknown; props?: Record<string, unknown>; children?: unknown }
+const kidsOf = (node: unknown): unknown[] => {
+  if (node === null || typeof node !== 'object') return []
+  const c = (node as DrawnNode).children ?? (node as DrawnNode).props?.children
+  return c === undefined || c === null ? [] : Array.isArray(c) ? c.flat(Infinity) : [c]
+}
+const textOf = (node: unknown): string =>
+  typeof node === 'string' ? node : typeof node === 'number' ? String(node) : kidsOf(node).map(textOf).join('')
+const keyOf = (node: unknown) => String((node as DrawnNode).key ?? (node as DrawnNode).props?.key ?? '')
+/** Each desktop overlay in a drawn tree: its blank Button, the Box holding that Button, and the words drawn before the overlay. */
+const overlaysOf = (root: unknown) => {
+  const found: { key: string; blank: string; words: string; holder: DrawnNode | undefined }[] = []
+  const buttonIn = (node: unknown, parent: unknown): { button: unknown; parent: unknown } | undefined => {
+    if ((node as DrawnNode)?.type === 'Button') return { button: node, parent }
+    for (const kid of kidsOf(node)) {
+      const hit = buttonIn(kid, node)
+      if (hit) return hit
+    }
+  }
+  const walk = (node: unknown) => {
+    const kids = kidsOf(node)
+    kids.forEach((kid, at) => {
+      const k = kid as DrawnNode
+      if (k?.type === 'Box' && k.props?.position === 'absolute') {
+        const hit = buttonIn(kid, undefined)
+        if (hit && /^ +$/.test(textOf(hit.button))) {
+          found.push({ key: keyOf(hit.button), blank: textOf(hit.button), words: kids.slice(0, at).map(textOf).join(''), holder: hit.parent as DrawnNode | undefined })
+        }
+      }
+      walk(kid)
+    })
+  }
+  walk(root)
+  return found
+}
+const expectOverlaysFit = (overlays: ReturnType<typeof overlaysOf>) => {
+  expect(overlays.length).toBeGreaterThan(0)
+  for (const one of overlays) {
+    expect(Array.from(one.blank).length, `${one.key}: blank of ${Array.from(one.blank).length} over ${JSON.stringify(one.words)}`).toBeLessThanOrEqual(Array.from(one.words).length)
+  }
+  for (const one of overlays) {
+    expect(one.holder?.type, `${one.key}: the Button's holder`).toBe('Box')
+    expect(one.holder?.props?.flexShrink, `${one.key}: the Button's holder does not shrink`).toBe(0)
+  }
+}
+
+const LONG_GOALS = `# Project
+
+## Sprint 1 — Hardening
+Goal: Close the unexercised paths
+- [>] B-057 Unexercised: secrets.py redaction is never run by any test in the suite
+- [ ] Short one
+`
+
+test('a desktop\'s pressable overlay is never longer than the words it lies over: a truncated Sprints row, HIDE and SHOW', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  shared(on, LONG_GOALS)
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: 48 } })
+  const open = overlaysOf(await ui.drawn())
+  // The long story is cut by `fit`, and its overlay is laid over the cut words, not the whole name.
+  const story = open.find(one => one.words.includes('B-057'))
+  expect(story, JSON.stringify(open.map(one => one.words))).toBeDefined()
+  expect(story?.words.endsWith('…'), story?.words).toBe(true)
+  expect(open.some(one => one.words.trim() === '▾ HIDE'), JSON.stringify(open.map(one => one.words))).toBe(true)
+  expectOverlaysFit(open)
+  await ui.press({ key: 'fold-s1' })
+  const folded = overlaysOf(await ui.drawn())
+  expect(folded.some(one => /^▸ SHOW/.test(one.words.trim())), JSON.stringify(folded.map(one => one.words))).toBe(true)
+  expectOverlaysFit(folded)
+  await ui.unmount()
+})

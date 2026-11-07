@@ -52,6 +52,8 @@ Lines printed within 200 ms reach the mod as one event, and each of its lines is
 
 ## Not yet verified
 
+Version 0.13.2 (`TASK-0252`): a pressable's blank native button no longer paints the desktop's `…` over its words (`▾ HIDE`, `▸ SHOW …`, a row name, `OPEN TRANSCRIPT`): it sits in a box that does not shrink, so the desktop has nothing to cut, and its blank is never longer than the words. Tested in the mod test kit; the kit draws no native button, so only the desktop shows that the mark is gone and a press still lands.
+
 Version 0.13.1: Daylight reads on a desktop (`TASK-0241`): pressable words are drawn as text outside a blank native button, and the sunburst follows SIGMAorbital in Daylight. Version 0.13.0: `/agent-watch theme dark|light|auto` (`TASK-0240`).
 
 Version 0.12.0: step progress of a background run (above). Tested in the mod test kit. Proved live in a desktop session before it was built (2.1.318): a Monitor's per-line event reaches the mod's `prompt.submit` hook with origin `task-notification`, as `<event>step 1/3 lint ok</event>` with no `<status>`, and its expiry arrives the same way as `<event>[Monitor expired after 3m …]</event>`. Until 0.12.0 the mod took a Monitor's first event for its end and drew the monitor done.
