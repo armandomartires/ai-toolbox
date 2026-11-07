@@ -1,5 +1,8 @@
 # Changelog
 
+## agent-watch 0.12.0, 0.11.3
+- A background run that prints `step <n>/<m> <label> <ok|FAIL>` per finished step, relayed by a Monitor tailing its output file, fills its Sessions row step by step: `n/m` in the STEPS cell and arc, `n/m STEPS · <last>` or `· FAIL <label>` in the caption, FAILED from the first `FAIL` on (`TASK-0249`). The Monitor is tied to the run by the task id its command names and draws no row of its own. A Monitor's event is no longer taken for its end, which drew every monitor done at its first event. 0.11.3: a PowerShell command run in the background, or moved there at its timeout, is a shell row like a Bash one. Tested in the mod test kit (166) and live from the store's rows; not yet seen in the pane.
+
 ## Mods layout
 - A mod keeps its Claude Code plugin under `mods/<name>/claude/` (`TASK-0233`, `ADR-0054`); `core/` and other harness folders are added when a second harness needs them. `check-mods.py` requires `claude/.claude-plugin/plugin.json`. Mod versions are unchanged.
 

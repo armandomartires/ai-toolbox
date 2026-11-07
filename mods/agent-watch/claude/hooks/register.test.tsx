@@ -846,6 +846,53 @@ const backgroundTools = (on: On) => {
 const notice = (id: string, status: string, summary: string) =>
   `<task-notification>\n<task-id>${id}</task-id>\n<status>${status}</status>\n<summary>${summary}</summary>\n</task-notification>`
 
+/** A Monitor's event as it arrived live (2.1.318): no status, the line in <event>. */
+const monitorEvent = (id: string, line: string) =>
+  `<task-notification>\n<task-id>${id}</task-id>\n<summary>Monitor event: "gate steps"</summary>\n<event>${line}</event>\nIf this event is something the user would act on now, send a PushNotification.\n</task-notification>`
+
+test("a monitor on a background run's output fills that run's row step by step, and a FAIL marks it failed", async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  backgroundTools(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Bash', command: './gates.sh', description: 'Run the driver', run_in_background: true })
+  // The monitor tails the run's own output file, which names its id (b1).
+  await $.tool.call({ tool: 'Monitor', description: 'gate steps', command: 'tail -f /tmp/claude/tasks/b1.output | grep --line-buffered "^step "', timeout_ms: 300_000 } as never)
+  const event = (line: string) => $.prompt.submit({ text: monitorEvent('m1', line), origin: { kind: 'task-notification' } } as never)
+  const look = async (check: (text: (pattern: RegExp) => Promise<string | undefined>) => Promise<void>) => {
+    const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+    await check(async pattern => (await ui.find({ text: pattern }))?.text)
+    await ui.unmount()
+  }
+
+  await event('step 1/3 lint ok')
+  await clock.advance(1_000)
+  await look(async text => {
+    // One row, the run's: the monitor is folded into it, and it is still running.
+    expect(await text(/^1 RUNNING$/)).toBeDefined()
+    expect(await text(/monitor · gate steps/)).toBeUndefined()
+    expect(await text(/1\/3 STEPS · lint/)).toBeDefined()
+    expect(await text(/^1\/3$/)).toBeDefined()
+  })
+
+  await event('step 2/3 typecheck FAIL')
+  await clock.advance(1_000)
+  await look(async text => {
+    expect(await text(/2\/3 STEPS · FAIL typecheck/)).toBeDefined()
+    expect(await text(/^2\/3$/)).toBeDefined()
+    // Failed from that step on, though the run goes on.
+    expect(await text(/^1 RUNNING$/)).toBeDefined()
+  })
+
+  await event('step 3/3 tests ok')
+  await $.prompt.submit({ text: notice('b1', 'completed', 'Background command "Run the driver" completed (exit code 0)'), origin: { kind: 'task-notification' } } as never)
+  await clock.advance(1_000)
+  await look(async text => {
+    expect(await text(/^0 RUNNING$/)).toBeDefined()
+    expect(await text(/3\/3 STEPS · FAIL typecheck · EXIT 0/)).toBeDefined()
+  })
+})
+
 test('a background command is a running row with no agent, and its notification ends it with its exit code', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000 })
   engine(on, { value: [] })
@@ -880,6 +927,31 @@ test('a background command is a running row with no agent, and its notification 
   // Its time stopped at the notification.
   expect(await text(/^1m35s$/)).toBeDefined()
   expect((await ui.find({ type: 'Text', text: /^ *◆ $/ }))?.props.color).toBe(DARK.red)
+  await ui.unmount()
+})
+
+test('a PowerShell command moved to the background at its timeout is a running shell until its notification', async ($, on) => {
+  const clock = mock.clock(on, { now: 700_000 })
+  engine(on, { value: [] })
+  // The result a live PowerShell call gave when its 600 s timeout passed.
+  on('tool.call', (_, e) => ({ result: (e as unknown as Record<string, unknown>).tool === 'PowerShell' ? { stdout: '', stderr: '', interrupted: false, backgroundTaskId: 'b0xa8rys0', timedOutAfterMs: 600_000 } : {} }))
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+  await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
+  await $.tool.call({ tool: 'PowerShell', command: 'wsl -d AlmaLinux-10 bash -lc ./gates.sh', description: 'Run the gates', timeout: 600_000 } as never)
+  await clock.advance(5_000)
+  {
+    const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+    const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
+    expect(await text(/^1 RUNNING$/)).toBeDefined()
+    expect(await text(/shell · Run the gates/)).toBeDefined()
+    // Backdated by its timeout: it has run ten minutes already.
+    expect(await text(/^10m05s$/)).toBeDefined()
+    await ui.unmount()
+  }
+  await $.prompt.submit({ text: notice('b0xa8rys0', 'completed', 'Background command "Run the gates" completed (exit code 0)'), origin: { kind: 'task-notification' } } as never)
+  await clock.advance(5_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect((await ui.find({ text: /^0 RUNNING$/ }))?.text).toBeDefined()
   await ui.unmount()
 })
 

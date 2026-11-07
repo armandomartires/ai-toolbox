@@ -40,6 +40,10 @@ export type BackgroundTask = {
   exitCode?: number
   startedAt: number
   endedAt?: number
+  /** Its known steps, from a Monitor's `step n/m` events. */
+  steps?: { done: number; total: number; failed?: string; last?: string }
+  /** A monitor tied to the shell it watches: that shell's row carries it. */
+  linkedTo?: string
 }
 
 /** A Workflow run. */
@@ -251,9 +255,16 @@ const backgroundMember = (task: BackgroundTask): Member => ({
   isActive: task.status === 'running',
   startedAt: task.startedAt,
   endedAt: task.endedAt,
-  badge: outcomeOf(task.status),
+  // A run with a step reported FAIL is failed from that step on, still running or not.
+  badge: task.steps?.failed !== undefined ? { status: 'critical', word: 'FAILED' } : outcomeOf(task.status),
   background: task,
 })
+
+/** The background tasks drawn as rows: all but a monitor tied to a shell that is listed, which that shell's row stands for. */
+export const drawnBackground = <T extends BackgroundTask>(list: readonly T[]): T[] => {
+  const shells = new Set(list.filter(task => task.kind === 'shell').map(task => task.id))
+  return list.filter(task => task.linkedTo === undefined || !shells.has(task.linkedTo))
+}
 
 /** A session's agents, done of all; its background tasks are not agents. */
 const countOf = (all: Member[], unit: Progress['unit']): Progress => {
@@ -300,7 +311,7 @@ export const sessionTree = (input: SessionInput): SessionNode[] => {
     if (isSessionRow(row) || (hasOrch && workers.has(row.id))) continue
     add(ownerOf(row), agentMember(row))
   }
-  for (const task of input.background ?? []) add(ownerOfLoop(task.ownerId), backgroundMember(task))
+  for (const task of drawnBackground(input.background ?? [])) add(ownerOfLoop(task.ownerId), backgroundMember(task))
 
   const nodes: (SessionNode & { parent?: string })[] = []
   const main = members.get(MAIN) ?? []
@@ -422,6 +433,8 @@ export const memberCaption = (member: Member, at: number) => {
   if (task !== undefined) {
     // The command when the description does not already say it, and the exit code once known.
     if (task.command && fit(task.command, 60) !== task.description) parts.push(`$ ${task.command}`)
+    // Its steps: the first that failed, else the latest one reported.
+    if (task.steps !== undefined) parts.push(`${task.steps.done}/${task.steps.total} STEPS${task.steps.failed !== undefined ? ` · FAIL ${task.steps.failed}` : task.steps.last ? ` · ${task.steps.last}` : ''}`)
     if (task.exitCode !== undefined) parts.push(`EXIT ${task.exitCode}`)
     return parts.join(' · ')
   }

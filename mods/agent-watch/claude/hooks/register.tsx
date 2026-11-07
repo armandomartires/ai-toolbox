@@ -7,15 +7,18 @@ import {
   assignTones,
   backgroundAdded,
   backgroundEnded,
+  backgroundLinked,
   backgroundOwnerEnded,
   backgroundReconciled,
   backgroundStarted,
+  backgroundStepped,
   callEnded,
   callStarted,
   endedBadly,
   isActive,
   markAlerted,
   mergeListed,
+  monitorEventsOf,
   notificationOf,
   recordRun,
   runningText,
@@ -226,6 +229,8 @@ export const register: Register = on => {
   })
 
   // A background task's notification names it and how it ended.
+  // A Monitor's event (no status, `<event>` lines) is not an end: its `step n/m`
+  // lines move the run it reports on (seen live: it arrives here, 2.1.318).
   on('prompt.submit', async ($, e, next) => {
     if (e.origin?.kind === 'task-notification') {
       const said = notificationOf(e.text)
@@ -233,6 +238,8 @@ export const register: Register = on => {
         const at = await $.clock.now()
         await update($, background, list => backgroundEnded(list, said.id, said.word, said.exitCode, at)).then(() => keep($)).catch(() => undefined)
       }
+      const events = monitorEventsOf(e.text)
+      if (events !== undefined) await update($, background, list => backgroundStepped(list, events.id, events.lines)).then(() => keep($)).catch(() => undefined)
     }
 
     return next(e)
@@ -264,7 +271,8 @@ export const register: Register = on => {
     // A background shell or monitor opened (its result names its id), or stopped.
     const opened = backgroundStarted(name, e as unknown as Record<string, unknown>, ran.result, agentId, await $.clock.now())
     if (opened !== undefined) {
-      await update($, background, list => backgroundAdded(list, opened)).then(() => keep($))
+      // A monitor whose command names a running shell's id reports on that shell.
+      await update($, background, list => backgroundAdded(list, backgroundLinked(list, opened))).then(() => keep($))
       return ran
     }
     if (name === 'TaskStop') {

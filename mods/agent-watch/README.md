@@ -13,7 +13,8 @@ A Claude Code mod that keeps an **Agents** pane beside the chat: this session an
 - **Sessions**: **THIS SESSION** first, then each sub-session under the one that started it, active ones before ended ones, newest first:
   - **ORCH BALANCED** (the policy in force; `· OFF` once `/orchestrate off`): the [task-orchestrator](../task-orchestrator/README.md) run, while its ledger holds a task. Its rows are the ledger's tasks in order, `T1 · builder · <objective>`, with the worker's model/effort (observed, else requested). A queued task waits and says `WAITS ON T1`. The ledger's words are badges: `▲ BLOCKED` and `▲ PARTIAL` amber, `◆ FAILED` red, `○ CANCELLED` grey.
   - **WF review-changes**: a Workflow run (multi-agent orchestration), its rows the agents its script started.
-- **Background tasks** (`ADR-0049`): a shell command run in the background (`run_in_background`, Ctrl+B, or moved at its timeout) or a Monitor is a row of the session whose loop started it, `B01 · shell · Run the driver`, with its elapsed time, its state (running, done, failed, stopped) and a caption with its command and `EXIT n` once known. It ends by its notification, a TaskStop, or the end of the subagent it dies with; the engine's in-flight list at each turn's end adds one that was missed and ends one no longer in it. `N RUNNING` and FAILED count them; AGENTS, the band and the status line do not. A background subagent is an agent row, never a task row.
+- **Background tasks** (`ADR-0049`): a shell command run in the background by Bash or, since 0.11.3, PowerShell (`run_in_background`, Ctrl+B, or moved at its timeout) or a Monitor is a row of the session whose loop started it, `B01 · shell · Run the driver`, with its elapsed time, its state (running, done, failed, stopped) and a caption with its command and `EXIT n` once known. It ends by its notification, a TaskStop, or the end of the subagent it dies with; the engine's in-flight list at each turn's end adds one that was missed and ends one no longer in it. `N RUNNING` and FAILED count them; AGENTS, the band and the status line do not. A background subagent is an agent row, never a task row.
+  - **Step progress of a background run** (0.12.0): a run that prints its known steps fills its row step by step instead of `0/1` until it ends. The run prints one line per finished step, and a Monitor turns each of those lines into an event that reaches the mod. See *How a run reports its steps* below. The row's STEPS cell and arc show `n/m`, its caption says `n/m STEPS · <last step>`, and a step reported `FAIL` turns the row FAILED (`FAIL <label>` in the caption) from that step on, though it still counts as running until it ends. A Monitor whose command names the run's task id (for example by tailing its output file) is tied to that run and draws no row of its own. A Monitor that names no running shell is the row itself.
   - **general-purpose · Build it**: a subagent that keeps its own task list (TodoWrite, in a terminal session; the desktop app gives subagents none) or spawned subagents of its own, its rows its children.
 - **Steps**: this session's task list (`3/5 STEPS`), or its agents when it keeps none; the orchestrator's tasks ended over all, queued ones counted; a Workflow run's agents; a delegating subagent's own steps, else its children. An agent without a task list counts as one step, `0/1` while it runs and `1/1` once ended.
 - **Colour is state**: running cyan, done `text-1`, failed red `◆`, blocked or partial amber `▲`, queued `text-3` outlined, stopped or cancelled `text-3` `○`. Ownership is shown by containment. The pane has no colour per session and no pulsing session icon.
@@ -29,7 +30,33 @@ A Claude Code mod that keeps an **Agents** pane beside the chat: this session an
 - **The band follows the orchestrator's run** (0.8.0, `TASK-0215`): while [task-orchestrator](../task-orchestrator/README.md)'s ledger has a task that is not in a final state, the meter is one mark per ledger task in the Sessions panel's own glyphs and colours (`■` done, cyan `●` running, hollow `□` queued, red `◆` failed, amber `▲` blocked or partial, `○` cancelled), then `4/7 TASKS` (ended of all), the running task as `T3 · builder · Draw the band` with its elapsed time, then `2 QUEUED` and, when they all wait on one task, `· WAIT ON T3`. The app's task list, which `wrap_up` ticks off at every turn end, is not read while a run is open. A narrow band cuts the objective first, then `WAIT ON`, then the queued text, and never wraps. A press on the running `●` opens that agent's transcript; the task text opens the Agents pane. With no open run the band is the task list's, as above. A session with a running or queued member is never `DONE` in the Sessions panel.
 - **The band shows the orchestrator's state while it is idle** (0.11.0, `TASK-0230`): with `/orchestrate on` the band says `ORCH BALANCED · IDLE` (the policy upper-cased) in text-3 when there is no task list, no running agent and no open task; a press opens the Agents pane. With a run open `ORCH <POLICY>` leads the line, and after a task list's meter it closes the line; it is the first part dropped when the line does not fit, before the objective or the step is cut. With orchestration off nothing changes. The same line is contributed to [task-compass](../task-compass/README.md)'s pane, so the idle line `ORCH <POLICY> · IDLE` appears there too. On a finished task list the label is dropped, not `ALL DONE`, when the band is narrow.
 
+## How a run reports its steps
+
+1. The script prints one line per **finished** step, on stdout, flushed at once:
+
+   ```
+   step <n>/<m> <label> <ok|FAIL>
+   ```
+
+   `n` counts from 1 and never passes `m`, the number of steps the run will take. `label` is free text and may be left out. The outcome, `ok` or `FAIL` in any case, is the line's last word. For example `step 3/7 mypy ok` or `step 4/7 pytest unit FAIL`. Any other line is ignored, and so is a line with `n` under 1, `n` above `m`, or `m` above 999. Done is the highest `n` reported, the total the latest `m`, and the first `FAIL` is kept. Print the step after it has run, not when it starts.
+2. Start the script in the background (Bash or PowerShell with `run_in_background`).
+3. Start a Monitor that tails that run's output file and keeps only the step lines. The file's name carries the run's task id, which ties the monitor to the run:
+
+   ```
+   tail -n +1 -f <the run's output file> | grep --line-buffered -E '^step [0-9]+/[0-9]+ '
+   ```
+
+   Give the Monitor a `timeout_ms` longer than the run; when the run ends its notification ends the row, and the monitor's expiry, later, changes nothing that shows. A Monitor that runs the script itself (`./gates.sh | grep --line-buffered -E '^step '`) also works; it is then the row.
+
+Lines printed within 200 ms reach the mod as one event, and each of its lines is read.
+
 ## Not yet verified
+
+Version 0.12.0: step progress of a background run (above). Tested in the mod test kit. Proved live in a desktop session before it was built (2.1.318): a Monitor's per-line event reaches the mod's `prompt.submit` hook with origin `task-notification`, as `<event>step 1/3 lint ok</event>` with no `<status>`, and its expiry arrives the same way as `<event>[Monitor expired after 3m …]</event>`. Until 0.12.0 the mod took a Monitor's first event for its end and drew the monitor done.
+
+Version 0.11.3: a PowerShell command run in the background, or moved there at its timeout, is a shell row like a Bash one (the tool's result has the same `backgroundTaskId` and `timedOutAfterMs`). Tested in the mod test kit only. Not yet seen live.
+
+Why the turn-end reconciliation never runs on this organization's machines: Claude Code's built-in `cc-plugin-sec-default@builtin` takes the outermost seat on a machine with managed settings and for Team and Enterprise organizations. It hooks `classic.*` and answers every classic event with `next.to(e, "append")`, which skips the whole `user` tier: every mod a person installs, `@inline` and dev-mods copies included. So `classic.Stop` and `classic.SubagentStop` never reach agent-watch. The chain is not broken: managed hooks and the settings hooks still run. Only an organization administrator can change this, through managed `prependPlugins`. The notification (`prompt.submit`, which sec-default does not pass over) and TaskStop are what end a background task there.
 
 The handle drawn by the shared panel (`TASK-0223`) was seen live in Compass's pane on the desktop (2026-11-04); not yet in the Agents pane.
 

@@ -393,7 +393,10 @@ export const trimTree = (tree: readonly SessionNode[], budget: number, at: numbe
 // names its id, and ended by its notification, a TaskStop, its owner's end
 // when it dies with it, or `classic.Stop`'s in-flight list no longer naming it.
 
-/** The tool result that opens a background task, if the call opened one: Bash's `backgroundTaskId`, Monitor's `taskId`. */
+/** The shell tools whose result names a background task by `backgroundTaskId`, with the same fields. */
+const SHELL_TOOLS = new Set(['Bash', 'PowerShell'])
+
+/** The tool result that opens a background task, if the call opened one: Bash's or PowerShell's `backgroundTaskId`, Monitor's `taskId`. */
 export const backgroundStarted = (
   tool: string,
   args: Record<string, unknown>,
@@ -403,7 +406,7 @@ export const backgroundStarted = (
 ): BackgroundTask | undefined => {
   const out = (result ?? {}) as Record<string, unknown>
   const text = (value: unknown) => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '')
-  if (tool === 'Bash' && typeof out.backgroundTaskId === 'string' && out.backgroundTaskId) {
+  if (SHELL_TOOLS.has(tool) && typeof out.backgroundTaskId === 'string' && out.backgroundTaskId) {
     const command = text(args.command)
     // A command moved to the background at its timeout started that long ago.
     const late = typeof out.timedOutAfterMs === 'number' ? out.timedOutAfterMs : 0
@@ -451,17 +454,101 @@ export const backgroundEnded = (list: BackgroundTask[], id: string, word: string
   )
 
 /**
+ * The engine's own line in a Monitor's `<event>` when the watch ends at its
+ * deadline (`[Monitor expired after 3m with 3 events delivered. …]`, seen live,
+ * 2.1.318): an end, though it has no `<status>`.
+ */
+const MONITOR_END = /<event>\s*\[Monitor (expired|stopped|killed|ended|exited)\b/i
+
+/** A Monitor's event notification: `<event>` blocks, no `<status>`, and not the engine's end line. It ends nothing (seen live, 2.1.318). */
+const isEventNotice = (text: string) => /<event>/.test(text) && !/<status>/.test(text) && !MONITOR_END.test(text)
+
+/**
  * What a task notification's text names: its task, its status, and the exit
  * code its summary gives (`... completed (exit code 1)`). None for a text that
- * names no task.
+ * names no task, and none for a Monitor's event, which is not an end.
  */
 export const notificationOf = (text: string): { id: string; word: string; exitCode?: number } | undefined => {
   const id = /<task-id>\s*([^<\s]+)\s*<\/task-id>/.exec(text)?.[1]
-  if (id === undefined) return undefined
-  const word = /<status>\s*([^<\s]+)\s*<\/status>/.exec(text)?.[1]?.toLowerCase() ?? 'completed'
+  if (id === undefined || isEventNotice(text)) return undefined
+  // A monitor that expired was killed at its deadline; one that exited says so with its code.
+  const ended = MONITOR_END.exec(text)?.[1]?.toLowerCase()
+  const word = /<status>\s*([^<\s]+)\s*<\/status>/.exec(text)?.[1]?.toLowerCase() ?? (ended === 'expired' || ended === 'stopped' || ended === 'killed' ? 'killed' : 'completed')
   const code = /exit code[:\s]+(-?\d+)/i.exec(text)?.[1]
 
   return { id, word, exitCode: code === undefined ? undefined : Number(code) }
+}
+
+/**
+ * A Monitor's event notification: its task and each line its `<event>` blocks
+ * carry (lines printed within 200 ms come batched in one). None for any other
+ * text.
+ */
+export const monitorEventsOf = (text: string): { id: string; lines: string[] } | undefined => {
+  const id = /<task-id>\s*([^<\s]+)\s*<\/task-id>/.exec(text)?.[1]
+  if (id === undefined || !isEventNotice(text)) return undefined
+  const lines = [...text.matchAll(/<event>([\s\S]*?)<\/event>/g)].flatMap(match => match[1]!.split(/\r?\n/)).map(line => line.trim()).filter(Boolean)
+
+  return { id, lines }
+}
+
+/** The most steps a run may declare; a larger `m` is taken for a typo. */
+const MAX_STEPS = 999
+
+/**
+ * One step line of the convention, `step <n>/<m> <label> <ok|FAIL>` (`ok` and
+ * `FAIL` in any case, the label optional and free text), as its numbers, label
+ * and outcome. None for any other line, or for `n` under 1 or above `m`.
+ */
+export const stepOf = (line: string): { n: number; m: number; label: string; isOk: boolean } | undefined => {
+  const match = /^\s*step\s+(\d+)\s*\/\s*(\d+)(?:\s+(.*?))?\s+(ok|fail)\s*$/i.exec(line)
+  if (match === null) return undefined
+  const n = Number(match[1])
+  const m = Number(match[2])
+  if (n < 1 || m < 1 || n > m || m > MAX_STEPS) return undefined
+
+  return { n, m, label: (match[3] ?? '').trim(), isOk: match[4]!.toLowerCase() === 'ok' }
+}
+
+/**
+ * A monitor's event lines applied to the run they report on: the shell it is
+ * tied to, else the monitor itself. Done is the highest step reported, total
+ * the latest `m`; the first `FAIL` is kept. Lines that are not steps change
+ * nothing, and an unknown task leaves the list as it was.
+ */
+export const backgroundStepped = (list: BackgroundTask[], monitorId: string, lines: readonly string[]): BackgroundTask[] => {
+  const monitor = list.find(one => one.id === monitorId)
+  if (monitor === undefined) return list
+  const targetId = monitor.linkedTo !== undefined && list.some(one => one.id === monitor.linkedTo) ? monitor.linkedTo : monitor.id
+  const steps = lines.map(stepOf).filter(step => step !== undefined)
+  if (steps.length === 0) return list
+
+  return list.map(one => {
+    if (one.id !== targetId) return one
+    const next = steps.reduce(
+      (acc, step) => ({
+        done: Math.max(acc.done, step.n),
+        total: step.m,
+        failed: acc.failed ?? (step.isOk ? undefined : step.label || `step ${step.n}`),
+        last: step.label || `step ${step.n}`,
+      }),
+      one.steps ?? { done: 0, total: steps[0]!.m },
+    )
+    return { ...one, steps: { done: Math.min(next.done, next.total), total: next.total, ...(next.failed !== undefined ? { failed: next.failed } : {}), ...(next.last ? { last: next.last } : {}) } }
+  })
+}
+
+/**
+ * A monitor tied to the shell it watches: the newest running shell whose id
+ * its command names (as in `tail -f …/tasks/<id>.output`). A shell, or a
+ * monitor that names none, is returned as it was.
+ */
+export const backgroundLinked = (list: readonly BackgroundTask[], task: BackgroundTask): BackgroundTask => {
+  if (task.kind !== 'monitor' || !task.command) return task
+  const named = list.filter(one => one.kind === 'shell' && one.status === 'running' && new RegExp(`(^|[^A-Za-z0-9])${one.id}([^A-Za-z0-9]|$)`).test(task.command!))
+  const shell = named.sort((a, b) => b.startedAt - a.startedAt)[0]
+
+  return shell === undefined ? task : { ...task, linkedTo: shell.id }
 }
 
 /** One entry of the engine's in-flight list (`classic.Stop`'s `background_tasks`), the fields read. */

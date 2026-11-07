@@ -5,11 +5,15 @@ import {
   agentKey,
   backgroundAdded,
   backgroundEnded,
+  backgroundLinked,
   backgroundOwnerEnded,
   backgroundReconciled,
   backgroundStarted,
+  backgroundStepped,
   memberCaption,
+  monitorEventsOf,
   notificationOf,
+  stepOf,
   sessionTree,
 } from './model'
 import { arcs, chartAgents, chartBackground, chartFailed, chartRunning } from './sunburst'
@@ -41,6 +45,18 @@ test('a Bash or Monitor result that names a task opens it; a foreground call ope
   expect(backgroundStarted('Monitor', { description: 'Watch the log', command: 'tail -f log', timeout_ms: 1 }, { taskId: 'm1', timeoutMs: 1 }, undefined, 0)).toMatchObject({ id: 'm1', kind: 'monitor', description: 'Watch the log' })
   expect(backgroundStarted('Bash', { command: 'ls' }, { stdout: '', stderr: '', interrupted: false }, undefined, 0)).toBeUndefined()
   expect(backgroundStarted('Read', { file_path: 'x' }, { backgroundTaskId: 'b5' }, undefined, 0)).toBeUndefined()
+})
+
+test('a PowerShell call moved to the background at its timeout opens a running shell, ended by its notification', () => {
+  // The result a live PowerShell call gave when its 600 s timeout passed.
+  const ps = backgroundStarted('PowerShell', { command: 'wsl -d AlmaLinux-10  bash -lc ./gates.sh', description: 'Run the gates', timeout: 600_000 }, { stdout: '', stderr: '', interrupted: false, backgroundTaskId: 'b0xa8rys0', timedOutAfterMs: 600_000 }, undefined, 700_000)
+  expect(ps).toEqual({ id: 'b0xa8rys0', kind: 'shell', description: 'Run the gates', command: 'wsl -d AlmaLinux-10 bash -lc ./gates.sh', ownerId: undefined, status: 'running', startedAt: 100_000 })
+  expect(backgroundStarted('PowerShell', { command: 'Start-Sleep 60' }, { backgroundTaskId: 'b6' }, 'a1', 0)?.description).toBe('Start-Sleep 60')
+  expect(backgroundStarted('PowerShell', { command: 'x' }, { backgroundTaskId: 'b8', backgroundEndsWithFinalResponse: true }, 'a1', 0)?.endsWithOwner).toBe(true)
+  expect(backgroundStarted('PowerShell', { command: 'Get-ChildItem' }, { stdout: '', stderr: '', interrupted: false }, undefined, 0)).toBeUndefined()
+  const said = notificationOf('<task-notification>\n<task-id>b0xa8rys0</task-id>\n<status>completed</status>\n<summary>Background command "Run the gates" completed (exit code 0)</summary>\n</task-notification>')!
+  const ended = backgroundEnded([ps!], said.id, said.word, said.exitCode, 900_000)
+  expect(ended[0]).toMatchObject({ id: 'b0xa8rys0', status: 'completed', exitCode: 0, endedAt: 900_000 })
 })
 
 test('a notification names its task, its status and the exit code its summary gives', () => {
@@ -138,4 +154,86 @@ test('past the member cap, a "+N" arc keeps background tasks out of the agent co
   expect(chartAgents(list)).toBe(1)
   expect(chartRunning(list)).toBe(1)
   expect(chartBackground(list)).toEqual({ total: 200, running: 200 })
+})
+
+// ---- Step progress of a background run ------------------------------------
+
+/** A Monitor's event notification as it arrived live (2.1.318): no <status>, the line in <event>. */
+const event = (id: string, ...lines: string[]) =>
+  `<task-notification>\n<task-id>${id}</task-id>\n<summary>Monitor event: "gate steps"</summary>\n<event>${lines.join('\n')}</event>\nIf this event is something the user would act on now, send a PushNotification.\n</task-notification>`
+
+test('a step line is step n/m, an optional label, and ok or FAIL', () => {
+  expect(stepOf('step 3/7 mypy ok')).toEqual({ n: 3, m: 7, label: 'mypy', isOk: true })
+  expect(stepOf('  step 4/7 pytest unit FAIL ')).toEqual({ n: 4, m: 7, label: 'pytest unit', isOk: false })
+  expect(stepOf('STEP 1 / 2 lint OK')).toEqual({ n: 1, m: 2, label: 'lint', isOk: true })
+  // No label: the outcome alone.
+  expect(stepOf('step 2/3 ok')).toEqual({ n: 2, m: 3, label: '', isOk: true })
+})
+
+test('a malformed step line, or one whose n is out of range, is no step', () => {
+  for (const line of ['step 3 of 7 mypy ok', 'step 3/7 mypy', 'step 3/7 mypy passed', 'Step: 3/7 ok', 'mypy ok', 'step /7 ok', 'step 3/ ok', 'step x/7 ok', ''])
+    expect(stepOf(line)).toBeUndefined()
+  // n greater than m, zero, or an absurd total.
+  expect(stepOf('step 8/7 extra ok')).toBeUndefined()
+  expect(stepOf('step 0/7 setup ok')).toBeUndefined()
+  expect(stepOf('step 1/0 ok')).toBeUndefined()
+  expect(stepOf('step 1/5000 ok')).toBeUndefined()
+})
+
+test("a monitor's event is not an end; its lines are read, batched ones split", () => {
+  expect(notificationOf(event('m1', 'step 1/3 lint ok'))).toBeUndefined()
+  expect(monitorEventsOf(event('m1', 'step 1/3 lint ok', 'step 2/3 types FAIL'))).toEqual({ id: 'm1', lines: ['step 1/3 lint ok', 'step 2/3 types FAIL'] })
+  // An end notice is no event.
+  expect(monitorEventsOf('<task-id>m1</task-id><status>completed</status><summary>done</summary>')).toBeUndefined()
+  expect(monitorEventsOf('a prompt with no task')).toBeUndefined()
+  // The engine's expiry line, as it arrived live, is an end: the watch was killed at its deadline.
+  const expired = event('m1', '[Monitor expired after 3m with 3 events delivered. Re-arm it if you still need the watch.]')
+  expect(monitorEventsOf(expired)).toBeUndefined()
+  expect(notificationOf(expired)).toEqual({ id: 'm1', word: 'killed', exitCode: undefined })
+})
+
+test("a monitor naming a running shell's id is tied to it, and its steps fill that shell; untied, the monitor is the run", () => {
+  const output = 'C:\\Temp\\claude\\tasks\\bgates01.output'
+  const monitor = (more: Partial<BackgroundTask> = {}): BackgroundTask => ({ id: 'm1', kind: 'monitor', description: 'gate steps', command: `tail -f ${output} | grep --line-buffered "^step "`, status: 'running', startedAt: 2_000, ...more })
+  const list = [shell('bgates01'), shell('bgates0', { startedAt: 1_500 })]
+  // The id must stand alone: bgates0 is a prefix of bgates01, not named.
+  expect(backgroundLinked(list, monitor()).linkedTo).toBe('bgates01')
+  expect(backgroundLinked([shell('bgates01', { status: 'completed' })], monitor()).linkedTo).toBeUndefined()
+  expect(backgroundLinked(list, monitor({ command: 'tail -f other.log' })).linkedTo).toBeUndefined()
+  expect(backgroundLinked(list, shell('b9', { command: 'echo bgates01' })).linkedTo).toBeUndefined()
+
+  const tied = [...list, monitor({ linkedTo: 'bgates01' })]
+  const one = backgroundStepped(tied, 'm1', ['step 1/3 lint ok', 'noise', 'step 2/3 typecheck FAIL'])
+  expect(one[0]!.steps).toEqual({ done: 2, total: 3, failed: 'typecheck', last: 'typecheck' })
+  expect(one[2]!.steps).toBeUndefined()
+  // A later ok keeps the first failure; done never goes back; a line that is not a step changes nothing.
+  const two = backgroundStepped(backgroundStepped(one, 'm1', ['step 3/3 tests ok']), 'm1', ['step 1/3 lint ok', 'Traceback'])
+  expect(two[0]!.steps).toEqual({ done: 3, total: 3, failed: 'typecheck', last: 'lint' })
+  expect(backgroundStepped(tied, 'm1', ['nothing here'])).toEqual(tied)
+  expect(backgroundStepped(tied, 'nope', ['step 1/3 ok'])).toEqual(tied)
+  // Untied: the monitor carries its own steps.
+  expect(backgroundStepped([monitor()], 'm1', ['step 1/2 build ok'])[0]!.steps).toEqual({ done: 1, total: 2, last: 'build' })
+})
+
+test('a run with steps shows n/m and its first failure, failed from that step on; its tied monitor is no row', () => {
+  const background: BackgroundTask[] = [
+    shell('b1', { description: 'Run the gates', command: './gates.sh', steps: { done: 2, total: 7, failed: 'pytest', last: 'pytest' } }),
+    { id: 'm1', kind: 'monitor', description: 'gate steps', command: 'tail -f b1.output', status: 'running', startedAt: 1_100, linkedTo: 'b1' },
+    shell('b2', { steps: { done: 3, total: 7, last: 'mypy' } }),
+  ]
+  const tree = sessionTree({ rows: [], runs: [], tones: {}, tasks: [], ledger: [], background })
+  const members = [...tree[0]!.running, ...tree[0]!.completed]
+  expect(members.map(member => member.key)).toEqual(['bg-b2', 'bg-b1'])
+  const gates = members.find(member => member.key === 'bg-b1')!
+  expect(gates.isActive).toBe(true)
+  expect(gates.badge?.word).toBe('FAILED')
+  expect(memberCaption(gates, 5_000)).toBe('$ ./gates.sh · 2/7 STEPS · FAIL pytest')
+  expect(memberCaption(members.find(member => member.key === 'bg-b2')!, 5_000)).toBe('$ python3 b2.py · 3/7 STEPS · mypy')
+  const list = arcs(tree, { now: 5_000 })
+  expect(list.find(arc => arc.key === 'bg-b1')?.progress).toEqual({ done: 2, total: 7 })
+  expect(list.find(arc => arc.key === 'bg-b2')?.progress).toEqual({ done: 3, total: 7 })
+  expect(chartBackground(list)).toEqual({ total: 2, running: 2 })
+  // A tied monitor whose shell is gone is drawn as itself.
+  const alone = sessionTree({ rows: [], runs: [], tones: {}, tasks: [], ledger: [], background: [background[1]!] })
+  expect(alone[0]!.running.map(member => member.key)).toEqual(['bg-m1'])
 })

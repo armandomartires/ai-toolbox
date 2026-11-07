@@ -139,14 +139,15 @@ const codesOf = (all: Struct[]): Map<string, string> => {
 const span = (start: number | undefined, end: number | undefined, now: number | undefined) =>
   start === undefined ? 0 : Math.max(0, (end ?? now ?? start) - start)
 
-/** A member's steps: its task list, else 0/1 while it runs or waits and 1/1 once ended. */
+/** A member's steps: its task list, a background run's reported steps, else 0/1 while it runs or waits and 1/1 once ended. */
 const memberRoll = (m: Member, now: number | undefined): Roll => {
   const tasks = m.row?.tasks
   const own = tasks !== undefined && tasks.length > 0
+  const reported = m.background?.steps
   const ended = stateKind(m.status, m.badge) !== 'running' && !m.isActive && !isActive(m.status)
   return {
-    done: own ? tasks.filter(t => t.status === 'completed').length : ended ? 1 : 0,
-    total: own ? tasks.length : 1,
+    done: own ? tasks.filter(t => t.status === 'completed').length : reported !== undefined ? reported.done : ended ? 1 : 0,
+    total: own ? tasks.length : reported !== undefined ? reported.total : 1,
     tokens: m.row?.tokens ?? 0,
     duration: span(m.startedAt ?? m.row?.startedAt, m.endedAt ?? m.row?.endedAt, now),
   }

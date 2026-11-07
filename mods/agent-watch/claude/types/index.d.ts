@@ -79,6 +79,20 @@ export type BackgroundTask = {
   exitCode?: number
   startedAt: number
   endedAt?: number
+  /** The run's known steps, from `step n/m <label> <ok|FAIL>` lines a Monitor's events carried (ADR-0049). */
+  steps?: BackgroundSteps
+  /** A monitor's: the shell it watches (its command names that shell's id), which takes its steps; the monitor is then no row. */
+  linkedTo?: string
+}
+
+/** A run's step progress: the highest step reported, of how many, and the first step that failed. */
+export type BackgroundSteps = {
+  done: number
+  total: number
+  /** The label of the first step reported `FAIL` (`step 2` when it had none). */
+  failed?: string
+  /** The label of the latest step reported. */
+  last?: string
 }
 
 // MIRROR of mods/task-orchestrator/claude/types/index.d.ts, its one owner: the part of

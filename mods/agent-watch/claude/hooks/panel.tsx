@@ -3,7 +3,7 @@ import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { AgentRow, BackgroundTask, OrchPolicy, OrchTask, Task, WorkflowRun } from '../types'
 import { elapsed, fit, headCaption, trimTree } from './model'
-import { memberCaption, sessionTree, tokensText } from './sessions'
+import { drawnBackground, memberCaption, sessionTree, tokensText } from './sessions'
 import type { Member, SessionNode } from './sessions'
 import { color, hms, kit, theme } from './sigma'
 import type { Token } from './sigma'
@@ -27,7 +27,7 @@ const COL = { state: 11, steps: 7, time: 6, tok: 6 }
 /** The rows the KPI row (a label, a value and a caption, and the margin above) and the selected-element panel take. */
 const KPI_ROWS = 4
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it under the table, so the person sees which copy draws the panel. */
-export const VERSION = '0.11.1'
+export const VERSION = '0.12.0'
 const PANEL_ROWS = 9
 /** The compact strip's rows: its margin and its line. */
 const STRIP_ROWS = 2
@@ -457,7 +457,8 @@ export async function renderSessions(
         )
 
   // What runs: the agents, and the background tasks (ADR-0049), so a long background command never reads as 0 RUNNING.
-  const running = state.agents.filter(row => row.status === 'running').length + (state.background ?? []).filter(task => task.status === 'running').length
+  // A monitor tied to its shell is that shell's row, so it is not counted twice.
+  const running = state.agents.filter(row => row.status === 'running').length + drawnBackground(state.background ?? []).filter(task => task.status === 'running').length
 
   // The body's rows as the accounting lays them out: where a drag starts while the panel sizes itself.
   const bodyRows = Math.max(SESSIONS_MIN, layout.used - Math.max(0, reservedRows) - HEAD_ROWS - FRAME_ROWS)
