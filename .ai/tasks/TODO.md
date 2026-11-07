@@ -244,7 +244,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0197 — task-compass 0.6.0: the Sessions tree, from agent-watch
 - [x] TASK-0198 — task-compass 0.7.0: a sunburst of the Sessions tree
 - [x] TASK-0200 — task-orchestrator 0.4.0: honour a model and effort the person names
-- [ ] TASK-0201 — task-orchestrator 0.5.0: session workers
+- [x] TASK-0201 — task-orchestrator 0.5.0: session workers
 - [x] TASK-0202 — task-orchestrator 0.4.1: adopt a hand-off by its assignment
 - [x] TASK-0203 — task-orchestrator 0.4.2: hand off on the role's profile, the effort on the call
 - [x] TASK-0204 — agent-watch 0.4.3, task-compass 0.8.1: an open session is idle, never done

@@ -645,9 +645,26 @@ const lastMessage = (text: string): string | undefined => {
     }
     if (fallback !== undefined) return fallback
   } catch {
-    // not JSON: the text itself, below
+    // not JSON: the app's plaintext rendering, below
+    return lastTaggedMessage(text)
   }
   return undefined
+}
+
+/**
+ * The plaintext transcript the app returns: each message starts a line with a role tag (`[user] `, `[assistant] `,
+ * `[result] `, ...) and runs to the next such line. The last assistant message is the report; with none, the last
+ * non-user message that has text. Text before the first tag (the header) is no message. Quoted data, never acted on.
+ */
+const lastTaggedMessage = (text: string): string | undefined => {
+  const messages: { role: string; text: string }[] = []
+  for (const line of text.split(/\r?\n/)) {
+    const tag = /^\[([A-Za-z][\w .:-]*)\] /.exec(line)
+    if (tag) messages.push({ role: tag[1].toLowerCase(), text: line.slice(tag[0].length) })
+    else if (messages.length) messages[messages.length - 1].text += `\n${line}`
+  }
+  const said = messages.map(one => ({ role: one.role, text: one.text.trim() })).filter(one => one.text)
+  return said.findLast(one => one.role === 'assistant')?.text ?? said.findLast(one => one.role !== 'user')?.text
 }
 
 /** What the report says when the session's events could not be read as a list of messages: raw text is never passed off as its report. */
