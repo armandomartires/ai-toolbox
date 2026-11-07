@@ -271,7 +271,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0227 — vault-secrets 2.3.1: judge an AppRole file on Windows by its access list
 - [x] TASK-0228 — The OpenCode driver tells a permission denial from another tool error (B-067)
 - [x] TASK-0229 — task-compass's README shows the pane on the desktop and in a terminal (B-064)
-- [ ] TASK-0230 — agent-watch: the band above the prompt shows the orchestrator's state, idle included
+- [x] TASK-0230 — agent-watch: the band above the prompt shows the orchestrator's state, idle included
 - [ ] TASK-0231 — task-compass: the Sessions panel shows under the board in either load order
 - [x] TASK-0232 — agent-watch 0.11.1: the STATE cell's glyph and word on one line
 - [x] TASK-0233 — Per-harness mod layout: mods/<name>/claude/ today, core/ and other harnesses later (ADR-0054)

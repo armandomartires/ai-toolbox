@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-04
-- Updated: 2026-11-05
+- Updated: 2026-11-07
 - Applies to: `mods/agent-watch/`
 - Source: the human, 2026-11-04: "Is there a way to show the orchestrator status above this text input?"
 
@@ -41,7 +41,7 @@ With task-orchestrator on, the band above the prompt always says so: `ORCH <POLI
 - [x] Orchestration off with nothing else: the engine's band (`next`)
 - [x] The label is dropped before any step text is cut, on every path; the line never wraps
 - [x] A non-default policy is drawn (`ORCH QUALITY`)
-- [ ] Seen live: the idle line was seen in the Compass pane (2026-11-04); the band above the prompt, on and off, not yet
+- [x] Seen live: the idle line in the Compass pane (2026-11-04); the band above the prompt with `/orchestrate on` and `off` (the person, 2026-11-07)
 
 ## Mandatory validations
 
@@ -60,7 +60,7 @@ With task-orchestrator on, the band above the prompt always says so: `ORCH <POLI
 |----------|-----------|
 | agent-watch | 0.11.0 |
 
-Next: a live look at the band with `/orchestrate on` and `off`, then done.
+Done 2026-11-07.
 
 ## Execution log
 
@@ -68,3 +68,4 @@ Next: a live look at the band with `/orchestrate on` and `off`, then done.
   - Evidence: `tests/test-mods.sh --mod agent-watch` → `PASS agent-watch:  155 pass`
   - Evidence: `python scripts/check-mods.py` → `OK (5 mods)`
   - Evidence: T2 ran `tests/validate.sh` on clean HEAD: the same failures as with the change
+- 2026-11-07 · the person · live check on the desktop: the band above the prompt shows `ORCH BALANCED · IDLE` with orchestration on and the engine's band with it off; closed
