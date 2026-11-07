@@ -1,5 +1,8 @@
 # Changelog
 
+## agent-watch 0.12.1
+- Each session keeps its rows under its own store key, `agent-watch:rows:<session id>` (`TASK-0250`). Under the one shared key of 0.11.2 to 0.12.0 the last session to write won, so with two sessions loading the mod a `/reload-plugins --force` could restore nothing of its own (seen live 2026-11-07). Rows under the shared key are still restored for their own session and moved; kept rows not written for a week are deleted at `session.start`. Tested in the mod test kit (169).
+
 ## agent-watch 0.12.0, 0.11.3
 - A background run that prints `step <n>/<m> <label> <ok|FAIL>` per finished step, relayed by a Monitor tailing its output file, fills its Sessions row step by step: `n/m` in the STEPS cell and arc, `n/m STEPS · <last>` or `· FAIL <label>` in the caption, FAILED from the first `FAIL` on (`TASK-0249`). The Monitor is tied to the run by the task id its command names and draws no row of its own. A Monitor's event is no longer taken for its end, which drew every monitor done at its first event. 0.11.3: a PowerShell command run in the background, or moved there at its timeout, is a shell row like a Bash one. Tested in the mod test kit (166) and live from the store's rows; not yet seen in the pane.
 

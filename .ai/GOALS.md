@@ -517,6 +517,8 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0239-orchestrator-ledger-races-and-trust.md
 - [x] TASK-0249 — agent-watch 0.11.3, 0.12.0: PowerShell background shells, and step progress of a background run
   .ai/tasks/TASK-0249-background-powershell-and-step-progress.md
+- [x] TASK-0250 — agent-watch 0.12.1: each session keeps its rows under its own store key
+  .ai/tasks/TASK-0250-agent-watch-rows-per-session.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md

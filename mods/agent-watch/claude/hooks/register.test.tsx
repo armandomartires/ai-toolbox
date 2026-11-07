@@ -1042,12 +1042,17 @@ test("a subagent's background command sits under it and ends with it when it die
 // (seen live 2026-11-06), so the rows are mirrored into `$.store` and come
 // back at `session.start` under the same session id (TASK-0238). The test
 // answers the store itself, so it can seed it and read what was written.
-const KEPT = 'agent-watch:rows'
+const KEPT = 'agent-watch:rows:sess-A'
 const storeOf = (on: On, entries: Record<string, unknown> = {}) => {
   const store = new Map(Object.entries(entries))
   on('store.get', (_, e) => ({ value: store.get(e.key) }))
   on('store.set', (_, e) => {
     store.set(e.key, JSON.parse(JSON.stringify(e.value)))
+    return { value: undefined }
+  })
+  on('store.keys', () => ({ value: [...store.keys()] }))
+  on('store.delete', (_, e) => {
+    store.delete(e.key)
     return { value: undefined }
   })
   return store
@@ -1073,6 +1078,7 @@ test('each change mirrors the rows into the store under this session id; a sessi
   await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
   const after = store.get(KEPT) as { sessionId: string; agents: { id: string; status: string }[]; background: unknown[] }
   expect(after.sessionId).toBe('sess-A')
+  expect((after as { savedAt?: number }).savedAt).toBe(1_000)
   expect(after.agents).toMatchObject([{ id: 'id-Find hooks', status: 'running' }])
   expect(after.background).toEqual([])
 
@@ -1109,7 +1115,7 @@ test("a session.start that finds the atoms empty restores this session's rows fr
 
 test('rows stored by another session are never restored (TASK-0238)', async ($, on) => {
   mock.clock(on, { now: 2_000 })
-  const store = storeOf(on, { [KEPT]: kept('sess-B') })
+  const store = storeOf(on, { 'agent-watch:rows:sess-B': kept('sess-B') })
   on('session.id', () => ({ value: 'sess-A' }))
   const listed = { value: [] as AgentInfo[] }
   engine(on, listed)
@@ -1120,7 +1126,53 @@ test('rows stored by another session are never restored (TASK-0238)', async ($, 
   expect(await ui.find({ text: /Tail the log/ })).toBeUndefined()
   expect((await ui.find({ text: /^0 RUNNING$/ }))?.text).toBeDefined()
   await ui.unmount()
-  // The first change of this session takes the key over.
+  // The first change of this session writes its own key; the other session's rows stay.
   await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
   expect((store.get(KEPT) as { sessionId: string }).sessionId).toBe('sess-A')
+  expect((store.get('agent-watch:rows:sess-B') as { sessionId: string }).sessionId).toBe('sess-B')
+})
+
+// Each session keeps its rows under its own key (TASK-0250): one shared key let
+// the last session to write win (seen live 2026-11-07).
+const SHARED = 'agent-watch:rows'
+
+test('rows the shared key of 0.12.0 holds for this session are restored and moved to its own key (TASK-0250)', async ($, on) => {
+  mock.clock(on, { now: 2_000 })
+  const store = storeOf(on, { [SHARED]: kept('sess-A') })
+  on('session.id', () => ({ value: 'sess-A' }))
+  engine(on, { value: [] as AgentInfo[] })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ text: /shell · Tail the log/ }))?.text).toBeDefined()
+  await ui.unmount()
+  expect((store.get(KEPT) as { sessionId: string }).sessionId).toBe('sess-A')
+  expect(store.has(SHARED)).toBe(false)
+})
+
+test("another session's rows under the shared key are neither restored nor removed while recent (TASK-0250)", async ($, on) => {
+  mock.clock(on, { now: 2_000 })
+  const store = storeOf(on, { [SHARED]: kept('sess-B') })
+  on('session.id', () => ({ value: 'sess-A' }))
+  engine(on, { value: [] as AgentInfo[] })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /Tail the log/ })).toBeUndefined()
+  await ui.unmount()
+  expect((store.get(SHARED) as { sessionId: string }).sessionId).toBe('sess-B')
+})
+
+test("session.start deletes other sessions' rows not written for a week, and nothing else (TASK-0250)", async ($, on) => {
+  const now = 8 * 24 * 60 * 60 * 1000
+  mock.clock(on, { now })
+  const store = storeOf(on, {
+    'agent-watch:rows:sess-old': { ...kept('sess-old'), savedAt: 0 },
+    'agent-watch:rows:sess-new': { ...kept('sess-new'), savedAt: now - 1_000 },
+    // The shared key of 0.12.0 has no time: its rows' latest start or end (900) dates it.
+    [SHARED]: kept('sess-X'),
+    'agent-watch:other': 'left alone',
+  })
+  on('session.id', () => ({ value: 'sess-A' }))
+  engine(on, { value: [] as AgentInfo[] })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  expect([...store.keys()].sort()).toEqual(['agent-watch:other', 'agent-watch:rows:sess-new'])
 })
