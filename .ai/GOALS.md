@@ -471,7 +471,7 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
   .ai/tasks/TASK-0215-agent-watch-band-follows-the-run.md
 - [x] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
   .ai/tasks/TASK-0216-agent-watch-gap-and-kpis.md
-- [?] TASK-0217 — Preview mod panes in a browser; copy mods into a session
+- [x] TASK-0217 — Preview mod panes in a browser; copy mods into a session
   .ai/tasks/TASK-0217-preview-mod-panes.md
 - [x] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
   .ai/tasks/TASK-0219-mod-preview-refined.md

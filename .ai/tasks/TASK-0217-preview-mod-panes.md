@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-03
 - Updated: 2026-11-07
@@ -48,7 +48,7 @@ A pane being developed can be seen at once, at several sizes and on both surface
 - [x] task-compass's scenes show this repo's board (16 sprints)
 - [x] `scripts/dev-mods.py` replaces a link with files and mirrors edits and removals
 - [x] The desktop prints `COMPASS <version>`; a terminal does not
-- [ ] The human previews a pane change before seeing it live
+- [x] The human previews a pane change before seeing it live (the person, 2026-11-07: done many times since, the preview page is the workflow's first look)
 
 ## Mandatory validations
 
@@ -70,7 +70,7 @@ A pane being developed can be seen at once, at several sizes and on both surface
 | `scripts/dev-mods.py` | copies mods into a session's dev-mods folder as files |
 | `mods/task-compass/` | 0.9.1 → 0.9.2: `COMPASS <version>` after the legend on the desktop |
 
-Next: a mod change is previewed before its live look (`TASK-0218` makes this the workflow).
+Done 2026-11-07.
 
 ## Execution log
 
@@ -78,3 +78,4 @@ Next: a mod change is previewed before its live look (`TASK-0218` makes this the
 - 2026-11-04 · Claude Code (Opus 5.5) · board review: `tests/test-mods.sh --mod task-compass` → `PASS task-compass: 64 pass` on Windows, with an uncommitted `layer.test.tsx` path fix not made here; the human's preview-before-live look is still open
 - 2026-11-07 · Claude Code (coordinator) · the task-compass suite passes with the Windows path fix in the tree (71 pass); the one open criterion is the human's preview of a pane change.
   - Evidence: `claude plugin test task-compass/claude` → `71 pass, 0 fail`
+- 2026-11-07 · the person · confirmed the preview has been used before each live look many times since TASK-0218; closed
