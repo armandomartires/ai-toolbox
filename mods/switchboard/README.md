@@ -18,13 +18,14 @@ A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or
 - **Topics.** Inside Mods and Skills, rows sit under topic sub-headers: an uppercase grey label, its count (with `n OFF` when some are off) and a rule. A mod's topic is the `category` of its `claude/.claude-plugin/plugin.json` (`planning`, `observability`); a mod with none is under **OTHER**. A skill's topic is the plugin before the `:` of `plugin:skill` (`legal` for `legal:brief`); a skill with no plugin is under **STANDALONE**. Topics are alphabetical with OTHER and STANDALONE last, rows alphabetical inside. Press a topic's header to collapse or expand it; topics start open. Connectors stay one flat list, and toggling stays per row.
 - **Resize the panel** (0.6.0, `ADR-0053`): drag the grip on the panel's bottom edge up or down and the panel takes that many rows, never under 4; what does not fit is cut. Double-click the grip to go back to automatic; once a click has given it the focus, `↑` and `↓` move it a row and `r` resets it. The height holds for this session, on the terminal and the desktop separately. On mobile and in VS Code there is no handle.
 - **Mods** lists every mod (a plugin with a hooks module) in the folders `CLAUDE_CODE_PLUGIN_DIRS` names, and any of your own that loads after switchboard. A plugin that only ships skills or servers is not listed: it has nothing to refuse. Managed and built-in plugins are not listed or touched. switchboard's own row says *ALWAYS ON*.
+- **Versions** (0.8.0, `TASK-0253`): when the session's project root holds `mods/<name>/claude` (an ai-toolbox checkout), a last section lists each of those mods with the version loaded beside the one its `plugin.json` declares: `0.13.1` when they agree, `loaded 0.12.1 · manifest 0.13.1` with a `▲` note when the loaded copy is stale, and `loaded from elsewhere: <folder>` when the copy loaded is not this checkout's (a second copy: a library install, a `dev-mods` sync). A mod of the checkout that is not loaded says so. The count in the header is the rows with a `▲`. The pane's last line is `SWITCHBOARD <version>`. Without a `mods/` folder in the project root there is no section.
 - A mod whose toggle this session cannot apply says so in its row, in amber with `▲`: *off from the next session* (it is running) or *on from the next session* (switchboard refused it at load).
 - **Skills** lists the skills the session's context lists; **Connectors** the connected servers. A connector the desktop names only by an id shows its first tool names beside it, so you can tell which it is.
 - The desktop app's own servers (`ccd_session`, `ccd_turn`, ...) are not listed and cannot be turned off: the app's task list, panes and session controls run through them.
 
 ## Not yet verified
 
-Version 0.6.0 (`TASK-0223`), the resize handle, is tested in the mod test kit; not yet seen live.
+Version 0.6.0 (`TASK-0223`), the resize handle, and 0.8.0 (`TASK-0253`), the Versions section and the pane's version line, are tested in the mod test kit; not yet seen live.
 
 ## Portability
 

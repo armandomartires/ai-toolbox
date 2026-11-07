@@ -11,6 +11,9 @@ export type Names = {
   connector: string[]
 }
 
+/** A loaded mod's folder and the `version` its manifest declared when it loaded. */
+export type LoadedMod = { root: string; version?: string }
+
 declare module 'claude-code' {
   interface PluginState {
     switchboard: {
@@ -28,6 +31,12 @@ declare module 'claude-code' {
       topics: Record<string, string>
       /** The pane's collapsed groups, each `<kind>:<topic>` (`mod:planning`); a group not listed shows its rows. */
       closedGroups: string[]
+      /** Each mod the session loaded: its folder and manifest version, from `plugin.register` and `CLAUDE_CODE_PLUGIN_DIRS`. */
+      loaded: Record<string, LoadedMod>
+      /** The session's project root when it holds `mods/<name>/claude` mods; '' otherwise (the Versions section is then not drawn). */
+      checkout: string
+      /** Each checkout mod's manifest version ('' for none), read from `mods/<name>/claude/.claude-plugin/plugin.json`. */
+      manifests: Record<string, string>
       /** The rows the person dragged this mod's panels' bodies to, by pane, handle and surface (sigma.tsx `heldOf`); a panel not listed sizes itself (ADR-0053). */
       panelRows: Record<string, number>
     }

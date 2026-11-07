@@ -3,6 +3,7 @@ import type { ConfigRow, On } from 'claude-code'
 import type { Engine } from 'claude-code/testing'
 
 import { TOKENS } from './sigma'
+import { VERSION } from './view'
 
 const DARK = TOKENS.dark
 
@@ -23,7 +24,7 @@ const PANE = {
 const LISTING = '- loop: Run a prompt on an interval.\n- review: Review a diff.'
 
 /** The engine beneath the mod, in project `root.value`: what ran, and what was invalidated. */
-const engine = (on: On, root: { value: string }) => {
+const engine = (on: On, root: { value: string }, isRepo = false) => {
   const ran: string[] = []
   const invalidated: string[] = []
   on('command.register', (_, e) => ({ value: { command: e.name } }))
@@ -60,13 +61,26 @@ const engine = (on: On, root: { value: string }) => {
     '/mods/task-compass/hooks/hooks.json': '{}',
     '/mods/skills-only/.claude-plugin/plugin.json': '{"name":"skills-only"}',
   }
+  // A checkout at `/p`: repo mods whose manifests are ahead of, or the same as, the copies loaded from `/mods`; and a template.
+  if (isRepo) {
+    Object.assign(files, {
+      '/mods/agent-watch/.claude-plugin/plugin.json': '{"name":"agent-watch","category":"observability","version":"0.12.1"}',
+      '/mods/task-compass/.claude-plugin/plugin.json': '{"name":"task-compass","category":"planning","version":"1.0.0"}',
+      '/p/mods/agent-watch/claude/.claude-plugin/plugin.json': '{"name":"agent-watch","version":"0.13.1"}',
+      '/p/mods/task-compass/claude/.claude-plugin/plugin.json': '{"name":"task-compass","version":"1.0.0"}',
+      '/p/mods/switchboard/claude/.claude-plugin/plugin.json': '{"name":"switchboard","version":"0.8.0"}',
+      '/p/mods/_template/claude/.claude-plugin/plugin.json': '{"name":"template","version":"0.1.0"}',
+    })
+  }
   mock.env(on, { CLAUDE_CODE_PLUGIN_DIRS: '/mods' })
   // The Windows CLI hands a path over as `C:\mods\...`; the fixtures are POSIX.
   const posix = (path: string) => path.replace(/^[A-Za-z]:/, '').replaceAll(String.fromCharCode(92), '/')
   on('fs.exists', (_, e) => ({ value: posix(e.path) in files }))
   on('fs.read', (_, e) => (posix(e.path) in files ? { value: files[posix(e.path)] as string } : { deny: 'ENOENT' }))
   on('fs.list', (_, e) =>
-    posix(e.path) === '/mods' ? { value: ['agent-watch', 'task-compass', 'skills-only'].map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) } : { value: [] },
+    posix(e.path) === '/mods' || (isRepo && posix(e.path) === '/p/mods')
+      ? { value: (posix(e.path) === '/mods' ? ['agent-watch', 'task-compass', 'skills-only'] : ['_template', 'agent-watch', 'switchboard', 'task-compass']).map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) }
+      : { value: [] },
   )
   on('tool.call', (_, e) => {
     ran.push(String(e.tool))
@@ -357,5 +371,39 @@ test('/switchboard theme light pins Daylight for the next render; a bad value an
   const { text } = await off($, 'list')
   const ui = await $.ui.mount({ ...OUTPUT(text), surface: 'terminal' })
   expect((await ui.find({ type: 'Text', text: /^MODS$/ }))?.props.color).toBe(TOKENS.light['text-1'])
+  await ui.unmount()
+})
+
+test('the pane lists each repo mod\'s loaded version beside its manifest, with a mark for a stale or foreign copy', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' }, true)
+  await start($)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  // Three repo mods (the template is left out): agent-watch is stale and loaded from /mods, task-compass loaded from /mods.
+  expect((await ui.find({ type: 'Text', text: /^VERSIONS  3 · ▲ 2$/ }))?.text).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /^loaded 0\.12\.1 · manifest 0\.13\.1$/ }))?.text).toBeDefined()
+  const notes = (await ui.findAll({ type: 'Text', text: /^ {2}▲ / })).map(one => one.text)
+  expect(notes).toEqual([
+    '  ▲ stale: restart or /reload-plugins to load 0.13.1; loaded from elsewhere: /mods/agent-watch',
+    '  ▲ loaded from elsewhere: /mods/task-compass',
+  ])
+  expect((await ui.find({ type: 'Text', text: /^AGENT-WATCH$/ }))?.props.color).toBe(DARK.amber)
+  // switchboard is not in the plugin folders and raised no plugin.register in a test: not loaded.
+  expect((await ui.find({ type: 'Text', text: /not loaded in this session/ }))?.text).toBeDefined()
+  expect(await ui.find({ text: /TEMPLATE/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('without mods in the project root the pane has no Versions section', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  await start($)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /VERSIONS/ })).toBeUndefined()
+  // The pane's own version line is always there.
+  expect(VERSION).toMatch(/^\d+\.\d+\.\d+$/)
+  expect((await ui.find({ type: 'Text', text: `SWITCHBOARD ${VERSION}` }))?.props.color).toBe(DARK['text-3'])
   await ui.unmount()
 })

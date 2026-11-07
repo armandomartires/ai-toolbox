@@ -1,4 +1,4 @@
-import type { Kind, Names } from '../types'
+import type { Kind, LoadedMod, Names } from '../types'
 
 /** This mod's own name: it is never turned off, whatever the store says. */
 export const SELF = 'switchboard'
@@ -121,11 +121,13 @@ export const dropSkills = (text: string, off: readonly string[]) => {
 
 /**
  * The folders a `CLAUDE_CODE_PLUGIN_DIRS` value names: `;`-separated on
- * Windows, `:`-separated elsewhere (a `;` in the value says which).
+ * Windows, `:`-separated elsewhere (a `;` in the value says which). Without a
+ * `;`, a colon after a lone drive letter is part of the path, so a single
+ * Windows folder (`C:\mods\x`) is not cut at its drive.
  */
 export const pluginDirs = (value: string | undefined) =>
   (value ?? '')
-    .split(value?.includes(';') ? ';' : ':')
+    .split(value?.includes(';') ? ';' : /(?<!(?:^|:)[A-Za-z]):/)
     .map(dir => dir.trim().replace(/[\\/]+$/, ''))
     .filter(dir => dir !== '')
 
@@ -257,6 +259,91 @@ export const groupRows = (kind: Kind, names: readonly string[], topics: Readonly
   return [...byTopic]
     .sort(([a], [b]) => last(a) - last(b) || a.localeCompare(b))
     .map(([topic, grouped]) => ({ topic, names: grouped }))
+}
+
+/** One repo mod in the Versions section: what is loaded beside what the checkout's manifest says. */
+export type VersionRow = {
+  name: string
+  loaded?: string
+  manifest?: string
+  isLoaded: boolean
+  /** Loaded from a folder other than this checkout's `mods/<name>/claude`. */
+  isElsewhere: boolean
+  /** The loaded version differs from the manifest's. */
+  isStale: boolean
+  /** Where it loaded from, when that is elsewhere. */
+  root?: string
+}
+
+/** A path with `/` separators and no trailing one. */
+const slashed = (path: string) => path.replace(/\\/g, '/').replace(/\/+$/, '')
+
+/** A slashed path with doubled separators and `.` segments collapsed; a leading `//` (a UNC share) is kept. */
+const tidy = (path: string) => {
+  const lead = path.startsWith('//') ? '//' : ''
+
+  return lead + path.slice(lead.length).replace(/\/(\.\/)+/g, '/').replace(/\/{2,}/g, '/').replace(/\/\.$/, '')
+}
+
+/** Whether a path is a Windows one: a drive letter, a backslash or a UNC share. */
+const isWindowsPath = (path: string) => /^[A-Za-z]:/.test(path) || path.includes('\\') || path.startsWith('//')
+
+/**
+ * Whether two paths name one folder. Separators, a trailing one, doubled ones
+ * and `.` segments are ignored; a Windows path (drive, backslash or UNC share)
+ * is compared without case, as its file system is; a POSIX path keeps its case.
+ */
+export const samePath = (a: string, b: string) => {
+  const [x, y] = [tidy(slashed(a)), tidy(slashed(b))]
+  const fold = (path: string) => (isWindowsPath(a) || isWindowsPath(b) ? path.toLowerCase() : path)
+
+  return fold(x) === fold(y)
+}
+
+/** The folder of a repo mod's Claude Code plugin in `checkout`. */
+export const repoModDir = (checkout: string, name: string) => `${slashed(checkout)}/mods/${name}/claude`
+
+/** A mod's row: `manifest` is the version in this checkout, `loaded` what the session loaded (undefined: not loaded). */
+export const versionRow = (checkout: string, name: string, manifest: string | undefined, loaded: LoadedMod | undefined): VersionRow => {
+  const isLoaded = loaded !== undefined
+  const base = { name, ...(loaded?.version === undefined ? {} : { loaded: loaded.version }), ...(manifest === undefined || manifest === '' ? {} : { manifest }) }
+
+  const isElsewhere = isLoaded && !samePath(loaded.root, repoModDir(checkout, name))
+
+  return {
+    ...base,
+    isLoaded,
+    isElsewhere,
+    isStale: isLoaded && base.manifest !== undefined && loaded.version !== base.manifest,
+    ...(isElsewhere ? { root: slashed(loaded.root) } : {}),
+  }
+}
+
+/**
+ * A row for each mod of the checkout (`manifests`: name to the version its
+ * `plugin.json` declares, '' for none), alphabetical; a loaded plugin that is
+ * not in the checkout has no row. None without a checkout.
+ */
+export const versionRows = (checkout: string, manifests: Readonly<Record<string, string>>, loaded: Readonly<Record<string, LoadedMod>>): VersionRow[] =>
+  checkout === ''
+    ? []
+    : Object.keys(manifests)
+        .sort((a, b) => a.localeCompare(b))
+        .map(name => versionRow(checkout, name, manifests[name], loaded[name]))
+
+/** How many rows are stale or loaded from elsewhere. */
+export const versionProblems = (rows: readonly VersionRow[]) => rows.filter(row => row.isStale || row.isElsewhere).length
+
+/** What a row says: the versions, and a note when it is stale, loaded from elsewhere or not loaded. */
+export const versionLine = (row: VersionRow): { text: string; note: string | undefined } => {
+  if (!row.isLoaded) return { text: row.manifest === undefined ? 'no version' : `manifest ${row.manifest}`, note: 'not loaded in this session' }
+  const text = row.isStale ? `loaded ${row.loaded ?? '?'} · manifest ${row.manifest}` : (row.loaded ?? 'no version')
+  const notes = [
+    ...(row.isStale ? [`stale: restart or /reload-plugins to load ${row.manifest}`] : []),
+    ...(row.isElsewhere ? [`loaded from elsewhere: ${row.root}`] : []),
+  ]
+
+  return { text, note: notes.length === 0 ? undefined : notes.join('; ') }
 }
 
 /** The key under which a group's collapsed state is kept: `mod:planning`. */

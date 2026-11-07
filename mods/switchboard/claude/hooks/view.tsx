@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, RenderInput, UiMessageArgument, UiMessageResult } from 'claude-code'
 
 import type { Kind } from '../types'
-import { KINDS, SELF, groupKey, groupRows, isOff, isProtected, pendingNote, shownName, takesEffect } from './model'
+import { KINDS, SELF, groupKey, groupRows, isOff, isProtected, pendingNote, shownName, takesEffect, versionLine, versionProblems, versionRows } from './model'
 import type { ListOutput } from './model'
 import { STATUS, color, heldOf, kit, recall, resizeAnswer } from './sigma'
 import { saveOff } from './store'
@@ -17,10 +17,16 @@ const hints = atom({ plugin: 'switchboard', key: 'hints' } as const, {})
 const topics = atom({ plugin: 'switchboard', key: 'topics' } as const, {})
 const closedGroups = atom({ plugin: 'switchboard', key: 'closedGroups' } as const, [])
 // The rows the person dragged this mod's panels to (ADR-0053), read with `heldOf`, written by `resizeAnswer`.
+// What the Versions section compares: the mods the session loaded and the checkout's manifests (inventory.ts writes them).
+const loadedMods = atom({ plugin: 'switchboard', key: 'loaded' } as const, {})
+const checkout = atom({ plugin: 'switchboard', key: 'checkout' } as const, '')
+const manifests = atom({ plugin: 'switchboard', key: 'manifests' } as const, {})
 const panelRows = atom({ plugin: 'switchboard', key: 'panelRows' } as const, {})
 
 export const PANE = 'switchboard'
 export const TITLE = 'Switchboard'
+/** This mod's version, shown in the pane's last line; keep it the same as `claude/.claude-plugin/plugin.json`'s. */
+export const VERSION = '0.8.0'
 /** The resize handle's `Client` key on the Switchboard panel's bottom edge (ADR-0053). */
 export const SWITCHBOARD_HANDLE = 'switchboard-handle'
 /** Each of this pane's handles with the fewest rows a drag holds its panel's body at: a section header and a row. */
@@ -44,7 +50,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
   const { Box, Button, Text } = ui
   const { label, panel, rule, toggle } = kit(ui, e.surface)
   const width = Math.max(20, e.props.bodyColumns)
-  const [held, known, gone, shown, named, grouped, closed, sized] = await Promise.all([
+  const [held, known, gone, shown, named, grouped, closed, sized, running, repo, versions] = await Promise.all([
     read($, off),
     read($, seen),
     read($, refused),
@@ -53,6 +59,9 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     read($, topics),
     read($, closedGroups),
     read($, panelRows),
+    read($, loadedMods),
+    read($, checkout),
+    read($, manifests),
   ])
   // The body's rows when it sizes itself, counted as `section`, `group` and `row` draw them: where a drag starts (ADR-0053).
   let bodyRows = 0
@@ -135,8 +144,41 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
     )
   }
 
+  // Versions: each mod of this checkout, the version loaded beside the manifest's, a note where they differ or the copy is not this checkout's.
+  const rows = versionRows(repo, versions, running)
+  const problems = versionProblems(rows)
+  const versionSection = () => {
+    bodyRows += 2 + rows.length
+    return (
+      <Box flexDirection="column" marginTop={1}>
+        <Text color={color('text-1')} weight="semibold" tabular>{`VERSIONS  ${rows.length}${problems > 0 ? ` · ${STATUS.caution.glyph} ${problems}` : ''}`}</Text>
+        <Text color={color('text-3')} size="caption" wrap="wrap">Loaded version beside the manifest's, for each mod of this checkout.</Text>
+        {rows.map(one => {
+          const line = versionLine(one)
+          bodyRows += line.note === undefined ? 0 : 1
+          const isOdd = one.isStale || one.isElsewhere
+
+          return (
+            <Box flexDirection="column">
+              <Box flexDirection="row" columnGap={1}>
+                <Text color={color(isOdd ? 'status-caution' : 'text-1')} wrap="truncate-end">{one.name.toUpperCase()}</Text>
+                <Text color={color('text-3')} size="caption" tabular>{line.text}</Text>
+              </Box>
+              {line.note !== undefined && (
+                <Text color={color(isOdd ? 'status-caution' : 'text-3')} size="caption" wrap="wrap">{`  ${isOdd ? STATUS.caution.glyph : STATUS.offline.glyph} ${line.note}`}</Text>
+              )}
+            </Box>
+          )
+        })}
+      </Box>
+    )
+  }
+
   const allOff = KINDS.reduce((sum, kind) => sum + held[kind].length, 0)
   const sections = KINDS.map(section)
+  // Drawn before the panel is, so its rows are in `bodyRows` when the handle reads them.
+  const versioned = rows.length > 0 ? versionSection() : undefined
+  bodyRows += 2
   return (
     <Box flexDirection="column" minHeight={e.props.scroll.bodyRows}>
       {panel(
@@ -146,7 +188,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
           width,
           resize: { key: SWITCHBOARD_HANDLE, rows: bodyRows, held: heldOf(sized, e, SWITCHBOARD_HANDLE), min: MINS[SWITCHBOARD_HANDLE] },
         },
-        <Box flexDirection="column">{sections}</Box>,
+        <Box flexDirection="column">{sections}{versioned}<Box marginTop={1} justifyContent="flex-end"><Text color={color('text-3')} size="caption">{`SWITCHBOARD ${VERSION}`}</Text></Box></Box>,
       )}
     </Box>
   )

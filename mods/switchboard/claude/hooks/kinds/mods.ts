@@ -8,6 +8,7 @@ import { loadOff } from '../store'
 const seen = atom({ plugin: 'switchboard', key: 'seen' } as const, { mod: [], skill: [], connector: [] })
 const refused = atom({ plugin: 'switchboard', key: 'refused' } as const, [])
 const topics = atom({ plugin: 'switchboard', key: 'topics' } as const, {})
+const loaded = atom({ plugin: 'switchboard', key: 'loaded' } as const, {})
 
 /**
  * Mods and other plugins: an off one's hooks module is refused as it is
@@ -29,8 +30,17 @@ export const registerMods = (on: On) => {
     const refuse = refusal(await loadOff($), e.name)
     if (refuse !== undefined) {
       await update($, refused, list => (list.includes(e.name) ? list : [...list, e.name])).catch(() => undefined)
+      // Refused, it did not load: a version recorded from an earlier load no longer holds.
+      await update($, loaded, held => {
+        const { [e.name]: _gone, ...kept } = held
+
+        return kept
+      }).catch(() => undefined)
       return { refuse }
     }
+
+    // Where it loads from and the version it declares, for the pane's Versions section.
+    await update($, loaded, held => ({ ...held, [e.name]: { root: e.root, ...(e.version === undefined ? {} : { version: e.version }) } })).catch(() => undefined)
 
     return next(e)
   })

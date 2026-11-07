@@ -24,12 +24,18 @@ const populate = async ($: EngineInterface, on: On) => {
     files[`/mods/${name}/.claude-plugin/plugin.json`] = JSON.stringify(category ? { name, category } : { name })
     files[`/mods/${name}/hooks/hooks.json`] = '{}'
   }
+  // The Versions section: a checkout at /p whose manifests are ahead of agent-watch's loaded copy, level with the rest.
+  for (const [name, loaded, manifest] of [['switchboard', '0.8.0', '0.8.0'], ['agent-watch', '0.12.1', '0.13.1'], ['task-compass', '1.0.0', '1.0.0'], ['task-orchestrator', '0.4.0', '0.4.0']]) {
+    files[`/mods/${name}/.claude-plugin/plugin.json`] = JSON.stringify({ name, version: loaded })
+    files[`/p/mods/${name}/claude/.claude-plugin/plugin.json`] = JSON.stringify({ name, version: manifest })
+  }
+  files['/p/mods/_template/claude/.claude-plugin/plugin.json'] = '{"name":"template","version":"0.1.0"}'
   mock.env(on, { CLAUDE_CODE_PLUGIN_DIRS: '/mods' })
   // The Windows CLI hands a path over as `C:\mods\...`; the fixtures are POSIX.
   const posix = (path: string) => path.replace(/^[A-Za-z]:/, '').replaceAll(String.fromCharCode(92), '/')
   on('fs.exists', (_, e) => ({ value: posix(e.path) in files }))
   on('fs.read', (_, e) => (posix(e.path) in files ? { value: files[posix(e.path)] as string } : { deny: 'ENOENT' }))
-  on('fs.list', (_, e) => ({ value: posix(e.path) === '/mods' ? ['switchboard', 'agent-watch', 'task-compass', 'task-orchestrator', 'my-experiment'].map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) : [] }))
+  on('fs.list', (_, e) => ({ value: posix(e.path) === '/p/mods' ? ['_template', 'switchboard', 'agent-watch', 'task-compass', 'task-orchestrator'].map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) : posix(e.path) === '/mods' ? ['switchboard', 'agent-watch', 'task-compass', 'task-orchestrator', 'my-experiment'].map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) : [] }))
   await $.session.start({ cwd: '/p', surface: 'desktop', isInteractive: true })
   await $.command.run({ command: 'switchboard', args: 'off mod agent-watch' } as never)
   await $.command.run({ command: 'switchboard', args: 'off skill sales:forecast' } as never)

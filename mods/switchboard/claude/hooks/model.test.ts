@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { EMPTY, STANDALONE, addSeen, groupRows, listData, listText, modTopic, skillTopic, asNames, isProtected, shownName, toolHints, dropSkills, isOff, listedSkills, offName, parseArgs, pendingNote, pluginDirs, refusal, serverOfTool, toggle } from './model'
+import { EMPTY, STANDALONE, addSeen, groupRows, listData, listText, modTopic, skillTopic, asNames, isProtected, shownName, toolHints, dropSkills, isOff, listedSkills, offName, parseArgs, pendingNote, pluginDirs, refusal, serverOfTool, toggle, samePath, repoModDir, versionRow, versionRows, versionLine, versionProblems } from './model'
 
 const LISTING = [
   'The following skills are available for use with the Skill tool:',
@@ -73,6 +73,8 @@ test('the plugin folders split by the separator the value uses', () => {
   expect(pluginDirs('/a/mods/x:/b/y/')).toEqual(['/a/mods/x', '/b/y'])
   expect(pluginDirs('\\\\wsl.localhost\\d\\x;C:\\mods\\y\\')).toEqual(['\\\\wsl.localhost\\d\\x', 'C:\\mods\\y'])
   expect(pluginDirs(undefined)).toEqual([])
+  expect(pluginDirs('C:\\work\\mods\\x\\claude')).toEqual(['C:\\work\\mods\\x\\claude'])
+  expect(pluginDirs('/a/x:C:/b/y')).toEqual(['/a/x', 'C:/b/y'])
 })
 
 test('a mod toggle waits for the next session only when the session differs from it', () => {
@@ -150,4 +152,76 @@ test('the list answers the same groups as text and as data', () => {
 test('topics group without case: Legal and legal share one group, a category of other joins Other', () => {
   expect(groupRows('skill', ['Legal:a', 'legal:b'])).toEqual([{ topic: 'legal', names: ['Legal:a', 'legal:b'] }])
   expect(groupRows('mod', ['x', 'y'], { x: 'other' })).toEqual([{ topic: 'Other', names: ['x', 'y'] }])
+})
+
+const CHECKOUT = 'C:\\work\\ai-toolbox'
+
+test('samePath ignores separators, a trailing one and a drive letter\'s case', () => {
+  expect(samePath('C:\\work\\ai-toolbox\\mods\\x\\claude\\', 'c:/work/ai-toolbox/mods/x/claude')).toBe(true)
+  expect(samePath('/a/b', '/a/c')).toBe(false)
+  expect(samePath('/a/B', '/a/b')).toBe(false)
+})
+
+test('samePath ignores case in a Windows path and collapses doubled or dot segments', () => {
+  expect(samePath('C:\\Work\\AI-Toolbox\\mods\\x\\claude', 'c:\\work\\ai-toolbox\\mods\\x\\claude')).toBe(true)
+  expect(samePath('C:/work//ai-toolbox/./mods/x', 'C:/work/ai-toolbox/mods/x')).toBe(true)
+  expect(samePath('/a//b/./c', '/a/b/c')).toBe(true)
+  expect(samePath('\\\\wsl.localhost\\D\\x', '//wsl.localhost/d/x')).toBe(true)
+})
+
+test('repoModDir is the checkout\'s mods/<name>/claude', () => {
+  expect(repoModDir(`${CHECKOUT}\\`, 'switchboard')).toBe('C:/work/ai-toolbox/mods/switchboard/claude')
+})
+
+test('a mod loaded from this checkout at the manifest\'s version is the same', () => {
+  const row = versionRow(CHECKOUT, 'switchboard', '0.8.0', { root: 'c:/work/ai-toolbox/mods/switchboard/claude', version: '0.8.0' })
+  expect(row).toEqual({ name: 'switchboard', loaded: '0.8.0', manifest: '0.8.0', isLoaded: true, isElsewhere: false, isStale: false })
+  expect(versionLine(row)).toEqual({ text: '0.8.0', note: undefined })
+})
+
+test('a loaded version that differs from the manifest is stale, and the note says both', () => {
+  const row = versionRow(CHECKOUT, 'agent-watch', '0.13.1', { root: `${CHECKOUT}/mods/agent-watch/claude`, version: '0.12.1' })
+  expect(row.isStale).toBe(true)
+  expect(row.isElsewhere).toBe(false)
+  expect(versionLine(row)).toEqual({ text: 'loaded 0.12.1 · manifest 0.13.1', note: 'stale: restart or /reload-plugins to load 0.13.1' })
+})
+
+test('a mod loaded from another folder is marked with that folder, even at the same version', () => {
+  const row = versionRow(CHECKOUT, 'task-compass', '1.0.0', { root: 'C:/Users/me/.claude/dev-mods/s1/task-compass', version: '1.0.0' })
+  expect(row.isElsewhere).toBe(true)
+  expect(row.isStale).toBe(false)
+  expect(versionLine(row).note).toBe('loaded from elsewhere: C:/Users/me/.claude/dev-mods/s1/task-compass')
+})
+
+test('elsewhere and stale at once name both', () => {
+  const row = versionRow(CHECKOUT, 'x', '2.0.0', { root: '/lib/x', version: '1.0.0' })
+  expect(row).toMatchObject({ isElsewhere: true, isStale: true })
+  expect(versionLine(row).note).toContain('stale')
+  expect(versionLine(row).note).toContain('/lib/x')
+})
+
+test('a mod not loaded says so, and a loaded one with no version is stale against a manifest version', () => {
+  const none = versionRow(CHECKOUT, 'y', '1.0.0', undefined)
+  expect(none).toMatchObject({ isLoaded: false, isStale: false, isElsewhere: false })
+  expect(versionLine(none)).toEqual({ text: 'manifest 1.0.0', note: 'not loaded in this session' })
+  const bare = versionRow(CHECKOUT, 'z', '1.0.0', { root: `${CHECKOUT}/mods/z/claude` })
+  expect(bare.isStale).toBe(true)
+  expect(versionLine(bare).text).toBe('loaded ? · manifest 1.0.0')
+})
+
+test('versionRows lists the checkout\'s mods alphabetically and counts the ones to look at', () => {
+  const rows = versionRows(
+    CHECKOUT,
+    { 'task-compass': '1.0.0', 'agent-watch': '0.13.1', switchboard: '0.8.0', idle: '0.1.0' },
+    {
+      switchboard: { root: `${CHECKOUT}/mods/switchboard/claude`, version: '0.8.0' },
+      'agent-watch': { root: `${CHECKOUT}/mods/agent-watch/claude`, version: '0.12.1' },
+      'task-compass': { root: '/lib/task-compass', version: '1.0.0' },
+      other: { root: '/lib/other', version: '9' },
+    },
+  )
+  expect(rows.map(row => row.name)).toEqual(['agent-watch', 'idle', 'switchboard', 'task-compass'])
+  // A mod that is not in the checkout is not listed; a mod not loaded is not a problem.
+  expect(versionProblems(rows)).toBe(2)
+  expect(versionRows('', { a: '1' }, {})).toEqual([])
 })
