@@ -28,6 +28,7 @@ import {
   turnStarted,
   watchText,
 } from './model'
+import { keep, restore } from './keep'
 import { remember, syncTheme, watchTheme } from './sigma'
 import { PANE, TITLE } from './names'
 import { COMPASS_PANE, contributeSessions, renderOutput, renderPane, sizeSessions } from './view'
@@ -46,6 +47,7 @@ const background = atom({ plugin: 'agent-watch', key: 'background' } as const, [
 // task-orchestrator's ledger, read and never written (types/index.d.ts, the mirror).
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 
+
 /** How often the pane is brought up to date while an agent is active. */
 const TICK_MS = 1_000
 /** How often a running agent's icon pulses. */
@@ -55,7 +57,7 @@ export const FRAME_MS = 400
 const reconcile = async ($: EngineInterface, inFlight: readonly InFlight[] | undefined) => {
   if (!Array.isArray(inFlight)) return
   const at = await $.clock.now()
-  await update($, background, list => backgroundReconciled(list, inFlight, at))
+  await update($, background, list => backgroundReconciled(list, inFlight, at)).then(() => keep($))
   await update($, now, () => at)
 }
 
@@ -86,13 +88,14 @@ const changeAgents = async ($: EngineInterface, change: (rows: AgentRow[]) => Ag
     return markAlerted(next, alerts.keys())
   })
   for (const row of alerts.values()) $.ui.toast(alertText(row), { timeoutMs: 8_000 })
+  await keep($)
   await syncTones($)
 }
 
 /** Each new sub-session's tone: a Workflow run, the orchestrator's run, a delegating agent. */
 const syncTones = async ($: EngineInterface) => {
   const [rows, all, tasksOfOrch] = await Promise.all([read($, agents), read($, runs), read($, ledger)])
-  await update($, tones, held => assignTones(held, rows, all, tasksOfOrch))
+  await update($, tones, held => assignTones(held, rows, all, tasksOfOrch)).then(() => keep($))
 }
 
 /** The rows brought up to date with `$.agent.list()`. */
@@ -109,6 +112,8 @@ export const register: Register = on => {
 
   on('session.start', async ($, e, next) => {
     await syncTheme($)
+    // After a forced reload the atoms are empty: this session's rows come back from the store.
+    await restore($).catch(() => undefined)
     // The pane first: a session the desktop app hosts through the SDK reports
     // no person at the prompt, yet draws panes, and with no surface to draw
     // it the pane waits undrawn. `/agents` is a name Claude Code ships, so the
@@ -165,7 +170,7 @@ export const register: Register = on => {
       const runId = e.workflow?.runId || undefined
       const spawn = { id: ran.agentId, parentId: e.parentAgentId, type: e.subagentType, description: e.description, model: ran.model, runId }
       // A Workflow agent opens its run, which the tool's result names.
-      if (runId) await update($, runs, all => recordRun(all, { id: runId, startedAt: at }))
+      if (runId) await update($, runs, all => recordRun(all, { id: runId, startedAt: at })).then(() => keep($))
       await changeAgents($, rows => spawnedRow(rows, spawn, at))
       await update($, now, () => at)
       await syncStatus($)
@@ -196,7 +201,7 @@ export const register: Register = on => {
       // and names no Workflow agent at all.
       await changeAgents($, rows => turnEnded(turnCounted(rows, id, tokens, model), id, e.reason, at)).catch(() => undefined)
       // Its background commands that die with its final answer end with it.
-      await update($, background, list => backgroundOwnerEnded(list, id, at)).catch(() => undefined)
+      await update($, background, list => backgroundOwnerEnded(list, id, at)).then(() => keep($)).catch(() => undefined)
       await refresh($).catch(() => undefined)
     }
 
@@ -226,7 +231,7 @@ export const register: Register = on => {
       const said = notificationOf(e.text)
       if (said !== undefined) {
         const at = await $.clock.now()
-        await update($, background, list => backgroundEnded(list, said.id, said.word, said.exitCode, at)).catch(() => undefined)
+        await update($, background, list => backgroundEnded(list, said.id, said.word, said.exitCode, at)).then(() => keep($)).catch(() => undefined)
       }
     }
 
@@ -245,13 +250,13 @@ export const register: Register = on => {
     if (agentId) {
       const since = await $.clock.now()
       const { tool, detail } = summarizeCall(String(e.tool), e as unknown as Record<string, unknown>)
-      await update($, agents, rows => callStarted(rows, agentId, { tool, detail, since })).catch(() => undefined)
+      await update($, agents, rows => callStarted(rows, agentId, { tool, detail, since })).then(() => keep($)).catch(() => undefined)
     }
     let ran: Awaited<ReturnType<typeof next>>
     try {
       ran = await next(e)
     } finally {
-      if (agentId) await update($, agents, rows => callEnded(rows, agentId)).catch(() => undefined)
+      if (agentId) await update($, agents, rows => callEnded(rows, agentId)).then(() => keep($)).catch(() => undefined)
     }
     if (ran.deny !== undefined || ran.isError) return ran
 
@@ -259,14 +264,14 @@ export const register: Register = on => {
     // A background shell or monitor opened (its result names its id), or stopped.
     const opened = backgroundStarted(name, e as unknown as Record<string, unknown>, ran.result, agentId, await $.clock.now())
     if (opened !== undefined) {
-      await update($, background, list => backgroundAdded(list, opened))
+      await update($, background, list => backgroundAdded(list, opened)).then(() => keep($))
       return ran
     }
     if (name === 'TaskStop') {
       const stopped = (ran.result as { task_id?: unknown } | undefined)?.task_id
       if (typeof stopped === 'string' && stopped) {
         const at = await $.clock.now()
-        await update($, background, list => backgroundEnded(list, stopped, 'killed', undefined, at))
+        await update($, background, list => backgroundEnded(list, stopped, 'killed', undefined, at)).then(() => keep($))
       }
       return ran
     }
@@ -274,7 +279,7 @@ export const register: Register = on => {
       const result = ran.result as { runId?: unknown; workflowName?: unknown } | undefined
       if (typeof result?.runId === 'string' && result.runId) {
         const run = { id: result.runId, name: typeof result.workflowName === 'string' ? result.workflowName : undefined, ownerId: agentId, startedAt: await $.clock.now() }
-        await update($, runs, all => recordRun(all, run))
+        await update($, runs, all => recordRun(all, run)).then(() => keep($))
         await syncTones($)
       }
       return ran
@@ -282,7 +287,7 @@ export const register: Register = on => {
     const change = taskChange(name, e as unknown as Record<string, unknown>, ran.result)
     if (change === undefined) return ran
     if (agentId) await changeAgents($, rows => rows.map(row => (row.id === agentId ? { ...row, tasks: change(row.tasks ?? []) } : row)))
-    else await update($, tasks, change)
+    else await update($, tasks, change).then(() => keep($))
 
     return ran
   })

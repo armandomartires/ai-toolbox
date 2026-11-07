@@ -11,6 +11,7 @@ import { gate, isBlocked, route } from './router'
 import type { Decision } from './router'
 import { DEFAULT_CONFIG, EFFORTS, MODEL_LADDER, POLICIES, READ_ONLY_TOOLS, ROLE_PROFILES, TASK_CLASSES, WORKER_DENIED_TOOLS, WRITER_TOOLS, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
 import type { Config, Effort, Policy, Role, TaskClass } from './routing'
+import { keep, restore } from './keep'
 import { remember, syncTheme, watchTheme } from './sigma'
 import { renderOutput, statusLineText } from './view'
 import type { OrchestrateOutput } from './view'
@@ -22,6 +23,10 @@ const policy = atom({ plugin: 'task-orchestrator', key: 'policy' } as const, 'ba
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 const overrides = atom({ plugin: 'task-orchestrator', key: 'overrides' } as const, [])
 const unavailable = atom({ plugin: 'task-orchestrator', key: 'unavailable' } as const, [])
+
+/** The assignment a task carries until it starts, when the dependencies' findings join it. */
+const assignments = new Map<string, Assignment>()
+
 
 const PLUGIN = 'task-orchestrator'
 const TOOL = {
@@ -284,14 +289,12 @@ const statusText = async ($: EngineInterface): Promise<string> => {
 }
 
 const settle = async ($: EngineInterface, task: Task, patch: Partial<Task>) => {
-  await update($, ledger, rows => setTask(rows, task.id, patch))
+  await update($, ledger, rows => setTask(rows, task.id, patch)).then(() => keep($, assignments))
   const now = byId(await read($, ledger), task.id)
   if (now) await audit($, now)
   await statusLine($)
 }
 
-/** The assignment a task carries until it starts, when the dependencies' findings join it. */
-const assignments = new Map<string, Assignment>()
 
 const contractOf = (rows: Ledger, task: Task): string => {
   const assignment = assignments.get(task.id) ?? { inputs: [], prohibited: [], deliverables: [], acceptance: [], tools: ROLE_PROFILES[task.role].readOnly ? `read-only tools (${READ_ONLY_TOOLS.join(', ')}); no shell` : 'the session\'s tools under its permission mode, minus agents, workflows and messaging; writes only inside the allowed files' }
@@ -365,7 +368,7 @@ const start = async ($: EngineInterface, task: Task): Promise<void> => {
   task = { ...task, prompt: contractOf(await read($, ledger), task) }
   const baseRevision = await baseOf($, task)
   const at = await $.clock.now()
-  await update($, ledger, rows => setTask(rows, task.id, { status: 'running', startedAt: at, baseRevision, prompt: task.prompt }))
+  await update($, ledger, rows => setTask(rows, task.id, { status: 'running', startedAt: at, baseRevision, prompt: task.prompt })).then(() => keep($, assignments))
   const spawn = () => $.agent.spawn({ subagentType: `${PLUGIN}:${name}`, prompt: task.prompt, description: task.description, model: task.requested.model, name: task.id }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }) as { deny: string })
   let ran = await spawn()
   // Auto mode's no-verdict deny asks for the action again once, as-is: the
@@ -373,7 +376,7 @@ const start = async ($: EngineInterface, task: Task): Promise<void> => {
   if (ran.deny !== undefined && isNoVerdict(ran.deny)) ran = await spawn()
   if (ran.deny !== undefined) {
     if (isNoVerdict(ran.deny)) return settle($, task, { status: 'blocked', handoff: true, reason: handoffReason(task), endedAt: await $.clock.now() })
-    if (isModelUnavailable(ran.deny)) await update($, unavailable, list => (list.includes(task.requested.model) ? list : [...list, task.requested.model]))
+    if (isModelUnavailable(ran.deny)) await update($, unavailable, list => (list.includes(task.requested.model) ? list : [...list, task.requested.model])).then(() => keep($, assignments))
     return settle($, task, { status: 'blocked', reason: `spawn refused: ${ran.deny}`, endedAt: await $.clock.now() })
   }
   if (ran.model && ran.model !== task.requested.model) resolved.set(task.requested.model, ran.model)
@@ -504,7 +507,7 @@ const answerDispatch = async ($: EngineInterface, input: DispatchInput): Promise
   const added = retryTask(rows, task, config.limits)
   if (added.refused) return { result: `blocked: ${added.refused}` }
   assignments.set(id, assignment)
-  await update($, ledger, () => added.ledger)
+  await update($, ledger, () => added.ledger).then(() => keep($, assignments))
   await tick($, personTurn)
   const now = byId(await read($, ledger), id) ?? task
   const after = await read($, ledger)
@@ -780,9 +783,9 @@ const answerReset = async ($: EngineInterface): Promise<string> => {
   // A hand-off waits for the coordinator's Agent or start_session call: clearing the ledger now would leave that worker untracked.
   const handed = rows.filter(waitsForHandoff)
   if (handed.length) return `reset refused: ${handed.length} task(s) handed off, waiting for the coordinator's start call (${handed.map(task => task.id).join(', ')}); cancel them first with /orchestrate cancel, or make the call`
-  await update($, ledger, () => [])
-  await update($, unavailable, () => [])
   assignments.clear()
+  await update($, ledger, () => []).then(() => keep($, assignments))
+  await update($, unavailable, () => []).then(() => keep($, assignments))
   delivered.clear()
   await statusLine($)
   return `reset: ${rows.length} task(s) cleared from the ledger, the refused models and the printed-once record forgotten; run: idle`
@@ -892,6 +895,8 @@ export const register: Register = on => {
     await syncTheme($)
     const env = await envOf($)
     const refused = await loadConfig($, env)
+    // After a forced reload the ledger is empty: this session's run comes back from the store.
+    await restore($, assignments).catch(() => undefined)
     const settings = await $.settings.read().catch(() => undefined)
     await update($, overrides, () => detectOverrides(settings, env))
     // Until the coordinator's first request shows its effort, the session gate uses the one its settings give (TASK-0225).
@@ -1070,7 +1075,7 @@ ${classGuide()}` },
       notes: ['spawned through the Agent tool, not dispatch: no allowed-files list; requested is the profile settings, and an effort on the call itself is not visible to the mod'],
       prompt: '',
     }
-    await update($, ledger, list => addTask(list, task).ledger)
+    await update($, ledger, list => addTask(list, task).ledger).then(() => keep($, assignments))
     await statusLine($)
     return ran
   }).catch(($, e, next) => (next.called ? next(e) : { deny: `${PLUGIN}: the spawn guard failed, so the spawn is refused` }))
@@ -1143,7 +1148,7 @@ ${classGuide()}` },
         const at = await $.clock.now()
         // A worker taken through the Agent tool asked for its profile's effort, not a named one: nothing to compare.
         const mismatch = e.effort === undefined || task.requested.effort === 'profile' || task.notes.some(one => one.startsWith('spawned through the Agent tool')) ? undefined : effortMismatchNote(await read($, overrides), task.requested.model, task.requested.effort, String(e.effort), e.model)
-        await update($, ledger, rows => setTask(rows, task.id, { observed: { model: e.model, effort: e.effort === undefined ? 'none (model takes no effort)' : String(e.effort), at }, ...(mismatch ? { notes: [...task.notes, mismatch] } : {}) }))
+        await update($, ledger, rows => setTask(rows, task.id, { observed: { model: e.model, effort: e.effort === undefined ? 'none (model takes no effort)' : String(e.effort), at }, ...(mismatch ? { notes: [...task.notes, mismatch] } : {}) })).then(() => keep($, assignments))
       }
     }
     return yield* next(e)
@@ -1159,7 +1164,7 @@ ${classGuide()}` },
     const counted = usageTokens((e as { usage?: unknown }).usage)
     const worker = byAgent(await read($, ledger), e.agentId)
     // A worker's tokens, as its turn reported them (TASK-0226): summed over its turns.
-    if (worker && counted !== undefined) await update($, ledger, rows => setTask(rows, worker.id, { tokens: (worker.tokens ?? 0) + counted }))
+    if (worker && counted !== undefined) await update($, ledger, rows => setTask(rows, worker.id, { tokens: (worker.tokens ?? 0) + counted })).then(() => keep($, assignments))
     const task = byAgent(await read($, ledger), e.agentId)
     if (!task || task.status !== 'running') return done
     const report = parseReport(e.answer)

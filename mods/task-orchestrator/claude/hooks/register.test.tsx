@@ -1378,3 +1378,81 @@ test('a start_session the app refuses twice prints the assignment once: the refu
   expect(got).toContain('assignment for T1: printed earlier')
   expect(got).toContain('start_session refused: not on this turn again')
 })
+
+// A `/reload-plugins --force` drops the mod's `$.state` with its instance
+// (seen live 2026-11-06: `status` said `No task in the ledger` mid-run), so
+// the run is mirrored into `$.store` and comes back at `session.start` under
+// the same session id (TASK-0238). The test answers the store itself, so it
+// can seed it and read what was written.
+const KEPT = 'task-orchestrator:run'
+const storeOf = (on: On, entries: Record<string, unknown> = {}) => {
+  const store = new Map(Object.entries(entries))
+  on('store.get', (_, e) => ({ value: store.get(e.key) }))
+  on('store.set', (_, e) => {
+    store.set(e.key, JSON.parse(JSON.stringify(e.value)))
+    return { value: undefined }
+  })
+  return store
+}
+
+test('each ledger change mirrors the run into the store under this session id, with the assignments (TASK-0238)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  const store = storeOf(on)
+  mock.env(on, { HOME: '/home/x' })
+  on('session.id', () => ({ value: 'sess-A' }))
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  expect(store.get(KEPT)).toBeUndefined()
+
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser', acceptance: ['the parser is named'] }))
+  const held = store.get(KEPT) as { sessionId: string; ledger: { id: string; status: string }[]; assignments: Record<string, { acceptance: string[] }> }
+  expect(held.sessionId).toBe('sess-A')
+  expect(held.ledger).toMatchObject([{ id: 'T1', status: 'running' }])
+  expect(held.assignments.T1?.acceptance).toEqual(['the parser is named'])
+
+  // A plain reload runs session.start again with the ledger kept: nothing is doubled.
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  expect((await status($)).match(/T1 → /g)).toHaveLength(1)
+})
+
+test("a session.start that finds the ledger empty restores this session's run; its worker's end still closes the task (TASK-0238)", async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  const store = storeOf(on)
+  mock.env(on, { HOME: '/home/x' })
+  on('session.id', () => ({ value: 'sess-A' }))
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser', acceptance: ['the parser is named'] }))
+  const held = store.get(KEPT)
+
+  // The forced reload, as the kit can stage it: the ledger emptied, the store holding the run as it was, session.start again.
+  await $.command.run({ command: 'orchestrate', args: 'cancel all' })
+  await $.command.run({ command: 'orchestrate', args: 'reset' })
+  expect(await status($)).toContain('No task in the ledger.')
+  store.set(KEPT, held)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+
+  expect(await status($)).toContain('T1 → scout [agent-1] → requested haiku/low')
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(String((await $.tool.call({ tool: COLLECT, ids: ['T1'] } as never)).result)).toContain('→ completed → review it')
+  // The restored assignment is what a dependant's contract quotes.
+  const t2 = String((await $.tool.call(dispatch({ id: 'T2', class: 'lookup', objective: 'Use it', deps: ['T1'] }))).result)
+  expect(t2).toContain('T2 → scout [agent-2]')
+})
+
+test('a run stored by another session is never restored (TASK-0238)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  storeOf(on, { [KEPT]: { sessionId: 'sess-B', ledger: [{ id: 'T9', taskClass: 'lookup', role: 'scout', objective: 'Old', description: 'Old', deps: [], allowedFiles: [], isWriter: false, isolated: false, requested: { model: 'haiku', effort: 'low' }, status: 'running', agentId: 'agent-9', retries: 0, escalations: 0, notes: [], createdAt: 1, startedAt: 1, prompt: '' }], unavailable: ['fable'], assignments: {} } })
+  mock.env(on, { HOME: '/home/x' })
+  on('session.id', () => ({ value: 'sess-A' }))
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+
+  const text = await status($)
+  expect(text).toContain('No task in the ledger.')
+  expect(text).not.toContain('T9')
+  expect(text).not.toContain('models refused this session')
+})

@@ -965,3 +965,90 @@ test("a subagent's background command sits under it and ends with it when it die
   expect((await ui.find({ type: 'Text', text: /^ *■ $/ }))?.text).toBeDefined()
   await ui.unmount()
 })
+
+// A `/reload-plugins --force` drops the mod's `$.state` with its instance
+// (seen live 2026-11-06), so the rows are mirrored into `$.store` and come
+// back at `session.start` under the same session id (TASK-0238). The test
+// answers the store itself, so it can seed it and read what was written.
+const KEPT = 'agent-watch:rows'
+const storeOf = (on: On, entries: Record<string, unknown> = {}) => {
+  const store = new Map(Object.entries(entries))
+  on('store.get', (_, e) => ({ value: store.get(e.key) }))
+  on('store.set', (_, e) => {
+    store.set(e.key, JSON.parse(JSON.stringify(e.value)))
+    return { value: undefined }
+  })
+  return store
+}
+const kept = (sessionId: string) => ({
+  sessionId,
+  agents: [{ id: 'id-Old', type: 'Explore', description: 'Old search', status: 'completed', startedAt: 100, endedAt: 900, calls: 3, tokens: 40 }],
+  tasks: [{ id: '1', text: 'Read it', status: 'completed' }, { id: '2', text: 'Write it', status: 'in_progress' }],
+  runs: [],
+  tones: {},
+  background: [{ id: 'b1', kind: 'shell', description: 'Tail the log', status: 'running', startedAt: 500 }],
+})
+
+test('each change mirrors the rows into the store under this session id; a session.start with rows held restores nothing (TASK-0238)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  const store = storeOf(on)
+  on('session.id', () => ({ value: 'sess-A' }))
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  expect(store.get(KEPT)).toBeUndefined()
+
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  const after = store.get(KEPT) as { sessionId: string; agents: { id: string; status: string }[]; background: unknown[] }
+  expect(after.sessionId).toBe('sess-A')
+  expect(after.agents).toMatchObject([{ id: 'id-Find hooks', status: 'running' }])
+  expect(after.background).toEqual([])
+
+  // A plain reload runs session.start again with the atoms kept: nothing is restored over them.
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ text: /^1 RUNNING$/ }))?.text).toBeDefined()
+  expect(await ui.findAll({ type: 'Button', text: /Find hooks/ })).toHaveLength(1)
+  await ui.unmount()
+})
+
+test("a session.start that finds the atoms empty restores this session's rows from the store, numbered as before (TASK-0238)", async ($, on) => {
+  mock.clock(on, { now: 2_000 })
+  storeOf(on, { [KEPT]: kept('sess-A') })
+  on('session.id', () => ({ value: 'sess-A' }))
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ text: /Explore · Old search/ }))?.text).toBeDefined()
+  expect((await ui.find({ text: /shell · Tail the log/ }))?.text).toBeDefined()
+  expect((await ui.find({ text: /^1 RUNNING$/ }))?.text).toBeDefined()
+  // The task list came back too: 1 of 2 done.
+  expect((await ui.find({ text: /^1\/2$/ }))?.text).toBeDefined()
+  await ui.unmount()
+  // A new agent takes the next number after the restored one, as before the reload.
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  const again = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await again.find({ text: /^2 RUNNING$/ }))?.text).toBeDefined()
+  expect((await again.find({ text: /A02/ }))?.text).toBeDefined()
+  await again.unmount()
+})
+
+test('rows stored by another session are never restored (TASK-0238)', async ($, on) => {
+  mock.clock(on, { now: 2_000 })
+  const store = storeOf(on, { [KEPT]: kept('sess-B') })
+  on('session.id', () => ({ value: 'sess-A' }))
+  const listed = { value: [] as AgentInfo[] }
+  engine(on, listed)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /Old search/ })).toBeUndefined()
+  expect(await ui.find({ text: /Tail the log/ })).toBeUndefined()
+  expect((await ui.find({ text: /^0 RUNNING$/ }))?.text).toBeDefined()
+  await ui.unmount()
+  // The first change of this session takes the key over.
+  await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)
+  expect((store.get(KEPT) as { sessionId: string }).sessionId).toBe('sess-A')
+})

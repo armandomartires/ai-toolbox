@@ -108,4 +108,4 @@ Auto mode's classifier judges an action against the model request that produced 
 
 ## Removal
 
-`/orchestrate off` stops it. To remove the mod: `/plugin uninstall task-orchestrator`, or take the folder out of `CLAUDE_CODE_PLUGIN_DIRS`. Its stored choices and audit rows live in the plugin store under `task-orchestrator:settings` and `task-orchestrator:audit`; nothing is written to the project.
+`/orchestrate off` stops it. To remove the mod: `/plugin uninstall task-orchestrator`, or take the folder out of `CLAUDE_CODE_PLUGIN_DIRS`. Its stored choices and audit rows live in the plugin store under `task-orchestrator:settings` and `task-orchestrator:audit`, and the open run under `task-orchestrator:run`, so a `/reload-plugins --force` does not lose it; nothing is written to the project.

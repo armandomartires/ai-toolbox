@@ -3,6 +3,9 @@
 ## Mods layout
 - A mod keeps its Claude Code plugin under `mods/<name>/claude/` (`TASK-0233`, `ADR-0054`); `core/` and other harness folders are added when a second harness needs them. `check-mods.py` requires `claude/.claude-plugin/plugin.json`. Mod versions are unchanged.
 
+## agent-watch 0.11.2, task-orchestrator 0.5.7
+- A `/reload-plugins --force` emptied both mods' `$.state` mid-run (seen live 2026-11-06: the Sessions panel restarted at B01/S01, `status` said `No task in the ledger`). agent-watch's rows and the orchestrator's run are now mirrored into the plugin store on each change (`agent-watch:rows`, `task-orchestrator:run`) and restored at `session.start` when the atoms are empty and the stored rows carry this session's id; another session's rows are never restored (`TASK-0238`). Tested in the mod test kit; the forced reload itself is the task's live check.
+
 ## agent-watch 0.11.1
 - The Sessions table's STATE cell draws its glyph and word on one line on the desktop (`TASK-0232`), as the SESSION column does.
 
