@@ -562,3 +562,6 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - [?] TASK-0261 — Session branches are named by task, and Claude Code's worktrees follow the sibling rule (B-061)
   .ai/tasks/TASK-0261-task-branches-and-claude-worktrees.md
   branch: agent/TASK-0261
+- [?] TASK-0262 — Scripts are checked out with LF, so a Linux bash on a Windows clone runs them
+  .ai/tasks/TASK-0262-scripts-checked-out-lf.md
+  branch: agent/TASK-0262

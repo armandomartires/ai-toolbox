@@ -292,6 +292,36 @@ Two places check this, deliberately:
 reason: on this mount `[ -x ]` can never fail, making it a check incapable
 of detecting its own failure case.
 
+### Line endings on a Windows host
+
+**Run this repo's scripts with Git Bash, not the `bash` PowerShell finds.**
+On this host `C:\Windows\system32\bash.exe` (WSL, a Linux bash) sits ahead
+of Git's on `PATH`, so `bash scripts/install.sh` from PowerShell ran under
+WSL and failed at `set: pipefail\r: invalid option name` (2026-11-08,
+`TASK-0262`). From PowerShell, call Git's bash by path:
+
+```powershell
+& 'C:\Program Files\Git\bin\bash.exe' scripts/install.sh --client claude-code
+```
+
+The `` came from `core.autocrlf=true`, Git for Windows' installer
+default: with no `.gitattributes`, it checked out 88 of the 91 tracked
+scripts CRLF. Git Bash tolerates the carriage return, which is why the
+pre-commit gate passed on every run here and never saw it. `.gitattributes`
+now forces LF for `*.sh`, `*.py`, `.githooks/*` and
+`configs/claude-code/hooks/*`; the index already held LF for all of them,
+so no blob changed. A clone checked out before that keeps its CRLF copies
+until they are rewritten:
+
+```bash
+git checkout-index -f -a           # rewrite the working copy under the attributes
+git ls-files --eol -- '*.sh' '*.py' | awk '{print $2}' | sort | uniq -c   # expect w/lf only
+```
+
+The 13 blobs that do hold CRLF (`.ai/templates/*.md` and the templates
+`sync-templates.sh` renders) are left as they are; a `* text=auto` rule
+would rewrite them and is a decision of its own.
+
 ## One worktree per agent session
 
 **Two agent sessions must never share this checkout.** A git index is a

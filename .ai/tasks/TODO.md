@@ -296,6 +296,7 @@ Sprint membership, one line per item. Details live in each brief and in
 
 - [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
 - [?] TASK-0261 — Session branches are named by task, and Claude Code's worktrees follow the sibling rule
+- [?] TASK-0262 — Scripts are checked out with LF, so a Linux bash on a Windows clone runs them
 
 ## Post-S9 (superseded by the promotion above)
 

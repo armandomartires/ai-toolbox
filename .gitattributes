@@ -1,0 +1,14 @@
+# Scripts and hooks are checked out with LF on every host (TASK-0262).
+#
+# WHY: a Windows clone with core.autocrlf=true (Git for Windows' installer
+# default) otherwise writes them CRLF. Git Bash tolerates the carriage
+# return, so this repo's gate never saw a problem; a Linux bash does not:
+# PowerShell's `bash` is WSL's, and `bash scripts/install.sh` failed there
+# at `set -uo pipefail\r` on 2026-11-08. Python is forgiving, but a CRLF
+# shebang line is not. The index already holds LF for every one of these,
+# so this changes no blob, only the working copy on checkout. Runbook,
+# *Line endings on a Windows host*.
+*.sh text eol=lf
+*.py text eol=lf
+.githooks/* text eol=lf
+configs/claude-code/hooks/* text eol=lf
