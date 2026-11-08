@@ -33,7 +33,7 @@ except ImportError:  # Windows has no fcntl; msvcrt locks the first byte instead
 
 def _lock(fh):
     if fcntl:
-        _lock(fh)
+        fcntl.flock(fh, fcntl.LOCK_EX)
     else:
         fh.seek(0)
         msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)
@@ -41,7 +41,7 @@ def _lock(fh):
 
 def _unlock(fh):
     if fcntl:
-        _unlock(fh)
+        fcntl.flock(fh, fcntl.LOCK_UN)
     else:
         fh.seek(0)
         msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
