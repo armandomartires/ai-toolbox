@@ -26,7 +26,7 @@ The mod's Claude Code plugin is `claude/` (`ADR-0054`). The board logic every ha
 |---|---|---|
 | Claude Code | Supported: `claude/`, the full Compass pane, the `story` tool, `/compass` and `/goals`. | `scripts/install.sh` lists it in `CLAUDE_CODE_PLUGIN_DIRS`. |
 | OpenCode | A port, `opencode/` (`TASK-0254`): the `story` tool on `.ai/GOALS.md` (`index.ts`) and a sidebar slot listing the current sprint's stories (`tui.tsx`). No pane, carousel or cards, no `.ai/` plan, no `/compass`. Written against `@opencode-ai/plugin` 1.18.30, the plugin package on the host; not yet seen in a live TUI. | `scripts/install.sh --client opencode` copies it to `~/.config/opencode/mods/task-compass/` with an entry `~/.config/opencode/plugins/task-compass.ts`; list `mods/task-compass/tui.tsx` under `"plugin"` in `~/.config/opencode/tui.json` for the sidebar. |
-| Codex | Planned (`B-070`): Codex draws no UI, so only the `story` tool (as MCP), a session-start hook and a skill carry over. | |
+| Codex | A plugin bundle, `codex/` (`TASK-0255`): Codex draws no UI, so a `SessionStart` command hook gives the session the current sprint's open stories, an MCP stdio server (`scripts/mcp-server.ts`, plain node 22.18 or later) exposes the `story` tool, and the `board` skill shows and edits the board. Not yet loaded in Codex. | `scripts/install.sh --client codex` copies it to `~/.codex/plugins/task-compass/` when `~/.codex` exists; then a marketplace entry names it (a workspace admin imports the marketplace), and Codex restarts. |
 
 ## Install
 

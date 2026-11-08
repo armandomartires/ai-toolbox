@@ -226,6 +226,27 @@ inst --client opencode
 check "P5 a folder this repo did not write is left in place" "$([ "$(cat "$OM/index.ts")" = mine ] && has "$out" 'was not written by this repo'; echo $?)" "$out"
 rm -rf "$OM"
 
+# --- Codex (TASK-0255): a mod's codex/ bundle is copied to ~/.codex/plugins/ --
+mkdir -p "$R/mods/mod-x/codex/hooks" "$R/mods/mod-x/codex/scripts"
+printf '{"name": "mod-x", "version": "0.1.0"}\n' > "$R/mods/mod-x/codex/plugin.json"
+printf '{"hooks": {}}\n' > "$R/mods/mod-x/codex/hooks/hooks.json"
+printf 'export const s = 1\n' > "$R/mods/mod-x/codex/scripts/server.ts"
+printf 'test\n' > "$R/mods/mod-x/codex/scripts/server.test.ts"
+CX="$HOME/.codex/plugins/mod-x"
+inst --client codex
+check "X1 with no ~/.codex the codex step is skipped, nothing written" "$([ "$rc" -eq 2 ] && has "$out" 'client skipped: codex' && [ ! -e "$HOME/.codex" ]; echo $?)" "$out"
+mkdir -p "$HOME/.codex"
+inst --client codex
+check "X2 the codex step copies the bundle, tests left out, with a marker" "$([ "$rc" -eq 0 ] && [ -f "$CX/plugin.json" ] && [ -f "$CX/hooks/hooks.json" ] && [ -f "$CX/scripts/server.ts" ] && [ ! -e "$CX/scripts/server.test.ts" ] && [ -f "$CX/.ai-toolbox-mod" ] && [ ! -L "$CX" ] && has "$out" 'mod copied: mod-x' && has "$out" 'marketplace entry'; echo $?)" "$out"
+check "X2 --client codex touches no skill or OpenCode path" "$([ ! -e "$HOME/.config/opencode/mods/mod-x" ] && [ ! -e "$HOME/.codex/skills" ]; echo $?)" "$out"
+inst --status
+check "X3 --status reports the codex copy" "$(has "$out" 'codex        mod:mod-x' && has "$out" 'COPY of'; echo $?)" "$out"
+inst --client codex --only alpha
+check "X4 a deselected mod's bundle is removed" "$([ ! -e "$CX" ] && has "$out" 'mod removed: mod-x (codex)'; echo $?)" "$out"
+mkdir -p "$CX"; echo '{}' > "$CX/plugin.json"
+inst --client codex
+check "X5 a bundle this repo did not write is left in place" "$([ "$(cat "$CX/plugin.json")" = '{}' ] && has "$out" 'was not written by this repo'; echo $?)" "$out"
+
 if [ "$fails" -ne 0 ]; then
   echo "test-install.sh: $fails of $cases case(s) FAILED"; exit 1
 fi

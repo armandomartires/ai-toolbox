@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "task-compass": {
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}/scripts/mcp-server.ts"]
+    }
+  }
+}

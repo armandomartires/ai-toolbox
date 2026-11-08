@@ -1,0 +1,9 @@
+{
+  "name": "task-compass",
+  "version": "0.1.0",
+  "description": "The project's sprint board from .ai/GOALS.md in Codex: the current sprint's open stories at session start, a story tool that sets a story's status, and a board skill.",
+  "license": "MIT",
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}

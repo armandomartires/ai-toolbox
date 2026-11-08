@@ -2,7 +2,7 @@
 # Deploy skills to agent clients, emit agent roles, list mods for Claude
 # Code, and print MCP registration commands.
 #
-# Usage: install.sh [link|copy] [--client claude-code|opencode|lm-studio-bionic|all]
+# Usage: install.sh [link|copy] [--client claude-code|opencode|codex|lm-studio-bionic|all]
 #                   [--bionic-project DIR] [--only NAME[,NAME...]]
 #        install.sh --status [--only NAME[,NAME...]]
 #
@@ -35,8 +35,10 @@
 # whether Claude Code's settings list it from this checkout. A report, not a
 # gate: nothing in validate.sh or CI calls it (ADR-0009).
 #
-# Mod ports (TASK-0254). A mod with an opencode/ folder is copied into
-# OpenCode's config dir by the opencode step; see mod_ports below.
+# Mod ports (TASK-0254, TASK-0255). A mod with an opencode/ folder is
+# copied into OpenCode's config dir by the opencode step, and one with a
+# codex/ folder into ~/.codex/plugins/ by the codex step, when ~/.codex
+# exists; see mod_ports below.
 #
 # Mod status (issue #5): every mod line names its status.json status, e.g.
 # [experimental]. A label only: what is deployed does not depend on it.
@@ -540,6 +542,11 @@ if [ "$STATUS" -eq 1 ]; then
   done <<EOF
 $CLIENTS
 EOF
+  if [ -d "$HOME/.codex" ]; then
+    mod_ports codex "$HOME/.codex" status
+  else
+    echo "codex: not installed ($HOME/.codex absent)"
+  fi
   exit 0
 fi
 
@@ -632,6 +639,20 @@ while IFS='|' read -r client target parent agents_target; do
 done <<EOF
 $CLIENTS
 EOF
+
+# Codex takes mods only, as plugin bundles (TASK-0255). Outside the CLIENTS
+# table on purpose: the gate pairs every row there with configs/<name>/,
+# and Codex gets no skills or agents from this script.
+case "$WANT_CLIENT" in
+  all|codex)
+    if [ -d "$HOME/.codex" ]; then
+      deployed_any=1
+      mod_ports codex "$HOME/.codex" write
+    else
+      echo "client skipped: codex (not installed: $HOME/.codex absent)"
+    fi
+    ;;
+esac
 
 # --- Bionic: PROJECT skills only -------------------------------------------
 # Deliberately outside the CLIENTS table. Every row there is a GLOBAL target

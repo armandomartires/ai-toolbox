@@ -153,3 +153,14 @@ execute })` with zod arguments from `tool.schema`, and a TUI module is
 sidebar_content(ctx, props) { ... } } })`. task-compass's port is written
 against that, so it can load where it is used; a move to 2.x is a later
 task.
+
+**Installing a Codex port.** `scripts/install.sh --client codex` (or a run
+for every client) copies each selected mod's `codex/` bundle, tests left out,
+to `~/.codex/plugins/<name>/` with the same marker, when `~/.codex` exists;
+the step sits outside the `CLIENTS` table, since Codex gets no skills or
+agents from it and the gate pairs every row there with `configs/<name>/`.
+Codex loads the bundle once a marketplace entry names it and it restarts;
+the entry, and a workspace admin importing the marketplace, are human
+steps. Proven by `tests/test-install.sh` (X1-X5). task-compass's bundle is
+the first (`TASK-0255`): a `SessionStart` hook, a plain-node MCP server for
+the `story` tool, and a skill.
