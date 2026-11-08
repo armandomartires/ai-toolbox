@@ -292,6 +292,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [?] TASK-0256 — Toggles draw SIGMAorbital's square switch on a desktop
 - [?] TASK-0257 — switchboard 0.9.0: the pane follows the design of Compass and Agents
 - [x] TASK-0258 — The mod preview's sidebar hides and shows from a button
+- [?] TASK-0260 — task-orchestrator 0.6.0: a worker stopped at its turn cap is reported, resumable, and given more turns
 
 - [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
 

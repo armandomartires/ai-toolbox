@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { COORDINATOR_PROTOCOL, assignmentId, buildContract, parseReport } from './contract'
+import { COORDINATOR_PROTOCOL, assignmentId, buildContract, parseReport, turnReserve } from './contract'
 import { DEFAULT_LIMITS } from './routing'
 
 test('the contract carries the assignment, its bounds and the stop condition', () => {
@@ -22,6 +22,28 @@ test('the contract carries the assignment, its bounds and the stop condition', (
     [],
   )
   expect(readOnly).toContain('read-only assignment')
+})
+
+test('the contract tells a worker to write its report before the turn cap, keeping turns in reserve (TASK-0260)', () => {
+  expect(turnReserve(120)).toBe(12)
+  expect(turnReserve(60)).toBe(6)
+  expect(turnReserve(10)).toBe(2)
+  const text = buildContract(
+    { id: 'T2', role: 'builder', taskClass: 'implementation', objective: 'Add the flag', allowedFiles: ['src/cli.ts'], isWriter: true, isolated: true, requested: { model: 'sonnet', effort: 'medium' }, deps: [] },
+    { inputs: [], prohibited: [], deliverables: [], acceptance: [], tools: "the session's tools" },
+    DEFAULT_LIMITS,
+    120,
+    [],
+  )
+  expect(text).toContain('at most 120 turns')
+  expect(text).toContain('the engine stops you mid-step at the cap, with no report')
+  expect(text).toContain('keep 12 turns in reserve: by turn 108')
+  expect(text).toContain('write your report with Status partial')
+  expect(text).toContain('what is done, what is left and where your edits are')
+  // The coordinator resumes such a worker rather than retrying it.
+  expect(COORDINATOR_PROTOCOL).toContain('except a worker collect says stopped at its turn cap: resume that agent with SendMessage to its agent id')
+  // The stop list names it too.
+  expect(text).toContain('- you reach turn 108 (the cap less the reserve), done or not.')
 })
 
 test('the protocol puts a model or effort the person names on every dispatch, over the table', () => {

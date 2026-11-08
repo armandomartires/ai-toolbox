@@ -372,6 +372,75 @@ const baseOf = async ($: EngineInterface, task: Task): Promise<string | undefine
   return git && git.exitCode === 0 ? git.stdout.trim() : undefined
 }
 
+/** The note a task stopped at its turn cap carries: its agent may be resumed, and its next turn reopens the task (TASK-0260). */
+const TURN_CAP_NOTE = 'stopped at its turn cap'
+
+/**
+ * Whether the engine cut an agent's run off mid-step, as it does at the turn cap: its transcript's last entry is a tool
+ * result with no answer after it. Seen live twice on 2026-11-08 (TASK-0260); nothing else in the end event says so.
+ */
+const cutOffMidStep = async ($: EngineInterface, agentId: string): Promise<boolean> => {
+  const rows: unknown = await $.session.messages({ agentId }).catch(() => undefined)
+  if (!Array.isArray(rows)) return false
+  const last = rows.at(-1) as { role?: unknown; toolResults?: unknown } | undefined
+  return last?.role === 'user' && Array.isArray(last.toolResults) && last.toolResults.length > 0
+}
+
+/** A task whose worker the cap stopped, still partial: a turn of its agent's reopens it. */
+const isResumable = (task: Task): boolean => task.status === 'partial' && task.notes.includes(TURN_CAP_NOTE)
+
+/** A git command's standard output, or undefined when it could not run or failed. */
+const gitOut = async ($: EngineInterface, argv: readonly string[]): Promise<string | undefined> => {
+  const ran = await $.process.run(argv).catch(() => undefined)
+  return ran && ran.exitCode === 0 ? ran.stdout.replace(/\r/g, '') : undefined
+}
+
+const plural = (count: number, one: string): string => `${count} ${one}${count === 1 ? '' : 's'}`
+
+const lineCount = (text: string | undefined): number | undefined => (text === undefined ? undefined : text.split('\n').filter(one => one.trim()).length)
+
+/**
+ * Where a worker cut off at its cap left its edits, and what they hold: its own worktree (`agent-<id>` on
+ * `worktree-agent-<id>`, as the engine names it) with what is uncommitted and the commits past its base, or the session's
+ * checkout. `held` is whether a fresh retry would lose anything; unknown counts as held.
+ */
+const workOf = async ($: EngineInterface, task: Task): Promise<{ text: string; held: boolean }> => {
+  if (!task.isolated) {
+    const cwd = await $.session.cwd().catch(() => '')
+    const branch = (await gitOut($, ['git', 'rev-parse', '--abbrev-ref', 'HEAD']))?.trim()
+    const dirty = lineCount(await gitOut($, ['git', 'status', '--porcelain']))
+    const what = dirty === undefined ? 'git status could not be read' : `${plural(dirty, 'uncommitted change')} (the checkout's, not only the worker's)`
+    // A retry runs in the same checkout: the edits stay where they are.
+    return { text: `its work is in the session's own checkout ${cwd}${branch ? ` on branch ${branch}` : ''}: ${what}`, held: false }
+  }
+  const listed = await gitOut($, ['git', 'worktree', 'list', '--porcelain'])
+  const trees = (listed ?? '').split(/\n\s*\n/).map(block => ({
+    path: /^worktree (.+)$/m.exec(block)?.[1]?.trim() ?? '',
+    branch: /^branch refs\/heads\/(.+)$/m.exec(block)?.[1]?.trim(),
+  }))
+  const mine = trees.find(one => one.path && (one.path.replace(/\\/g, '/').split('/').at(-1) === `agent-${task.agentId}` || one.branch === `worktree-agent-${task.agentId}`))
+  if (!mine) return { text: `its worktree was not found: git worktree list names no agent-${task.agentId}`, held: true }
+  const dirty = lineCount(await gitOut($, ['git', '-C', mine.path, 'status', '--porcelain']))
+  const counted = task.baseRevision ? Number((await gitOut($, ['git', '-C', mine.path, 'rev-list', '--count', `${task.baseRevision}..HEAD`]))?.trim()) : NaN
+  const ahead = Number.isInteger(counted) ? counted : undefined
+  const parts = [
+    dirty === undefined ? 'uncommitted changes unknown (git status failed)' : dirty ? plural(dirty, 'uncommitted change') : 'nothing uncommitted',
+    ahead === undefined ? 'new commits unknown' : ahead ? plural(ahead, 'new commit') : 'no new commit',
+  ]
+  return { text: `its work is in worktree ${mine.path}${mine.branch ? ` on branch ${mine.branch}` : ''}: ${parts.join(' and ')}`, held: dirty !== 0 || ahead !== 0 }
+}
+
+/** What collect says of a worker cut off at its cap: the cap, where its edits are, and to resume it rather than retry. */
+const turnCapReason = async ($: EngineInterface, task: Task): Promise<string> => {
+  const work = await workOf($, task)
+  return [
+    `${TURN_CAP_NOTE} (${ROLE_PROFILES[task.role].maxTurns} turns) mid-step, before its report: its transcript ends on a tool result`,
+    work.text,
+    `resume the same agent: SendMessage to ${task.agentId} asking it to finish and write its report`,
+    ...(work.held && task.isolated ? [`do not dispatch ${task.id} again: a retry starts a fresh worktree at HEAD and loses them`] : []),
+  ].join('; ')
+}
+
 /**
  * The Agent call that starts a handed-off task, as the coordinator makes it:
  * on the role's own profile, registered at load, since a profile registered
@@ -1280,6 +1349,16 @@ ${classGuide()}` },
     return next.called ? next(e) : e.agentId ? { deny: `${PLUGIN}: the worker fence failed, so the call is refused` } : next(e)
   })
 
+  // A worker stopped at its turn cap and resumed by the coordinator's SendMessage runs again: back to running, so the
+  // fence holds its calls and collect waits for its report (TASK-0260).
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId) {
+      const task = byAgent(await read($, ledger), e.agentId)
+      if (task && isResumable(task)) await settle($, task, { status: 'running', reason: undefined, endedAt: undefined, notes: [...task.notes, 'resumed after its turn cap'] }, 'partial')
+    }
+    return next(e)
+  })
+
   // The one place the effective settings are visible: a worker's model request.
   on('turn.step', async function* ($, e, next) {
     // The coordinator's own request carries its effort, which a session worker may not exceed.
@@ -1308,12 +1387,15 @@ ${classGuide()}` },
     // A worker's tokens, as its turn reported them (TASK-0226): summed over its turns.
     if (worker && counted !== undefined) await update($, ledger, rows => setTask(rows, worker.id, { tokens: (worker.tokens ?? 0) + counted })).then(() => keep($, assignments))
     const task = byAgent(await read($, ledger), e.agentId)
-    if (!task || task.status !== 'running') return done
+    // A worker stopped at its cap and resumed by SendMessage answers again: its turn.start reopened it, or, unheard, this does.
+    if (!task || (task.status !== 'running' && !isResumable(task))) return done
     const report = parseReport(e.answer)
+    const capped = e.reason === 'answer' && report.status === 'unknown' && (await cutOffMidStep($, e.agentId))
     const status: Task['status'] = e.reason !== 'answer' ? 'failed' : report.status === 'unknown' ? 'partial' : report.status
-    const reason = e.reason !== 'answer' ? `the worker's turn ended by ${e.reason}` : report.status === 'unknown' ? 'the worker gave no Status line; read its report' : undefined
+    const reason = e.reason !== 'answer' ? `the worker's turn ended by ${e.reason}` : capped ? await turnCapReason($, task) : report.status === 'unknown' ? 'the worker gave no Status line; read its report' : undefined
     const hint = reclassifyHint(task, status)
-    if (!(await settle($, task, { status, report, reason, endedAt: await $.clock.now(), ...(hint ? { notes: [...task.notes, hint] } : {}) }, 'running'))) return done
+    const notes = [...task.notes, ...(hint ? [hint] : []), ...(capped && !task.notes.includes(TURN_CAP_NOTE) ? [TURN_CAP_NOTE] : [])]
+    if (!(await settle($, task, { status, report, reason, endedAt: await $.clock.now(), ...(notes.length !== task.notes.length ? { notes } : {}) }, task.status))) return done
     // A worker's end is in no turn of the person's: a session task behind it waits for their next prompt.
     await ended($, task.id, { sessions: false, notify: true })
     return done

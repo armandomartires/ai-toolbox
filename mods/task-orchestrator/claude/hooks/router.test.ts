@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { escalate, fallback, gate, isBlocked, route } from './router'
-import { DEFAULT_CONFIG, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
+import { DEFAULT_CONFIG, ROLE_PROFILES, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
 import type { Config } from './routing'
 
 const none = { unavailable: [] as string[] }
@@ -107,4 +107,12 @@ test('a role named over the table brings its own row settings, unless a model or
   expect(own.notes).toContain("settings opus/high from role debugger's own row")
   const named = decided(route({ taskClass: 'lookup', role: 'debugger', model: 'sonnet', effort: 'medium' }, DEFAULT_CONFIG, none))
   expect(named).toMatchObject({ role: 'debugger', model: 'sonnet', effort: 'medium' })
+})
+
+test('a builder and a debugger have the turns a mod change with its 5-10 minute gate needs; the read-only roles keep theirs (TASK-0260)', () => {
+  // 2026-11-08: a debugger and a builder at 60 each stopped mid-step with no report (TASK-0260).
+  expect(ROLE_PROFILES.builder.maxTurns).toBe(120)
+  expect(ROLE_PROFILES.debugger.maxTurns).toBe(120)
+  const readOnly = Object.fromEntries(Object.entries(ROLE_PROFILES).filter(([, one]) => one.readOnly).map(([name, one]) => [name, one.maxTurns]))
+  expect(readOnly).toEqual({ utility: 10, scout: 20, investigator: 40, reviewer: 30, planner: 40, 'risk-reviewer': 30 })
 })

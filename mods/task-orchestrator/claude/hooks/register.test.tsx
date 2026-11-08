@@ -1648,3 +1648,86 @@ test('/orchestrate theme light pins Daylight for the next render; a bad value an
   expect((await ui.find({ type: 'Text', text: /^ORCHESTRATOR$/ }))?.props.color).toBe(TOKENS.light['text-1'])
   await ui.unmount()
 })
+
+/** The engine's git and a worker's transcript, as a turn-cap test needs them (TASK-0260). */
+const capWorld = (on: On, git: Record<string, string>, transcripts: Record<string, unknown[]>) => {
+  const ran: string[] = []
+  on('process.run', (_, e) => {
+    const command = [...e.argv].join(' ')
+    ran.push(command)
+    const stdout = git[command]
+    return { value: { exitCode: stdout === undefined ? 128 : 0, stdout: stdout ?? '', stderr: stdout === undefined ? 'fatal: not stubbed' : '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  on('session.messages', (_, e) => ({ value: (transcripts[String((e as { agentId?: string }).agentId)] ?? []) as never }))
+  // A resumed agent's run starts a turn again; nothing beneath the plugins answers it in the kit.
+  on('turn.start', (_, e) => ({ turnId: e.turnId }))
+  return { ran }
+}
+
+/** A transcript the engine cut off mid-step: an assistant's tool call, then its result, and no answer after it. */
+const cutOff = [
+  { role: 'assistant', text: 'Running the gate.', toolUses: [{ tool_use_id: 'u1', tool: 'Bash', input: { command: 'tests/validate.sh' } }] },
+  { role: 'user', text: '', toolUses: [], toolResults: [{ tool_use_id: 'u1', text: ' M src/a.ts', isError: false }] },
+]
+
+test('a worker stopped at its turn cap mid-step: collect names the cap, its worktree, branch and changes, and says resume, not retry (TASK-0260)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  const WT = '/p/.claude/worktrees/agent-agent-1'
+  capWorld(on, {
+    'git rev-parse HEAD': 'base111\n',
+    'git worktree list --porcelain': `worktree /p\nHEAD base111\nbranch refs/heads/master\n\nworktree ${WT}\nHEAD head222\nbranch refs/heads/worktree-agent-agent-1\n\n`,
+    [`git -C ${WT} status --porcelain`]: ' M src/a.ts\n?? src/a.test.ts\n',
+    [`git -C ${WT} rev-list --count base111..HEAD`]: '1\n',
+  }, { 'agent-1': cutOff })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true }))
+  // The engine ends the run at the cap: the answer is the last text it wrote, no report.
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: 'Running the gate.', durationMs: 1, isAborted: false, turnId: 't' })
+  const got = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['B1'] })).result)
+  expect(got).toContain('B1 → builder [agent-1]')
+  expect(got).toContain('→ partial')
+  expect(got).not.toContain('gave no Status line')
+  expect(got).toContain('stopped at its turn cap (120 turns) mid-step, before its report: its transcript ends on a tool result')
+  expect(got).toContain(`its work is in worktree ${WT} on branch worktree-agent-agent-1: 2 uncommitted changes and 1 new commit`)
+  expect(got).toContain('resume the same agent: SendMessage to agent-1 asking it to finish and write its report')
+  expect(got).toContain('do not dispatch B1 again: a retry starts a fresh worktree at HEAD and loses them')
+
+  // Resumed by SendMessage: its next turn puts it back under the fence, and its report closes the task.
+  await $.turn.start({ text: 'finish and report', turnId: 't2', agentId: 'agent-1' })
+  expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)).toContain('B1 → builder [agent-1]')
+  expect((await $.tool.call({ tool: 'Edit', file_path: '/p/src/b.ts', old_string: 'a', new_string: 'b', agentId: 'agent-1' })).deny).toContain('outside its allowed files')
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed', 'review it'), durationMs: 1, isAborted: false, turnId: 't2' })
+  const after = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['B1'] })).result)
+  expect(after).toContain('→ completed')
+  expect(after).toContain('→ review it')
+})
+
+test('a writer in the session checkout stopped at its cap names that checkout; a worker that ends on its own words with no report is still unparsed (TASK-0260)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  capWorld(on, {
+    'git rev-parse --abbrev-ref HEAD': 'master\n',
+    'git status --porcelain': ' M src/a.ts\n',
+  }, { 'agent-1': cutOff, 'agent-2': [{ role: 'assistant', text: 'I am done.', toolUses: [] }] })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'D1', class: 'debugging', objective: 'find it', allowedFiles: ['src/a.ts'] }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: '', durationMs: 1, isAborted: false, turnId: 't' })
+  const got = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['D1'] })).result)
+  expect(got).toContain('stopped at its turn cap (120 turns) mid-step')
+  expect(got).toContain("its work is in the session's own checkout /p on branch master: 1 uncommitted change (the checkout's, not only the worker's)")
+  expect(got).toContain('resume the same agent: SendMessage to agent-1')
+  expect(got).not.toContain('loses them')
+
+  await $.tool.call(dispatch({ id: 'S1', class: 'lookup', objective: 'look' }))
+  await $.turn.complete({ agentId: 'agent-2', reason: 'answer', answer: 'I am done.', durationMs: 1, isAborted: false, turnId: 't' })
+  const plain = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['S1'] })).result)
+  expect(plain).toContain('the worker gave no Status line; read its report')
+  expect(plain).not.toContain('turn cap')
+})

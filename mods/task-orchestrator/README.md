@@ -65,6 +65,8 @@ The coordinator picks the class; `dispatch`'s `class` field lists what each one 
 
 A read-only role gets `Read`, `Grep`, `Glob` and `LS` and nothing else, so it has no shell. A writer role gets those and `Edit`, `Write`, `MultiEdit`, `NotebookEdit`, `Bash` and `TodoWrite` (`WRITER_TOOLS` in `routing.ts`), so no connector's schema rides into its context. Every role is denied `Agent`, `Workflow`, `SendMessage`, `TaskStop` and the worktree tools. Each worker ends with a fixed report (Status, Findings, Files, Checks actually run, Evidence, Risks, Next) and is told to list checks it did not run under Next, never under Checks. The report parser reads the labels as the worker writes them: as plain lines, bullets, `##` headings or bold, followed by `:` or ` — ` (or ` – `), and `Checks run` or `Checks actually run` both name Checks. The status word must still be `completed`, `partial`, `blocked` or `failed`, else the task ends `partial`. A bullet label inside a filled section is kept as text, not read as a label. A worker is told not to update the person's task board or task list; the coordinator keeps the [task-compass](../task-compass/README.md) board current.
 
+Each role has a turn cap on its profile: utility 10, scout 20, documentation, reviewer and risk-reviewer 30, investigator, planner and tester 40, frontier-specialist 80, builder and debugger 120 (`WRITER_CHANGE_TURNS` in `routing.ts`, sized for a mod change with its tests, a preview, a version step, a brief and the 5-10 minute gate). The assignment tells the worker to keep a tenth of its cap in reserve, at least two turns, and to stop by then with a `partial` report that says what is done, what is left and where its edits are. The engine stops a worker at its cap in the middle of a step, with no report. When a worker ends with no report and its transcript's last entry is a tool result, `collect` says it stopped at its turn cap. It names the worktree and branch, or the session's checkout, with the uncommitted changes and new commits there. It tells the coordinator to resume that agent with `SendMessage` to its agent id, because a fresh retry of an isolated task starts a new worktree at HEAD and loses those edits. The resumed agent's next turn sets the task back to `running` under the same write fence, and its report closes the task.
+
 ### Session workers
 
 A task runs as a session only when the person asks for sessions ("run them as sub sessions"). The coordinator then dispatches it with `runAs: "session"`; the default is `subagent`, and every other task stays one. A session is a Code-tab session the person can open and talk to. It runs in its own worktree, and its parent is the coordinator (`parentSessionId`).
@@ -98,6 +100,10 @@ Without editing the mod, put a JSON file at `~/.claude/task-orchestrator.json` (
 ```
 
 The choices made with `/orchestrate` (on, policy, opt-ins, providers) are stored per project and win over the home file; the project file is applied last and is never stored.
+
+## Not yet verified
+
+Version 0.6.0 (`TASK-0260`): the turn caps, the reserve in the assignment, and `collect`'s turn-cap report with resume handling. These are tested in the mod test kit, with the engine's git output and an agent transcript stubbed. They have not been seen in a live run: a worker stopped at the 120 cap, `collect` naming its real worktree, and the coordinator's `SendMessage` reopening the task. On 2026-11-08 a resume by `SendMessage` worked by hand, before this version. Whether the engine sends a resumed agent's `turn.start` with its agent id has not been seen live either. Without it, the task stays `partial` and outside the write fence until the resumed run's report closes it.
 
 ## What is enforced and what is observed
 

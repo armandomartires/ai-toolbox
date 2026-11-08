@@ -551,6 +551,8 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   .ai/tasks/TASK-0257-switchboard-design-parity.md
 - [x] TASK-0258 — The mod preview's sidebar hides and shows from a button
   .ai/tasks/TASK-0258-preview-sidebar-toggle.md
+- [?] TASK-0260 — task-orchestrator 0.6.0: a worker stopped at its turn cap is reported, resumable, and given more turns
+  .ai/tasks/TASK-0260-orchestrator-turn-cap.md
 - [?] TASK-0253 — switchboard 0.8.0: each repo mod's loaded version beside its manifest (B-071)
   .ai/tasks/TASK-0253-switchboard-loaded-versions.md
 - B-072 Mods cannot follow the desktop app's light/dark switch: no signal reaches a hook
