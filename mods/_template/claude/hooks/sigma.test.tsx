@@ -403,8 +403,12 @@ test('a toggle on a desktop: the track an Svg, the name and state Texts, a blank
     expect(String(one.props.label ?? '').trim()).toBe('')
     expect(String(one.text).trim()).toBe('')
   }
-  expect((await desk.find({ type: 'Text', text: /^ AGENT-WATCH$/ }))?.props.color).toBe(D['text-1'])
-  expect((await desk.find({ type: 'Text', text: /^ SWITCHBOARD$/ }))?.props.color).toBe(D['text-3'])
+  // A toggle's name is a row, not a title (TASK-0257): text-2 at the body weight while on, text-3 while off or disabled, as Compass's and Agents' rows are.
+  for (const [name, token] of [[' AGENT-WATCH', 'text-2'], [' COMPASS', 'text-3'], [' SWITCHBOARD', 'text-3']] as const) {
+    const drawn = await desk.find({ type: 'Text', text: name })
+    expect(drawn?.props.color).toBe(D[token])
+    expect(drawn?.props.weight).toBeUndefined()
+  }
   expect(await desk.find({ type: 'Text', text: /^\[ ■\]$/ })).toBeUndefined()
   await desk.unmount()
 
@@ -412,5 +416,9 @@ test('a toggle on a desktop: the track an Svg, the name and state Texts, a blank
   expect(await term.find({ type: 'Svg' })).toBeUndefined()
   expect((await term.find({ type: 'Button', key: 't-on' }))?.props.label).toBe('AGENT-WATCH ON')
   expect((await term.findAll({ type: 'Text', text: /^\[ ■\]$/ })).map(one => one.props.color)).toEqual([D['text-1'], D['text-3']])
+  const termName = await term.find({ type: 'Text', text: ' AGENT-WATCH' })
+  expect(termName?.props.color).toBe(D['text-2'])
+  expect(termName?.props.weight).toBeUndefined()
+  expect((await term.find({ type: 'Text', text: ' COMPASS' }))?.props.color).toBe(D['text-3'])
   await term.unmount()
 })

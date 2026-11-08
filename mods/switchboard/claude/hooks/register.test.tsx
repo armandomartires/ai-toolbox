@@ -32,7 +32,7 @@ const MANY_SKILLS = [
 const MANY_SERVERS = Array.from({ length: 24 }, (_, i) => `server_${i + 1}`)
 
 /** The engine beneath the mod, in project `root.value`: what ran, and what was invalidated. */
-const engine = (on: On, root: { value: string }, isRepo = false, many = false) => {
+const engine = (on: On, root: { value: string }, isRepo = false, many = false, moreRepoMods = 0) => {
   const ran: string[] = []
   const invalidated: string[] = []
   on('command.register', (_, e) => ({ value: { command: e.name } }))
@@ -86,6 +86,9 @@ const engine = (on: On, root: { value: string }, isRepo = false, many = false) =
       '/p/mods/_template/claude/.claude-plugin/plugin.json': '{"name":"template","version":"0.1.0"}',
     })
   }
+  // More checkout mods, none loaded: each a Versions row with its note.
+  const extraRepo = Array.from({ length: moreRepoMods }, (_, i) => `a-checkout-mod-with-a-long-name-number-${i + 1}`)
+  for (const name of extraRepo) files[`/p/mods/${name}/claude/.claude-plugin/plugin.json`] = JSON.stringify({ name, version: '1.2.3' })
   mock.env(on, { CLAUDE_CODE_PLUGIN_DIRS: '/mods' })
   // The Windows CLI hands a path over as `C:\mods\...`; the fixtures are POSIX.
   const posix = (path: string) => path.replace(/^[A-Za-z]:/, '').replaceAll(String.fromCharCode(92), '/')
@@ -93,7 +96,7 @@ const engine = (on: On, root: { value: string }, isRepo = false, many = false) =
   on('fs.read', (_, e) => (posix(e.path) in files ? { value: files[posix(e.path)] as string } : { deny: 'ENOENT' }))
   on('fs.list', (_, e) =>
     posix(e.path) === '/mods' || (isRepo && posix(e.path) === '/p/mods')
-      ? { value: (posix(e.path) === '/mods' ? ['agent-watch', 'task-compass', 'skills-only'] : ['_template', 'agent-watch', 'switchboard', 'task-compass']).map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) }
+      ? { value: (posix(e.path) === '/mods' ? ['agent-watch', 'task-compass', 'skills-only'] : ['_template', 'agent-watch', 'switchboard', 'task-compass', ...extraRepo]).map(name => ({ name, kind: 'dir' as const, size: 0, mtimeMs: 0, isLink: false })) }
       : { value: [] },
   )
   on('tool.call', (_, e) => {
@@ -113,6 +116,37 @@ const start = ($: Engine) =>
 
 const off = async ($: Engine, args: string) =>
   (await $.command.run({ command: 'switchboard', args } as never)) as { text: string }
+
+type Mounted = Awaited<ReturnType<Engine['ui']['mount']>>
+
+/** An element as `find` describes its children. */
+type Drawn = { type?: string; props?: Record<string, unknown>; children?: unknown[] }
+const textsIn = (node: unknown): Drawn[] =>
+  typeof node !== 'object' || node === null ? [] : (node as Drawn).type === 'Text' ? [node as Drawn] : ((node as Drawn).children ?? []).flatMap(textsIn)
+const textOf = (node: Drawn | undefined) => (node?.children ?? []).filter(one => typeof one === 'string').join('')
+
+/**
+ * The Texts that show words under the element keyed `key`, in drawing order: a Text keeps no key, so the Box around
+ * them carries it. A pressable's blank (figure spaces) and a rule's glyphs show none.
+ */
+const wordsUnder = async (ui: Mounted, key: string) => {
+  const found = await ui.find({ key })
+  return (found?.children ?? []).flatMap(textsIn).filter(one => textOf(one).trim() !== '' && !/^─+$/.test(textOf(one)))
+}
+
+/**
+ * A header's Texts (TASK-0257): its fold glyph, its title and its counts, each a Text of its own since a desktop
+ * draws a Button's words in its own colour; `key` is the press, `section-<kind>` or `group-<kind>:<topic>`.
+ */
+const headerTexts = async (ui: Mounted, key: string) => {
+  const [glyph, title, count] = await wordsUnder(ui, `${key}-head`)
+  return { glyph, title, count }
+}
+/** A header's words: its glyph, title and counts. */
+const header = async (ui: Mounted, key: string) => {
+  const { glyph, title, count } = await headerTexts(ui, key)
+  return { glyph: glyph && textOf(glyph), title: title && textOf(title), count: count && textOf(count) }
+}
 
 test('a skill turned off is dropped from the listing, its call denied, its prompt replaced', async ($, on) => {
   mock.store(on)
@@ -197,7 +231,7 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
-    expect((await ui.find({ text: /MODS  3/ }))?.text).toBeDefined()
+    expect(await header(ui, 'section-mod')).toEqual({ glyph: '▾', title: ' MODS', count: '3' })
     expect((await ui.find({ type: 'Text', text: /^SWITCHBOARD$/ }))?.props.color).toBe(DARK['text-1'])
     expect((await ui.find({ text: /^ AGENT-WATCH$/ }))?.text).toBeDefined()
     expect((await ui.find({ text: /^ TASK-COMPASS$/ }))?.text).toBeDefined()
@@ -221,7 +255,9 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
       expect(tracks.find(one => one.props.alt === 'AGENT-WATCH ON')?.props.source).toContain(`fill="${DARK['text-1']}"/></svg>`)
       expect(tracks.find(one => one.props.alt === 'SWITCHBOARD ALWAYS ON')?.props.source).toContain(`fill="${DARK['text-3']}"/></svg>`)
     }
-    expect((await ui.find({ type: 'Text', text: /^ AGENT-WATCH$/ }))?.props.color).toBe(DARK['text-1'])
+    // A row's name is body text, text-2 at the body weight, under the section's text-1 title (TASK-0257).
+    expect((await ui.find({ type: 'Text', text: /^ AGENT-WATCH$/ }))?.props.color).toBe(DARK['text-2'])
+    expect((await ui.find({ type: 'Text', text: /^ AGENT-WATCH$/ }))?.props.weight).toBeUndefined()
     expect((await ui.findAll({ type: 'Text', text: /^  ON$/ }))[0]?.props.color).toBe(DARK['text-3'])
     expect((await ui.findAll({ type: 'Text' })).filter(one => one.props.dimColor || (one.props.bold && !one.props.weight)).length).toBe(0)
     await ui.unmount()
@@ -229,7 +265,9 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   await ui.press({ key: 'mod-agent-watch' })
-  expect((await ui.find({ text: /MODS  3 · ○ 1 OFF/ }))?.text).toBeDefined()
+  expect((await header(ui, 'section-mod')).count).toBe('3 · ○ 1 OFF')
+  // Off, the name falls back to text-3, as an offline item does.
+  expect((await ui.find({ type: 'Text', text: /^ AGENT-WATCH$/ }))?.props.color).toBe(DARK['text-3'])
   // Off: the knob at the left, track in line-strong, the word OFF.
   const switched = (await ui.findAll({ type: 'Svg' })).find(one => one.props.alt === 'AGENT-WATCH OFF')
   expect(switched?.props.source).toContain(`<rect x="3" y="3" width="8" height="8" fill="${DARK['line-strong']}"/>`)
@@ -246,7 +284,7 @@ test('skills and connectors open from their header; a toggle there acts next tur
   await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  expect((await ui.find({ text: /SKILLS  4/ }))?.text).toBeDefined()
+  expect(await header(ui, 'section-skill')).toEqual({ glyph: '▸', title: ' SKILLS', count: '4' })
   expect(await ui.find({ text: /^ LOOP$/ })).toBeUndefined()
   await ui.press({ key: 'section-skill' })
   expect((await ui.find({ text: /^ LOOP$/ }))?.text).toBeDefined()
@@ -264,24 +302,34 @@ test('mods and skills sit under topic sub-headers, in text-3, with their counts;
   await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  // The topic titles in drawing order, `kind` one of mod or skill.
+  const titles = async (kind: string) =>
+    Promise.all(
+      (await ui.findAll({ type: 'Box' }))
+        .filter(one => one.key?.startsWith(`group-${kind}:`) && one.key.endsWith('-head'))
+        .map(async one => (await header(ui, String(one.key).replace(/-head$/, ''))).title),
+    )
   // Mods: each manifest's category, switchboard under its own, none under OTHER.
-  for (const topic of ['CONFIGURATION', 'OBSERVABILITY', 'PLANNING']) {
-    expect((await ui.find({ type: 'Text', text: new RegExp(`^▾ ${topic}$`) }))?.props.color).toBe(DARK['text-3'])
+  for (const topic of ['configuration', 'observability', 'planning']) {
+    const { glyph, title } = await headerTexts(ui, `group-mod:${topic}`)
+    expect(textOf(title)).toBe(` ${topic.toUpperCase()}`)
+    expect(title?.props?.color).toBe(DARK['text-3'])
+    expect(title?.props?.size).toBe('caption')
+    expect(textOf(glyph)).toBe('▾')
   }
-  expect((await ui.find({ type: 'Text', text: /^1$/ }))?.props.tabular).toBe(true)
+  expect((await headerTexts(ui, 'group-mod:planning')).count?.props?.tabular).toBe(true)
+  expect((await header(ui, 'group-mod:planning')).count).toBe('1')
   expect(await ui.find({ text: /OTHER/ })).toBeUndefined()
-  const topics = (await ui.findAll({ type: 'Text', text: /^▾ [A-Z]+$/ })).map(one => one.text)
-  expect(topics).toEqual(['▾ CONFIGURATION', '▾ OBSERVABILITY', '▾ PLANNING'])
+  expect(await titles('mod')).toEqual([' CONFIGURATION', ' OBSERVABILITY', ' PLANNING'])
 
   // Skills: by plugin prefix, with STANDALONE last.
   await ui.press({ key: 'section-skill' })
-  const skillTopics = (await ui.findAll({ type: 'Text', text: /^▾ (LEGAL|STANDALONE)$/ })).map(one => one.text)
-  expect(skillTopics).toEqual(['▾ LEGAL', '▾ STANDALONE'])
+  expect(await titles('skill')).toEqual([' LEGAL', ' STANDALONE'])
   expect((await ui.find({ text: /^ LEGAL:BRIEF$/ }))?.text).toBeDefined()
 
   // A press on a group header hides its rows; another shows them again.
   await ui.press({ key: 'group-mod:observability' })
-  expect((await ui.find({ type: 'Text', text: /^▸ OBSERVABILITY$/ }))?.text).toBeDefined()
+  expect((await header(ui, 'group-mod:observability')).glyph).toBe('▸')
   expect(await ui.find({ text: /^ AGENT-WATCH$/ })).toBeUndefined()
   expect((await ui.find({ text: /^ TASK-COMPASS$/ }))?.text).toBeDefined()
   await ui.press({ key: 'group-mod:observability' })
@@ -402,17 +450,28 @@ test('the pane lists each repo mod\'s loaded version beside its manifest, with a
 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   // Three repo mods (the template is left out): agent-watch is stale and loaded from /mods, task-compass loaded from /mods.
-  expect((await ui.find({ type: 'Text', text: /^VERSIONS  3 · ▲ 2$/ }))?.text).toBeDefined()
-  expect((await ui.find({ type: 'Text', text: /^loaded 0\.12\.1 · manifest 0\.13\.1$/ }))?.text).toBeDefined()
+  // The section's header is the others' (TASK-0257): a fold glyph, the title, the counts; a press folds it.
+  expect(await header(ui, 'section-versions')).toEqual({ glyph: '▾', title: ' VERSIONS', count: '3 · ▲ 2' })
+  // Label and value, as Agents' Selected panel draws them: the label text-3 caption, the version text-1 tabular.
+  for (const word of [/^LOADED$/, /^MANIFEST$/, /^VERSION$/]) expect((await ui.find({ type: 'Text', text: word }))?.props).toMatchObject({ color: DARK['text-3'], size: 'caption' })
+  for (const version of [/^0\.12\.1$/, /^0\.13\.1$/, /^1\.0\.0$/]) expect((await ui.find({ type: 'Text', text: version }))?.props).toMatchObject({ color: DARK['text-1'], tabular: true })
   const notes = (await ui.findAll({ type: 'Text', text: /^ {2}▲ / })).map(one => one.text)
   expect(notes).toEqual([
     '  ▲ stale: restart or /reload-plugins to load 0.13.1; loaded from elsewhere: /mods/agent-watch',
     '  ▲ loaded from elsewhere: /mods/task-compass',
   ])
-  expect((await ui.find({ type: 'Text', text: /^AGENT-WATCH$/ }))?.props.color).toBe(DARK.amber)
+  // The name is a row's text-2; the caution colour sits on its glyph beside it, never on the name alone.
+  expect((await ui.find({ type: 'Text', text: /^AGENT-WATCH$/ }))?.props.color).toBe(DARK['text-2'])
+  const [mark] = await wordsUnder(ui, 'version-agent-watch-mark')
+  expect(textOf(mark)).toBe('▲')
+  expect(mark?.props?.color).toBe(DARK.amber)
+  expect(await wordsUnder(ui, 'version-switchboard-mark')).toEqual([])
   // switchboard is not in the plugin folders and raised no plugin.register in a test: not loaded.
   expect((await ui.find({ type: 'Text', text: /not loaded in this session/ }))?.text).toBeDefined()
   expect(await ui.find({ text: /TEMPLATE/ })).toBeUndefined()
+  await ui.press({ key: 'section-versions' })
+  expect((await header(ui, 'section-versions')).glyph).toBe('▸')
+  expect(await ui.find({ type: 'Text', text: /^AGENT-WATCH$/ })).toBeUndefined()
   await ui.unmount()
 })
 
@@ -423,10 +482,100 @@ test('without mods in the project root the pane has no Versions section', async 
 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   expect(await ui.find({ text: /VERSIONS/ })).toBeUndefined()
-  // The pane's own version line is always there.
+  // The pane's own version line is always there, at the right of the legend as Compass's is (TASK-0257).
   expect(VERSION).toMatch(/^\d+\.\d+\.\d+$/)
-  expect((await ui.find({ type: 'Text', text: `SWITCHBOARD ${VERSION}` }))?.props.color).toBe(DARK['text-3'])
+  const [line] = await wordsUnder(ui, 'switchboard-version')
+  expect(textOf(line)).toBe(`SWITCHBOARD ${VERSION}`)
+  expect(line?.props).toMatchObject({ color: DARK['text-3'], size: 'caption' })
+  // The legend: each mark the pane uses, its glyph in its colour and its word in text-3.
+  const [offGlyph, offWord] = await wordsUnder(ui, 'legend-off')
+  expect(offGlyph?.props?.color).toBe(DARK['text-3'])
+  expect(textOf(offWord)).toBe(' OFF')
+  const [cautionGlyph, cautionWord] = await wordsUnder(ui, 'legend-caution')
+  expect(cautionGlyph?.props?.color).toBe(DARK.amber)
+  expect(cautionWord?.props).toMatchObject({ color: DARK['text-3'], size: 'caption' })
   await ui.unmount()
+})
+
+// The person, 2026-11-08, at 0.8.1 beside Compass and Agents: "Still not following the same design system as compass and agent-watch".
+test('the pane is one bracketed SIGMAorbital frame opening on a KPI row, as Compass and Agents are (TASK-0257)', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  await start($)
+  await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
+  await off($, 'off mod agent-watch')
+
+  for (const surface of ['desktop', 'terminal'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    if (surface === 'desktop') {
+      // The region frame: the surface fill, a square line border and eight text-1 bracket arms, clipped from bordered Boxes.
+      const boxes = await ui.findAll({ type: 'Box' })
+      expect(boxes.filter(one => one.props.backgroundColor === DARK.surface).length).toBeGreaterThan(0)
+      expect(boxes.filter(one => one.props.borderColor === DARK['text-1']).length).toBe(8)
+    } else {
+      for (const glyph of ['┌', '┐', '└', '┘']) expect((await ui.find({ type: 'Text', text: glyph }))?.props.color).toBe(DARK['text-1'])
+    }
+    // The KPI row: MODS, SKILLS, CONNECTORS and OFF, each a text-3 label over a text-1 tabular value.
+    for (const word of ['MODS', 'SKILLS', 'CONNECTORS', 'OFF']) {
+      expect((await ui.find({ type: 'Text', text: new RegExp(`^${word}$`) }))?.props).toMatchObject({ color: DARK['text-3'], size: 'caption' })
+    }
+    const values = (await ui.findAll({ type: 'Text' })).filter(one => one.props.size === 'title')
+    expect(values.map(one => one.props.color)).toEqual([DARK['text-1'], DARK['text-1'], DARK['text-1'], DARK['text-1']])
+    expect(values.every(one => one.props.tabular === true)).toBe(true)
+    // Each kind's value is its section's count; OFF is everything off.
+    const counts = await Promise.all(['mod', 'skill', 'connector'].map(async kind => (await header(ui, `section-${kind}`)).count?.split(' ')[0]))
+    expect(values.map(one => one.text)).toEqual([...counts, '1'])
+    expect(counts.slice(0, 2)).toEqual(['3', '4'])
+    await ui.unmount()
+  }
+})
+
+test('on a desktop each header is a pressable, its words Texts in their tokens under a blank Button; SKILLS and a topic open on a press (TASK-0257)', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'dark' } as ConfigRow] }))
+  await start($)
+  await $.prompt.attachment({ type: 'skill_listing', text: LISTING } as never)
+
+  for (const theme of ['dark', 'light'] as const) {
+    if (theme === 'light') await off($, 'theme light')
+    const T = TOKENS[theme]
+    // The control token: line-strong in Night ops, text-3 in Daylight (TASK-0241).
+    const control = theme === 'dark' ? T['line-strong'] : T['text-3']
+    const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+    // A desktop draws a Button's words in its own colour (TASK-0241): every header Button is blank, plain and unlabelled.
+    for (const key of ['section-mod', 'section-skill', 'section-connector', 'group-mod:observability']) {
+      const button = await ui.find({ type: 'Button', key })
+      expect(button?.props.plain).toBe(true)
+      // The kit reports the blank as the label; nothing a desktop could draw over the words.
+      expect(String(button?.props.label ?? '').trim()).toBe('')
+      expect(String(button?.text).trim()).toBe('')
+    }
+    expect(await header(ui, 'section-skill')).toEqual({ glyph: '▸', title: ' SKILLS', count: '4' })
+    const skills = await headerTexts(ui, 'section-skill')
+    expect(skills.glyph?.props?.color).toBe(control)
+    expect(skills.title?.props).toMatchObject({ color: T['text-1'], weight: 'semibold' })
+    expect(skills.count?.props).toMatchObject({ color: T['text-3'], size: 'caption', tabular: true })
+    expect(await ui.find({ text: /^ LEGAL:BRIEF$/ })).toBeUndefined()
+
+    await ui.press({ key: 'section-skill' })
+    expect((await header(ui, 'section-skill')).glyph).toBe('▾')
+    expect((await ui.find({ text: /^ LOOP$/ }))?.text).toBeDefined()
+    // Topics start open; a press folds LEGAL, and the press under test opens it again.
+    expect((await header(ui, 'group-skill:legal')).glyph).toBe('▾')
+    await ui.press({ key: 'group-skill:legal' })
+    expect(await header(ui, 'group-skill:legal')).toEqual({ glyph: '▸', title: ' LEGAL', count: '1' })
+    expect((await headerTexts(ui, 'group-skill:legal')).glyph?.props?.color).toBe(control)
+    expect(String((await ui.find({ type: 'Button', key: 'group-skill:legal' }))?.text).trim()).toBe('')
+    expect(await ui.find({ text: /^ LEGAL:BRIEF$/ })).toBeUndefined()
+
+    await ui.press({ key: 'group-skill:legal' })
+    expect((await header(ui, 'group-skill:legal')).glyph).toBe('▾')
+    expect((await ui.find({ text: /^ LEGAL:BRIEF$/ }))?.text).toBeDefined()
+    // Back as it was, for the other theme.
+    await ui.press({ key: 'section-skill' })
+    await ui.unmount()
+  }
 })
 
 /** What the engine draws at most: "every tree's bounds (20,000 nodes, 32 deep, 100,000 characters serialized)". */
@@ -443,19 +592,19 @@ test('on a desktop SKILLS opens with 128 skills and CONNECTORS with 25, the tree
 
   for (const surface of ['desktop', 'terminal'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
-    expect((await ui.find({ type: 'Text', text: /^▸ SKILLS {2}128$/ }))?.text).toBeDefined()
+    expect(await header(ui, 'section-skill')).toEqual({ glyph: '▸', title: ' SKILLS', count: '128' })
     await ui.press({ key: 'section-skill' })
-    expect((await ui.find({ type: 'Text', text: /^▾ SKILLS {2}128$/ }))?.text).toBeDefined()
-    expect((await ui.find({ type: 'Text', text: /^▾ ANTHROPIC-SKILLS$/ }))?.text).toBeDefined()
+    expect((await header(ui, 'section-skill')).glyph).toBe('▾')
+    expect(await header(ui, 'group-skill:anthropic-skills')).toEqual({ glyph: '▾', title: ' ANTHROPIC-SKILLS', count: '100' })
     expect((await ui.find({ text: /^ ANTHROPIC-SKILLS:SKILL-NUMBER-1$/ }))?.text).toBeDefined()
     expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
     await ui.press({ key: 'section-connector' })
-    expect((await ui.find({ type: 'Text', text: /^▾ CONNECTORS {2}25$/ }))?.text).toBeDefined()
+    expect(await header(ui, 'section-connector')).toEqual({ glyph: '▾', title: ' CONNECTORS', count: '25' })
     expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
     // What does not fit says so, with the way to reach it; closing a group frees its room for the rows after it.
     expect((await ui.find({ type: 'Text', text: /^\+ \d+ more not drawn/ }))?.text).toBeDefined()
     await ui.press({ key: 'group-skill:anthropic-skills' })
-    expect((await ui.find({ type: 'Text', text: /^▸ ANTHROPIC-SKILLS$/ }))?.text).toBeDefined()
+    expect((await header(ui, 'group-skill:anthropic-skills')).glyph).toBe('▸')
     expect(await ui.find({ text: /^ ANTHROPIC-SKILLS:SKILL-NUMBER-1$/ })).toBeUndefined()
     expect((await ui.find({ text: /^ ENGINEERING:REVIEW-STEP-20$/ }))?.text).toBeDefined()
     expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
@@ -478,8 +627,8 @@ test('a fresh desktop mount after the sections were opened draws the pane, as a 
 
   const again = await $.ui.mount({ ...PANE, surface: 'desktop' })
   expect(await chars(again)).toBeLessThanOrEqual(TREE_CHARS)
-  expect((await again.find({ type: 'Text', text: /^▾ SKILLS {2}128$/ }))?.text).toBeDefined()
-  expect((await again.find({ type: 'Text', text: /^▾ CONNECTORS {2}25$/ }))?.text).toBeDefined()
+  expect(await header(again, 'section-skill')).toEqual({ glyph: '▾', title: ' SKILLS', count: '128' })
+  expect(await header(again, 'section-connector')).toEqual({ glyph: '▾', title: ' CONNECTORS', count: '25' })
   expect((await again.find({ type: 'Text', text: /^SWITCHBOARD \d/ }))?.text).toBeDefined()
   await again.unmount()
 })
@@ -496,8 +645,54 @@ test('however many skills and however long their names, the desktop tree stays w
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   await ui.press({ key: 'section-skill' })
   await ui.press({ key: 'section-connector' })
-  expect((await ui.find({ type: 'Text', text: /^▾ SKILLS {2}728/ }))?.text).toBeDefined()
+  expect((await header(ui, 'section-skill')).count).toMatch(/^728 · ○ 1 OFF$/)
   expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
   expect((await ui.drawn() as unknown as { children?: unknown }) !== undefined).toBe(true)
+  await ui.unmount()
+})
+
+// Review of 8d92c44: the Versions rows and header were not paid from the budget, so a checkout with many mods, Versions
+// open and the skills' rows filling the budget drew past the bound.
+test('with Versions open over a large checkout and 728 long-named skills open, the tree stays within the bounds (TASK-0257)', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' }, true, true, 80)
+  await start($)
+  const listing = Array.from({ length: 600 }, (_, i) => `- plugin-${i % 7}:${'a-very-long-skill-name-that-goes-on-'.padEnd(48, 'x')}${i}: x`).join('\n')
+  await $.prompt.attachment({ type: 'skill_listing', text: listing } as never)
+
+  for (const surface of ['desktop', 'terminal'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    expect((await header(ui, 'section-versions')).glyph).toBe('▾')
+    await ui.press({ key: 'section-skill' })
+    await ui.press({ key: 'section-connector' })
+    expect((await header(ui, 'section-skill')).count).toBe('728')
+    expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
+    // The rows past the budget say so; the sections after them are still drawn.
+    expect((await ui.find({ type: 'Text', text: /^\+ \d+ more/ }))?.text).toBeDefined()
+    expect((await header(ui, 'section-connector')).glyph).toBe('▾')
+    await ui.press({ key: 'section-skill' })
+    await ui.press({ key: 'section-connector' })
+    await ui.unmount()
+  }
+})
+
+// A header is a pressable since TASK-0257 (its words, an overlay Box and a blank Button), so headers are paid from the budget too.
+test('however many topics, the desktop tree stays within the bounds and names the topics not drawn (TASK-0257)', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' })
+  await start($)
+  // 400 skills, each under a plugin of its own: 400 topic headers.
+  const listing = Array.from({ length: 400 }, (_, i) => `- plugin-number-${i}:only-skill: x`).join('\n')
+  await $.prompt.attachment({ type: 'skill_listing', text: listing } as never)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'section-skill' })
+  expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
+  expect((await header(ui, 'group-skill:plugin-number-0')).glyph).toBe('▾')
+  expect((await ui.find({ type: 'Text', text: /^\+ \d+ more topics not drawn/ }))?.text).toBeDefined()
+  // The section after SKILLS is still drawn, and opens.
+  await ui.press({ key: 'section-connector' })
+  expect((await header(ui, 'section-connector')).glyph).toBe('▾')
+  expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
   await ui.unmount()
 })

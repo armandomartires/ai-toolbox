@@ -27,7 +27,7 @@ const COL = { state: 11, steps: 7, time: 6, tok: 6 }
 /** The rows the KPI row (a label, a value and a caption, and the margin above) and the selected-element panel take. */
 const KPI_ROWS = 4
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it under the table, so the person sees which copy draws the panel. */
-export const VERSION = '0.13.3'
+export const VERSION = '0.13.4'
 const PANEL_ROWS = 9
 /** The compact strip's rows: its margin and its line. */
 const STRIP_ROWS = 2

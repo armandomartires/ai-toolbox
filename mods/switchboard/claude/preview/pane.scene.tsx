@@ -42,8 +42,21 @@ const populate = async ($: EngineInterface, on: On) => {
   await $.command.run({ command: 'switchboard', args: 'list' } as never)
 }
 
+/**
+ * The same pane after the presses under test (TASK-0257): SKILLS opened from its header, and the LEGAL topic folded
+ * and opened again from its own; SALES left folded, so both glyphs show. The state outlives the mount that pressed.
+ */
+const populateOpen = async ($: EngineInterface, on: On) => {
+  await populate($, on)
+  const props = { title: 'Switchboard', isFocused: false, bodyColumns: 70, placement: 'dock', scroll: { offset: 0, bodyRows: 70 }, view: {} }
+  const ui = await ($ as unknown as { ui: { mount: (e: unknown) => Promise<{ press: (q: { key: string }) => Promise<unknown>; unmount: () => Promise<unknown> }> } }).ui.mount({ plugin: 'switchboard', component: 'Pane', requestId: 'switchboard', surface: 'desktop', props })
+  for (const key of ['section-skill', 'group-skill:legal', 'group-skill:legal', 'group-skill:sales']) await ui.press({ key })
+  await ui.unmount()
+}
+
 const scenes: Record<string, Scene> = {
   'Switchboard pane': { requestId: 'switchboard', title: 'Switchboard', sizes: [[70, 50], [48, 50]], surfaces: ['desktop', 'terminal'], populate },
+  'Switchboard pane, SKILLS open': { requestId: 'switchboard', title: 'Switchboard', sizes: [[70, 70]], surfaces: ['desktop', 'terminal'], populate: populateOpen },
 }
 
 runScenes(test, 'switchboard', scenes, REQUEST, {}, TOKENS)

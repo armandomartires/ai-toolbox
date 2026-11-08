@@ -29,7 +29,7 @@ declare module 'claude-code' {
       open: Kind[]
       /** Each mod's topic: the `category` of its plugin.json. A mod with none is not listed and falls under Other. */
       topics: Record<string, string>
-      /** The pane's collapsed groups, each `<kind>:<topic>` (`mod:planning`); a group not listed shows its rows. */
+      /** The pane's collapsed groups, each `<kind>:<topic>` (`mod:planning`), and `versions` for the Versions section; one not listed shows its rows. */
       closedGroups: string[]
       /** Each mod the session loaded: its folder and manifest version, from `plugin.register` and `CLAUDE_CODE_PLUGIN_DIRS`. */
       loaded: Record<string, LoadedMod>

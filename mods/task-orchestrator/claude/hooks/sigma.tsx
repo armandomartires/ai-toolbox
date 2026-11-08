@@ -684,6 +684,8 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
    * the end it stands at, the label uppercase, then the state word (ON or
    * OFF) in text-3. On: track and knob in text-1. Off: in line-strong. With
    * no `onPress` it is disabled: all of it in text-3, and not pressable.
+   * The label is a row's name, not a title (TASK-0257): text-2 at the body
+   * weight while on, text-3 while off, as Compass's and Agents' rows are.
    *
    * A `plain` Button holding Text, since only a Button takes a press and it
    * holds only strings and Text; the track is drawn in glyphs, so it stays
@@ -695,6 +697,7 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
     const word = (opts.isOn ? (opts.onText ?? 'on') : (opts.offText ?? 'off')).toUpperCase()
     const trackToken: Token = isDisabled ? 'text-3' : opts.isOn ? 'text-1' : 'line-strong'
     const track = color(trackToken)
+    const nameToken: Token = !isDisabled && opts.isOn ? 'text-2' : 'text-3'
     const { Svg } = ui as unknown as Record<'Svg', ((props: Record<string, unknown>) => never) | undefined>
     if (!isTerminal && typeof Svg === 'function') {
       // A desktop draws a Button's label as its own text, over whatever the Button holds, so the glyph track never
@@ -704,7 +707,7 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
       const row = (
         <Box flexDirection="row" alignItems="center">
           <Svg source={toggleSvg(opts.isOn, track, color('void'))} width={TOGGLE_PX.width} height={TOGGLE_PX.height} alt={said} />
-          <Text color={color(isDisabled ? 'text-3' : 'text-1')} weight="semibold" wrap="truncate-end">
+          <Text color={color(nameToken)} wrap="truncate-end">
             {` ${opts.label.toUpperCase()}`}
           </Text>
           <Text color={color('text-3')} size="caption">
@@ -721,7 +724,7 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
       </Text>
     )
     const name = (
-      <Text color={color(isDisabled ? 'text-3' : 'text-1')} weight="semibold" wrap="truncate-end">
+      <Text color={color(nameToken)} wrap="truncate-end">
         {` ${opts.label.toUpperCase()}`}
       </Text>
     )
