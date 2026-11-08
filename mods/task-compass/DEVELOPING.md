@@ -6,12 +6,23 @@
 
 The Claude Code plugin is `mods/task-compass/claude/` (`ADR-0054`); the paths below are relative to it, and `README.md` and this file stay one level up.
 
+The harness-neutral board is `core/` (`TASK-0254`), pure TypeScript that imports no harness API (`check-mods.py` rule 0):
+
+- `core/board.ts`: the `GOALS.md` board: the `Status`, `Story` and `Sprint` types (the same shapes as `types/index.d.ts`), the checkbox table `MARKER`, `statusFromWords`, `deriveStatus`, `parseSprints`, `setStoryStatus`, `currentSprint`.
+- `core/plan.ts`: reading a project-workflow `.ai/` layer (below, *Modules*); imports only `board.ts`.
+- `core/story.ts`: the `story` tool and the board as text for a harness with no pane (`answerStory`, `openStoriesText`, `boardText`); OpenCode and Codex only.
+- `core/core.test.ts`: their tests, on node's runner: `node --test mods/task-compass/core/core.test.ts` (Node 22.18 or later strips the types itself). The imports name the `.ts` file (`./board.ts`), which node needs and Claude Code's loader accepts.
+
+A harness loads its own folder alone (Claude Code refuses an import from outside the plugin folder; `dev-mods.py` and `install.sh` copy one folder), so each carries copies: `claude/hooks/board.ts` and `claude/hooks/plan.ts`, `opencode/board.ts` and `opencode/story.ts`. `check-mods.py` rule 10 fails a copy that differs from `core/`: change `core/`, then `cp` it over each copy.
+
+The OpenCode port is `opencode/`: `index.ts` (the server part, the `story` tool), `tui.tsx` (the `sidebar_content` slot), `compass.ts` (the file side both use: `runStory`, `sidebarBoard`), `types/opencode-plugin.d.ts` (the part of `@opencode-ai/plugin` 1.18.30 they use, declared by hand). Tested by `node --test mods/task-compass/opencode/compass.test.ts`; `index.ts` and `tui.tsx` import OpenCode's packages and are not loaded by a test.
+
 - `hooks/sigma.tsx`: the SIGMAorbital design module, a byte-identical copy of `mods/_template/claude/hooks/sigma.tsx` (`ADR-0043`); never edit it here.
 - `hooks/handle.tsx`: the resize handle's surface module, `heldRows`, `hintText` and the desktop bar, a byte-identical copy of `mods/_template/claude/hooks/handle.tsx` (`ADR-0052`, `ADR-0053`); `sigma.tsx` imports it, so never edit it here.
-- `hooks/model.ts`: pure logic (parse sprints, status table `STATUS` on SIGMAorbital tokens, `setStoryStatus`, `applyPlan`, `guessStory`, `wrap`). Tested directly in `register.test.tsx`.
+- `hooks/model.ts`: pure logic (status table `STATUS` on SIGMAorbital tokens, `applyPlan`, `guessStory`, `wrap`); it re-exports the board functions of `hooks/board.ts`, the copy of `core/board.ts`. Tested directly in `register.test.tsx`.
 - `hooks/rails.ts`: pure layout of the pane: `focusOf`, `carousel`, `columnRows` (rows, cards, progress, folding), sprint dates. Tested directly in `rails.test.ts`.
 - `hooks/view.tsx`: the `ui.render` pane, drawing what `rails.ts` lays out, and `registerPane` and its slot (below), and `renderOutput`, `/compass` and `/goals` drawn as panels from the results `register.tsx` keeps with `remember`.
-- `hooks/plan.ts`: pure reading of a project-workflow `.ai/` layer: `layoutOf`, `parseRoadmap`, `briefStory`, `statusOfRaw`, `planSprints` (open sprints last). Tested directly in `plan.test.ts`.
+- `hooks/plan.ts`: the copy of `core/plan.ts`, pure reading of a project-workflow `.ai/` layer: `layoutOf`, `parseRoadmap`, `briefStory`, `statusOfRaw`, `planSprints` (open sprints last). Tested directly in `plan.test.ts`.
 - `hooks/register.tsx`: the hooks, the `story` tool, board loading (`<layout root>/GOALS.md`, else a root `GOALS.md` copied there, else the `.ai/` layer, re-reading only the briefs whose mtime or size moved), the live task list (`tasks`, matched to a story by `guessStory`) and the `now` clock the sprint dates read. It tracks no subagents. It is the only module that knows the source (`source` in `$.state`), and it writes only when the source is `goals`. Its `.ai/` behaviour is tested in `layer.test.tsx`.
 - `types/index.d.ts`: the `$.state` contract. Compass reads no other plugin's state and declares no mirror (rule 8).
 

@@ -213,5 +213,16 @@ r="$(root core-comment)"; core "$r" "// import { atom } from 'claude-code' stays
 export const y = 1"
 run "$r"; check "G7 a harness import named only in a comment passes" "$rc" "$out"
 
+# Rule 10 (TASK-0254): a harness folder carries byte-identical copies of the core/ modules it uses.
+r="$(root core-copies)"; core "$r" "export const z = 1"; mkdir -p "$r/mods/pane/opencode" "$r/mods/pane/core"
+cp "$r/mods/pane/core/model.ts" "$r/mods/pane/claude/hooks/model.ts"; cp "$r/mods/pane/core/model.ts" "$r/mods/pane/opencode/model.ts"
+printf 'test\n' > "$r/mods/pane/core/model.test.ts"; printf 'mine\n' > "$r/mods/pane/opencode/model.test.ts"
+run "$r"; check "G8 identical copies in claude/ and opencode/ pass; a test file is no owner" "$rc" "$out"
+
+r="$(root core-drift)"; core "$r" "export const z = 1"; mkdir -p "$r/mods/pane/codex/scripts"
+printf 'export const z = 2\n' > "$r/mods/pane/codex/scripts/model.ts"
+run "$r"; [ "$rc" -eq 1 ] && [[ "$out" == *"mods/pane/codex/scripts/model.ts: differs from its owner mods/pane/core/model.ts"*"rule 10"* ]]
+check "G9 a copy in codex/ that differs from core/ fails" $? "$out"
+
 echo "test-check-mods.sh: $((cases - fails))/$cases passed"
 [ "$fails" -eq 0 ]

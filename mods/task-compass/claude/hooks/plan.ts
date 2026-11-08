@@ -1,11 +1,15 @@
-import type { Sprint, Story } from '../types'
-import { deriveStatus, statusFromWords } from './model'
+import type { Sprint, Story } from './board.ts'
+import { deriveStatus, statusFromWords } from './board.ts'
 
 /**
  * A project-workflow `.ai/` layer read as the pane's sprints and stories:
  * the roadmap's *Sprint history* rows are the sprints, the task briefs in
  * `tasks/` their stories. Nothing here writes; the project's own rules keep
  * the files current.
+ *
+ * Harness-neutral (ADR-0054 clause 4): it imports only board.ts, and the
+ * Claude plugin carries a byte-identical copy, claude/hooks/plan.ts
+ * (check-mods.py rule 10). Change it here, then copy it.
  */
 
 export const ROADMAP_FILE = '30.ROADMAP.md'

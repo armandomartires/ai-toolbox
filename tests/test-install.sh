@@ -203,6 +203,29 @@ printf '{"env": {bad\n' > "$SET"
 inst --client claude-code
 check "S17 a settings.json that does not parse fails the run, untouched" "$([ "$rc" -ne 0 ] && has "$out" 'does not parse' && [ "$(cat "$SET")" = '{"env": {bad' ]; echo $?)" "$out"
 
+# --- mod ports (TASK-0254): a mod's opencode/ folder is copied, never linked --
+echo '{"env": {}}' > "$SET"
+mkdir -p "$R/mods/mod-x/opencode/types"
+printf "export default { id: 'mod-x' }\n" > "$R/mods/mod-x/opencode/index.ts"
+printf 'export const b = 1\n' > "$R/mods/mod-x/opencode/board.ts"
+printf 'declare module "m" {}\n' > "$R/mods/mod-x/opencode/types/m.d.ts"
+printf 'test\n' > "$R/mods/mod-x/opencode/board.test.ts"
+OM="$HOME/.config/opencode/mods/mod-x" OE="$HOME/.config/opencode/plugins/mod-x.ts"
+inst --client opencode
+check "P1 the opencode step copies the port, tests left out, with a marker" "$([ "$rc" -eq 0 ] && [ -f "$OM/index.ts" ] && [ -f "$OM/types/m.d.ts" ] && [ ! -e "$OM/board.test.ts" ] && [ ! -L "$OM" ] && [ -f "$OM/.ai-toolbox-mod" ] && has "$out" 'mod copied: mod-x'; echo $?)" "$out"
+check "P1 the entry in plugins/ re-exports the copy's index.ts" "$(grep -q "export { default } from '../mods/mod-x/index.ts'" "$OE" && [ ! -e "$HOME/.config/opencode/mods/mod-y" ]; echo $?)" "$(cat "$OE" 2>&1)"
+printf 'export const b = 2\n' > "$R/mods/mod-x/opencode/board.ts"
+inst --client opencode
+check "P2 a second run replaces the copy with the repo's" "$(grep -q 'b = 2' "$OM/board.ts"; echo $?)" "$out"
+inst --status
+check "P3 --status reports the port as a copy" "$(has "$out" 'opencode     mod:mod-x' && has "$out" 'COPY of'; echo $?)" "$out"
+inst --client opencode --only alpha
+check "P4 a deselected mod's copy and entry are removed" "$([ ! -e "$OM" ] && [ ! -e "$OE" ] && has "$out" 'mod removed: mod-x (opencode)'; echo $?)" "$out"
+mkdir -p "$OM"; echo mine > "$OM/index.ts"
+inst --client opencode
+check "P5 a folder this repo did not write is left in place" "$([ "$(cat "$OM/index.ts")" = mine ] && has "$out" 'was not written by this repo'; echo $?)" "$out"
+rm -rf "$OM"
+
 if [ "$fails" -ne 0 ]; then
   echo "test-install.sh: $fails of $cases case(s) FAILED"; exit 1
 fi

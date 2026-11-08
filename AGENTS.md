@@ -6,8 +6,8 @@ Rules and commands only; each rule's reason is in the ADR or runbook it names.
 Collect, develop, validate and deploy AI customization tools: skills, MCP
 servers, loops, mods, prompts, agent roles, each self-contained and portable to
 every client with its capability: skills to Claude Code and OpenCode, MCP
-servers to those and external ones to Bionic, mods to Claude Code (ADR-0020,
-ADR-0039, ADR-0040). Out of scope: application code, public services, secrets.
+servers to those and external ones to Bionic, mods to Claude Code, with ports
+to OpenCode and Codex beside them (ADR-0020, ADR-0039, ADR-0040). Out of scope: application code, public services, secrets.
 
 ## Security and secrets
 - Never commit secrets, tokens, passwords, private keys, or `.env` files. Scan

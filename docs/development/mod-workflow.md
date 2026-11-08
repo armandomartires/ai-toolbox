@@ -90,8 +90,9 @@ workflow itself:
 
 ## Portability: OpenCode plugins and Codex
 
-Mods target Claude Code only (`ADR-0040` clause 2). The stages, not the
-code, carry over; this section says how far, so a port is a backlog row
+Mods target Claude Code first; since 2026-11-08 a mod may carry an OpenCode
+or Codex port beside `claude/` (`ADR-0040` clause 2, amended; task-compass
+is the first, `TASK-0254`). The stages, not the code, carry over; this section says how far, so a port is a backlog row
 with a known shape (`B-069`, `B-070`) rather than a surprise. It follows the
 pattern `agents/` set: one source, emitted or written per client, never a
 symlink (`ADR-0018`).
@@ -119,8 +120,36 @@ built on it, hot reload, and the organization library (Codex's admin
 marketplace is the nearest; OpenCode has none).
 
 **Where a port lives.** Inside the mod's folder, one subfolder per client
-(`opencode/`, `codex/`), so the registry keeps one row and the pure modules
-have one copy; `check-mods.py` would need to know the subfolders, and
-`install.sh` a link or copy path per client. That needs an amendment to
-`ADR-0040` clause 2 and is `B-069` (OpenCode) and `B-070` (Codex), each
-*Ready when* a mod is wanted on that client.
+(`opencode/`, `codex/`), so the registry keeps one row. The shared logic is
+`mods/<name>/core/`, pure TypeScript importing no harness API (`ADR-0054`
+clause 4). A harness cannot import it from there: Claude Code's loader
+refuses an import from outside the plugin folder ("it is outside the
+plugin's folder", found 2026-11-08), and `dev-mods.py` and `install.sh` copy
+one harness folder alone. So each harness folder carries byte-identical
+copies of the core modules it uses, and `check-mods.py` rule 10 fails a copy
+that differs (`ADR-0018`: one source, emitted per client). Imports name the
+`.ts` file (`./board.ts`), so node's own test runner can load core/ and a
+port's file side (`node --test`, Node 22.18 or later); the ports' tests stay
+outside the gate, like the mod tests.
+
+**Installing an OpenCode port.** `scripts/install.sh --client opencode`
+(or a run for every client) copies each selected mod's `opencode/`, tests
+left out, to `~/.config/opencode/mods/<name>/` with a marker file, and writes
+`~/.config/opencode/plugins/<name>.ts`, a one-line entry re-exporting its
+`index.ts`; the copy sits outside `plugins/` so OpenCode's scan of that
+folder never loads a helper module as a plugin. The TUI part is listed by
+hand: `~/.config/opencode/mods/<name>/tui.tsx` under `"plugin"` in
+`~/.config/opencode/tui.json`. A folder without the marker is never
+replaced; a deselected mod's copy and entry are removed; `--status` reports
+each. Proven by `tests/test-install.sh` (P1-P5).
+
+**The API on the host is not the one documented above.** The table was read
+from OpenCode 2.2's docs (`@opencode/plugin`, `Plugin.define`). The
+OpenCode on this Windows host installs `@opencode-ai/plugin` 1.18.30 into
+`~/.config/opencode/node_modules/`: a plugin module is `{ id, server }`
+whose `server(input)` returns hooks, tools by `tool({ description, args,
+execute })` with zod arguments from `tool.schema`, and a TUI module is
+`{ id, tui }` registering Solid slots by `api.slots.register({ slots: {
+sidebar_content(ctx, props) { ... } } })`. task-compass's port is written
+against that, so it can load where it is used; a move to 2.x is a later
+task.

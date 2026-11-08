@@ -35,6 +35,9 @@
 # whether Claude Code's settings list it from this checkout. A report, not a
 # gate: nothing in validate.sh or CI calls it (ADR-0009).
 #
+# Mod ports (TASK-0254). A mod with an opencode/ folder is copied into
+# OpenCode's config dir by the opencode step; see mod_ports below.
+#
 # Mod status (issue #5): every mod line names its status.json status, e.g.
 # [experimental]. A label only: what is deployed does not depend on it.
 #
@@ -396,6 +399,71 @@ if listed:
 PYMERGE
 }
 
+# Copy each selected mod's port for another client (TASK-0254, TASK-0255;
+# ADR-0040 clause 2, amended). $1 is opencode or codex, $2 the client's
+# config dir, $3 `write` or `status`. A port is mods/<name>/<client>/, a
+# self-contained folder (its core/ modules are copies, check-mods.py rule
+# 10), so it is always COPIED, whatever the skills mode, never linked
+# (ADR-0018). Tests are left out. The copy carries a marker file, and a
+# folder without it is someone else's: never replaced or removed.
+#   opencode: the folder goes to <dir>/mods/<name>/, outside plugins/, so
+#     OpenCode's scan of plugins/ never loads its helper modules as plugins;
+#     plugins/<name>.ts is a one-line entry re-exporting its index.ts. The
+#     TUI part (tui.tsx) is listed by hand under "plugin" in tui.json.
+#   codex: the folder is the plugin bundle, <dir>/plugins/<name>/; Codex
+#     loads it once a marketplace entry names it, after a restart.
+# A deselected mod's marked copy (and its entry file) is removed.
+PORT_MARK=".ai-toolbox-mod"
+mod_ports() {
+  local client="$1" dir="$2" action="$3" n src dest entry state
+  for n in $MOD_NAMES; do
+    src="mods/$n/$client"
+    [ -d "$src" ] || continue
+    if [ "$client" = opencode ]; then
+      dest="$dir/mods/$n" entry="$dir/plugins/$n.ts"
+    else
+      dest="$dir/plugins/$n" entry=""
+    fi
+    if [ "$action" = status ]; then
+      if [ -f "$dest/$PORT_MARK" ]; then state="COPY of $(cat "$dest/$PORT_MARK")"
+      elif [ -e "$dest" ]; then state="not written by this repo"
+      else state="absent"; fi
+      is_selected "$n" || state="$state (not selected)"
+      printf '%-12s %-18s %s\n' "$client" "mod:$n" "$state"
+      continue
+    fi
+    if [ -e "$dest" ] && [ ! -f "$dest/$PORT_MARK" ]; then
+      echo "  mod $n: $dest was not written by this repo; left in place, not copied"
+      continue
+    fi
+    if ! is_selected "$n"; then
+      if [ -f "$dest/$PORT_MARK" ]; then
+        rm -rf "$dest"
+        [ -n "$entry" ] && [ -f "$entry" ] && grep -q '^// Written by ai-toolbox' "$entry" && rm -f "$entry"
+        echo "  mod removed: $n ($client)"
+      fi
+      continue
+    fi
+    rm -rf "$dest"
+    mkdir -p "$dest"
+    (cd "$src" && find . -type f ! -name '*.test.*' | while IFS= read -r f; do
+      mkdir -p "$dest/$(dirname "$f")" && cp "$f" "$dest/$f"
+    done)
+    echo "$(pwd)/$src" > "$dest/$PORT_MARK"
+    if [ -n "$entry" ]; then
+      if [ -e "$entry" ] && ! grep -q '^// Written by ai-toolbox' "$entry"; then
+        echo "  mod $n: $entry was not written by this repo; left in place"
+      else
+        mkdir -p "$(dirname "$entry")"
+        printf '// Written by ai-toolbox scripts/install.sh: loads mods/%s/opencode.\nexport { default } from '"'"'../mods/%s/index.ts'"'"'\n' "$n" "$n" > "$entry"
+      fi
+      echo "  mod copied: $n -> $dest (entry $entry; TUI: list $dest/tui.tsx under \"plugin\" in $dir/tui.json)"
+    else
+      echo "  mod copied: $n -> $dest (add a marketplace entry for it, then restart Codex)"
+    fi
+  done
+}
+
 skill_version() { # the frontmatter version of a SKILL.md, quotes stripped
   awk '/^[[:space:]]*version:/ { v = $2; gsub(/["\047\r]/, "", v); print v; exit }' "$1"
 }
@@ -468,6 +536,7 @@ if [ "$STATUS" -eq 1 ]; then
     if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
       plugin_dirs "$parent/settings.json" status
     fi
+    if [ "$client" = opencode ]; then mod_ports opencode "$parent" status; fi
   done <<EOF
 $CLIENTS
 EOF
@@ -525,6 +594,7 @@ while IFS='|' read -r client target parent agents_target; do
   if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
     plugin_dirs "$parent/settings.json" write || exit 1
   fi
+  if [ "$client" = opencode ]; then mod_ports opencode "$parent" write; fi
 
   # Agents are EMITTED, never linked (ADR-0018 clause 3): a per-client file's
   # content differs by definition, so it cannot be a symlink to one source.

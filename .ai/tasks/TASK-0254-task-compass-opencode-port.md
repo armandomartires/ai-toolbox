@@ -1,0 +1,76 @@
+# TASK-0254 — task-compass in OpenCode: a `core/` and an `opencode/` port
+
+## Status
+
+- Status: in review
+- Owner: agent (Claude Code)
+- Created: 2026-11-08
+- Updated: 2026-11-08
+- Applies to: `mods/task-compass/`, `ADR-0040`, `scripts/check-mods.py`, `scripts/install.sh`
+- Source: `B-069`. The person asked on 2026-11-08 to complete S16, which is the row's *Ready when*: a mod wanted on OpenCode.
+
+## Objective
+
+task-compass works in OpenCode: a `story` tool that sets a story's status in `.ai/GOALS.md`, as the Claude mod's does, and a sidebar slot listing the current sprint's stories. The board logic lives once, in `mods/task-compass/core/`.
+
+## Inputs
+
+| Artifact | Expected state |
+|----------|----------------|
+| `ADR-0040` clause 2 | mods target Claude Code only |
+| `ADR-0054` clause 4 | `core/` is added when a second harness needs it; imports no harness API |
+| `mods/task-compass/claude/hooks/model.ts`, `plan.ts` | the board parser and the plan reader, inside the Claude plugin |
+| OpenCode on this host | installs `@opencode-ai/plugin` 1.18.30 into `~/.config/opencode/node_modules/`; `@opencode/plugin` (2.x, `Plugin.define`, documented in `mod-workflow.md`) is not on disk |
+
+## Scope
+
+- In: the `ADR-0040` clause 2 amendment; `core/board.ts`, `core/plan.ts`, `core/story.ts` with node tests; byte-identical copies in `claude/hooks/` and `opencode/`, enforced by `check-mods.py` rule 10; `opencode/index.ts`, `tui.tsx`, `compass.ts`, a hand-written declaration of the API used; `install.sh`'s opencode copy path; docs; task-compass 0.12.3.
+- Out: the Compass pane, carousel and cards in OpenCode; the project-workflow `.ai/` plan and `/compass`, `/goals` there; OpenCode 2.x's API; publishing to npm.
+
+## Likely files
+
+- `mods/task-compass/core/`, `mods/task-compass/opencode/`, `mods/task-compass/claude/hooks/{board,plan,model}.ts`, `claude/.claude-plugin/plugin.json`, `README.md`, `DEVELOPING.md`
+- `.ai/decisions/0040-mods-component-kind.md`, `scripts/check-mods.py`, `tests/test-check-mods.sh`, `scripts/install.sh`, `tests/test-install.sh`, `docs/development/mod-workflow.md`
+
+## Execution plan
+
+1. Probe Claude Code's loader with an import from outside the plugin folder: refused ("it is outside the plugin's folder"), and an import naming `./x.ts`: accepted. So copies, not imports (`ADR-0018`), and `.ts` in import paths, which node's type stripping needs.
+2. Move the board and the plan reader to `core/`, copy them into `claude/hooks/`; `model.ts` re-exports the board.
+3. `core/story.ts`: the pure story tool and the board as text; `opencode/` on top of it; node tests for both.
+4. `check-mods.py` rule 10; `install.sh` copies the port; tests for each.
+
+## Acceptance criteria
+
+- [x] `ADR-0040` clause 2 amended, with a dated amendment line in its header
+- [x] `core/` imports no harness API, and `check-mods.py` passes; a copy that differs from `core/` fails (rule 10, G8-G9)
+- [x] The Claude plugin's tests pass as before, from the copies
+- [x] `node --test` passes for `core/` and the OpenCode plugin's tool and sidebar data
+- [x] `install.sh --client opencode` copies the port and its entry, never over a folder it did not write, and removes a deselected one (P1-P5)
+- [ ] Live: with the port installed and `tui.tsx` listed in `tui.json`, open the OpenCode TUI in a folder with `.ai/GOALS.md`; expect the sidebar to show "Compass" and the current sprint's stories with their glyphs, and the `story` tool, called by the model, to change a checkbox
+
+## Mandatory validations
+
+- [x] `cd mods && claude plugin test task-compass/claude`: 71 pass, 0 fail
+- [x] `node --test mods/task-compass/core/core.test.ts`: 9 pass; `node --test mods/task-compass/opencode/compass.test.ts`: 4 pass
+- [x] `bash tests/test-check-mods.sh`: 31/31; `bash tests/test-install.sh`: 43 cases OK
+- [ ] `tests/validate.sh`: run by the pre-commit hook at the commit
+
+## Risks and rollback
+
+- The port follows the plugin package on this host (1.18.30), not the 2.2 docs the Portability table quotes; the `slots.register` argument shape (`@opentui/solid`'s `SolidPlugin`) is not on disk and is unverified, and how OpenCode 1.x lists a file TUI plugin in `tui.json` is from its config type, not tried.
+- No `opencode` command could be run here: even `opencode --version` fails with `EBADF: bad file descriptor, read`, so loading is unverified.
+- The sidebar reads `GOALS.md` when the slot draws; it does not watch the file.
+- Rollback: git revert the task commit.
+
+## Outputs / handover
+
+| Artifact | End state |
+|----------|-----------|
+| task-compass | 0.12.3 (`claude/` files changed by the extraction, behaviour unchanged), `core/`, `opencode/` |
+
+Next: the live check above, then `B-070` (`TASK-0255`).
+
+## Execution log
+
+- 2026-11-08 · Claude Code (Opus 5.5, worker of the S16 coordinator) · loader probe, `core/` extraction, OpenCode port, rule 10, install path, docs.
+  - Evidence: probe `claude plugin test` → `cannot import "../../outside/pure" … it is outside the plugin's folder`; with `./pure.ts` → `1 pass`

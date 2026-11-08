@@ -41,6 +41,12 @@ README is read from mods/<dir>/claude/. For each directory mods/<dir>/:
      the template's handle.tsx exists. A text check: it finds a pane with no
      resizable panel, not a pane with one panel left out, which the mod's
      tests catch.
+ 10. a harness folder's copy of a core/ module is byte-identical to it
+     (ADR-0018, ADR-0054): a file under claude/, opencode/, codex/ (...)
+     named like a non-test module of the mod's core/ is that module's copy.
+     A copy, not an import: Claude Code's loader refuses an import from
+     outside the plugin folder, and dev-mods.py and an install copy a
+     harness folder alone, so each carries the core modules it uses.
 
 WHAT THIS PROVES: Claude Code can find the mod's manifest, hooks modules and
 contract, and the registry can index it; every mod draws from one copy of
@@ -150,6 +156,28 @@ def check(mod, bad):
     check_resize(mod, hooks_dir, bad)
     check_mirror(mod, bad)
     check_core(mod, bad)
+    check_copies(mod, bad)
+
+
+def check_copies(mod, bad):
+    """Rule 10: a harness folder's copy of a core/ module is byte-identical to it."""
+    core = os.path.join(mod, "core")
+    if not os.path.isdir(core):
+        return
+    owners = {f: os.path.join(core, f) for f in sorted(os.listdir(core))
+              if f.endswith(CORE_SOURCE) and ".test." not in f
+              and os.path.isfile(os.path.join(core, f))}
+    for harness in sorted(HARNESS_DIRS):
+        for root, dirs, files in os.walk(os.path.join(mod, harness)):
+            dirs[:] = sorted(d for d in dirs if d != "node_modules")
+            for f in sorted(files):
+                if f not in owners:
+                    continue
+                copy = os.path.join(root, f)
+                if read_bytes(copy) != read_bytes(owners[f]):
+                    bad.append("%s: differs from its owner %s; change the owner, "
+                               "then cp %s %s (rule 10)"
+                               % (copy, owners[f], owners[f], copy))
 
 
 def harness_import(core, file, spec):

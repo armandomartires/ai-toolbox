@@ -20,12 +20,13 @@ A Claude Code mod that keeps a **Compass** pane beside the chat: your project's 
 
 ## Portability
 
-The mod's Claude Code plugin is `claude/` (`ADR-0054`).
+The mod's Claude Code plugin is `claude/` (`ADR-0054`). The board logic every harness shares, parsing `GOALS.md`, setting a story's status, reading a project-workflow plan, is `core/`; each harness folder carries byte-identical copies of the core modules it uses (`check-mods.py` rule 10), because a harness loads its own folder alone.
 
-| Harness | Status |
-|---|---|
-| Claude Code | Supported: `claude/`. |
-| OpenCode, Codex | Not planned: the mod is a UI (the Compass pane) drawn with Claude Code's mod engine, which no other harness has. No `core/` folder: it is added only when a second harness needs shared logic. |
+| Harness | Status | Install |
+|---|---|---|
+| Claude Code | Supported: `claude/`, the full Compass pane, the `story` tool, `/compass` and `/goals`. | `scripts/install.sh` lists it in `CLAUDE_CODE_PLUGIN_DIRS`. |
+| OpenCode | A port, `opencode/` (`TASK-0254`): the `story` tool on `.ai/GOALS.md` (`index.ts`) and a sidebar slot listing the current sprint's stories (`tui.tsx`). No pane, carousel or cards, no `.ai/` plan, no `/compass`. Written against `@opencode-ai/plugin` 1.18.30, the plugin package on the host; not yet seen in a live TUI. | `scripts/install.sh --client opencode` copies it to `~/.config/opencode/mods/task-compass/` with an entry `~/.config/opencode/plugins/task-compass.ts`; list `mods/task-compass/tui.tsx` under `"plugin"` in `~/.config/opencode/tui.json` for the sidebar. |
+| Codex | Planned (`B-070`): Codex draws no UI, so only the `story` tool (as MCP), a session-start hook and a skill carry over. | |
 
 ## Install
 
@@ -97,6 +98,8 @@ A project with no `GOALS.md` (under `.ai/`, or a root one the mod has yet to cop
 - `/goals init` writes a starter `.ai/GOALS.md`; `/goals` reloads the board and says where it read it from, drawn as a GOALS panel of the last eight sprints with their progress. In a `.ai/` project, `/goals` lists the open sprints and `init` writes nothing.
 
 ## Not yet verified
+
+Version 0.12.3 (`TASK-0254`, `TASK-0255`): the board parser, the story tool's logic and the plan reader live in `mods/task-compass/core/`, and the Claude plugin carries byte-identical copies (`check-mods.py` rule 10); behaviour unchanged. The OpenCode port (`opencode/`) and the Codex bundle (`codex/`) have not loaded in their clients yet.
 
 Version 0.12.2 (`TASK-0252`): a Sprints row's press is a blank sized to the name as drawn, cut by `fit`, not to the whole name, and the blank button sits in a box that does not shrink, so the desktop paints no `…` over the name, `‹ PREV`, `NEXT ›` or a fold toggle. Tested in the mod test kit; the kit draws no native button, so only the desktop shows that the mark is gone and a press still lands.
 
