@@ -286,6 +286,9 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0249 — agent-watch 0.11.3, 0.12.0: PowerShell background shells, and step progress of a background run
 - [x] TASK-0250 — agent-watch 0.12.1: each session keeps its rows under its own store key
 - [x] TASK-0252 — Pressable overlays no longer paint the desktop's `…` over their words
+- [?] TASK-0253 — switchboard 0.8.0: each repo mod's loaded version beside its manifest (B-071)
+- [?] TASK-0254 — task-compass 0.12.3: an OpenCode port on a shared core/ (B-069)
+- [?] TASK-0255 — task-compass for Codex: a plugin bundle on core/ (B-070)
 
 - [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
 

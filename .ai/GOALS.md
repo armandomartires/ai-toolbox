@@ -539,14 +539,14 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   .ai/planning/BACKLOG.md
 - B-062 asset-management's vendored `project-workflow` predates `vendor-skill.sh` and is behind 7.1.2
   .ai/planning/BACKLOG.md
-- B-063 Estate repository work waiting on the human: pushes of `b92e2a9` (`B-039`) and `2a09fa0` (`B-052`); LDAP config drift, estate `#96`
+- B-063 Estate repository work waiting on the human: LDAP config drift, estate `#96` (both pushes landed)
   .ai/planning/BACKLOG.md
-- B-069 An OpenCode port of a mod: `mods/<name>/opencode/` on `@opencode/plugin`
-  .ai/planning/BACKLOG.md
-- B-070 A Codex equivalent of a mod: `mods/<name>/codex/`, a plugin bundle
-  .ai/planning/BACKLOG.md
-- B-071 A pane that lists every repo mod's loaded version beside its manifest
-  .ai/planning/BACKLOG.md
+- [?] TASK-0254 — task-compass 0.12.3: an OpenCode port on a shared core/ (B-069)
+  .ai/tasks/TASK-0254-task-compass-opencode-port.md
+- [?] TASK-0255 — task-compass for Codex: a plugin bundle on core/ (B-070)
+  .ai/tasks/TASK-0255-task-compass-codex-port.md
+- [?] TASK-0253 — switchboard 0.8.0: each repo mod's loaded version beside its manifest (B-071)
+  .ai/tasks/TASK-0253-switchboard-loaded-versions.md
 - B-072 Mods cannot follow the desktop app's light/dark switch: no signal reaches a hook
   .ai/planning/BACKLOG.md
 - B-074 Unexercised: project-token handoff to the isolated agent launcher
