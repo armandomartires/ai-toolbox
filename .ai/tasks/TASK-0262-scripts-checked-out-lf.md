@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent (Claude Code)
 - Branch: agent/TASK-0262
 - Created: 2026-11-08
@@ -34,17 +34,17 @@ The repo has no `.gitattributes`, and this host's Git for Windows sets `core.aut
 
 1. Write the attributes and the runbook subsection; brief, board, TODO, changelog.
 2. Commit in the task worktree (the gate runs under Git Bash, as before), rebase, push.
-3. In the main checkout, `git checkout-index -f -a` rewrites the working copy under the new attributes; confirm with `git ls-files --eol` and run `bash scripts/install.sh --status` under WSL's bash from PowerShell.
+3. In the main checkout, delete the clean CRLF copies and `git checkout -- .` (`checkout-index -f -a` left them alone); confirm with `git ls-files --eol` and run `bash scripts/install.sh --status` under WSL's bash from PowerShell.
 
 ## Acceptance criteria
 
 - [x] `git ls-files --eol` shows every script `i/lf` before and after: no blob changed
-- [ ] After renormalizing, every `*.sh` and `*.py` in the main checkout is `w/lf`
-- [ ] `bash scripts/install.sh --status` run from PowerShell (WSL bash) prints the status table instead of the `pipefail\r` error
+- [x] After renormalizing, every `*.sh` and `*.py` in the main checkout is `w/lf` (91 of 91)
+- [x] `bash scripts/install.sh --status` run from PowerShell (WSL bash) prints the status table instead of the `pipefail\r` error
 
 ## Mandatory validations
 
-- [ ] `tests/validate.sh` at the commit
+- [x] `tests/validate.sh` at the commit
 
 ## Risks and rollback
 
@@ -54,8 +54,9 @@ The repo has no `.gitattributes`, and this host's Git for Windows sets `core.aut
 ## Outputs / handover
 
 - The attributes file and the runbook subsection *Line endings on a Windows host*.
-- Follow-up, not taken: the CRLF template blobs above, and whether `sync-templates.sh` should write LF.
+- Follow-up, not taken: the CRLF template blobs above, and whether `sync-templates.sh` should write LF. Under WSL, `worktree.sh list` prints a nested worktree's path joined to its Windows gitdir; WSL is not a supported runtime for the scripts, Git Bash is.
 
 ## Execution log
 
 - 2026-11-08 · Claude Code (Fable 5.1) · diagnosed from the person's paste: PowerShell resolves WSL's bash first; Git Bash runs CRLF scripts; 88/91 scripts CRLF in the working copy, all LF in the index. Attributes, runbook, brief written in the `TASK-0262` worktree.
+- 2026-11-08 · Claude Code (Fable 5.1) · landed as 66b405c; main checkout rewritten (91/91 `w/lf`); `bash scripts/install.sh --status` and `worktree.sh list` ran under WSL's bash from PowerShell. Closed.

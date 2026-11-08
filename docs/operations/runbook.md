@@ -311,10 +311,13 @@ pre-commit gate passed on every run here and never saw it. `.gitattributes`
 now forces LF for `*.sh`, `*.py`, `.githooks/*` and
 `configs/claude-code/hooks/*`; the index already held LF for all of them,
 so no blob changed. A clone checked out before that keeps its CRLF copies
-until they are rewritten:
+until they are rewritten. `git checkout-index -f -a` does not do it: a file whose
+content matches the index is left alone, so delete the clean copies and check
+them out again (verified 2026-11-08):
 
 ```bash
-git checkout-index -f -a           # rewrite the working copy under the attributes
+git ls-files --eol -- '*.sh' '*.py' | awk '$2=="w/crlf"{print $NF}' | xargs rm -f
+git checkout -- .                  # the copies were clean; git rewrites them under the attributes
 git ls-files --eol -- '*.sh' '*.py' | awk '{print $2}' | sort | uniq -c   # expect w/lf only
 ```
 
