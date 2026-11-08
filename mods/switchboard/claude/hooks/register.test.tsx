@@ -23,8 +23,16 @@ const PANE = {
 
 const LISTING = '- loop: Run a prompt on an interval.\n- review: Review a diff.'
 
+/** 128 skills as a desktop lists them: 100 under `anthropic-skills`, 20 under `engineering`, 8 standalone; and 24 servers. */
+const MANY_SKILLS = [
+  ...Array.from({ length: 100 }, (_, i) => `anthropic-skills:skill-number-${i + 1}`),
+  ...Array.from({ length: 20 }, (_, i) => `engineering:review-step-${i + 1}`),
+  ...Array.from({ length: 8 }, (_, i) => `standalone-${i + 1}`),
+]
+const MANY_SERVERS = Array.from({ length: 24 }, (_, i) => `server_${i + 1}`)
+
 /** The engine beneath the mod, in project `root.value`: what ran, and what was invalidated. */
-const engine = (on: On, root: { value: string }, isRepo = false) => {
+const engine = (on: On, root: { value: string }, isRepo = false, many = false) => {
   const ran: string[] = []
   const invalidated: string[] = []
   on('command.register', (_, e) => ({ value: { command: e.name } }))
@@ -46,10 +54,16 @@ const engine = (on: On, root: { value: string }, isRepo = false) => {
   on('session.usage', () => ({
     value: {
       context: {
-        breakdown: {
-          skills: { skillFrontmatter: [{ name: 'deploy' }, { name: 'review' }, { name: 'legal:brief' }] },
-          mcpTools: ['batch', 'guide', 'update', 'read'].map(tool => ({ name: `mcp__${ID}__${tool}`, serverName: ID })),
-        },
+        breakdown: many
+          ? {
+              // A real desktop's count (2026-11-08): 128 skills across plugins, 24 connectors.
+              skills: { skillFrontmatter: MANY_SKILLS.map(name => ({ name })) },
+              mcpTools: MANY_SERVERS.flatMap(server => ['get', 'list'].map(tool => ({ name: `mcp__${server}__${tool}`, serverName: server }))),
+            }
+          : {
+              skills: { skillFrontmatter: [{ name: 'deploy' }, { name: 'review' }, { name: 'legal:brief' }] },
+              mcpTools: ['batch', 'guide', 'update', 'read'].map(tool => ({ name: `mcp__${ID}__${tool}`, serverName: ID })),
+            },
       },
     } as never,
   }))
@@ -412,5 +426,78 @@ test('without mods in the project root the pane has no Versions section', async 
   // The pane's own version line is always there.
   expect(VERSION).toMatch(/^\d+\.\d+\.\d+$/)
   expect((await ui.find({ type: 'Text', text: `SWITCHBOARD ${VERSION}` }))?.props.color).toBe(DARK['text-3'])
+  await ui.unmount()
+})
+
+/** What the engine draws at most: "every tree's bounds (20,000 nodes, 32 deep, 100,000 characters serialized)". */
+const TREE_CHARS = 100_000
+const chars = async (ui: Awaited<ReturnType<Engine['ui']['mount']>>) => JSON.stringify(await ui.drawn()).length
+
+// A desktop refuses a tree past its bounds and keeps its last drawing, or on a fresh mount has none ("switchboard
+// has not drawn in this pane"). With TASK-0256's desktop toggle (an Svg and an overlay Button a row) SKILLS open
+// at 128 drew 184,790 characters: the header press seemed dead and a session switch blanked the pane.
+test('on a desktop SKILLS opens with 128 skills and CONNECTORS with 25, the tree within the engine bounds (TASK-0256)', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' }, false, true)
+  await start($)
+
+  for (const surface of ['desktop', 'terminal'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    expect((await ui.find({ type: 'Text', text: /^▸ SKILLS {2}128$/ }))?.text).toBeDefined()
+    await ui.press({ key: 'section-skill' })
+    expect((await ui.find({ type: 'Text', text: /^▾ SKILLS {2}128$/ }))?.text).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^▾ ANTHROPIC-SKILLS$/ }))?.text).toBeDefined()
+    expect((await ui.find({ text: /^ ANTHROPIC-SKILLS:SKILL-NUMBER-1$/ }))?.text).toBeDefined()
+    expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
+    await ui.press({ key: 'section-connector' })
+    expect((await ui.find({ type: 'Text', text: /^▾ CONNECTORS {2}25$/ }))?.text).toBeDefined()
+    expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
+    // What does not fit says so, with the way to reach it; closing a group frees its room for the rows after it.
+    expect((await ui.find({ type: 'Text', text: /^\+ \d+ more not drawn/ }))?.text).toBeDefined()
+    await ui.press({ key: 'group-skill:anthropic-skills' })
+    expect((await ui.find({ type: 'Text', text: /^▸ ANTHROPIC-SKILLS$/ }))?.text).toBeDefined()
+    expect(await ui.find({ text: /^ ANTHROPIC-SKILLS:SKILL-NUMBER-1$/ })).toBeUndefined()
+    expect((await ui.find({ text: /^ ENGINEERING:REVIEW-STEP-20$/ }))?.text).toBeDefined()
+    expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
+    await ui.press({ key: 'group-skill:anthropic-skills' })
+    await ui.press({ key: 'section-skill' })
+    await ui.press({ key: 'section-connector' })
+    await ui.unmount()
+  }
+})
+
+test('a fresh desktop mount after the sections were opened draws the pane, as a session switched away and back does (TASK-0256)', async ($, on) => {
+  mock.store(on)
+  engine(on, { value: '/p' }, false, true)
+  await start($)
+
+  const first = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await first.press({ key: 'section-skill' })
+  await first.press({ key: 'section-connector' })
+  await first.unmount()
+
+  const again = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await chars(again)).toBeLessThanOrEqual(TREE_CHARS)
+  expect((await again.find({ type: 'Text', text: /^▾ SKILLS {2}128$/ }))?.text).toBeDefined()
+  expect((await again.find({ type: 'Text', text: /^▾ CONNECTORS {2}25$/ }))?.text).toBeDefined()
+  expect((await again.find({ type: 'Text', text: /^SWITCHBOARD \d/ }))?.text).toBeDefined()
+  await again.unmount()
+})
+
+test('however many skills and however long their names, the desktop tree stays within the bounds (TASK-0256)', async ($, on) => {
+  mock.store(on, { 'off:/p': { mod: [], skill: [], connector: [] } })
+  engine(on, { value: '/p' }, false, true)
+  await start($)
+  // 600 more skills with 60-character names, seen by the listing hook.
+  const listing = Array.from({ length: 600 }, (_, i) => `- plugin-${i % 7}:${'a-very-long-skill-name-that-goes-on-'.padEnd(48, 'x')}${i}: x`).join('\n')
+  await $.prompt.attachment({ type: 'skill_listing', text: listing } as never)
+  await off($, 'off skill plugin-1:a-very-long-skill-name-that-goes-on-xxxxxxxxxxxx1')
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'section-skill' })
+  await ui.press({ key: 'section-connector' })
+  expect((await ui.find({ type: 'Text', text: /^▾ SKILLS {2}728/ }))?.text).toBeDefined()
+  expect(await chars(ui)).toBeLessThanOrEqual(TREE_CHARS)
+  expect((await ui.drawn() as unknown as { children?: unknown }) !== undefined).toBe(true)
   await ui.unmount()
 })

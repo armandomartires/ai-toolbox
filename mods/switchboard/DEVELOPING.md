@@ -35,6 +35,10 @@ The Claude Code plugin is `mods/switchboard/claude/` (`ADR-0054`); the paths bel
 - **Gating hooks have no `.catch`** on purpose: a judge that fails lets the call or plugin through, the safe way for a convenience switch to fail.
 - **Headless checks**: `claude -p "/switchboard ..." --plugin-dir mods/switchboard/claude --output-format stream-json --verbose` runs the command with no model call; its `system/init` line lists the servers, plugins and skills, and `--debug-file` shows each hook's verdict.
 
+## The tree's bounds (TASK-0256)
+
+The engine draws a tree within its bounds (100,000 characters serialized; the kit cuts a Pane's text at 100,000 and reports `characters of text are drawn up to the first 100000`), and a desktop refuses one past them: it keeps its last drawing, and a fresh mount has none ("switchboard has not drawn in this pane"). A desktop toggle row is about 1,370 characters (Svg track, words, overlay Button), so `view.tsx` spends `ROW_BUDGET` on rows by `rowCost` in document order and draws `+ N more not drawn` for the rest. The kit does not refuse a large hooks tree, so `register.test.tsx` asserts `JSON.stringify(await ui.drawn()).length` against 100,000 with 128 skills and 25 connectors open, on a fresh mount, and with 728 long-named skills.
+
 ## The resize handle
 
 The pane's one panel is `kit().panel` with `resize: { key: 'switchboard-handle', rows, held, min: 4 }` (`ADR-0053`). It is not bracketed, so the shared panel draws the handle in a row under it, a plain edge. `rows` is counted as `section`, `group` and `row` draw (a wrapped caption or row is not counted). `sizePanels` is `resizeAnswer` into `panelRows`. `hooks/handle.tsx` is a byte-identical copy of the template's, which `sigma.tsx` imports. Tested in `register.test.tsx`.

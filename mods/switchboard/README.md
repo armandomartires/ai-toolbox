@@ -25,6 +25,8 @@ A Claude Code mod that turns installed **mods**, **skills** and **MCP servers or
 
 ## Not yet verified
 
+Version 0.8.2 (`TASK-0256`): the pane draws its toggle rows within the engine's tree bounds. With 128 skills open, 0.8.1's desktop rows made a tree of 184,790 characters, past the 100,000 the engine draws, so a desktop kept its last drawing (a header press seemed dead) and after a session switch showed none. Rows past a budget are not drawn; their group says how many, and closing a section or group above shows them.
+
 Version 0.8.1 (`TASK-0256`): on a desktop each toggle is SIGMAorbital's square switch, an Svg track under a blank Button laid over the row, and the Versions section sits under MODS. Tested in the mod test kit; the kit draws no native button, so only the desktop shows the switch and that a press lands.
 
 Version 0.6.0 (`TASK-0223`), the resize handle, and 0.8.0 (`TASK-0253`), the Versions section and the pane's version line, are tested in the mod test kit; not yet seen live.

@@ -26,13 +26,28 @@ const panelRows = atom({ plugin: 'switchboard', key: 'panelRows' } as const, {})
 export const PANE = 'switchboard'
 export const TITLE = 'Switchboard'
 /** This mod's version, shown in the pane's last line; keep it the same as `claude/.claude-plugin/plugin.json`'s. */
-export const VERSION = '0.8.1'
+export const VERSION = '0.8.2'
 /** The resize handle's `Client` key on the Switchboard panel's bottom edge (ADR-0053). */
 export const SWITCHBOARD_HANDLE = 'switchboard-handle'
 /** Each of this pane's handles with the fewest rows a drag holds its panel's body at: a section header and a row. */
 const MINS = { [SWITCHBOARD_HANDLE]: 4 }
 
 const HEADINGS: Record<Kind, string> = { mod: 'Mods', skill: 'Skills', connector: 'Connectors' }
+
+/**
+ * The characters of the pane's tree its toggle rows may take. The engine draws a tree within its bounds (100,000
+ * characters serialized; the kit cuts a Pane's text at 100,000 and drops what is past it), and a desktop refuses one
+ * past them: it keeps its last drawing, so a header press seemed dead, and a fresh mount had none ("switchboard has
+ * not drawn in this pane", TASK-0256). Rows past the budget are not drawn; their group says how many, and how to
+ * reach them. The rest of the tree (headers, captions, Versions) fits in what is left.
+ */
+const ROW_BUDGET = 72_000
+/**
+ * A toggle row's serialized characters, at most, as drawn on `surface`: measured 1,370 on a desktop (an Svg track, the
+ * words, an overlay Button) and 625 on the terminal for a 31-character name, which a row carries five times.
+ */
+const rowCost = (surface: string, name: string, note: string | undefined) =>
+  (surface === 'terminal' ? 520 : 1250) + 6 * name.length + (note === undefined ? 0 : 400 + 2 * note.length)
 
 /**
  * The pane: one section per kind, Mods open and the others behind their
@@ -65,6 +80,8 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
   ])
   // The body's rows when it sizes itself, counted as `section`, `group` and `row` draw them: where a drag starts (ADR-0053).
   let bodyRows = 0
+  // What the toggle rows may still take of the tree (ROW_BUDGET); once a row does not fit, none after it is drawn.
+  let budget = ROW_BUDGET
 
   const row = (kind: Kind, name: string) => {
     const isSelf = kind === 'mod' && name === SELF
@@ -88,6 +105,30 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
         )}
       </Box>
     )
+  }
+
+  // The rows of one group or flat section in order while they fit the budget, then one caption naming the rest.
+  const rowsOf = (kind: Kind, names: readonly string[]) => {
+    const drawn: ReturnType<typeof row>[] = []
+    for (const name of names) {
+      const isSelf = kind === 'mod' && name === SELF
+      const cost = rowCost(e.surface, shownName(kind, name, named), kind === 'mod' && !isSelf ? pendingNote(held, gone, name) : undefined)
+      if (cost > budget) {
+        budget = 0
+        break
+      }
+      budget -= cost
+      drawn.push(row(kind, name))
+    }
+    const left = names.length - drawn.length
+    if (left === 0) return drawn
+    bodyRows += 1
+    return [
+      ...drawn,
+      <Text color={color('text-3')} size="caption" wrap="wrap">
+        {`+ ${left} more not drawn: the pane holds so many rows at once. Close a section or group above to see them, or run /switchboard on|off ${kind} <name>.`}
+      </Text>,
+    ]
   }
 
   // A topic's sub-header: a text-3 label under the section's text-1 header,
@@ -117,7 +158,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
             {rule(Math.max(1, spare))}
           </Box>
         </Box>
-        {!isClosed && members.map(name => row(kind, name))}
+        {!isClosed && rowsOf(kind, members)}
       </Box>
     )
   }
@@ -139,7 +180,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
         </Button>
         {isOpen && <Text color={color('text-3')} size="caption" wrap="wrap">{`Takes effect ${takesEffect[kind]}.`}</Text>}
         {isOpen && names.length === 0 && <Text color={color('text-3')}>None seen yet in this session.</Text>}
-        {isOpen && groups.map(one => (one.topic === '' ? one.names.map(name => row(kind, name)) : group(kind, one.topic, one.names)))}
+        {isOpen && groups.map(one => (one.topic === '' ? rowsOf(kind, one.names) : group(kind, one.topic, one.names)))}
       </Box>
     )
   }

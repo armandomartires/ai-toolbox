@@ -59,6 +59,7 @@ On a desktop every Switchboard row read as plain words, `AGENT-WATCH ON`, with n
 - The kit draws no native button, so only the desktop shows that the blank overlay paints nothing and that a press lands through it (the pattern is `TASK-0241`'s, seen working live for Compass's rows).
 - The blank is sized as three figure spaces for the track plus the words; a very long name is clipped by the overlay, not cut by the desktop.
 - The preview's light-theme switch recolours token colours in props, not inside Svg markup, so it shows the Night ops track; a real Daylight session draws the track with the light tokens.
+- Found live 2026-11-08 at 0.8.1: SKILLS and group headers did not open, and a session switched away and back showed "switchboard has not drawn in this pane". Cause: the desktop toggle (Svg, words, overlay Button) costs about 1,370 serialized characters a row against 640 before, so with SKILLS (128) open the pane's tree was 184,790 characters (89,738 at 0.8.0), past the 100,000 the engine draws; the desktop kept its last drawing, and a fresh mount with `open` holding `skill` had none. The kit reports the bound (`ui.render (Pane): 130060 characters of text are drawn up to the first 100000`, the buttons past it gone) but does not refuse a large hooks tree, so the tests measure `ui.drawn()`. Fix in switchboard 0.8.2: a row budget (`ROW_BUDGET`, `rowCost`), the rest of a group named as `+ N more not drawn`. Remaining: with 128 skills a desktop draws about 47 skill rows at once; the rest need a section or group above closed, or `/switchboard on|off`. `rowCost` is an estimate from the kit's serialization; the desktop's own count is not observable here.
 - Rollback: git revert the task commit.
 
 ## Outputs / handover
@@ -68,3 +69,4 @@ On a desktop every Switchboard row read as plain words, `AGENT-WATCH ON`, with n
 ## Execution log
 
 - 2026-11-08 · Claude Code (Opus 5.5) · spec read from the Design System artifact; red tests, `toggleSvg`, the desktop branch of `toggle` on `pressable`, copies, switchboard test and section order, preview in both themes, version step (agent-watch 0.13.3, task-compass 0.12.4, switchboard 0.8.1, task-orchestrator 0.5.11).
+- 2026-11-08 · Claude Code (Opus 5.5) · live bug at 0.8.1 (headers dead, pane blank after a session switch) traced to the pane's tree passing the engine's 100,000-character bound with 128 skills open (184,790; 89,738 at 0.8.0); red tests in `register.test.tsx` (128 skills and 25 connectors, a fresh mount, 728 long-named skills), then a row budget in `view.tsx`; switchboard 0.8.2.
