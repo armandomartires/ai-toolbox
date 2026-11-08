@@ -161,6 +161,25 @@
     show()
   }
 
+  // The sidebar's button (and Ctrl+B) hides or shows it; the choice outlives the reload after each rebuild.
+  const drawer = document.getElementById('drawer')
+  const setDrawer = open => {
+    document.body.classList.toggle('drawer-closed', !open)
+    drawer.setAttribute('aria-expanded', String(open))
+    drawer.title = (open ? 'Hide' : 'Show') + ' the sidebar (Ctrl+B)'
+    try { localStorage.setItem('drawer', open ? 'open' : 'closed') } catch {}
+  }
+  let saved = null
+  try { saved = localStorage.getItem('drawer') } catch {}
+  setDrawer(saved !== 'closed')
+  drawer.onclick = () => setDrawer(document.body.classList.contains('drawer-closed'))
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'b') {
+      e.preventDefault()
+      drawer.click()
+    }
+  })
+
   document.getElementById('outline').onchange = e => document.body.classList.toggle('outline', e.target.checked)
   document.getElementById('light').onchange = e => document.body.classList.toggle('light', e.target.checked)
   document.getElementById('stamp').textContent = data.stamp ? 'built ' + new Date(Number(data.stamp) * 1000).toLocaleTimeString() : ''

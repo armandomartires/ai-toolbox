@@ -547,6 +547,8 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   .ai/tasks/TASK-0255-task-compass-codex-port.md
 - [?] TASK-0256 — Toggles draw SIGMAorbital's square switch on a desktop
   .ai/tasks/TASK-0256-desktop-toggle-switch.md
+- [x] TASK-0258 — The mod preview's sidebar hides and shows from a button
+  .ai/tasks/TASK-0258-preview-sidebar-toggle.md
 - [?] TASK-0253 — switchboard 0.8.0: each repo mod's loaded version beside its manifest (B-071)
   .ai/tasks/TASK-0253-switchboard-loaded-versions.md
 - B-072 Mods cannot follow the desktop app's light/dark switch: no signal reaches a hook

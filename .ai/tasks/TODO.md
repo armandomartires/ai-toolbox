@@ -290,6 +290,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [?] TASK-0254 — task-compass 0.12.3: an OpenCode port on a shared core/ (B-069)
 - [?] TASK-0255 — task-compass for Codex: a plugin bundle on core/ (B-070)
 - [?] TASK-0256 — Toggles draw SIGMAorbital's square switch on a desktop
+- [x] TASK-0258 — The mod preview's sidebar hides and shows from a button
 
 - [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
 

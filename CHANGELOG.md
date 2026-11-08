@@ -1,5 +1,8 @@
 # Changelog
 
+## Mod preview
+- The preview page's sidebar hides and shows from a button at its top left, or Ctrl+B, and stays as left across the reload after each rebuild (`TASK-0258`).
+
 ## agent-watch 0.13.3, task-compass 0.12.4, switchboard 0.8.1, task-orchestrator 0.5.11
 - On a desktop every toggle draws SIGMAorbital's square switch (`TASK-0256`; seen live 2026-11-08 as plain `AGENT-WATCH ON` rows). A desktop draws a Button's label as its own text over what the Button holds, so the glyph track never showed. The shared `sigma.tsx`'s `kit().toggle` now draws the track as an `Svg` to the design's sizes (28 by 14, a 1px line on `void`, an 8px knob 2px inside it, `text-1` on, `line-strong` off), the words as Texts, and lays `pressable`'s blank Button over the row; the terminal keeps its glyph track. switchboard's Versions section moves under MODS. Tested in the mod test kit; not yet seen live.
 
