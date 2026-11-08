@@ -5,6 +5,35 @@
 **Accepted — 2026-09-23**, ratified by the human **as written** (`TASK-0084`),
 after the mechanism had been exercised rather than merely built.
 
+**Amended 2026-11-08** (`TASK-0261`; narrows `B-061` to its live check), on
+the human's decision. Two additions; no clause is changed and clause 5 holds.
+
+- **1a. The branch is the task's.** `scripts/worktree.sh add TASK-nnnn` makes
+  `../ai-toolbox-worktrees/TASK-nnnn` on `agent/TASK-nnnn`; a later session
+  that continues the task runs the same command and **resumes the branch**.
+  Git refuses one branch in two worktrees, so two sessions cannot work one
+  task at once, which is the lock wanted. The brief's Status block carries
+  `Branch:` and the Compass board an indented `branch:` line, so the branch
+  is found from the task, not remembered. **Not per sprint:** a sprint branch
+  is long-lived and shared, which brings back the contention this ADR removed
+  and breaks "one task = one commit". Free names stay allowed for probes and
+  the hook below, and are landed or removed the same day (clause 4).
+- **1b. Claude Code's own worktrees are sessions under clause 1.** Code-tab
+  sessions and `isolation: worktree` subagents default to `.claude/worktrees/`
+  *inside* the repo, on `claude/<slug>` and `worktree-agent-<id>`; on
+  2026-11-08 seven sat there when this was planned, several holding unlanded commits, and
+  `worktree.sh` could neither flag nor remove them. Now a tracked
+  `WorktreeCreate`/`WorktreeRemove` hook pair (`configs/claude-code/hooks/`,
+  emitted into the project's `.claude/settings.json` by `install.sh`) routes
+  them through `worktree.sh`, the human sets the desktop's *Worktree
+  location* to the sibling folder and *Branch prefix* to `agent`, `list`
+  flags nested and foreign-prefix entries, and `remove <path>` clears them
+  under the same refusal as any session worktree.
+- **Falsifiable:** a Code-tab worktree session started after `install.sh`
+  lands in `../ai-toolbox-worktrees` on `agent/…`. Whether the desktop fires
+  `WorktreeCreate` is undocumented; if it does not, the desktop settings alone
+  carry 1b, and this line is to be corrected to say so when measured.
+
 **What ratification covers.** All five Decision clauses. **Clause 2 is the one
 that needed the signature**, and it is the one that changes a stated rule in
 `AGENTS.md`: work stops going straight onto `master` and arrives by

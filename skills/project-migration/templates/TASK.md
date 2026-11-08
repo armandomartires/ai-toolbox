@@ -8,11 +8,14 @@
 ## Status
 
 <!-- FILL: Status is one of planned, ready, in_progress, blocked, review, done,
-     cancelled. Keep Updated current. Applies to: components and environment.
-     Source: the B-###, PLAN, REVIEW or request this discharges. -->
+     cancelled. Branch: the `agent/TASK-nnnn` branch a later session resumes
+     (`scripts/worktree.sh add TASK-nnnn`), or `none` when the work is on
+     `master` by hand. Keep Updated current. Applies to: components and
+     environment. Source: the B-###, PLAN, REVIEW or request this discharges. -->
 
 - Status: planned
 - Owner: agent
+- Branch: agent/TASK-XXXX
 - Created:
 - Updated:
 - Applies to:

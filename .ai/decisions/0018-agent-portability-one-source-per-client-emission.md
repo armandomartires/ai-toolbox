@@ -465,6 +465,11 @@ the effect is not a boundary. This is recorded because a reader could
 otherwise take the warning as evidence that something stopped the write;
 nothing did.
 
+**Placement, decided 2026-11-08** (`TASK-0261`). Where such a worktree sits
+is settled by `ADR-0023`'s amendment of that date: Claude Code's own worktrees
+follow the sibling rule through a `WorktreeCreate` hook. The confinement
+finding above is unchanged by it.
+
 **Consequence for the `B-035` gap, and it is the useful one.** The Claude Code
 binding has no embedded decision standard, deliberately left because whether
 its roles can read `skills/unattended-ops/` turned on this question. They are

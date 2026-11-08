@@ -18,17 +18,21 @@ max_lines: 90
 !phase before
 !required true
 !terse
-identification: status, owner, dates, applicability, source
+identification: status, owner, branch, dates, applicability, source
 !standard
 Status is one of planned, ready, in_progress, blocked, review, done,
-cancelled. Keep Updated current. Applies to: components and environment.
-Source: the B-###, PLAN, REVIEW or request this discharges.
+cancelled. Branch: the `agent/TASK-nnnn` branch a later session resumes
+(`scripts/worktree.sh add TASK-nnnn`), or `none` when the work is on
+`master` by hand. Keep Updated current. Applies to: components and
+environment. Source: the B-###, PLAN, REVIEW or request this discharges.
 !literal
 Fill every field. Status: one word from planned, ready, in_progress,
-blocked, review, done, cancelled. Dates: YYYY-MM-DD.
+blocked, review, done, cancelled. Branch: agent/TASK-nnnn or none.
+Dates: YYYY-MM-DD.
 !body
 - Status: planned
 - Owner: agent
+- Branch: agent/TASK-XXXX
 - Created:
 - Updated:
 - Applies to:

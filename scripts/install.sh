@@ -40,6 +40,12 @@
 # codex/ folder into ~/.codex/plugins/ by the codex step, when ~/.codex
 # exists; see mod_ports below.
 #
+# Worktree hooks (TASK-0261, ADR-0023). The claude-code step also merges
+# configs/claude-code/settings.hooks.json (WorktreeCreate and WorktreeRemove,
+# which put Claude Code's worktrees beside the repo, not inside it) into
+# THIS checkout's .claude/settings.json, created if absent. Other hooks are
+# kept, and a file that does not parse is never written.
+#
 # Mod status (issue #5): every mod line names its status.json status, e.g.
 # [experimental]. A label only: what is deployed does not depend on it.
 #
@@ -401,6 +407,72 @@ if listed:
 PYMERGE
 }
 
+# Merge configs/claude-code/settings.hooks.json (the WorktreeCreate and
+# WorktreeRemove hooks, ADR-0023, TASK-0261) into THIS checkout's
+# .claude/settings.json, the project settings: the hook commands point at
+# $CLAUDE_PROJECT_DIR. $1 is `write` or `status`. Other hooks and keys are
+# kept; an entry already present is not added twice; a file that does not
+# parse is never written (the run fails).
+worktree_hooks() {
+  local action="$1" frag="configs/claude-code/settings.hooks.json"
+  [ -f "$frag" ] || return 0
+  # --status must not create anything; only the write path makes the directory.
+  if [ "$action" = write ]; then mkdir -p .claude || return 1; fi
+  python3 - "$(pwd)/.claude/settings.json" "$frag" "$action" <<'PYHOOKS'
+import json, os, sys
+settings, frag, action = sys.argv[1:4]
+with open(frag, encoding="utf-8") as f:
+    want = json.load(f)["hooks"]
+data = {}
+if os.path.exists(settings):
+    try:
+        with open(settings, encoding="utf-8") as f:
+            text = f.read()
+        data = json.loads(text) if text.strip() else {}
+    except ValueError as e:
+        print("ERROR: %s does not parse as JSON (%s); its hooks were not written."
+              % (settings, e), file=sys.stderr)
+        sys.exit(1)
+    if not isinstance(data, dict) or not isinstance(data.get("hooks", {}), dict):
+        print("ERROR: %s is not a JSON object with an object `hooks`; not written."
+              % settings, file=sys.stderr)
+        sys.exit(1)
+
+
+def commands(groups):
+    return {h.get("command") for g in groups if isinstance(g, dict)
+            for h in g.get("hooks", []) if isinstance(h, dict)}
+
+
+hooks = data.get("hooks", {})
+missing = []
+for event, groups in want.items():
+    have = commands(hooks.get(event, []))
+    todo = [g for g in groups if not commands([g]) <= have]
+    if todo:
+        missing.append((event, todo))
+if action == "status":
+    print("%-12s %-18s %s" % ("claude-code", "hooks:worktree",
+          "present in " + settings if not missing else "MISSING from " + settings
+          + " (" + ", ".join(e for e, _ in missing) + ")"))
+    sys.exit(0)
+if not missing:
+    sys.exit(0)
+new = dict(data)
+new_hooks = dict(hooks)
+for event, todo in missing:
+    new_hooks[event] = list(hooks.get(event, [])) + todo
+new["hooks"] = new_hooks
+tmp = settings + ".tmp"
+with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+    json.dump(new, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+os.replace(tmp, settings)
+print("hooks added: %s -> claude-code (%s in %s; from the next session)"
+      % (", ".join(e for e, _ in missing), "worktree hooks", settings))
+PYHOOKS
+}
+
 # Copy each selected mod's port for another client (TASK-0254, TASK-0255;
 # ADR-0040 clause 2, amended). $1 is opencode or codex, $2 the client's
 # config dir, $3 `write` or `status`. A port is mods/<name>/<client>/, a
@@ -538,6 +610,7 @@ if [ "$STATUS" -eq 1 ]; then
     if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
       plugin_dirs "$parent/settings.json" status
     fi
+    if [ "$client" = "claude-code" ]; then worktree_hooks status; fi
     if [ "$client" = opencode ]; then mod_ports opencode "$parent" status; fi
   done <<EOF
 $CLIENTS
@@ -601,6 +674,7 @@ while IFS='|' read -r client target parent agents_target; do
   if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
     plugin_dirs "$parent/settings.json" write || exit 1
   fi
+  if [ "$client" = "claude-code" ]; then worktree_hooks write || exit 1; fi
   if [ "$client" = opencode ]; then mod_ports opencode "$parent" write; fi
 
   # Agents are EMITTED, never linked (ADR-0018 clause 3): a per-client file's

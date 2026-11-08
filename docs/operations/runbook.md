@@ -304,15 +304,24 @@ The main checkout stays on `master` and is the **integration tree**. Each
 session works in its own worktree on its own branch.
 
 ```bash
-scripts/worktree.sh add s9        # create (or report) a session worktree
-scripts/worktree.sh list          # every worktree, main checkout marked
-scripts/worktree.sh remove s9     # refuses if work would be lost
+scripts/worktree.sh add TASK-0261   # create, or resume, the task's worktree
+scripts/worktree.sh list            # every worktree; main checkout, nested
+                                    # and foreign-prefix entries marked
+scripts/worktree.sh remove TASK-0261  # by name or path; refuses lost work
 ```
 
 Worktrees are created as **siblings** of the repo, in
-`../ai-toolbox-worktrees/<name>`, on branch `agent/<name>`. Never put one
-inside the repo: `tests/validate.sh` and `scripts/sync-registry.sh` glob
-component directories and `git status` would see the nested tree.
+`../ai-toolbox-worktrees/<name>`, on branch `agent/<name>`. **The name is the
+task id** (`TASK-nnnn`, ADR-0023 clause 1a): a later session that continues
+the task runs the same `add` and resumes the branch, which the brief records
+as `Branch:` in its Status block and the Compass board as an indented
+`branch:` line. Not the sprint: a sprint branch is shared and long-lived. A
+free name is for probes and the Claude Code hook below, and is landed or
+removed the same day. Never put a worktree inside the repo: `tests/validate.sh`
+and `scripts/sync-registry.sh` glob component directories and `git status`
+would see the nested tree. On this Windows host the gate `add` runs to prove
+itself took about eight minutes (2026-11-08); it is the same gate the commit
+runs.
 
 ### Landing work
 
@@ -351,11 +360,38 @@ Then remove the worktree. These are for isolation, not for parallel
 development, so they should be short-lived:
 
 ```bash
-scripts/worktree.sh remove s9
+scripts/worktree.sh remove TASK-0261
 ```
 
 `remove` refuses while the worktree has uncommitted changes or commits not
-yet on `origin/master`, and says which.
+yet on `origin/master`, and says which. It also takes a path, and reads the
+branch from the worktree itself, so a `claude/…`, `worktree-agent-…` or
+detached worktree is removed the same way.
+
+### Claude Code's own worktrees
+
+The desktop app's Code-tab sessions and the Agent tool's `isolation:
+"worktree"` subagents make worktrees of their own, by default at
+`.claude/worktrees/<name>` **inside the repo**, on `claude/<slug>` and
+`worktree-agent-<id>`. They are sessions under ADR-0023 (clause 1b) and
+follow the sibling rule by two means, both needed:
+
+1. `bash scripts/install.sh --client claude-code` emits a
+   `WorktreeCreate`/`WorktreeRemove` hook pair into the project's
+   `.claude/settings.json` (source: `configs/claude-code/hooks/`, tracked;
+   `.claude/` is not). The create hook runs `worktree.sh add <slug>` and
+   answers the sibling path; the remove hook runs `worktree.sh remove
+   <path>` and keeps the worktree when that refuses.
+2. In the desktop app, Settings → Code: *Worktree location* →
+   `..\ai-toolbox-worktrees`, *Branch prefix* → `agent`. Whether a Code-tab
+   session fires `WorktreeCreate` is not documented, so the settings carry
+   the rule where the hook does not.
+
+A hook-made branch is `agent/<slug>`, since the hook has no task id. Once the
+task is known, prefer `worktree.sh add TASK-nnnn` and land or remove the slug
+branch the same day. `worktree.sh list` marks what is nested or on a foreign
+prefix; a `worktree-agent-*` branch holding commits is landed like any
+session branch.
 
 ### The gate runs in a worktree — verify it, don't assume it
 

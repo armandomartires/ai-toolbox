@@ -336,6 +336,55 @@ Notes:
 > mcp-servers/gates> run gates` — cwd-independent, so it is the form a client
 > config needs (`tests/smoke-mcp.sh` uses it).
 
+## Worktrees
+
+Sessions never share a checkout (ADR-0023). Claude Code's own worktrees
+default to `<repo>/.claude/worktrees/<slug>`, inside the repo, on a
+`claude/<slug>` or `worktree-agent-*` branch; `scripts/worktree.sh list` flags
+those as NESTED and as a foreign prefix.
+
+Two hooks, tracked here because `.claude/` is gitignored, replace that default
+(`settings.hooks.json` is the fragment; the scripts are in `hooks/`):
+
+- `WorktreeCreate` -> `hooks/worktree-create.sh` reads `name` (a slug such as
+  `bold-oak-a3f2`) from the hook JSON, runs `scripts/worktree.sh add <name>`
+  with its output on stderr, and prints the worktree's absolute path as the
+  last stdout line, which is Claude Code's contract. The path is
+  `<repo>-worktrees/<slug>`, beside the repo.
+- `WorktreeRemove` -> `hooks/worktree-remove.sh` reads `worktree_path` and runs
+  `scripts/worktree.sh remove <path>`. A refusal (uncommitted changes,
+  unlanded commits, a locked worktree) is printed and the hook exits 0, so the
+  worktree is kept.
+
+The branch is `agent/<slug>` because the hook has no task id. When the task is
+known, create the worktree with `worktree.sh add TASK-nnnn` instead, which
+gives `agent/TASK-nnnn` and resumes that branch on a later session.
+
+`bash scripts/install.sh --client claude-code` emits the hooks block: it merges
+`settings.hooks.json` into this checkout's `.claude/settings.json` (created if
+absent), keeps every other hook, and never writes a file that does not parse.
+Run `bash scripts/install.sh --status` to see whether they are present.
+
+**Where the hooks apply.** The project `.claude/settings.json` exists only in
+a checkout where `install.sh` ran, and `.claude/` is not tracked. A session in
+a sibling worktree (`<repo>-worktrees/X`) reads that worktree's own
+`.claude/`, so a subagent it spawns still nests under that worktree unless
+`install.sh --client claude-code` was run there too. The alternative is to put
+the same `hooks` block in `~/.claude/settings.json`, which every session
+reads. We recommend that for a person who works in many worktrees: it is done
+once per host, and its commands must then use an absolute path to the main
+checkout's `hooks/` instead of `$CLAUDE_PROJECT_DIR` (which a hook run from a
+worktree resolves to that worktree, whose copy of the scripts may be older).
+`install.sh` does not do this: its target stays the project file.
+
+The create hook sets `WORKTREE_SKIP_GATE=1`, so `worktree.sh add` skips its
+gate probe (minutes on this host) and prints `gate     : not probed`; both hook
+entries carry `"timeout": 120`. An interactive `worktree.sh add` still probes.
+
+Desktop Code-tab sessions may not fire `WorktreeCreate`. The person also sets
+Settings > Code: **Worktree location** to `..\ai-toolbox-worktrees` and
+**Branch prefix** to `agent`.
+
 ## Install record — 2026-09-24 (`TASK-0090`)
 
 `scripts/install.sh link`, exit **0**. The lines for this client, verbatim

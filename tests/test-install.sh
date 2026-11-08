@@ -247,6 +247,37 @@ mkdir -p "$CX"; echo '{}' > "$CX/plugin.json"
 inst --client codex
 check "X5 a bundle this repo did not write is left in place" "$([ "$(cat "$CX/plugin.json")" = '{}' ] && has "$out" 'was not written by this repo'; echo $?)" "$out"
 
+# --- Worktree hooks (TASK-0261): the fragment is merged into the PROJECT's
+# .claude/settings.json, never clobbering, never writing an unparsable file ---
+mkdir -p "$R/configs/claude-code"
+cp "$here/configs/claude-code/settings.hooks.json" "$R/configs/claude-code/settings.hooks.json"
+PS="$R/.claude/settings.json"
+rm -rf "$R/.claude"
+inst --status
+check "H1 --status creates no .claude/ and reports the hooks missing" "$([ ! -e "$R/.claude" ] && has "$out" 'hooks:worktree' && has "$out" 'MISSING'; echo $?)" "$out"
+mkdir -p "$R/.claude"
+printf '{"model": "m", "hooks": {"WorktreeCreate": [{"hooks": [{"type": "command", "command": "mine"}]}], "Stop": []}}\n' > "$PS"
+inst --client claude-code
+merged="$(python3 -c '
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+h = d["hooks"]
+cmds = lambda e: [x["command"] for g in h.get(e, []) for x in g["hooks"]]
+ok = d["model"] == "m" and h["Stop"] == [] and cmds("WorktreeCreate")[0] == "mine" \
+  and len(cmds("WorktreeCreate")) == 2 and "worktree-create.sh" in cmds("WorktreeCreate")[1] \
+  and len(cmds("WorktreeRemove")) == 1 and "worktree-remove.sh" in cmds("WorktreeRemove")[0]
+sys.stdout.write("yes" if ok else "no")' "$PS" 2>&1)"
+check "H2 the fragment is merged beside an existing hook and other keys" "$([ "$rc" -eq 0 ] && [ "$merged" = yes ] && has "$out" 'hooks added: WorktreeCreate, WorktreeRemove'; echo $?)" "$out $merged"
+before="$(cat "$PS")"
+inst --client claude-code
+check "H3 a second run is a no-op" "$([ "$rc" -eq 0 ] && [ "$(cat "$PS")" = "$before" ] && lacks "$out" 'hooks added'; echo $?)" "$out"
+inst --status
+check "H3 --status then reports the hooks present" "$(has "$out" 'hooks:worktree' && has "$out" 'present in'; echo $?)" "$out"
+printf '{bad' > "$PS"
+inst --client claude-code
+check "H4 an unparsable file is left untouched and the run exits 1" "$([ "$rc" -eq 1 ] && [ "$(cat "$PS")" = '{bad' ] && has "$out" 'does not parse'; echo $?)" "$out"
+rm -rf "$R/.claude" "$R/configs"
+
 if [ "$fails" -ne 0 ]; then
   echo "test-install.sh: $fails of $cases case(s) FAILED"; exit 1
 fi

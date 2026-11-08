@@ -295,6 +295,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [?] TASK-0260 — task-orchestrator 0.6.0: a worker stopped at its turn cap is reported, resumable, and given more turns
 
 - [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
+- [?] TASK-0261 — Session branches are named by task, and Claude Code's worktrees follow the sibling rule
 
 ## Post-S9 (superseded by the promotion above)
 

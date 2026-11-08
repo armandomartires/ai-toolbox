@@ -59,9 +59,9 @@ Components: `skills/` `mcp-servers/` `loops/` `mods/` `prompts/` `agents/`
 - Before changes: check `git status`, branch, remote, uncommitted changes.
 - One task = one commit; never include unrelated changes.
 - Never delete or overwrite human changes without authorization.
-- **Two agent sessions must never share this checkout.** Each takes its own
-  worktree (`scripts/worktree.sh add <name>`) and lands by rebase; `master`
-  stays linear (ADR-0023; runbook, *One worktree per agent session*).
+- **Two agent sessions must never share this checkout.** Each takes a worktree
+  on its task's branch (`scripts/worktree.sh add TASK-nnnn`; a later session
+  resumes it) and lands by rebase; `master` stays linear (ADR-0023; runbook).
 - Remotes (ADR-0028): `origin`, the intranet GitLab, is primary; `github` is
   its **public** mirror. Everything committed is world-readable, so the
   intranet hostname never goes in a tracked file: write `$GITLAB_URL`,
