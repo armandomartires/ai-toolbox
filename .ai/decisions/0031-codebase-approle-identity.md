@@ -1,5 +1,8 @@
 # ADR-0031 — The codebase has an AppRole identity that may write its own secrets
 
+**Session-model amendment, 2026-11-08:** ADR-0057 opts repositories with `vault_role` into daily OS-keychain sessions and issued project tokens. These legacy rules remain for repositories without `vault_role`; AppRole stays available for servers/CI.
+
+
 ## Status
 
 Accepted (2026-10-04), on the human's decisions of that day. Task: `TASK-0132`.

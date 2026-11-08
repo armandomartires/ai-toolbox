@@ -286,6 +286,8 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0249 — agent-watch 0.11.3, 0.12.0: PowerShell background shells, and step progress of a background run
 - [x] TASK-0250 — agent-watch 0.12.1: each session keeps its rows under its own store key
 
+- [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
+
 ## Post-S9 (superseded by the promotion above)
 
 - [x] TASK-0074 — One guard pair for both command allowlists, and a correction to TASK-0071

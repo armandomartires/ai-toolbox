@@ -104,7 +104,15 @@ PUSH_VALUE, GITHUB_VALUE = "VAL-gitlab-push-9a1", "VAL-github-4c2"
 ROLE_ID, SECRET_ID, APP = "role-id-5a7c", "sid-Secret-91fe", "hvs.APPROLE-token-0005"
 PRIVATE_VALUE, APP_VALUE = "VAL-private-3d8", "VAL-written-by-approle-6b0"
 ADMIN, CHILD_PROJ = "hvs.ADMIN-provisioner-0006", "hvs.CHILD-project-0007"
+MFA_CODE, MFA_METHOD, MFA_REQUEST = "493817", "method-id-totp-0009", "mfa-request-0010"
+DAILY, PROJECT_TOKEN, AGENT_TOKEN = "hvs.DAILY-session-0011", "hvs.PROJECT-scoped-0012", "hvs.AGENT-scoped-0013"
+SESSION_VALUE = "VAL-session-project-8e1"
+TRANSITION = "hvs.DAILY-transitional-0014"
 TOKENS = {
+    DAILY: ["default", "developer"],
+    TRANSITION: ["default", "developer", "workstation-read"],
+    PROJECT_TOKEN: ["demo-session-app"],
+    AGENT_TOKEN: ["demo-session-app"],
     PARENT: ["admin", "default", "secrets-writer", "workstation-read", "demo-vault-read"],
     CHILD: ["default", "workstation-read"],
     CHILD_PROJ: ["default", "workstation-read", "demo-vault-read"],
@@ -126,6 +134,7 @@ state = {
     "auth": {"approle/": {"type": "approle"}, "ldap/": {"type": "ldap"}},
     "roles": {},
     "methods": [],  # every request's method, never cleared (T42)
+    "mfa": None,  # None, "totp" or "no-totp": what an ldap login demands (T58-T60)
 }
 
 
@@ -152,20 +161,49 @@ class Stub(BaseHTTPRequestHandler):
         if path == "sys/health":
             return self.reply(200, {"initialized": True, "sealed": False})
         if re.fullmatch(r"auth/ldap/login/[^/]+", path) and method == "POST":
+            if (body or {}).get("password") == PASSWORD and state["mfa"]:
+                # Login MFA: 200, an empty token and the requirement (T58-T60).
+                offered = [{"type": "totp", "id": MFA_METHOD, "uses_passcode": True}] if state["mfa"] == "totp" \
+                    else [{"type": "duo", "id": "duo-method-0"}]
+                return self.reply(200, {"auth": {"client_token": "", "mfa_requirement": {
+                    "mfa_request_id": MFA_REQUEST, "mfa_constraints": {"ldap-totp": {"any": offered}}}}})
             if (body or {}).get("password") == PASSWORD:
-                return self.reply(200, {"auth": {"client_token": PARENT, "policies": TOKENS[PARENT],
+                return self.reply(200, {"auth": {"client_token": state.get("session_login_token", PARENT), "policies": TOKENS[state.get("session_login_token", PARENT)],
                                                  "lease_duration": 28800}})
             return self.reply(400, {"errors": ["ldap operation failed: failed to bind as user"]})
+        if path == "sys/mfa/validate" and method == "POST":
+            if token is None and (body or {}).get("mfa_request_id") == MFA_REQUEST \
+                    and (body.get("mfa_payload") or {}) == {MFA_METHOD: [MFA_CODE]}:
+                return self.reply(200, {"auth": {"client_token": state.get("session_login_token", PARENT), "policies": TOKENS[state.get("session_login_token", PARENT)],
+                                                 "lease_duration": 28800}})
+            return self.reply(400, {"errors": ["failed to validate TOTP passcode"]})
         if path == "auth/approle/login" and method == "POST":
             if body == {"role_id": ROLE_ID, "secret_id": SECRET_ID}:
                 return self.reply(200, {"auth": {"client_token": APP, "policies": TOKENS[APP],
                                                  "lease_duration": 600}})
             return self.reply(400, {"errors": ["invalid role or secret ID"]})
         if path == "auth/token/lookup-self":
+            if token in (PROJECT_TOKEN, AGENT_TOKEN):
+                return self.reply(403, deny)
             if token in TOKENS:
                 return self.reply(200, {"data": {"policies": TOKENS[token], "ttl": 28000}})
             return self.reply(403, deny)
+        if path in ("auth/token/create/demo-session", "auth/token/create/demo-session-agent") and method == "POST":
+            if token != DAILY:
+                return self.reply(403, deny)
+            expected = {"policies": ["demo-session-app"], "no_default_policy": True,
+                        "no_parent": False, "type": "service", "ttl": "8h", "explicit_max_ttl": "8h"}
+            if body != expected:
+                return self.reply(400, {"errors": ["incorrect role request"]})
+            issued = AGENT_TOKEN if path.endswith("-agent") else PROJECT_TOKEN
+            state.setdefault("session_revoked", set()).discard(issued)
+            return self.reply(200, {"auth": {"client_token": issued, "policies": state.get("session_issued_policies", TOKENS[issued]),
+                                             "lease_duration": state.get("session_issued_ttl", 28000),
+                                             "orphan": state.get("session_issued_orphan", False), "token_type": "service"}})
         if path == "auth/token/create" and method == "POST":
+            if token == TRANSITION and body.get("policies") == ["developer"] and body.get("no_parent") is False:
+                return self.reply(200, {"auth": {"client_token": DAILY, "policies": TOKENS[DAILY],
+                                                 "lease_duration": 28000, "orphan": False}})
             if token != PARENT:
                 return self.reply(403, deny)
             # A non-root parent can only hand down policies it holds itself.
@@ -176,6 +214,10 @@ class Stub(BaseHTTPRequestHandler):
             return self.reply(200, {"auth": {"client_token": child, "policies": TOKENS[child],
                                              "lease_duration": 28800}})
         if path == "auth/token/revoke-self":
+            if token in (PROJECT_TOKEN, AGENT_TOKEN):
+                if not state.get("session_revoke_allowed", True):
+                    return self.reply(403, {"errors": ["denied " + PROJECT_TOKEN + " " + SESSION_VALUE]})
+                state.setdefault("session_revoked", set()).add(token)
             return self.reply(204)
         sysm = re.fullmatch(r"sys/mounts/([^/]+)|sys/policies/acl/([^/]+)|sys/auth|auth/approle/role/([^/]+)", path)
         if sysm:
@@ -199,8 +241,13 @@ class Stub(BaseHTTPRequestHandler):
                 table[key] = body["policy"] if policy else body
                 return self.reply(204)
             return self.reply(405, {"errors": ["unsupported"]})
-        m = re.fullmatch(r"(kv|demo-vault)/data/(.+)", path)
+        m = re.fullmatch(r"(kv|demo-vault|projects-test)/data/(.+)", path)
         if m:
+            if token in (PROJECT_TOKEN, AGENT_TOKEN):
+                if token in state.get("session_revoked", set()) or m.group(1) != "projects-test" or not m.group(2).startswith("demo-session/"):
+                    return self.reply(403, deny)
+                if state.get("session_read_error"):
+                    return self.reply(503, {"errors": [PROJECT_TOKEN + " " + SESSION_VALUE]})
             if token not in TOKENS:
                 return self.reply(403, deny)
             key = m.group(2) if m.group(1) == "kv" else "%s:%s" % m.groups()
@@ -209,7 +256,7 @@ class Stub(BaseHTTPRequestHandler):
                     return self.reply(404, {"errors": []})
                 data, version = state["store"][key]
                 return self.reply(200, {"data": {"data": data, "metadata": {"version": version}}})
-            if not {"secrets-writer", "ai-toolbox-app"} & set(TOKENS[token]):
+            if not {"secrets-writer", "ai-toolbox-app", "demo-session-app"} & set(TOKENS[token]):
                 return self.reply(403, deny)
             current = state["store"].get(key, ({}, 0))[1]
             if body["options"]["cas"] != current:
@@ -944,6 +991,90 @@ try:
           and gitlab["vars"].get("MISSING_TOKEN", {}).get("value") == IMP_GL2
           and gitlab["vars"]["MISSING_TOKEN"].get("masked") is True, (p.stdout + p.stderr).strip())
 
+    # T58-T60 - Vault enforces TOTP on the ldap login: the script completes it.
+    state["mfa"] = "totp"
+    clear_tok(); taken()
+    p = run(["login"], stdin=PASSWORD + "\n" + MFA_CODE + "\n")
+    reqs = taken()
+    val = [x for x in reqs if x[1] == "sys/mfa/validate"]
+    creates = [x for x in reqs if x[1] == "auth/token/create"]
+    check("T58 an ldap login that needs TOTP exits 0 and stores the child",
+          p.returncode == 0 and tok() == CHILD, "%s: %s" % (label(tok()), p.stderr.strip()))
+    check("T58 the code goes to sys/mfa/validate without a token, for the offered method",
+          len(val) == 1 and val[0][2] is None and val[0][3] == {
+              "mfa_request_id": MFA_REQUEST, "mfa_payload": {MFA_METHOD: [MFA_CODE]}})
+    check("T58 the child is created with the token validate returned",
+          len(creates) == 1 and creates[0][2] == PARENT)
+    # The prompt text: Windows prints none for a piped stdin, so ask the function.
+    asked, mod58 = [], script_mod()
+    real_prompt = mod58.prompt_secret
+    mod58.prompt_secret = lambda text: asked.append(text) or MFA_CODE
+
+    class FakeVault:
+        def call(self, *a, **k):
+            return {"auth": {"client_token": PARENT}}
+    try:
+        mod58.totp_validate(FakeVault(), "tester", {"mfa_request_id": MFA_REQUEST, "mfa_constraints": {
+            "c": {"any": [{"type": "totp", "id": MFA_METHOD}]}}})
+    finally:
+        mod58.prompt_secret = real_prompt
+    check("T58 the prompt names the user and not the code", asked == ["TOTP code for tester: "], str(asked))
+
+    # One TOTP method id per constraint, whatever else a constraint offers.
+    def mfa_payload(constraints):
+        sent, asked = [], []
+        mod = script_mod()
+        mod.prompt_secret = lambda text: asked.append(text) or MFA_CODE
+
+        class V:
+            def call(self, method, path, *a, **k):
+                sent.append((path, k.get("body")))
+                return {"auth": {"client_token": PARENT}}
+        try:
+            mod.totp_validate(V(), "tester", {"mfa_request_id": MFA_REQUEST, "mfa_constraints": constraints})
+            code = 0
+        except SystemExit as e:
+            code = e.code
+        return sent, asked, code
+    sent, asked, code = mfa_payload({"c": {"any": [{"type": "totp", "id": "t1"}, {"type": "totp", "id": "t2"}]}})
+    check("T61 one constraint with two TOTP methods sends only the first",
+          code == 0 and len(asked) == 1 and [b["mfa_payload"] for _, b in sent] == [{"t1": [MFA_CODE]}], str(sent))
+    sent, asked, code = mfa_payload({"a": {"any": [{"type": "duo", "id": "d1"}, {"type": "totp", "id": "ta"}]},
+                                     "b": {"any": [{"type": "totp", "id": "tb1"}, {"type": "totp", "id": "tb2"}]}})
+    check("T61 two constraints send one id each and the code is asked once",
+          code == 0 and len(asked) == 1 and [b["mfa_payload"] for _, b in sent]
+          == [{"ta": [MFA_CODE], "tb1": [MFA_CODE]}], str(sent))
+    sent, asked, code = mfa_payload({"a": {"any": [{"type": "totp", "id": "ta"}]},
+                                     "b": {"any": [{"type": "duo", "id": "d1"}]}})
+    check("T61 a constraint with only a non-TOTP method dies (3) before any prompt or validate call",
+          code == 3 and sent == [] and asked == [], "%s %s %s" % (code, sent, asked))
+
+    clear_tok(); taken()
+    p = run(["login"], stdin=PASSWORD + "\n000000\n")
+    check("T58 a wrong code exits 3 naming the user, stores nothing, and does not echo the code",
+          p.returncode == 3 and tok() is None and "tester" in p.stderr and "000000" not in p.stdout + p.stderr,
+          p.stderr.strip())
+    p = run(["login"], stdin=PASSWORD + "\n\n")
+    check("T58 an empty code is refused before validate",
+          p.returncode == 1 and tok() is None and "empty TOTP code" in p.stderr, p.stderr.strip())
+
+    state["mfa"] = "no-totp"
+    taken()
+    p = run(["login"], stdin=PASSWORD + "\n" + MFA_CODE + "\n")
+    check("T59 a requirement with no TOTP method exits 3, asks for no code, stores nothing",
+          p.returncode == 3 and tok() is None and "no TOTP method" in p.stderr
+          and not any(x[1] == "sys/mfa/validate" for x in taken()), p.stderr.strip())
+
+    state["mfa"] = None
+    p = run(["login"], stdin=PASSWORD + "\n")
+    check("T60 without MFA the login is unchanged (no TOTP prompt)",
+          p.returncode == 0 and tok() == CHILD and "TOTP" not in p.stderr, p.stderr.strip())
+    clear_tok()
+
+    # T62-T71 run inside this same fake server and temporary HOME.
+    with open("tests/vault-session-cases.py", encoding="utf-8") as session_cases:
+        exec(compile(session_cases.read(), "tests/vault-session-cases.py", "exec"), globals())
+
     # T42 - nothing this script did, in any case above, asked Vault to delete.
     check("T42 no DELETE request was ever sent", "DELETE" not in state["methods"])
 
@@ -961,7 +1092,8 @@ try:
                                    ("gitlab token", GL_TOKEN), ("gitlab row value", "VAL-gl-old-0e1"),
                                    ("migrated value", MIG1), ("second migrated value", MIG2), ("stray value", STRAY),
                                    ("imported local value", IMP_LOCAL), ("imported github value", IMP_GH),
-                                   ("imported gitlab value", IMP_GL1), ("second imported gitlab value", IMP_GL2))
+                                   ("imported gitlab value", IMP_GL1), ("second imported gitlab value", IMP_GL2),
+                                   ("transitional session", TRANSITION), ("daily session", DAILY), ("project token", PROJECT_TOKEN), ("agent token", AGENT_TOKEN), ("session value", SESSION_VALUE), ("TOTP code", MFA_CODE), ("wrong TOTP code", "000000"))
               if s in blob]
     check("T15 no password, token or value in any output (%d runs)" % len(outputs), not leaked, ", ".join(leaked))
 

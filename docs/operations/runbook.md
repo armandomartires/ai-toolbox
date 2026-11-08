@@ -44,6 +44,32 @@ Rules that are enforced, not merely advised:
 
 ## Secrets on a new host
 
+For a repository declaring `vault_role`, use the session model (`ADR-0057`):
+
+1. The owner completes the daily LDAP/TOTP identity and registered project
+   roles, including explicit `update` on `auth/token/revoke-self` in the app
+   policy. Do not apply those Vault changes from this repository.
+2. Provide the native keychain: Windows Credential Manager, macOS Keychain,
+   or an unlocked Secret Service session with `secret-tool`. A missing or
+   locked backend is a stop, never permission to create a plaintext cache.
+3. Configure `VAULT_ADDR`, `VAULT_CACERT` and the private
+   `VAULT_PROJECTS_MOUNT` outside tracked files. `VAULT_LDAP_MOUNT` defaults
+   to `ldap`; project identity comes only from `secrets.conf`.
+4. The human runs `vault_secrets.py login` (LDAP, then TOTP), followed by
+   `check`. No `~/.vault-token` or AppRole secret_id is written. The loader
+   refuses any admin/root token and retains only developer plus default.
+5. `exec VAR -- CMD` issues a project token and revokes it before command
+   start. A failed revocation stops. Agents use the future isolated launcher
+   through `issue --agent NAME --token-fd FD` (Windows also supports a pipe
+   `--token-handle`); the token is never printed or passed in argv.
+
+**ai-toolbox is not aligned by TASK-0259.** Its existing `secrets.conf`,
+per-host AppRole and private map still authenticate its own push. Do not
+remove or replace them here. That migration and the alignment CI job belong
+to sigma-infrastructure S096.T007 after T005 and T009. The legacy host
+procedure below remains applicable until then.
+
+
 Once per host, and the host then needs no exported token at all (ADR-0030):
 
 1. **Trust the internal root CA.** Copy its *public* certificate to a stable

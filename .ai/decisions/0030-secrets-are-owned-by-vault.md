@@ -1,5 +1,8 @@
 # ADR-0030 — Secrets are owned by Vault; the environment stays the interface
 
+**Session-model amendment, 2026-11-08:** ADR-0057 opts repositories with `vault_role` into daily OS-keychain sessions and issued project tokens. These legacy rules remain for repositories without `vault_role`; AppRole stays available for servers/CI.
+
+
 ## Status
 
 Accepted (2026-10-03), on the human's decisions of 2026-10-01..03. Task:

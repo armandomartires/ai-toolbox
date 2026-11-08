@@ -5,6 +5,62 @@ The loader assumes this layout. It was built by hand on 2026-10-01..03
 that built it does not lose the layout. **No hostname, address, DN or group
 name belongs in this file.** Those live only in Vault's own configuration.
 
+## Session-issued project access (ADR-0057)
+
+A repository with `backend = vault` and `vault_role = <name>` uses the
+registered `<name>` and `<name>-agent` token roles. The project is selected
+only by repository configuration. The real shared projects mount is private:
+set `VAULT_PROJECTS_MOUNT` outside tracked files, and keep map entries symbolic:
+
+```text
+EXAMPLE_TOKEN=${VAULT_PROJECTS_MOUNT}/<name>/example#token
+```
+
+The owner's daily LDAP identity is TOTP-gated and may create tokens through
+explicitly registered role paths. Its keychain session retains only
+`developer` plus the default self-service policy. Transitional
+`workstation-read` is stripped using a non-orphan child before storage; an
+identity-derived broad policy that cannot be stripped is refused. Neither
+admin nor root can be stored. The separate admin identity and all policy,
+role and identity changes stay outside this loader.
+
+Project roles issue **non-orphan service tokens**, no default policy,
+`<name>-app` only, bound to internal/VPN CIDRs with an explicit 8h maximum.
+The app policy confines KV v2 operations to that project's prefix. In
+addition it must explicitly allow its token to revoke itself:
+
+```hcl
+path "auth/token/revoke-self" { capabilities = ["update"] }
+```
+
+**Owner prerequisite:** the supplied project-policy generator grants KV
+access but lacks this self-revocation rule. The owner approved adding it
+separately. The loader does not change a real policy and refuses to start
+an exec command if revocation is not confirmed. It does not ask for
+`lookup-self` on project tokens; `check` uses daily-session expiry metadata
+and direct scoped reads.
+
+The daily session is held in Windows Credential Manager (logon-session
+persistence), macOS Keychain, or Secret Service. Payloads reach native code
+through ctypes or stdin, never argv or a temporary file; no unavailable
+backend falls back to plaintext. Keychain records include the expiry and
+are isolated by Vault address and LDAP auth mount. OS keychains are not an
+agent isolation boundary: the future per-project launcher/container owns
+that boundary.
+
+`exec` fetches and then revokes before POSIX exec or Windows process start.
+A successful `issue --agent` handoff transfers lifecycle responsibility to
+the launcher through an inherited pipe/socket descriptor (or a Windows
+pipe HANDLE). Failure revokes; the daily session remains the parent of all
+issued tokens, so logging out revokes descendants. The launcher and native
+live checks are pending and tracked as Unexercised.
+
+`provision` below is **superseded for aligned development projects** by the
+owner's registry/policy synchronization. It remains for legacy projects.
+The following legacy sections still describe every repository without
+`vault_role`; ai-toolbox itself stays on that path until its separate
+alignment task.
+
 ## Transport
 
 - **TLS on the listener**, with a certificate whose SAN covers the name

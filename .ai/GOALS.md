@@ -524,6 +524,9 @@ plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of don
 - [x] TASK-0241 — agent-watch and task-compass read cleanly in Daylight, as SIGMAorbital specifies
   .ai/tasks/TASK-0241-daylight-readability.md
 
+- [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
+  .ai/tasks/TASK-0259-vault-session-project-tokens.md
+
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - B-057 Unexercised: secrets `provision`, and `put` to GitLab and GitHub (`TASK-0156`, `TASK-0157`)
@@ -543,4 +546,6 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - B-071 A pane that lists every repo mod's loaded version beside its manifest
   .ai/planning/BACKLOG.md
 - B-072 Mods cannot follow the desktop app's light/dark switch: no signal reaches a hook
+  .ai/planning/BACKLOG.md
+- B-074 Unexercised: project-token handoff to the isolated agent launcher
   .ai/planning/BACKLOG.md

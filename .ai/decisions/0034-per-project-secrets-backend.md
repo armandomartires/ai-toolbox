@@ -1,5 +1,8 @@
 # ADR-0034 — Each project declares its secrets backend; a Vault project gets its own mount
 
+**Session-model amendment, 2026-11-08:** ADR-0057 opts repositories with `vault_role` into daily OS-keychain sessions and issued project tokens. These legacy rules remain for repositories without `vault_role`; AppRole stays available for servers/CI.
+
+
 **Status**: accepted
 **Date**: 2026-10-11
 **Task**: TASK-0155 (with TASK-0156, TASK-0157)

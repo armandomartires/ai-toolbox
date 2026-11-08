@@ -1,5 +1,8 @@
 # Changelog
 
+## vault-secrets 2.4.0
+- Opt-in vault_role selects session-issued scoped tokens, native OS keychain storage, LDAP/TOTP and fail-closed pre-exec revocation (TASK-0259, ADR-0057). Agent tokens use inherited pipes only; launcher/native live checks are pending in B-074. Legacy repositories and ai-toolbox push authentication remain unchanged; provision is retained but superseded for aligned development.
+
 ## agent-watch 0.13.1, task-compass 0.12.1
 - Daylight reads on a desktop (`TASK-0241`). A desktop draws a `Button` natively, its label in the desktop's own colour whatever the `Text`s in it say, so the Compass Sprints rows, `‹ PREV`, `NEXT ›`, `↺`, the fold toggles and agent-watch's table rows and `OPEN TRANSCRIPT` drew near-white on Daylight's light panel. The shared `sigma.tsx` gains `kit().pressable`: on a desktop the words are a `Text` in their token and the Button is laid over them with a blank label; the terminal keeps its Buttons. A control's words take `controlToken()`: `text-3` in Daylight (its `line-strong` is 3.7:1, a line), `line-strong` in Night ops as before. The Daylight sunburst follows SIGMAorbital: opaque slices in their state's colour stepped by depth (100%, 62%, 36%) on 1.5px `surface` gaps, a label on a fill in `on-ink` where it holds 4.5:1 and otherwise on a `surface` plate in text-1 and text-3; Night ops draws as before. Tested in the mod test kit (contrast of every Text in both panes); not yet seen live: that a press lands through the overlay and the blank Button paints nothing.
 
