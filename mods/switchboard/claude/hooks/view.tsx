@@ -26,7 +26,7 @@ const panelRows = atom({ plugin: 'switchboard', key: 'panelRows' } as const, {})
 export const PANE = 'switchboard'
 export const TITLE = 'Switchboard'
 /** This mod's version, shown in the pane's last line; keep it the same as `claude/.claude-plugin/plugin.json`'s. */
-export const VERSION = '0.8.0'
+export const VERSION = '0.8.1'
 /** The resize handle's `Client` key on the Switchboard panel's bottom edge (ADR-0053). */
 export const SWITCHBOARD_HANDLE = 'switchboard-handle'
 /** Each of this pane's handles with the fewest rows a drag holds its panel's body at: a section header and a row. */
@@ -188,7 +188,7 @@ export const renderPane = async ($: EngineInterface, e: RenderInput<'Pane'>) => 
           width,
           resize: { key: SWITCHBOARD_HANDLE, rows: bodyRows, held: heldOf(sized, e, SWITCHBOARD_HANDLE), min: MINS[SWITCHBOARD_HANDLE] },
         },
-        <Box flexDirection="column">{sections}{versioned}<Box marginTop={1} justifyContent="flex-end"><Text color={color('text-3')} size="caption">{`SWITCHBOARD ${VERSION}`}</Text></Box></Box>,
+        <Box flexDirection="column">{sections[0]}{versioned}{sections.slice(1)}<Box marginTop={1} justifyContent="flex-end"><Text color={color('text-3')} size="caption">{`SWITCHBOARD ${VERSION}`}</Text></Box></Box>,
       )}
     </Box>
   )

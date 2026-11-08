@@ -343,6 +343,18 @@ export type StatBlock = { label: string; value: string; unit?: string; delta?: s
  * The primitives for one drawing: `ui` is what `$.ui.resolve(e)` returned and
  * `surface` the input's, since a terminal and a desktop draw edges apart.
  */
+/** SIGMAorbital's Toggle track in CSS pixels (`.so-toggle__track`): 28 by 14, a 1px frame. */
+export const TOGGLE_PX = { width: 28, height: 14 } as const
+
+/**
+ * The Toggle's track as `Svg` markup: a square frame on `fill` (the `void` token), its 1px line in `line`, and an
+ * 8px knob in `line`, 2px inside the frame on each side, at the left when off and the right when on (`.so-toggle__knob`).
+ */
+export const toggleSvg = (isOn: boolean, line: string, fill: string) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${TOGGLE_PX.width}" height="${TOGGLE_PX.height}" viewBox="0 0 ${TOGGLE_PX.width} ${TOGGLE_PX.height}">` +
+  `<rect x="0.5" y="0.5" width="${TOGGLE_PX.width - 1}" height="${TOGGLE_PX.height - 1}" fill="${fill}" stroke="${line}" stroke-width="1"/>` +
+  `<rect x="${isOn ? 17 : 3}" y="3" width="8" height="8" fill="${line}"/></svg>`
+
 export const kit = (ui: Ui, surface: RenderSurface) => {
   const { Box, Button, Text } = ui
   const isTerminal = surface === 'terminal'
@@ -681,7 +693,28 @@ export const kit = (ui: Ui, surface: RenderSurface) => {
   const toggle = (opts: { key: string; label: string; isOn: boolean; onPress?: () => void; onText?: string; offText?: string }) => {
     const isDisabled = opts.onPress === undefined
     const word = (opts.isOn ? (opts.onText ?? 'on') : (opts.offText ?? 'off')).toUpperCase()
-    const track = color(isDisabled ? 'text-3' : opts.isOn ? 'text-1' : 'line-strong')
+    const trackToken: Token = isDisabled ? 'text-3' : opts.isOn ? 'text-1' : 'line-strong'
+    const track = color(trackToken)
+    const { Svg } = ui as unknown as Record<'Svg', ((props: Record<string, unknown>) => never) | undefined>
+    if (!isTerminal && typeof Svg === 'function') {
+      // A desktop draws a Button's label as its own text, over whatever the Button holds, so the glyph track never
+      // showed (seen live 2026-11-08). There the track is the design's own square switch, an Svg, the words are
+      // Texts in their tokens, and `pressable` lays a blank Button over the row.
+      const said = `${opts.label.toUpperCase()} ${word}`
+      const row = (
+        <Box flexDirection="row" alignItems="center">
+          <Svg source={toggleSvg(opts.isOn, track, color('void'))} width={TOGGLE_PX.width} height={TOGGLE_PX.height} alt={said} />
+          <Text color={color(isDisabled ? 'text-3' : 'text-1')} weight="semibold" wrap="truncate-end">
+            {` ${opts.label.toUpperCase()}`}
+          </Text>
+          <Text color={color('text-3')} size="caption">
+            {`  ${word}`}
+          </Text>
+        </Box>
+      )
+      // The blank covers the track (about three figure spaces wide) and the words, never more than is drawn.
+      return isDisabled ? row : pressable({ key: opts.key, label: `   ${opts.label} ${word}`, token: trackToken, onPress: opts.onPress as () => void }, row)
+    }
     const knob = (
       <Text color={track} mono>
         {opts.isOn ? '[ ■]' : '[■ ]'}

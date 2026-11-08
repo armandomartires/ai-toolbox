@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 import type { ConfigRow, On } from 'claude-code'
 
-import { IDENTITY, STATUS, TOKENS, agentState, elapsed, hms, kit, recall, remember, segments, themeArg, themeOf, THEME_USAGE } from './sigma'
+import { IDENTITY, STATUS, TOGGLE_PX, TOKENS, agentState, elapsed, hms, kit, recall, remember, segments, themeArg, themeOf, THEME_USAGE, toggleSvg } from './sigma'
 
 test('every token has a hex in both themes, aliases resolved', () => {
   for (const id of ['dark', 'light'] as const) {
@@ -360,5 +360,57 @@ test('a pressable on a desktop: its words a Text, a blank Button over them no lo
   const term = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect((await term.find({ type: 'Button' }))?.text).toBe('▾ HIDE')
   expect(await term.find({ type: 'Box', text: / / })).toBeUndefined()
+  await term.unmount()
+})
+
+test('the toggle track is the SIGMAorbital one: a square 28x14 frame on void, an 8px knob 2px in, at 17px when on', () => {
+  expect(TOGGLE_PX).toEqual({ width: 28, height: 14 })
+  const on = toggleSvg(true, '#aaaaaa', '#000000')
+  expect(on).toContain('width="28" height="14"')
+  expect(on).toContain('<rect x="0.5" y="0.5" width="27" height="13" fill="#000000" stroke="#aaaaaa" stroke-width="1"/>')
+  expect(on).toContain('<rect x="17" y="3" width="8" height="8" fill="#aaaaaa"/>')
+  expect(toggleSvg(false, '#555555', '#000000')).toContain('<rect x="3" y="3" width="8" height="8" fill="#555555"/>')
+  expect(on).not.toContain(' rx=')
+})
+
+test('a toggle on a desktop: the track an Svg, the name and state Texts, a blank Button laid over them with no label; the terminal keeps its glyphs', async ($, on) => {
+  // A desktop draws a Button's label as its own text over the Texts in it, so the switch never showed (seen live 2026-11-08).
+  on('ui.render', ($, e) => {
+    const ui = $.ui.resolve(e)
+    const { toggle } = kit(ui, e.surface)
+    return (
+      <ui.Box flexDirection="column">
+        {toggle({ key: 't-on', label: 'agent-watch', isOn: true, onPress: () => {} })}
+        {toggle({ key: 't-off', label: 'compass', isOn: false, onPress: () => {} })}
+        {toggle({ key: 't-self', label: 'switchboard', isOn: true, onText: 'always on' })}
+      </ui.Box>
+    )
+  })
+  const PANE = { plugin: 'my-mod', component: 'Pane', requestId: 'tg', props: { title: 'x', isFocused: false, bodyColumns: 40, placement: 'dock', scroll: { offset: 0, bodyRows: 10 }, view: {} } } as const
+  const D = TOKENS.dark
+
+  const desk = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const svgs = await desk.findAll({ type: 'Svg' })
+  expect(svgs.map(one => one.props.alt)).toEqual(['AGENT-WATCH ON', 'COMPASS OFF', 'SWITCHBOARD ALWAYS ON'])
+  expect(svgs.map(one => [one.props.width, one.props.height])).toEqual([[28, 14], [28, 14], [28, 14]])
+  expect(String(svgs[0]?.props.source)).toContain(`x="17" y="3" width="8" height="8" fill="${D['text-1']}"`)
+  expect(String(svgs[1]?.props.source)).toContain(`x="3" y="3" width="8" height="8" fill="${D['line-strong']}"`)
+  expect(String(svgs[2]?.props.source)).toContain(`fill="${D['text-3']}"`)
+  const buttons = await desk.findAll({ type: 'Button' })
+  expect(buttons.map(one => one.key)).toEqual(['t-on', 't-off'])
+  for (const one of buttons) {
+    // No words a desktop could draw over the switch: the kit reports the blank as its label, and nothing else.
+    expect(String(one.props.label ?? '').trim()).toBe('')
+    expect(String(one.text).trim()).toBe('')
+  }
+  expect((await desk.find({ type: 'Text', text: /^ AGENT-WATCH$/ }))?.props.color).toBe(D['text-1'])
+  expect((await desk.find({ type: 'Text', text: /^ SWITCHBOARD$/ }))?.props.color).toBe(D['text-3'])
+  expect(await desk.find({ type: 'Text', text: /^\[ ■\]$/ })).toBeUndefined()
+  await desk.unmount()
+
+  const term = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await term.find({ type: 'Svg' })).toBeUndefined()
+  expect((await term.find({ type: 'Button', key: 't-on' }))?.props.label).toBe('AGENT-WATCH ON')
+  expect((await term.findAll({ type: 'Text', text: /^\[ ■\]$/ })).map(one => one.props.color)).toEqual([D['text-1'], D['text-3']])
   await term.unmount()
 })

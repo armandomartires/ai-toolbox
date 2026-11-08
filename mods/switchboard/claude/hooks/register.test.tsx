@@ -192,13 +192,21 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
     expect((await ui.find({ type: 'Text', text: /^ SWITCHBOARD$/ }))?.props.color).toBe(DARK['text-3'])
     // SIGMAorbital's Toggle: a square track, text-1 while on, the name uppercase, then ON in text-3.
     const on = await ui.find({ type: 'Button', key: 'mod-agent-watch' })
-    expect(on?.props.label).toBe('AGENT-WATCH ON')
     expect(on?.props.plain).toBe(true)
     expect(on?.props.variant).toBeUndefined()
-    // switchboard's own disabled track is text-3; an enabled one is text-1.
-    const tracks = (await ui.findAll({ type: 'Text', text: /^\[ ■\]$/ })).map(one => one.props.color)
-    expect(tracks).toContain(DARK['text-1'])
-    expect(tracks).toContain(DARK['text-3'])
+    if (surface === 'terminal') {
+      expect(on?.props.label).toBe('AGENT-WATCH ON')
+      // switchboard's own disabled track is text-3; an enabled one is text-1.
+      const tracks = (await ui.findAll({ type: 'Text', text: /^\[ ■\]$/ })).map(one => one.props.color)
+      expect(tracks).toContain(DARK['text-1'])
+      expect(tracks).toContain(DARK['text-3'])
+    } else {
+      // A desktop draws a Button's label over what it holds, so the Button is blank and the track is an Svg.
+      expect(String(on?.props.label ?? '').trim()).toBe('')
+      const tracks = await ui.findAll({ type: 'Svg' })
+      expect(tracks.find(one => one.props.alt === 'AGENT-WATCH ON')?.props.source).toContain(`fill="${DARK['text-1']}"/></svg>`)
+      expect(tracks.find(one => one.props.alt === 'SWITCHBOARD ALWAYS ON')?.props.source).toContain(`fill="${DARK['text-3']}"/></svg>`)
+    }
     expect((await ui.find({ type: 'Text', text: /^ AGENT-WATCH$/ }))?.props.color).toBe(DARK['text-1'])
     expect((await ui.findAll({ type: 'Text', text: /^  ON$/ }))[0]?.props.color).toBe(DARK['text-3'])
     expect((await ui.findAll({ type: 'Text' })).filter(one => one.props.dimColor || (one.props.bold && !one.props.weight)).length).toBe(0)
@@ -209,9 +217,8 @@ test('the pane lists every mod with hooks from the plugin folders, each with an 
   await ui.press({ key: 'mod-agent-watch' })
   expect((await ui.find({ text: /MODS  3 · ○ 1 OFF/ }))?.text).toBeDefined()
   // Off: the knob at the left, track in line-strong, the word OFF.
-  const switched = await ui.find({ type: 'Button', key: 'mod-agent-watch' })
-  expect(switched?.props.label).toBe('AGENT-WATCH OFF')
-  expect((await ui.find({ type: 'Text', text: /^\[■ \]$/ }))?.props.color).toBe(DARK['line-strong'])
+  const switched = (await ui.findAll({ type: 'Svg' })).find(one => one.props.alt === 'AGENT-WATCH OFF')
+  expect(switched?.props.source).toContain(`<rect x="3" y="3" width="8" height="8" fill="${DARK['line-strong']}"/>`)
   expect((await ui.find({ type: 'Text', text: /^ off from the next session$/ }))?.props.color).toBe(DARK.amber)
   await ui.press({ key: 'mod-agent-watch' })
   expect(await ui.find({ type: 'Text', text: /^ (on|off) from the next session$/ })).toBeUndefined()
