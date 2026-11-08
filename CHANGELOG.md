@@ -1,5 +1,9 @@
 # Changelog
 
+## switchboard 0.9.0, agent-watch 0.13.4, task-compass 0.12.5, task-orchestrator 0.5.12
+- switchboard's sections open again, and the pane survives a session switch (`TASK-0256`, 0.8.2). With SKILLS open the pane's tree reached 184,790 characters, past the 100,000 the engine draws, so the desktop kept its last frame: a press seemed dead and a remount drew nothing. Rows, topic headers and Versions rows past a budget are not drawn; a line says how many and how to reach them.
+- switchboard follows the design of Compass and Agents (`TASK-0257`): one bracketed panel opening on a KPI row (MODS, SKILLS, CONNECTORS, OFF); section and topic headers pressed through `kit().pressable`, so a desktop no longer draws them as native buttons; section titles text-1, topic titles text-3, row names text-2 (text-3 when off); Versions as label and value, folding like a topic; a legend with the version line closes the panel. `kit().toggle` draws its label as a row (`sigma.tsx`, copied to every mod). Tested in the mod test kit and reviewed; not yet seen live.
+
 ## Mod preview
 - The preview page's sidebar hides and shows from a button at its top left, or Ctrl+B, and stays as left across the reload after each rebuild (`TASK-0258`).
 
