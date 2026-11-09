@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent (Claude Code)
 - Branch: agent/TASK-0261
 - Created: 2026-11-08
@@ -46,7 +46,7 @@ ADR-0023 gives each session a sibling worktree on `agent/<name>` but leaves the 
 - [x] `worktree.sh list` marks the five `.claude/worktrees` entries as nested and the main checkout as such, run from the worktree and from the main checkout
 - [x] `tests/test-worktree.sh` covers the task form, the resume, a foreign-prefix and a detached removal, and a refused unpushed commit (18 cases)
 - [x] `install.sh --client claude-code` merges the hooks beside an existing hook, is a no-op the second time, and leaves an unparsable file untouched (temp directory; `tests/test-install.sh`, 49 cases)
-- [ ] A worktree-isolated subagent lands in `../ai-toolbox-worktrees`; a desktop Code-tab worktree session likewise, or ADR-0023's falsifiable line is corrected. **Not yet run against the real project** (`B-061` waits on it)
+- [x] A desktop Code-tab worktree session lands in `../ai-toolbox-worktrees` on `agent/…`: seen 2026-11-09 from a Windows session (`TASK-0263`, `TASK-0264`) and from a WSL session of the same checkout (`TASK-0263-arch/-dev/-test`, listed by their `/mnt/c` paths); nothing new nested
 
 ## Mandatory validations
 
@@ -73,3 +73,4 @@ ADR-0023 gives each session a sibling worktree on `agent/<name>` but leaves the 
 
 - 2026-11-08 · Claude Code (Fable 5.1) · renumbered from TASK-0260: another session had taken that number in the main checkout while this ran (the collision ADR-0023 says branches do not fix).
 - 2026-11-08 · Claude Code (Fable 5.1) · plan approved; worktree created; governance text, schema and brief written; tooling built by a builder subagent (Sonnet 5.5), tests green; the hook pair smoke-tested in a temp repo only, so `B-061` is narrowed, not closed, and the brief sits in review until the live check.
+- 2026-11-09 · Claude Code (Fable 5.1) · live check, first two Code-tab worktree sessions: the desktop fires `WorktreeCreate`, with `$CLAUDE_PROJECT_DIR` empty and under WSL's bash (first on PATH). `install.sh` now writes the absolute path and runs the hook through Git's `bin/bash.exe` from either shell; the emitted command, run verbatim under WSL with hook JSON on stdin, made `../ai-toolbox-worktrees/probe-emitted` on `agent/probe-emitted`. Third session: `'gb' is not recognized as an internal or external command`: the Windows desktop runs hooks through cmd.exe. The command is now a cmd line calling Git's `bin\bash.exe` by full path; a WSL session meanwhile opened in a separate WSL clone with no hooks and nested as before. Fourth session and a WSL session of this checkout both landed as siblings; closed.

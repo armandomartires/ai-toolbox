@@ -363,6 +363,22 @@ gives `agent/TASK-nnnn` and resumes that branch on a later session.
 `bash scripts/install.sh --client claude-code` emits the hooks block: it merges
 `settings.hooks.json` into this checkout's `.claude/settings.json` (created if
 absent), keeps every other hook, and never writes a file that does not parse.
+The fragment names `$CLAUDE_PROJECT_DIR`; the merge writes this checkout's
+absolute path in its place. **The desktop app runs the hook with that
+variable empty** (measured 2026-11-09: `/bin/bash:
+/configs/claude-code/hooks/worktree-create.sh: No such file or directory`),
+so an emitted command must not depend on it. **The Windows desktop runs
+hook commands through `cmd.exe`**, so a bare `bash` is whatever `PATH` finds
+first (WSL's Linux bash here, `C:\Windows\system32\bash.exe`, which cannot
+open a `C:/...` path: `/bin/bash: C:/Users/.../worktree-create.sh: No such
+file or directory`) and a shell expression is read by cmd (`'gb' is not
+recognized as an internal or external command`), both measured 2026-11-09.
+On a Windows host the emitted command is therefore a cmd line,
+`"C:\Program Files\Git\bin\bash.exe" "<checkout>/configs/.../worktree-create.sh"`.
+`bin\bash.exe` rather than `usr\bin\bash.exe`, because only the wrapper
+sets up Git Bash's `PATH`; the inner one finds no `cat` or `python3`. A
+WSL-side clone is a Linux host: its `install.sh` emits the plain `bash`
+form and has its own `.claude/settings.json`.
 Run `bash scripts/install.sh --status` to see whether they are present.
 
 **Where the hooks apply.** The project `.claude/settings.json` exists only in
@@ -372,18 +388,19 @@ a sibling worktree (`<repo>-worktrees/X`) reads that worktree's own
 `install.sh --client claude-code` was run there too. The alternative is to put
 the same `hooks` block in `~/.claude/settings.json`, which every session
 reads. We recommend that for a person who works in many worktrees: it is done
-once per host, and its commands must then use an absolute path to the main
-checkout's `hooks/` instead of `$CLAUDE_PROJECT_DIR` (which a hook run from a
-worktree resolves to that worktree, whose copy of the scripts may be older).
-`install.sh` does not do this: its target stays the project file.
+once per host, with the same absolute path to the main checkout's `hooks/`
+that `install.sh` writes. `install.sh` does not do this: its target stays the
+project file.
 
 The create hook sets `WORKTREE_SKIP_GATE=1`, so `worktree.sh add` skips its
 gate probe (minutes on this host) and prints `gate     : not probed`; both hook
 entries carry `"timeout": 120`. An interactive `worktree.sh add` still probes.
 
-Desktop Code-tab sessions may not fire `WorktreeCreate`. The person also sets
-Settings > Code: **Worktree location** to `..\ai-toolbox-worktrees` and
-**Branch prefix** to `agent`.
+Desktop Code-tab sessions **do** fire `WorktreeCreate` (measured 2026-11-09),
+so the hook alone carries the rule. The desktop's own **Worktree location**
+and **Branch prefix** (Settings > Code) are account-wide, not per project, so
+this repo asks for no value there; if they are set, a folder outside every
+repository satisfies ADR-0023's "never inside the repo".
 
 ## Install record — 2026-09-24 (`TASK-0090`)
 

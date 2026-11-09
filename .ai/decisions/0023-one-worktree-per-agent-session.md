@@ -25,14 +25,16 @@ the human's decision. Two additions; no clause is changed and clause 5 holds.
   `worktree.sh` could neither flag nor remove them. Now a tracked
   `WorktreeCreate`/`WorktreeRemove` hook pair (`configs/claude-code/hooks/`,
   emitted into the project's `.claude/settings.json` by `install.sh`) routes
-  them through `worktree.sh`, the human sets the desktop's *Worktree
-  location* to the sibling folder and *Branch prefix* to `agent`, `list`
+  them through `worktree.sh` (the desktop's own worktree settings are
+  account-wide, so none is asked for), `list`
   flags nested and foreign-prefix entries, and `remove <path>` clears them
   under the same refusal as any session worktree.
 - **Falsifiable:** a Code-tab worktree session started after `install.sh`
-  lands in `../ai-toolbox-worktrees` on `agent/…`. Whether the desktop fires
-  `WorktreeCreate` is undocumented; if it does not, the desktop settings alone
-  carry 1b, and this line is to be corrected to say so when measured.
+  lands in `../ai-toolbox-worktrees` on `agent/…`. **Measured 2026-11-09:**
+  the desktop does fire `WorktreeCreate`, with `$CLAUDE_PROJECT_DIR` empty
+  and, on Windows, through `cmd.exe`; three emissions failed on those and
+  `install.sh` now writes the absolute path as a cmd line calling Git's
+  `bin\bash.exe`. The landing is recorded in `TASK-0261`'s brief.
 
 **What ratification covers.** All five Decision clauses. **Clause 2 is the one
 that needed the signature**, and it is the one that changes a stated rule in

@@ -409,20 +409,47 @@ PYMERGE
 
 # Merge configs/claude-code/settings.hooks.json (the WorktreeCreate and
 # WorktreeRemove hooks, ADR-0023, TASK-0261) into THIS checkout's
-# .claude/settings.json, the project settings: the hook commands point at
-# $CLAUDE_PROJECT_DIR. $1 is `write` or `status`. Other hooks and keys are
-# kept; an entry already present is not added twice; a file that does not
-# parse is never written (the run fails).
+# .claude/settings.json, the project settings. The fragment writes
+# $CLAUDE_PROJECT_DIR; the merge replaces it with this checkout's absolute
+# path, because the desktop app ran the hook with the variable EMPTY and
+# bash looked for /configs/... (measured 2026-11-09, TASK-0261). On a
+# Windows host the command is a cmd.exe command line that calls Git's
+# bin\bash.exe by its full path: the Windows desktop runs hook commands
+# through cmd.exe, so a bare `bash` is whatever PATH finds first (WSL's
+# Linux bash here, which cannot open C:/... paths) and a shell expression
+# is read by cmd ("'gb' is not recognized as an internal or external
+# command", measured 2026-11-09). bin\bash.exe, not usr\bin\bash.exe: only
+# the wrapper sets up Git Bash's PATH. $1 is
+# `write` or `status`. Other hooks and keys are kept; an entry already
+# present is not added twice; a file that does not parse is never written
+# (the run fails).
 worktree_hooks() {
   local action="$1" frag="configs/claude-code/settings.hooks.json"
   [ -f "$frag" ] || return 0
   # --status must not create anything; only the write path makes the directory.
   if [ "$action" = write ]; then mkdir -p .claude || return 1; fi
-  python3 - "$(pwd)/.claude/settings.json" "$frag" "$action" <<'PYHOOKS'
-import json, os, sys
-settings, frag, action = sys.argv[1:4]
+  # The script path in the form git prints on this host (C:/... on Git Bash,
+  # which bash.exe reads; /... elsewhere); the bash.exe path in cmd's own.
+  local root gitwin=; root=$(pwd -W 2>/dev/null || pwd -P)
+  if command -v cygpath >/dev/null 2>&1; then
+    gitwin="$(cygpath -w / | sed 's#\\$##')\\bin\\bash.exe"   # C:\Program Files\Git\bin\bash.exe, as cmd.exe wants it
+  fi
+  python3 - "$(pwd)/.claude/settings.json" "$frag" "$action" "$root" "$gitwin" <<'PYHOOKS'
+import json, os, re, sys
+settings, frag, action, root, gitwin = sys.argv[1:6]
 with open(frag, encoding="utf-8") as f:
-    want = json.load(f)["hooks"]
+    want = json.loads(f.read().replace("$CLAUDE_PROJECT_DIR", root))["hooks"]
+if gitwin:
+    # `bash "<script>"` -> `"C:\...\Git\bin\bash.exe" "<script>"`, a cmd.exe line.
+    def via_gitbash(cmd):
+        m = re.fullmatch(r'bash ("[^"]+")', cmd)
+        if not m:
+            return cmd
+        return '"%s" %s' % (gitwin, m.group(1))
+    for groups in want.values():
+        for g in groups:
+            for h in g.get("hooks", []):
+                h["command"] = via_gitbash(h["command"])
 data = {}
 if os.path.exists(settings):
     try:

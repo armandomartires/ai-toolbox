@@ -259,15 +259,20 @@ mkdir -p "$R/.claude"
 printf '{"model": "m", "hooks": {"WorktreeCreate": [{"hooks": [{"type": "command", "command": "mine"}]}], "Stop": []}}\n' > "$PS"
 inst --client claude-code
 merged="$(python3 -c '
-import json, sys
+import json, os, sys
 d = json.load(open(sys.argv[1], encoding="utf-8"))
 h = d["hooks"]
 cmds = lambda e: [x["command"] for g in h.get(e, []) for x in g["hooks"]]
 ok = d["model"] == "m" and h["Stop"] == [] and cmds("WorktreeCreate")[0] == "mine" \
   and len(cmds("WorktreeCreate")) == 2 and "worktree-create.sh" in cmds("WorktreeCreate")[1] \
-  and len(cmds("WorktreeRemove")) == 1 and "worktree-remove.sh" in cmds("WorktreeRemove")[0]
+  and len(cmds("WorktreeRemove")) == 1 and "worktree-remove.sh" in cmds("WorktreeRemove")[0] \
+  and "$CLAUDE_PROJECT_DIR" not in cmds("WorktreeCreate")[1] \
+  and "/configs/claude-code/hooks/worktree-create.sh" in cmds("WorktreeCreate")[1] \
+  and cmds("WorktreeCreate")[1].split(chr(34))[1][0] in "/CDEcde" \
+  and (not os.environ.get("MSYSTEM") or (cmds("WorktreeCreate")[1].startswith(chr(34))
+       and "\\bin\\bash.exe\" \"" in cmds("WorktreeCreate")[1] and "exec " not in cmds("WorktreeCreate")[1]))
 sys.stdout.write("yes" if ok else "no")' "$PS" 2>&1)"
-check "H2 the fragment is merged beside an existing hook and other keys" "$([ "$rc" -eq 0 ] && [ "$merged" = yes ] && has "$out" 'hooks added: WorktreeCreate, WorktreeRemove'; echo $?)" "$out $merged"
+check "H2 the fragment is merged beside an existing hook and other keys, the absolute path in place of the variable" "$([ "$rc" -eq 0 ] && [ "$merged" = yes ] && has "$out" 'hooks added: WorktreeCreate, WorktreeRemove'; echo $?)" "$out $merged"
 before="$(cat "$PS")"
 inst --client claude-code
 check "H3 a second run is a no-op" "$([ "$rc" -eq 0 ] && [ "$(cat "$PS")" = "$before" ] && lacks "$out" 'hooks added'; echo $?)" "$out"

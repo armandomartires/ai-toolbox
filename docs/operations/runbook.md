@@ -407,7 +407,7 @@ The desktop app's Code-tab sessions and the Agent tool's `isolation:
 "worktree"` subagents make worktrees of their own, by default at
 `.claude/worktrees/<name>` **inside the repo**, on `claude/<slug>` and
 `worktree-agent-<id>`. They are sessions under ADR-0023 (clause 1b) and
-follow the sibling rule by two means, both needed:
+follow the sibling rule through a hook:
 
 1. `bash scripts/install.sh --client claude-code` emits a
    `WorktreeCreate`/`WorktreeRemove` hook pair into the project's
@@ -415,10 +415,13 @@ follow the sibling rule by two means, both needed:
    `.claude/` is not). The create hook runs `worktree.sh add <slug>` and
    answers the sibling path; the remove hook runs `worktree.sh remove
    <path>` and keeps the worktree when that refuses.
-2. In the desktop app, Settings → Code: *Worktree location* →
-   `..\ai-toolbox-worktrees`, *Branch prefix* → `agent`. Whether a Code-tab
-   session fires `WorktreeCreate` is not documented, so the settings carry
-   the rule where the hook does not.
+2. The desktop fires `WorktreeCreate` for a Code-tab worktree session
+   (measured 2026-11-09), with `$CLAUDE_PROJECT_DIR` **empty** and through
+   `cmd.exe` on Windows, which is why `install.sh` writes the absolute
+   path and, on a Windows host, a cmd line that calls Git's `bin\bash.exe`
+   by its full path (`configs/claude-code/README.md`, *Worktrees*). The
+   desktop's *Worktree location* and *Branch prefix* settings are
+   account-wide, so this repo asks for no value there.
 
 A hook-made branch is `agent/<slug>`, since the hook has no task id. Once the
 task is known, prefer `worktree.sh add TASK-nnnn` and land or remove the slug
