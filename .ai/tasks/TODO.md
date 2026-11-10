@@ -299,8 +299,9 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0262 — Scripts are checked out with LF, so a Linux bash on a Windows clone runs them
 - [?] TASK-0265 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
 
-## Sprint S11 — Claude-centric alignment (planned 2026-11-10)
+## Sprint S11 — Claude-centric alignment (OPEN — promoted 2026-11-10)
 
+- [x] TASK-0286 — Open sprint S11 and add Phase 11 to the roadmap
 - [ ] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
 - [ ] TASK-0267 — Anthropic provider in the eval suite (P0.2)
 - [ ] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)

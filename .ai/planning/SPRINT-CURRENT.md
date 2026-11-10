@@ -1,8 +1,13 @@
-# No sprint is open
+# Sprint S11 — Claude-centric alignment (OPEN)
 
-S10 closed 2026-09-26 on `REVIEW-0012` and is archived in `planning/sprints/`. Opening the next sprint is a human decision. Until then, work runs task by task on the human's routing. The next task id is the next number not yet used in `.ai/tasks/`.
+**Opened 2026-11-10 on the human's decision** (`TASK-0286`), in the same commit that added **Phase 11** to `ROADMAP.md`. S10 closed 2026-09-26 on `REVIEW-0012` and is archived in `planning/sprints/`.
 
-**S11 — Claude-centric alignment is planned, not open** (2026-11-10). Its 20 briefs, `TASK-0266` to `TASK-0285`, come from the answered alignment plan in `docs/reports/2026-11-10-alignment/` and are listed in `planning/sprints/SPRINT-S11-claude-alignment.md`. Opening it, and adding its phase to `ROADMAP.md`, is the human's call.
+The sprint's plan, decisions record, dependencies and order are in `planning/sprints/SPRINT-S11-claude-alignment.md`; its source is the answered alignment plan in `docs/reports/2026-11-10-alignment/`. Twenty briefs, `TASK-0266` to `TASK-0285`, all `planned`. Start with the P0 items (`TASK-0266` to `TASK-0270`), which have no item dependencies.
+
+- **The tier ADR is pre-accepted.** The human accepted on 2026-11-10, in advance, the ADR `TASK-0268` drafts, within that brief's scope: it supersedes `ADR-0018` clause 7 for Claude Code emission only, with the D3 table. A draft that goes further goes back to the human.
+- **Human-gated in the sprint:** live exposure of gates over HTTP (`TASK-0285`), the nightly eval schedule and spend (`TASK-0267`, `TASK-0278`), and `TASK-0271`'s ADR for the refused terms that pass measurement.
+
+The next task id is the next number not yet used in `.ai/tasks/`.
 
 ## Open, not scheduled
 

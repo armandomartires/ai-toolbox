@@ -8,7 +8,7 @@
 - Created: 2026-11-10
 - Updated: 2026-11-10
 - Applies to: `scripts/emit-agents.py`, `.ai/context/`, `.ai/decisions/`, `docs/development/authoring-guide.md`, `tests/`
-- Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P0.3 (Q3), decisions D3=B (per-role tiers, default inherit, table kept in .ai/context); related: ADR-0017 (rejected 2026-09-15), ADR-0018 clause 7
+- Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P0.3 (Q3), decisions D3=B (per-role tiers, default inherit, table kept in .ai/context); related: ADR-0017 (rejected 2026-09-15), ADR-0018 clause 7; the human accepted step 1's ADR in advance on 2026-11-10, within this scope
 
 ## Objective
 
@@ -47,7 +47,7 @@ Remove the unresolved `{tier:<name>}` placeholder from emitted Claude Code agent
 
 ## Execution plan
 
-1. Write the ADR superseding ADR-0018 clause 7 for Claude Code emission, recording that it reverses the ADR-0017 outcome there, and why. Stop: it needs the human's acceptance before steps 2 onward land. If it is declined, close the task as not done.
+1. Write the ADR superseding ADR-0018 clause 7 for Claude Code emission, recording that it reverses the ADR-0017 outcome there, and why. The human accepted it in advance on 2026-11-10 within this brief's scope (Claude Code emission only, the D3 table): mark it `Accepted` citing that. If the draft goes beyond this scope, stop and ask the human before steps 2 onward land.
 2. Write the test: each Claude Code agent's `model:` equals the table value for its role (all 15 roles checked against the table directly, since only 4 are emitted today), an unlisted role gets `inherit`, and every `model:` is `sonnet`, `opus`, `haiku`, `inherit` or a full model id. A check that no `{tier:` remains is secondary. Run it and see it fail.
 3. Write the table in `.ai/context`.
 4. Change `emit_claude_code` to read the table and map role to alias, defaulting to `inherit`.
@@ -70,7 +70,7 @@ Remove the unresolved `{tier:<name>}` placeholder from emitted Claude Code agent
 
 ## Risks and rollback
 
-- The human may decline the ADR. Then no code lands and D3=B stays unimplemented; do not emit tiers without it.
+- The draft may need to reach beyond Claude Code emission (OpenCode or Codex tiers). That is outside the advance acceptance: stop and ask the human.
 - A tier that is too low for a role degrades quality silently; the table is one file and a change is one line.
 - Only 4 roles are emitted for Claude Code until TASK-0271, so the test must cover the table directly as well as the emitted files.
 - Rollback: git revert the task commit

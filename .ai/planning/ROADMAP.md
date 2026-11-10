@@ -56,6 +56,11 @@ A validated, indexed, versioned library of AI customization tools that any agent
   - concise artifacts (`ADR-0033`, `PLAN-0007`)
 - Open items: `planning/SPRINT-CURRENT.md`.
 
+## Phase 11 — Claude-centric alignment (OPEN 2026-11-10)
+- Raise the 2026-11-10 alignment score (54.5 / 100) by making Claude Code the reference harness, with OpenCode and Codex as generated ports.
+- Marketplace and three plugins as the primary install, the roles reaching Claude Code once their boundaries are measured, harness-side permissions and hooks, a Claude eval provider with a multi-trial suite.
+- Sprint S11 (`TASK-0266` to `TASK-0285`); plan and answers in `docs/reports/2026-11-10-alignment/`; opened by `TASK-0286`.
+
 ## Risks
 - **Client formats and capabilities drift.** Re-verify a claim about external state when you act on it, not from a plan written days earlier (`ADR-0006`).
 - **The commit gate grows linearly with components.** Measure it on the `/mnt/c` checkout, not on `/tmp`: `/tmp` understates by about 40%.

@@ -570,6 +570,8 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 
 ## S11 — Claude-centric alignment
 Goal: Claude Code becomes the reference harness, with generated ports; see .ai/planning/sprints/SPRINT-S11-claude-alignment.md
+- [x] TASK-0286 — Open sprint S11 and add Phase 11 to the roadmap
+  .ai/tasks/TASK-0286-open-sprint-s11.md
 - [ ] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
   .ai/tasks/TASK-0266-marketplace-manifest.md
 - [ ] TASK-0267 — Anthropic provider in the eval suite (P0.2)

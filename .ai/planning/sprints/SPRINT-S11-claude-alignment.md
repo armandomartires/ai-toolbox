@@ -1,6 +1,6 @@
 # Sprint S11 — Claude-centric alignment
 
-**PLANNED 2026-11-10.** Not yet promoted: `SPRINT-CURRENT.md`, `ROADMAP.md` and the board are the coordinator's to update.
+**OPEN — promoted 2026-11-10** by `TASK-0286`, on the human's decision, in the same commit that added **Phase 11** to `ROADMAP.md`.
 
 Planned from `docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md` (commit `a4704ca`), with all fifteen decisions answered in `docs/reports/2026-11-10-alignment/decisions.yaml`. No item is blocked by a decision any more.
 
@@ -14,7 +14,7 @@ Raise the alignment score from **54.5 / 100** toward a Claude-centric toolbox wi
 |----|--------|--------|
 | D1 | B | P1.1 starts with a measurement, one fixture per refused term (like TASK-0107). A new ADR supersedes ADR-0018 clause 8.3 only for the terms that pass. |
 | D2 | B | Marketplace and plugins are the primary Claude Code install; `install.sh` stays for development and non-Claude ports. |
-| D3 | B | Per-role tiers, default `inherit`, table kept in `.ai/context` (opus: adjudicator, critic, designer-manager, refuter, task-planner; sonnet: git-ops, ideator, implementer, qa-test, review; haiku: closer, gate-runner, park-steward, preflight, run-scribe). ADR-0017 is rejected and ADR-0018 clause 7 forbids the table, so `TASK-0268` starts with a new ADR the human must accept. |
+| D3 | B | Per-role tiers, default `inherit`, table kept in `.ai/context` (opus: adjudicator, critic, designer-manager, refuter, task-planner; sonnet: git-ops, ideator, implementer, qa-test, review; haiku: closer, gate-runner, park-steward, preflight, run-scribe). ADR-0017 is rejected and ADR-0018 clause 7 forbids the table, so `TASK-0268` starts with a new ADR, which the human accepted in advance on 2026-11-10 within that brief's scope. |
 | D4 | B | Short `CLAUDE.md` importing `@AGENTS.md` plus Claude-only notes; `.claude/rules/` tracked; supersedes ADR-0002. |
 | D5 | B | Add a Claude Agent SDK runner next to the current binding, compare on the golden run, then pick. |
 | D6 | A, B, C | OpenCode supported (generated port, tests); Codex supported (S2 done); Bionic and LM Studio best-effort, untested. |
@@ -94,4 +94,4 @@ Five answers differ from what the assessment recommended. Each one carries a cos
 
 ## Task numbering
 
-This sprint allocates `TASK-0266` to `TASK-0285`, in plan order (P0.1 = `TASK-0266` through P2.6 = `TASK-0285`). All briefs were written 2026-11-10 with status `planned`. **Next free id: `TASK-0286`.**
+This sprint allocates `TASK-0266` to `TASK-0285`, in plan order (P0.1 = `TASK-0266` through P2.6 = `TASK-0285`). All briefs were written 2026-11-10 with status `planned`. `TASK-0286` opened the sprint. **Next free id: `TASK-0287`.**

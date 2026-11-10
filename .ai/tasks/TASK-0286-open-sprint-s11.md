@@ -1,0 +1,76 @@
+# TASK-0286 — Open sprint S11 and add Phase 11 to the roadmap
+
+## Status
+
+- Status: done
+- Owner: agent (Claude Code, coordinator)
+- Branch: agent/ai-toolbox-alignment-66b894
+- Created: 2026-11-10
+- Updated: 2026-11-10
+- Applies to: `.ai/planning/`, `.ai/context/CURRENT_STATE.md`, `.ai/tasks/TODO.md`, `.ai/GOALS.md`, `.ai/tasks/TASK-0268-model-tier-table.md`
+- Source: the human's request of 2026-11-10 to open S11 and add its phase to `ROADMAP.md`, and their advance acceptance of the ADR `TASK-0268` drafts
+
+## Objective
+
+Open sprint S11, planned the same day from the answered alignment plan (`TASK-0266` to `TASK-0285`), and add Phase 11 to `ROADMAP.md` in the same commit, as `TASK-0085` did for S10. Record the human's advance acceptance of `TASK-0268`'s ADR where that brief and the sprint will see it.
+
+## Inputs
+
+| Artifact | Expected state |
+|----------|----------------|
+| `.ai/planning/SPRINT-CURRENT.md` | "No sprint is open"; S11 noted as planned |
+| `.ai/planning/sprints/SPRINT-S11-claude-alignment.md` | `PLANNED 2026-11-10`, 97 lines |
+| `.ai/planning/ROADMAP.md` | Phases 1–10, then "After Phase 10 (no sprint open)" |
+| `.ai/tasks/TASK-0268-model-tier-table.md` | step 1 stops for the human's acceptance of the ADR; 90 lines, at budget |
+
+## Scope
+
+- In: `SPRINT-CURRENT.md` headed by S11 as open, pointing to the sprint file; Phase 11 in `ROADMAP.md`; the sprint file's header, D3 row and next free id; the advance acceptance in `TASK-0268` (Source line, step 1, the risk that it is declined); `TODO.md`, `GOALS.md` and `CURRENT_STATE.md`'s roadmap line.
+- Out: moving the sprint file's body into `SPRINT-CURRENT.md` (its 97 lines would break that file's 80-line budget, `ADR-0033`); writing the ADR itself, which stays `TASK-0268` step 1; starting any S11 task; the runbook's stale `git push github` line in "Landing work".
+
+## Likely files
+
+- `.ai/planning/SPRINT-CURRENT.md`, `.ai/planning/ROADMAP.md`, `.ai/planning/sprints/SPRINT-S11-claude-alignment.md`
+- `.ai/tasks/TASK-0268-model-tier-table.md`, `.ai/tasks/TODO.md`, `.ai/GOALS.md`, `.ai/context/CURRENT_STATE.md`
+
+## Execution plan
+
+1. Rewrite `SPRINT-CURRENT.md`'s heading and opening for S11 as open; keep its open items, known limitation and closed lists.
+2. Add Phase 11 after "After Phase 10" in `ROADMAP.md`.
+3. Mark the sprint file promoted; note the advance acceptance in its D3 row; move its next free id to `TASK-0287`.
+4. Record the advance acceptance in `TASK-0268` without adding a line.
+5. List this task under S11 in `TODO.md` and `GOALS.md`; update `CURRENT_STATE.md`'s roadmap line.
+6. Run `tests/validate.sh`.
+
+## Acceptance criteria
+
+- [x] `SPRINT-CURRENT.md` opens with S11 as open and names `TASK-0286`; it stays within its 80-line budget
+- [x] `ROADMAP.md` has a Phase 11 section naming S11, its tasks and its source
+- [x] `TASK-0268` says its ADR is accepted in advance within its scope, and stops only if the draft goes beyond it; it stays at 90 lines
+- [x] `TODO.md` and `GOALS.md` list `TASK-0286` as done under S11
+
+## Mandatory validations
+
+- [x] tests/validate.sh
+
+## Risks and rollback
+
+- An advance acceptance covers a text not yet written. It is bounded to Claude Code emission with the D3 table; anything wider goes back to the human.
+- Rollback: git revert the task commit
+
+## Outputs / handover
+
+| Artifact | End state |
+|----------|-----------|
+| `SPRINT-CURRENT.md` | S11 open, pointing to its sprint file and naming the human gates |
+| `ROADMAP.md` | Phase 11, open 2026-11-10 |
+| `SPRINT-S11-claude-alignment.md` | promoted; next free id `TASK-0287` |
+| `TASK-0268` | the ADR in step 1 is accepted in advance within its scope |
+
+Next: the P0 items, `TASK-0266` to `TASK-0270`.
+
+## Execution log
+
+- 2026-11-10 · Claude Code (Opus 5.5, coordinator) · S11 opened and Phase 11 added in one change, on the human's decision
+  - Evidence: tests/validate.sh → validate.sh: OK
+  - Deviation: the sprint body stays in `planning/sprints/` rather than moving into `SPRINT-CURRENT.md`, because of the line budget
