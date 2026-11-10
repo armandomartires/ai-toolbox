@@ -580,7 +580,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0268-model-tier-table.md
 - [ ] TASK-0269 — MCP hygiene: gates annotations and lock drift (P0.4)
   .ai/tasks/TASK-0269-mcp-annotations-and-lock-drift.md
-- [>] TASK-0270 — Fix stale loop text (P0.5)
+- [x] TASK-0270 — Fix stale loop text (P0.5)
   .ai/tasks/TASK-0270-stale-loop-text.md
 - [ ] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
   .ai/tasks/TASK-0271-role-guard.md

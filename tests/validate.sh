@@ -446,6 +446,22 @@ for f in loops/*/loop.md; do
   done
 done
 
+# Stale loop text (TASK-0270). A loop that calls landed work pending, or a role
+# "named here before it exists", misdescribes the repository to the agent that
+# follows it. Whitespace is normalised first (newlines and runs of blanks become
+# one space) because a phrase that wraps across a line break escapes a per-line
+# grep; that is exactly how "before it exists" went unseen. Scoped to
+# loops/*/loop.md so a legitimate quotation elsewhere is not caught.
+for f in loops/*/loop.md; do
+  [ -f "$f" ] || continue
+  flat=$(tr '\r\n\t' '   ' < "$f" | tr -s ' ')
+  for phrase in 'Until TASK-0045' 'before it exists'; do
+    case "$flat" in
+      *"$phrase"*) echo "STALE LOOP TEXT: $f says '$phrase' — state present behaviour"; fail=1 ;;
+    esac
+  done
+done
+
 # Mods: manifest, hooks modules, contract and README, per harness folder
 # (ADR-0040, ADR-0054, TASK-0177).
 # Shape only and offline; the mods' own tests need a `claude` that supports

@@ -119,11 +119,11 @@ end, and **step 14 runs even when the run halted**.
 Two kinds of actor appear. The **driver** is the binding — a script, not an
 agent — and it holds the control flow: the queue, the bounds, the verdict
 dispatch and the gate command map. The named roles are agents, authored in
-`agents/` (`TASK-0063`, `TASK-0064`), and **each is named here before it
-exists** because this loop is deliberately authored first, so the roles are
-shaped by the sequence rather than the reverse.
+`agents/` (`TASK-0063`, `TASK-0064`), and **each is defined there** with this
+loop as its source: the loop was authored first, so the roles are shaped by
+the sequence rather than the reverse.
 
-**Nine roles, named here and nowhere else yet:** `preflight`,
+**Nine roles, named here:** `preflight`,
 `task-planner`, `implementer`, `gate-runner`, `refuter`, `adjudicator`,
 `closer`, `park-steward` and `run-scribe`. Nine is the count `ADR-0022` and
 `PLAN-0006` both state, so a tenth appearing later is a divergence to

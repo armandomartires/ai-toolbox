@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0270
 - Created: 2026-11-10
@@ -42,13 +42,13 @@ Correct two loop passages that describe work as pending when it has landed, and 
 
 ## Acceptance criteria
 
-- [ ] Neither phrase appears under `loops/*/loop.md`, counted after whitespace normalisation so a wrapped phrase is caught
-- [ ] The passages read correctly in context without a pointer to a finished task
-- [ ] Restoring the old text, including `before it exists` split across two lines, fails the check
+- [x] Neither phrase appears under `loops/*/loop.md`, counted after whitespace normalisation so a wrapped phrase is caught
+- [x] The passages read correctly in context without a pointer to a finished task
+- [x] Restoring the old text, including `before it exists` split across two lines, fails the check
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 
 ## Risks and rollback
 
@@ -59,12 +59,17 @@ Correct two loop passages that describe work as pending when it has landed, and 
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `tests/validate.sh` | whitespace-normalised check rejecting `Until TASK-0045` and `before it exists` under `loops/*/loop.md` (flattens with `tr`, then a `case` match) |
+| `loops/design-brief/loop.md` | the `git-ops` passage states the role exists (`agents/git-ops/`), so the step executes as written |
+| `loops/unattended-run/loop.md` | roles are "defined there" in `agents/`; "named here and nowhere else yet" became "named here" (all nine roles confirmed present) |
 
-Next:
+Next: review the diff and commit; uncommitted in the worktree.
 
 ## Execution log
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-10 · agent/Sonnet 5.5 · added the check, fixed both passages, validated
+  - Evidence: red first: the check extracted from tests/validate.sh printed `STALE LOOP TEXT: loops/design-brief/loop.md says 'Until TASK-0045'` and `STALE LOOP TEXT: loops/unattended-run/loop.md says 'before it exists'` (fail=1), the second being the wrapped phrase. After the rewrite it printed nothing (fail=0). Restoring `before it exists` split across two lines gave `STALE LOOP TEXT: loops/unattended-run/loop.md says 'before it exists'` (fail=1); removed again, fail=0. Roles preflight, task-planner, implementer, gate-runner, refuter, adjudicator, closer, park-steward, run-scribe and git-ops each have agents/<role>/agent.md. Full `bash tests/validate.sh` ended `validate.sh: OK` (real 25m16s on this host).
+  - Deviation: also reworded "named here and nowhere else yet" in the same passage (line 126 of unattended-run, inside the brief's 122-126 range) because it was stale for the same reason
