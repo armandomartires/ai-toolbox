@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0266
 - Created: 2026-11-10
@@ -44,14 +44,14 @@ Make the four existing mods installable from the repo itself with `/plugin marke
 
 ## Acceptance criteria
 
-- [ ] `claude plugin validate .` passes at the repo root
-- [ ] The new `tests/test-mods.sh` check passes, and fails when `.claude-plugin/marketplace.json` is deleted
-- [ ] `docs/registry.md` carries the install line and says `install.sh` is for development and non-Claude ports
+- [x] `claude plugin validate .` passes at the repo root
+- [x] The new `tests/test-mods.sh` check passes, and fails when `.claude-plugin/marketplace.json` is deleted
+- [x] `docs/registry.md` carries the install line and says `install.sh` is for development and non-Claude ports
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] `bash tests/test-mods.sh`
+- [x] tests/validate.sh
+- [x] `bash tests/test-mods.sh`
 
 ## Risks and rollback
 
@@ -63,12 +63,18 @@ Make the four existing mods installable from the repo itself with `/plugin marke
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `.claude-plugin/marketplace.json` | new: name ai-toolbox, owner, four plugins with sources `./mods/<n>/claude`; validates |
+| `tests/test-mods.sh` | new marketplace check (file exists, four sources listed, `plugin validate .`); skips with the CLI absent; skipped under `--mod` |
+| `scripts/sync-registry.sh`, `docs/registry.md` | registry is generated: the install section is in the generator, registry regenerated |
 
-Next:
+Next: commit; the four plugin.json files give two validate warnings each (category belongs in the marketplace entry, no author) - a mod edit outside this brief.
 
 ## Execution log
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-10 · agent/Sonnet 5.5 · implemented
+  - Evidence: red: with the manifest absent `bash tests/test-mods.sh` printed `FAIL marketplace: .claude-plugin/marketplace.json is missing`, `5 passed, 1 failed`. Green: after adding it, `PASS marketplace: plugin validate .`, `6 passed, 0 failed`; `claude plugin validate .` printed `Validation passed with warnings` (8 warnings, all from the mods' plugin.json). With no `claude` on PATH the script printed `SKIP all mods` and `SKIP is not a pass`.
+  - Validate: the first `tests/validate.sh` run exited 1 on check-private-names (the origin host in the install line); the line now uses `https://<gitlab-host>/<group>/ai-toolbox.git`, registry regenerated, and the second run exited 0 and ended `validate.sh: OK`.
+  - Deviation: docs/registry.md is generated, so the line went into scripts/sync-registry.sh (allowed). The delete-and-restore step was covered by the red run before the file existed, not repeated after.

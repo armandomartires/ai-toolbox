@@ -1,0 +1,35 @@
+{
+  "name": "ai-toolbox",
+  "owner": {
+    "name": "Armando Martires"
+  },
+  "metadata": {
+    "description": "ai-toolbox mods for Claude Code: panes and coordination for SIGMAorbital."
+  },
+  "plugins": [
+    {
+      "name": "agent-watch",
+      "source": "./mods/agent-watch/claude",
+      "description": "An Agents pane beside the chat: sessions, sub-sessions, background shells, failure toasts and a task-orchestrator progress meter.",
+      "category": "observability"
+    },
+    {
+      "name": "switchboard",
+      "source": "./mods/switchboard/claude",
+      "description": "A Switchboard pane listing every installed mod, skill and MCP server or connector with a per-project on/off switch.",
+      "category": "configuration"
+    },
+    {
+      "name": "task-compass",
+      "source": "./mods/task-compass/claude",
+      "description": "A Compass pane beside the chat: the project's sprints side by side and the story Claude is on with its live tasks.",
+      "category": "planning"
+    },
+    {
+      "name": "task-orchestrator",
+      "source": "./mods/task-orchestrator/claude",
+      "description": "Makes the session a lead coordinator: worker profiles with explicit model and effort, dispatched as isolated subagents under enforced limits.",
+      "category": "orchestration"
+    }
+  ]
+}

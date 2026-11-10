@@ -58,6 +58,29 @@ if [ -z "$CLI" ]; then
 fi
 
 pass=0; failed=0; matched=0
+
+# The marketplace manifest (TASK-0266): the repo root is a Claude Code
+# marketplace listing every mod, so `/plugin marketplace add` installs them.
+# Skipped under --mod: that asks for one mod, not the repo.
+if [ -z "$WANT" ]; then
+  MKT=.claude-plugin/marketplace.json
+  mkt_ok=1
+  if [ ! -f "$MKT" ]; then
+    echo "FAIL marketplace: $MKT is missing"; mkt_ok=0
+  else
+    for d in mods/*/; do
+      n="$(basename "$d")"
+      [ "$n" = "_template" ] && continue
+      grep -q "\"source\": *\"./mods/$n/claude\"" "$MKT"         || { echo "FAIL marketplace: no plugin with source ./mods/$n/claude"; mkt_ok=0; }
+    done
+    if out="$("$CLI" plugin validate . 2>&1)"; then :; else
+      printf '%s
+' "$out" | grep -E '^ *(>|×)'; echo "FAIL marketplace: plugin validate ."; mkt_ok=0
+    fi
+  fi
+  if [ "$mkt_ok" -eq 1 ]; then echo "PASS marketplace: plugin validate ."; pass=$((pass + 1))
+  else failed=$((failed + 1)); fi
+fi
 for d in mods/*/; do
   name="$(basename "$d")"
   [ -z "$WANT" ] || [ "$WANT" = "$name" ] || continue

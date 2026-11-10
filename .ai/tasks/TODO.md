@@ -302,7 +302,7 @@ Sprint membership, one line per item. Details live in each brief and in
 ## Sprint S11 — Claude-centric alignment (OPEN — promoted 2026-11-10)
 
 - [x] TASK-0286 — Open sprint S11 and add Phase 11 to the roadmap
-- [ ] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
+- [x] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
 - [x] TASK-0267 — Anthropic provider in the eval suite (P0.2)
 - [ ] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)
 - [ ] TASK-0269 — MCP hygiene: gates annotations and lock drift (P0.4)
