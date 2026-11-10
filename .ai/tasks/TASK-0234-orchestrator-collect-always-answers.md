@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-05
-- Updated: 2026-11-05
+- Updated: 2026-11-10
 - Applies to: `mods/task-orchestrator/`
 - Source: the human, 2026-11-05: "The orchestrate mod seems to have some issues" — a worker's report "never arrived" through `collect`; `status` felt off.
 
@@ -80,3 +80,4 @@ Next: the human runs `/reload-plugins --force` (or opens a fresh session), then 
   - Evidence: `python scripts/check-mods.py` → no `MOD SHAPE` line
 - 2026-11-05 · Claude Code (Fable 5.1) · live on 0.5.5: five scouts (haiku/low, each handed off and adopted). Found: a worker ending during a `collect` is not seen by that collect (L5: ended at 2.3 s, collect waited 8.9 s, answered running; L4 the same). The wait inside `collect` therefore never catches a subagent; only the end note does. Pre-existing, recorded in ARCHITECTURE.md; a design change (collect returns at once unless a session is pending) is a task of its own.
   - Evidence: timestamps 23:25:31.869 → 23:25:40.673 around `collect ["L4"]` (L4 ran 7124 ms); 23:26:14.473 → 23:26:23.390 around `collect ["L5"]` (L5 ran 2322 ms); both answers `still running`
+- 2026-11-10 · closed by the coordinator of TASK-0265: TODO and GOALS already marked it done; the live check stays owed as recorded

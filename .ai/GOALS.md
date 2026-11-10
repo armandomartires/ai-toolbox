@@ -565,3 +565,5 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 - [x] TASK-0262 — Scripts are checked out with LF, so a Linux bash on a Windows clone runs them
   .ai/tasks/TASK-0262-scripts-checked-out-lf.md
   branch: agent/TASK-0262
+- [?] TASK-0265 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
+  .ai/tasks/TASK-0265-orchestrator-review-fixes.md

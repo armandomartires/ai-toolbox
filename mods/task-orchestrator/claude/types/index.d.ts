@@ -75,6 +75,8 @@ export type Task = {
   runAs?: 'subagent' | 'session'
   /** The session's id (`local_<uuid>`), parsed from the coordinator's `start_session` result. */
   sessionId?: string
+  /** The branch the session's own worktree is on, when the `start_session` answer names one; never guessed. */
+  branch?: string
   retries: number
   escalations: number
   createdAt: number

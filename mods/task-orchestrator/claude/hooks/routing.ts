@@ -16,6 +16,21 @@ export type ModelAlias = (typeof MODEL_LADDER)[number]
 export const GATED_EFFORTS: readonly Effort[] = ['xhigh', 'max']
 export const GATED_MODELS: readonly string[] = ['fable']
 
+/**
+ * The ladder family an alias or an id names: the family word, lowercased, as a whole token between non-letters
+ * (`claude-fable-5-1`, `Fable`), never a piece of another word; undefined when it names none.
+ */
+export const familyOf = (model: string): ModelAlias | undefined => {
+  const lower = typeof model === 'string' ? model.toLowerCase() : ''
+  return MODEL_LADDER.find(alias => new RegExp(`(^|[^a-z])${alias}($|[^a-z])`).test(lower))
+}
+
+/** The ladder rank of a model's family, or -1 when it names none. */
+export const familyRank = (model: string): number => {
+  const family = familyOf(model)
+  return family === undefined ? -1 : MODEL_LADDER.indexOf(family)
+}
+
 export const ROLES: readonly Role[] = [
   'utility',
   'scout',
@@ -85,17 +100,14 @@ export const POLICY_DELTAS: Record<Policy, Partial<Record<TaskClass, Partial<Rou
 
 export type Limits = {
   maxConcurrent: number
-  /** Workers never delegate: the coordinator is the one level that does. */
-  maxNesting: number
   maxRetries: number
   maxEscalations: number
-  /** How long `collect` waits before it answers with what it has. */
+  /** The ceiling on how long `collect` waits before it answers with what it has: the hook's own budget (ten seconds) caps each call below it. */
   collectTimeoutMs: number
 }
 
 export const DEFAULT_LIMITS: Limits = {
   maxConcurrent: 3,
-  maxNesting: 1,
   maxRetries: 2,
   maxEscalations: 1,
   collectTimeoutMs: 600_000,
@@ -233,8 +245,8 @@ export const mergeConfig = (base: Config, override: unknown): { config: Config; 
     for (const key of Object.keys(DEFAULT_LIMITS) as (keyof Limits)[]) {
       const value = override.limits[key]
       if (value === undefined) continue
-      if (typeof value === 'number' && Number.isInteger(value) && value >= 0) config.limits[key] = value
-      else refused.push(`limits.${key} must be a whole number`)
+      if (typeof value === 'number' && Number.isInteger(value) && value >= (key === 'maxConcurrent' ? 1 : 0)) config.limits[key] = value
+      else refused.push(key === 'maxConcurrent' && typeof value === 'number' && Number.isInteger(value) ? `limits.${key} must be at least 1` : `limits.${key} must be a whole number`)
     }
   } else if (override.limits !== undefined) refused.push('limits is not an object')
   if (isRecord(override.optIn)) {
@@ -247,6 +259,8 @@ export const mergeConfig = (base: Config, override: unknown): { config: Config; 
   } else if (override.optIn !== undefined) refused.push('optIn is not an object')
   if (isRecord(override.providers)) {
     for (const [id, value] of Object.entries(override.providers)) {
+      // A `__proto__` key out of JSON.parse would set the prototype of `config.providers`, not a row of it.
+      if (id === '__proto__' || !Object.prototype.hasOwnProperty.call(override.providers, id)) { refused.push(`providers.${id}: not a provider id`); continue }
       if (isRecord(value) && typeof value.enabled === 'boolean') config.providers[id] = { enabled: value.enabled }
       else refused.push(`providers.${id}.enabled must be true or false`)
     }

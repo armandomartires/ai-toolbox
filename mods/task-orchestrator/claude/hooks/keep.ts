@@ -10,7 +10,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { Assignment } from './contract'
-import type { Ledger } from './ledger'
+import type { Ledger, Task } from './ledger'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
 // in that same file, so each module declares the atoms it uses.
@@ -31,6 +31,17 @@ export type KeptRun = {
   assignments: Record<string, Assignment>
 }
 
+/** The most characters of one report field the kept copy holds; the live ledger keeps the whole report. */
+export const KEPT_FIELD_CAP = 2_000
+const TRUNCATED = '…[truncated]'
+
+/** `text` cut to KEPT_FIELD_CAP with the cut marked; a text already that short, a capped one included, is returned as it is. */
+const capped = (text: string): string => (text.length > KEPT_FIELD_CAP ? `${text.slice(0, KEPT_FIELD_CAP - TRUNCATED.length)}${TRUNCATED}` : text)
+
+/** A row as the store keeps it: its report's long fields capped (the prompt stays whole: a queued task starts from it). */
+const keptRow = (task: Task): Task =>
+  task.report ? { ...task, report: { ...task.report, findings: capped(task.report.findings), files: capped(task.report.files), checks: capped(task.report.checks), evidence: capped(task.report.evidence), risks: capped(task.report.risks) } } : task
+
 /** This session's id, read once at `session.start`; unset, nothing is kept. */
 let sessionId: string | undefined
 /** The JSON last written, so an unchanged run costs no store write. */
@@ -45,7 +56,7 @@ const isKept = (value: unknown): value is KeptRun =>
 export async function keep($: EngineInterface, assignments: ReadonlyMap<string, Assignment>): Promise<void> {
   if (sessionId === undefined) return
   const [rows, refused] = await Promise.all([read($, ledger), read($, unavailable)])
-  const kept: KeptRun = { sessionId, ledger: rows, unavailable: refused, assignments: Object.fromEntries(assignments) }
+  const kept: KeptRun = { sessionId, ledger: rows.map(keptRow), unavailable: refused, assignments: Object.fromEntries(assignments) }
   const text = JSON.stringify(kept)
   if (text === lastKept) return
   lastKept = text
@@ -67,6 +78,13 @@ export async function restore($: EngineInterface, assignments: Map<string, Assig
   await update($, ledger, () => held.ledger)
   await update($, unavailable, () => held.unavailable)
   for (const [id, assignment] of Object.entries(held.assignments)) assignments.set(id, assignment)
-  lastKept = JSON.stringify({ sessionId: held.sessionId, ledger: held.ledger, unavailable: held.unavailable, assignments: Object.fromEntries(assignments) })
+  lastKept = JSON.stringify({ sessionId: held.sessionId, ledger: held.ledger.map(keptRow), unavailable: held.unavailable, assignments: Object.fromEntries(assignments) })
   return true
+}
+
+/** Removes this session's run from the store (`/orchestrate reset`); the next ledger write keeps it again. */
+export async function forget($: EngineInterface): Promise<void> {
+  lastKept = undefined
+  if (sessionId === undefined) return
+  await $.store.delete(runKey(sessionId)).catch(() => undefined)
 }

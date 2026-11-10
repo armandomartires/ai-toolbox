@@ -2,10 +2,10 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent (Claude Code)
 - Created: 2026-11-06
-- Updated: 2026-11-06
+- Updated: 2026-11-10
 - Applies to: `mods/agent-watch/`, `mods/task-orchestrator/`
 - Source: live, 2026-11-06 (desktop 2.1.318, auto mode): after `/reload-plugins --force`, run to pick up an edited mod, `status` printed `No task in the ledger` and the Sessions panel restarted at B01/S01, while the app's Background tasks pane still listed all 11 earlier tasks.
 
@@ -77,3 +77,4 @@ Next: the human runs the live check above, then the commit `(TASK-0238)`.
 - 2026-11-06 · Claude Code (Fable 5.1, side session of the coordinator) · fact established from the types and the docs (a plain reload keeps `$.state`; `--force` is documented only as the prompt-cache override); `keep.ts` in both mods, write sites wired, six tests, docs, versions.
   - Evidence: `claude plugin test agent-watch/claude` → `158 pass, 0 fail`; `claude plugin test task-orchestrator/claude` → `92 pass, 0 fail`
   - Evidence: `python scripts/check-mods.py` → `OK (5 mods)`
+- 2026-11-10 · closed by the coordinator of TASK-0265: TODO and GOALS already marked it done; the live check stays owed as recorded

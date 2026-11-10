@@ -1,7 +1,7 @@
 // Pure routing: a task class and the coordinator's overrides in, one decision
 // out, with every substitution named. Nothing here touches the engine.
 
-import { EFFORTS, GATED_EFFORTS, GATED_MODELS, MODEL_LADDER, ROLES, TASK_CLASSES, routesUnder } from './routing'
+import { EFFORTS, GATED_EFFORTS, GATED_MODELS, MODEL_LADDER, ROLES, TASK_CLASSES, familyOf, routesUnder } from './routing'
 import type { Config, Effort, Role, TaskClass } from './routing'
 
 export type RouteRequest = {
@@ -38,17 +38,18 @@ const isRole = (value: unknown): value is Role => (ROLES as readonly string[]).i
 export const gate = (model: string, effort: Effort, config: Config): string | undefined => {
   if (GATED_EFFORTS.includes(effort) && !config.optIn.highEffort)
     return `effort "${effort}" needs an explicit opt-in: /orchestrate opt-in high-effort`
-  if (GATED_MODELS.includes(model) && !config.optIn.frontier)
+  if (GATED_MODELS.includes(familyOf(model) ?? '') && !config.optIn.frontier)
     return `model "${model}" needs an explicit opt-in: /orchestrate opt-in frontier`
   return undefined
 }
 
-/** The next model up the ladder that is not unavailable, or undefined. */
+/** The next family up the ladder that is not unavailable, or undefined; also undefined for a model whose family is unknown. */
 export const fallback = (model: string, availability: Availability): string | undefined => {
-  const at = (MODEL_LADDER as readonly string[]).indexOf(model)
-  const from = at < 0 ? 0 : at + 1
-  for (const candidate of MODEL_LADDER.slice(from)) {
-    if (!availability.unavailable.includes(candidate)) return candidate
+  const family = familyOf(model)
+  if (family === undefined) return undefined
+  const gone = new Set(availability.unavailable.map(one => familyOf(one)).filter(one => one !== undefined))
+  for (const candidate of MODEL_LADDER.slice(MODEL_LADDER.indexOf(family) + 1)) {
+    if (!availability.unavailable.includes(candidate) && !gone.has(candidate)) return candidate
   }
   return undefined
 }
@@ -88,6 +89,7 @@ export const route = (request: RouteRequest, config: Config, availability: Avail
   if (gated) return { blocked: gated, notes }
   if (availability.unavailable.includes(model)) {
     const next = fallback(model, availability)
+    if (familyOf(model) === undefined) return { blocked: `model ${model} is unavailable here and cannot be placed on the ladder (${MODEL_LADDER.join(', ')}): name a model alias or id of one of those families`, notes }
     if (next === undefined) return { blocked: `model ${model} is unavailable here and no model above it on the ladder is either`, notes }
     const gatedNext = gate(next, effort, config)
     if (gatedNext) return { blocked: `model ${model} is unavailable here; the fallback ${next} is gated: ${gatedNext}`, notes }
@@ -110,6 +112,7 @@ export const escalate = (decision: Decision, kind: 'effort' | 'model', config: C
     return { ...decision, effort: next, notes }
   }
   const next = fallback(decision.model, availability)
+  if (familyOf(decision.model) === undefined) return { blocked: `model ${decision.model} cannot be placed on the ladder (${MODEL_LADDER.join(', ')}): nothing to escalate to`, notes }
   if (next === undefined) return { blocked: `no model above ${decision.model} is available`, notes }
   const gated = gate(next, decision.effort, config)
   if (gated) return { blocked: gated, notes }

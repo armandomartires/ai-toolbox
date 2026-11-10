@@ -10,12 +10,14 @@ const NO_VERDICT = 'The server-side auto mode classifier gave no verdict for Age
  * as given. `noVerdict` is how many of the plugin's spawns auto mode refuses
  * with no verdict, as it did in a desktop session; the model's own pass.
  */
-const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVerdict?: number; model?: string; session?: (e: Record<string, unknown>) => unknown; files?: Record<string, string> } = {}) => {
+const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVerdict?: number; refuseStop?: boolean; cwdFails?: boolean; model?: string; session?: (e: Record<string, unknown>) => unknown; files?: Record<string, string> } = {}) => {
   const spawned: { type: string; model?: string; name?: string; prompt: string }[] = []
   const refused: string[] = []
   const registered: Record<string, unknown>[] = []
   const stopped: string[] = []
   const statuses: (string | undefined)[] = []
+  // A test arms `during` to run something (a cancel, say) while a spawn or a session call is in flight.
+  const hooks: { during?: () => Promise<unknown> | unknown } = {}
   // The desktop app's session tools the mod sees or calls, as `options.session` answers them.
   const calls: Record<string, unknown>[] = []
   on('command.register', (_, e) => ({ value: { command: e.name } }))
@@ -38,8 +40,13 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVer
   // The kit raises a plugin's spawn in the Agent tool's shape (`subagent_type`)
   // and reads the record it hands the plugin from `result`; the model's spawn
   // comes as AgentSpawnInput. One stub answers both.
-  on('agent.spawn', (_, e) => {
+  on('agent.spawn', async (_, e) => {
     const call = e as unknown as { subagentType?: string; subagent_type?: string; model?: string; name?: string; prompt: string }
+    if (call.subagentType !== undefined && hooks.during) {
+      const run = hooks.during
+      hooks.during = undefined
+      await run()
+    }
     if (call.subagent_type !== undefined && refused.length < (options.noVerdict ?? 0)) {
       refused.push(call.name ?? '')
       return { deny: NO_VERDICT }
@@ -48,7 +55,10 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVer
     return got ? ({ model: got.model, agentId: got.agentId, result: { agentId: got.agentId, resolvedModel: got.model } } as never) : { deny: `model ${call.model} is not available` }
   })
   on('settings.read', () => ({ value: options.settings ?? {} }))
-  on('session.cwd', () => ({ value: '/p' }))
+  on('session.cwd', () => {
+    if (options.cwdFails) throw new Error('the session is gone')
+    return { value: '/p' }
+  })
   on('session.model', () => ({ value: options.model ?? 'claude-fable-5-1' }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   // What the mod appends to the session as hidden notes, and toasts: the test reads them.
@@ -78,10 +88,18 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVer
   })
   on('tool.describe', (_, e) => ({ description: e.description }))
   on('ui.log', () => ({ value: undefined }))
-  on('tool.call', (_, e) => {
-    if (e.tool === 'TaskStop') stopped.push(String((e as { task_id?: string }).task_id))
+  on('tool.call', async (_, e) => {
+    if (e.tool === 'TaskStop') {
+      stopped.push(String((e as { task_id?: string }).task_id))
+      if (options.refuseStop) return { deny: 'auto mode refused the stop' } as never
+    }
     if (options.session && String(e.tool).startsWith('mcp__ccd_session')) {
       calls.push(e as unknown as Record<string, unknown>)
+      if (e.tool === 'mcp__ccd_session__start_session' && hooks.during) {
+        const run = hooks.during
+        hooks.during = undefined
+        await run()
+      }
       return options.session(e as unknown as Record<string, unknown>) as never
     }
     return { result: 'ok' }
@@ -95,7 +113,7 @@ const engine = (on: On, options: { settings?: unknown; denySpawn?: string; noVer
   on('turn.step', async function* (_, e) {
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
   })
-  return { spawned, registered, stopped, statuses, refused, calls, tools, prompts, appended, toasts, reads }
+  return { spawned, registered, stopped, statuses, refused, calls, tools, prompts, appended, toasts, reads, hooks }
 }
 
 const dispatch = (input: Record<string, unknown>) => ({ tool: 'mcp__task-orchestrator__dispatch', ...input })
@@ -339,7 +357,7 @@ test('a failed review blocks a done report, a worker profile taken through the A
   expect(String(cancelled.result)).toBe('D1 cancelled')
   expect(world.stopped).toEqual(['agent-4'])
 
-  // Off: no new dispatch, the ledger stays, the fence lifts, nothing is discarded.
+  // Off: no new dispatch, the ledger stays, running workers stay fenced, nothing is discarded.
   const off = await $.command.run({ command: 'orchestrate', args: 'off' })
   expect(off.text).toContain('open task(s) stay in the ledger')
   const refused = await $.tool.call(dispatch({ id: 'S2', class: 'lookup', objective: 'look' }))
@@ -496,8 +514,8 @@ test("a project's config file may narrow the limits but not widen them nor opt i
   expect(String((await $.tool.call({ tool: COLLECT, ids: ['T2'] } as never)).result)).toContain('behind the concurrency cap: 1 running')
   // The store holds the person's choices only: the project file's policy ran this session and was not persisted.
   const held = store.get('task-orchestrator:settings:/p') as { policy: string; optIn: { frontier?: boolean; highEffort?: boolean } }
-  expect(held.policy).toBe('balanced')
-  expect(held.optIn).toEqual({ frontier: false, highEffort: false })
+  expect(held.policy).toBeUndefined()
+  expect(held.optIn).toBeUndefined()
   expect(store.get('task-orchestrator:settings')).toBeUndefined()
   // An opt-in made with /orchestrate is stored, and comes back at the next start.
   await $.command.run({ command: 'orchestrate', args: 'opt-in frontier' })
@@ -521,7 +539,7 @@ test('a project file cannot raise a limit through a __proto__ key (TASK-0239)', 
 
 test('a session whose first prompt is an assignment is a worker: no protocol, and orchestration stays off in it (TASK-0239)', async ($, on) => {
   mock.clock(on)
-  storeOf(on, { 'task-orchestrator:settings:/p': { enabled: true, policy: 'balanced', optIn: { frontier: false, highEffort: false }, providers: {} } })
+  storeOf(on, { 'task-orchestrator:settings:/p': { v: 2, enabled: true, policy: 'balanced', optIn: { frontier: false, highEffort: false }, providers: {} } })
   mock.env(on, { HOME: '/home/x' })
   const { prompts: contexts } = engine(on)
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
@@ -1565,6 +1583,10 @@ const storeOf = (on: On, entries: Record<string, unknown> = {}) => {
     store.set(e.key, JSON.parse(JSON.stringify(e.value)))
     return { value: undefined }
   })
+  on('store.delete', (_, e) => {
+    store.delete(e.key)
+    return { value: undefined }
+  })
   return store
 }
 
@@ -1730,4 +1752,463 @@ test('a writer in the session checkout stopped at its cap names that checkout; a
   const plain = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['S1'] })).result)
   expect(plain).toContain('the worker gave no Status line; read its report')
   expect(plain).not.toContain('turn cap')
+})
+
+// TASK-0265: one admission gate for every way into running; the fence outlives /orchestrate off.
+
+const CANCEL = 'mcp__task-orchestrator__cancel'
+const builderSpawn = (name: string) => ({ prompt: `write ${name}`, description: `${name} builder`, subagentType: 'task-orchestrator:builder', name }) as AgentSpawnInput
+
+test('two Agent-tool spawns of writer profiles: the second is refused and leaves no untracked worker (TASK-0265)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const [one, two] = await Promise.all([$.agent.spawn(builderSpawn('W1')), $.agent.spawn(builderSpawn('W2'))])
+  // Refused before the spawn (a deny), or stopped after it (the engine takes no deny once the spawn answered, so the coordinator is told by a note).
+  const denies = [one.deny, two.deny].filter(deny => deny !== undefined)
+  expect(denies.length + world.stopped.length).toBe(1)
+  if (denies.length) expect(denies[0]).toContain('one writer at a time without isolation')
+  else expect(world.appended.some(text => text.includes('was not admitted') && text.includes('one writer at a time without isolation'))).toBe(true)
+  // Whatever the engine started past the refusal is stopped: one worker lives, and it has a row.
+  expect(world.spawned.length - world.stopped.length).toBe(1)
+  const listed = await status($)
+  expect(listed.match(/→ builder \[/g)).toHaveLength(1)
+  expect(listed).toContain('running')
+  // The writer taken this way owns the whole checkout: a third is refused as well.
+  expect((await $.agent.spawn(builderSpawn('W3'))).deny).toContain('one writer at a time')
+})
+
+test('an Agent-tool spawn whose name is a dispatched id gets a distinct id and a row (TASK-0265)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'agent-2', class: 'lookup', objective: 'look' }))
+  const direct = await $.agent.spawn({ prompt: 'look', description: 'direct scout', subagentType: 'task-orchestrator:scout', name: 'agent-2' } as AgentSpawnInput)
+  expect(direct.deny).toBeUndefined()
+  const listed = await status($)
+  expect(listed).toContain('agent-2 → scout [agent-1]')
+  expect(listed).toContain(`agent-3 → scout [${direct.agentId}]`)
+})
+
+test('an adopted Agent call whose task is cancelled before the settle: the started worker is stopped and the row stays cancelled (TASK-0265)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { noVerdict: 99 })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find the parser' }))).result)
+  const prompt = byLine(held, '# Assignment H1')
+  world.hooks.during = () => $.tool.call({ tool: CANCEL, id: 'H1' } as never)
+  const adopted = await $.agent.spawn({ prompt, description: 'H1 scout', subagentType: 'task-orchestrator:scout', model: 'haiku', name: 'H1' } as AgentSpawnInput)
+  // The engine takes no deny once the spawn answered: the worker is stopped and the coordinator is told.
+  expect(adopted.deny).toBeUndefined()
+  expect(world.stopped).toEqual(['agent-1'])
+  expect(world.appended.some(text => text.includes('H1 was not admitted after its Agent call started'))).toBe(true)
+  expect(await status($)).toContain('H1 → scout → requested haiku/low → unverified → cancelled')
+})
+
+test('an adopted start_session whose task is cancelled before the settle: the answer says the session must be stopped by hand, and the row stays cancelled (TASK-0265)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const answers: unknown[] = [STARTED(1), REFUSED('no such session')]
+  const world = engine(on, { session: () => answers.shift() })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await say($, PERSON)
+  const prompt = byLine(String((await $.tool.call(session('T1'))).result), '# Assignment T1')
+  world.hooks.during = () => $.tool.call({ tool: CANCEL, id: 'T1' } as never)
+  const adopted = await $.tool.call(startSession({ prompt }))
+  expect(adopted.deny).toContain('stop it yourself')
+  expect(adopted.deny).toContain('local_00000001-aaaa-4bbb-8ccc-000000000001')
+  expect(await status($)).toContain('T1 → reviewer → requested sonnet/medium → unverified → cancelled')
+})
+
+test('a turn-capped worker resumed while the cap is full stays partial and the coordinator is told; it resumes once a slot frees (TASK-0265)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on)
+  capWorld(on, { 'git rev-parse HEAD': 'base111\n' }, { 'agent-1': cutOff })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: 'Running the gate.', durationMs: 1, isAborted: false, turnId: 't' })
+  for (const id of ['S1', 'S2', 'S3']) await $.tool.call(dispatch({ id, class: 'lookup', objective: `look ${id}` }))
+  await $.turn.start({ text: 'finish and report', turnId: 't2', agentId: 'agent-1' })
+  expect(await status($)).toMatch(/B1 → builder \[agent-1\].*→ partial/)
+  const told = world.appended.filter(text => text.includes('B1') && text.includes('could not be readmitted'))
+  expect(told).toHaveLength(1)
+  expect(told[0]).toContain('3 workers already running')
+  expect(told[0]).toContain('outside the fence')
+  // A slot frees: the next resume is admitted.
+  await $.turn.complete({ agentId: 'agent-2', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  await $.turn.start({ text: 'finish and report', turnId: 't3', agentId: 'agent-1' })
+  expect(await status($)).toMatch(/B1 → builder \[agent-1\].*→ running/)
+})
+
+test('/orchestrate off leaves a running writer fenced and the nesting guard standing (TASK-0265)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'] }))
+  await $.command.run({ command: 'orchestrate', args: 'off' })
+  expect((await $.tool.call({ tool: 'Edit', file_path: '/p/src/b.ts', old_string: 'a', new_string: 'b', agentId: 'agent-1' })).deny).toContain('outside its allowed files')
+  expect((await $.tool.call({ tool: 'Agent', prompt: 'x', description: 'y', agentId: 'agent-1' })).deny).toContain('may not call Agent')
+  expect((await $.agent.spawn({ prompt: 'help', description: 'nested', subagentType: 'Explore', parentAgentId: 'agent-1' } as AgentSpawnInput)).deny).toContain('workers do not delegate')
+  expect((await $.tool.call({ tool: 'Edit', file_path: '/p/src/a.ts', old_string: 'a', new_string: 'b', agentId: 'agent-1' })).deny).toBeUndefined()
+})
+
+test('cancel with no usable id cancels nothing; "all" still cancels everything (TASK-0265)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'S1', class: 'lookup', objective: 'look' }))
+  for (const input of [{}, { id: '' }, { id: 7 }, { ids: ['S1'] }]) {
+    const answer = await $.tool.call({ tool: CANCEL, ...input } as never)
+    expect(String(answer.result)).toBe('cancel needs a task id or "all"; nothing was cancelled')
+  }
+  expect(world.stopped).toEqual([])
+  expect(await status($)).toContain('→ running')
+  expect(String((await $.tool.call({ tool: CANCEL, id: 'all' } as never)).result)).toContain('S1 cancelled')
+  expect(world.stopped).toEqual(['agent-1'])
+})
+
+// R5, D10: what the person sees of the run, and what the mod keeps of it.
+
+test('the status line shows a queued count right after a dispatch that queues (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const { statuses } = engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  for (const id of ['T1', 'T2', 'T3']) await $.tool.call(dispatch({ id, class: 'lookup', objective: `Find ${id}` }))
+  expect(statuses.at(-1)).toBe('ORCH BALANCED · 3 RUNNING · 0 QUEUED')
+  // The fourth queues behind the cap: no row settles, yet the line moves.
+  await $.tool.call(dispatch({ id: 'T4', class: 'lookup', objective: 'Find T4' }))
+  expect(statuses.at(-1)).toBe('ORCH BALANCED · 3 RUNNING · 1 QUEUED')
+  // A cancel of the queued one is on the line too.
+  await $.tool.call({ tool: CANCEL, id: 'T4' } as never)
+  expect(statuses.at(-1)).toBe('ORCH BALANCED · 3 RUNNING · 0 QUEUED')
+})
+
+test('a hand-off holding a slot is a running task on the status line (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const { statuses } = engine(on, { noVerdict: 99 })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find it' }))
+  await $.tool.call(dispatch({ id: 'H2', class: 'lookup', objective: 'Read it', deps: ['H1'] }))
+  expect(statuses.at(-1)).toBe('ORCH BALANCED · 1 RUNNING · 1 QUEUED')
+})
+
+const mountStatus = async ($: Hosted) => {
+  const text = ((await $.command.run({ command: 'orchestrate', args: 'status' } as never)) as { text: string }).text
+  return $.ui.mount({ ...OUTPUT(text), surface: 'terminal' })
+}
+
+test('the panel draws why a queued task waits, a retry count and a worker tokens (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'light' } as ConfigRow] }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  const usage = { input_tokens: 10_000, output_tokens: 200, cache_read_input_tokens: 1_000, cache_creation_input_tokens: 0 }
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find a' }))
+  await $.tool.call(dispatch({ id: 'T2', class: 'lookup', objective: 'Use a', deps: ['T1'] }))
+  await $.tool.call(dispatch({ id: 'T3', class: 'lookup', objective: 'Find c' }))
+  // T3 fails and is dispatched again (its retry 1); T1 ends partial with tokens, so T2 stays queued behind it.
+  await $.turn.complete({ agentId: 'agent-2', reason: 'answer', answer: report('failed'), durationMs: 1, isAborted: false, turnId: 't3' } as never)
+  await $.tool.call(dispatch({ id: 'T3', class: 'lookup', objective: 'Find c again' }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('partial'), durationMs: 1, isAborted: false, turnId: 't1', usage } as never)
+  const ui = await mountStatus($)
+  expect(await ui.find({ text: /waits on T1 \(partial\): dispatch T1 again under its id to retry it/ })).toBeDefined()
+  expect(await ui.find({ text: /retry 1\/2/ })).toBeDefined()
+  expect(await ui.find({ text: /11\.2k tok/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('the panel marks a hand-off in amber and draws what its dependant waits on (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on, { noVerdict: 99 })
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'light' } as ConfigRow] }))
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine</Text>
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find it' }))
+  await $.tool.call(dispatch({ id: 'H2', class: 'lookup', objective: 'Read it', deps: ['H1'] }))
+  const ui = await mountStatus($)
+  const word = await ui.find({ type: 'Text', text: /HANDOFF/ })
+  expect(word).toBeDefined()
+  expect(word?.props.color).toBe(TOKENS.light.amber)
+  expect(await ui.find({ text: /waits on H1 \(handed off\)/ })).toBeDefined()
+  await ui.unmount()
+})
+
+test('/orchestrate reset removes the run from the store; the next write keeps it again (R5)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  const store = storeOf(on)
+  mock.env(on, { HOME: '/home/x' })
+  on('session.id', () => ({ value: 'sess-A' }))
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser' }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(store.get(KEPT)).toBeDefined()
+  await $.command.run({ command: 'orchestrate', args: 'reset' })
+  expect(store.has(KEPT)).toBe(false)
+  await $.tool.call(dispatch({ id: 'T9', class: 'lookup', objective: 'Find again' }))
+  expect((store.get(KEPT) as { ledger: { id: string }[] }).ledger.map(one => one.id)).toEqual(['T9'])
+})
+
+test('the kept copy of a report is capped and marked, the live ledger is whole (R5)', async ($, on) => {
+  mock.clock(on, { now: 1_000 })
+  const store = storeOf(on)
+  mock.env(on, { HOME: '/home/x' })
+  on('session.id', () => ({ value: 'sess-A' }))
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find the parser' }))
+  const big = 'x'.repeat(5_000)
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: `Status: completed\nFindings: ${big}\nFiles: none\nChecks: none\nEvidence: ${big}\nRisks: short\nNext: go`, durationMs: 1, isAborted: false, turnId: 't' })
+  const kept = (store.get(KEPT) as { ledger: { report: { findings: string; evidence: string; risks: string } }[] }).ledger[0]!.report
+  expect(kept.findings.length).toBeLessThanOrEqual(2_000)
+  expect(kept.findings).toContain('[truncated]')
+  expect(kept.evidence.length).toBeLessThanOrEqual(2_000)
+  expect(kept.risks).toBe('short')
+  const live = String((await $.tool.call({ tool: COLLECT, ids: ['T1'] } as never)).result)
+  expect(live).toContain(big)
+})
+
+test('a start_session answer that names a branch records it on the row; one that names none leaves it empty (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const answers: unknown[] = [
+    ASKED('Started session "T1" (session_id: local_00000001-aaaa-4bbb-8ccc-000000000001) on branch claude/session-t1. It is running.'),
+    STARTED(2),
+  ]
+  engine(on, { session: () => answers.shift() })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await say($, PERSON)
+  const prompts: string[] = []
+  for (const id of ['T1', 'T2']) prompts.push(byLine(String((await $.tool.call(session(id))).result), `# Assignment ${id}`))
+  await $.tool.call(startSession({ prompt: prompts[0] }))
+  await $.tool.call(startSession({ prompt: prompts[1] }))
+  const text = await status($)
+  expect(text).toMatch(/T1 → reviewer \[local_00000001-[^\]]*\].*→ running · branch claude\/session-t1/)
+  expect(text).toMatch(/T2 → reviewer \[local_00000002-[^\]]*\].*→ running/)
+  expect(text.split('\n').find(one => one.startsWith('T2 →'))).not.toContain('branch')
+})
+
+// Config.
+
+test('the home file is read from USERPROFILE when HOME is unset (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, { USERPROFILE: '/users/x' })
+  const world = engine(on, { files: { '/users/x/.claude/task-orchestrator.json': JSON.stringify({ policy: 'quality' }) } })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  expect(world.reads).toContain('/users/x/.claude/task-orchestrator.json')
+  expect(await status($)).toContain('policy quality')
+})
+
+test('a config file that exists but is not JSON is listed under config refused; a missing one is not (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, { HOME: '/home/x' })
+  engine(on, { files: { '/p/.claude/task-orchestrator.json': '{"policy": "quality",' } })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const text = await status($)
+  expect(text).toContain('config refused')
+  expect(text).toContain('- /p/.claude/task-orchestrator.json: not valid JSON')
+  expect(text).not.toContain('/home/x/.claude/task-orchestrator.json')
+  expect(text).toContain('policy balanced')
+})
+
+test('a project file may not set providers: the block is refused and nothing is enabled (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, { HOME: '/home/x' })
+  engine(on, { files: { '/p/.claude/task-orchestrator.json': JSON.stringify({ providers: { openai: { enabled: true } } }) } })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const text = await status($)
+  expect(text).toContain('/p/.claude/task-orchestrator.json: providers is accepted from the home file or /orchestrate providers only')
+  const providers = ((await $.command.run({ command: 'orchestrate', args: 'providers' } as never)) as { text: string }).text
+  expect(providers).not.toMatch(/openai[^\n]*\benabled\b/i)
+})
+
+test('the store keeps only the choices made with /orchestrate: a later edit of the home file policy is seen (R5)', async ($, on) => {
+  mock.clock(on)
+  const store = storeOf(on)
+  mock.env(on, { HOME: '/home/x' })
+  const files: Record<string, string> = { '/home/x/.claude/task-orchestrator.json': JSON.stringify({ policy: 'economy' }) }
+  engine(on, { files })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  expect(await status($)).toContain('policy economy')
+  expect(store.get('task-orchestrator:settings:/p')).toEqual({ v: 2, enabled: true })
+  files['/home/x/.claude/task-orchestrator.json'] = JSON.stringify({ policy: 'quality' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  expect(await status($)).toContain('policy quality')
+  // A choice made here is kept, and outranks the file.
+  await $.command.run({ command: 'orchestrate', args: 'policy balanced' })
+  await $.command.run({ command: 'orchestrate', args: 'opt-in frontier' })
+  expect(store.get('task-orchestrator:settings:/p')).toEqual({ v: 2, enabled: true, policy: 'balanced', optIn: { frontier: true } })
+  files['/home/x/.claude/task-orchestrator.json'] = JSON.stringify({ policy: 'economy' })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  expect(await status($)).toContain('policy balanced')
+})
+
+test('maxNesting is no setting: a file naming it changes nothing, and a worker may not spawn (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, { HOME: '/home/x' })
+  engine(on, { files: { '/home/x/.claude/task-orchestrator.json': JSON.stringify({ limits: { maxNesting: 5 } }) } })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const routing = ((await $.command.run({ command: 'orchestrate', args: 'routing' } as never)) as { text: string }).text
+  expect(routing).not.toContain('nesting')
+  await $.tool.call(dispatch({ id: 'T1', class: 'lookup', objective: 'Find a' }))
+  const denied = await $.agent.spawn({ prompt: 'help', description: 'nested', subagentType: 'Explore', parentAgentId: 'agent-1' } as AgentSpawnInput)
+  expect(denied.deny).toContain('workers do not delegate')
+  expect(denied.deny).not.toContain('nesting limit')
+})
+
+test('the collect limit is stated as a ceiling the hook budget caps (R5)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const routing = ((await $.command.run({ command: 'orchestrate', args: 'routing' } as never)) as { text: string }).text
+  expect(routing).toContain('collect waits at most 600s, a ceiling the ten-second hook budget caps')
+  const tool = (name: string) => String((world.tools.find(one => (one as { name?: string }).name === name) as { description?: string } | undefined)?.description)
+  expect(tool('collect')).toContain('ceiling')
+  expect(tool('dispatch')).toContain('ceiling')
+})
+
+test('an adopted Agent call whose stop is refused: the note says the stop was refused, names the agent and says it runs unfenced (TASK-0265 review B1)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { noVerdict: 99, refuseStop: true })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const held = String((await $.tool.call(dispatch({ id: 'H1', class: 'lookup', objective: 'Find the parser' }))).result)
+  const prompt = byLine(held, '# Assignment H1')
+  world.hooks.during = () => $.tool.call({ tool: CANCEL, id: 'H1' } as never)
+  await $.agent.spawn({ prompt, description: 'H1 scout', subagentType: 'task-orchestrator:scout', model: 'haiku', name: 'H1' } as AgentSpawnInput)
+  const told = world.appended.filter(text => text.includes('H1 was not admitted after its Agent call started'))
+  expect(told).toHaveLength(1)
+  expect(told[0]).toContain('refused')
+  expect(told[0]).toContain('agent-1')
+  expect(told[0]).toContain('untracked and unfenced')
+  expect(told[0]).not.toContain('was stopped and')
+})
+
+test('two Agent-tool spawns whose stop is refused: the note says the loser runs untracked, not that it was stopped (TASK-0265 review B1)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on, { refuseStop: true })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await Promise.all([$.agent.spawn(builderSpawn('W1')), $.agent.spawn(builderSpawn('W2'))])
+  const told = world.appended.filter(text => text.includes('was not admitted'))
+  // Refused before its spawn in some interleavings: then there is nothing to stop and no note.
+  if (world.stopped.length) {
+    expect(told).toHaveLength(1)
+    expect(told[0]).toContain('stop was refused')
+    expect(told[0]).toContain(world.stopped[0]!)
+    expect(told[0]).toContain('untracked and unfenced')
+    expect(told[0]).not.toContain('and was stopped')
+  }
+})
+
+test('a session whose cwd cannot be read refuses every worker write: the fence does not fail open (TASK-0265 review B2)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const options = { cwdFails: false }
+  engine(on, options)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'] }))
+  expect((await $.tool.call({ tool: 'Edit', file_path: '/p/src/a.ts', old_string: 'a', new_string: 'b', agentId: 'agent-1' })).deny).toBeUndefined()
+  options.cwdFails = true
+  for (const file_path of ['/etc/passwd', '../../src/a.ts', '/p/src/a.ts']) {
+    expect((await $.tool.call({ tool: 'Edit', file_path, old_string: 'a', new_string: 'b', agentId: 'agent-1' })).deny).toContain('the checkout path is unknown, so the write is refused')
+  }
+})
+
+test('a legacy settings entry (0.6.0, no v) applies only enabled and status says so; a v2 entry is applied (TASK-0265 review N1)', async ($, on) => {
+  mock.clock(on)
+  storeOf(on, { 'task-orchestrator:settings:/p': { enabled: true, policy: 'quality', optIn: { frontier: true }, providers: {} } })
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const legacy = await status($)
+  expect(legacy).toContain('policy balanced')
+  expect(legacy).not.toContain('policy quality')
+  expect(legacy).toContain('stored settings from an earlier version: only "enabled" was read; set policy, opt-in and providers again with /orchestrate')
+})
+
+test('a v2 settings entry is applied and raises no earlier-version line (TASK-0265 review N1)', async ($, on) => {
+  mock.clock(on)
+  storeOf(on, { 'task-orchestrator:settings:/p': { v: 2, enabled: true, policy: 'quality' } })
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const listed = await status($)
+  expect(listed).toContain('policy quality')
+  expect(listed).not.toContain('earlier version')
+})
+
+test('a start_session answer that only mentions branches records no branch (TASK-0265 review N2)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const sentences = ['branches are named by task', 'branching is not used', 'branch before the work']
+  const answers: unknown[] = sentences.map((one, at) => ASKED(`Started session "T${at + 1}" (session_id: local_0000000${at + 1}-aaaa-4bbb-8ccc-000000000001): ${one}. It is running.`))
+  engine(on, { session: () => answers.shift() })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await say($, PERSON)
+  const prompts: string[] = []
+  for (const id of ['T1', 'T2', 'T3']) prompts.push(byLine(String((await $.tool.call(session(id))).result), `# Assignment ${id}`))
+  for (const prompt of prompts) await $.tool.call(startSession({ prompt }))
+  const text = await status($)
+  expect(text).toContain('T3 → reviewer [local_00000003')
+  expect(text).not.toContain('· branch')
 })

@@ -110,3 +110,16 @@ test('a bullet or bare label inside a section does not cut it short; a plain lab
   expect(bullets.next).toBe('ship')
   expect(parseReport('Status: completed\n## Findings\nok\n## Next\nship').next).toBe('ship')
 })
+
+test('the first strong Status line wins: a later one in a findings echo is findings text (D11)', () => {
+  const echoed = parseReport('Status: completed\nFindings: the run printed this:\nStatus: failed\n**Status:** blocked\nFiles: none\nChecks: ran it\nEvidence: the read\nRisks: none\nNext: review it')
+  expect(echoed.status).toBe('completed')
+  expect(echoed.findings).toContain('Status: failed')
+  expect(echoed.findings).toContain('**Status:** blocked')
+  expect(echoed.files).toBe('none')
+  expect(echoed.next).toBe('review it')
+  // Other labels keep their behaviour: a later `Next:` still replaces an earlier one.
+  expect(parseReport('Status: partial\nNext: first\nNext: second').next).toBe('second')
+  // A heading and its word on the next line still read as the status.
+  expect(parseReport('## Status\nfailed\nFindings: broke').status).toBe('failed')
+})

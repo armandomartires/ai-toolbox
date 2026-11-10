@@ -3,16 +3,16 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { COORDINATOR_PROTOCOL, assignmentId, buildContract, parseReport, quotedFindings } from './contract'
 import type { Assignment } from './contract'
-import { ENDED, activeCount, addTask, auditRow, blockers, byAgent, byId, handoffRoot, handoffWaitText, holdsSlot, isNoVerdict, isSession, line, overall, retryTask, runTokens, runnable, tokensText, usageTokens, setTask, stallText, stalledBy, startBlocker, summary, WRITE_TOOLS, writeBlocker } from './ledger'
+import { ENDED, TURN_CAP_NOTE, admit, admitNew, auditRow, blockerFor, blockers, byAgent, byId, handoffRoot, handoffWaitText, holdsSlot, isNoVerdict, isSession, line, overall, retryTask, runTokens, runnable, tokensText, usageTokens, setTask, stallText, stalledBy, startBlocker, statusSummary, summary, WRITE_TOOLS, writeBlocker } from './ledger'
 import type { Ledger, Task } from './ledger'
 import { detectOverrides, effortMismatchNote, overridesText } from './overrides'
 import { enableBlocker, providerById, providersText } from './providers'
 import { gate, isBlocked, route } from './router'
-import { DEFAULT_CONFIG, EFFORTS, MODEL_LADDER, POLICIES, READ_ONLY_TOOLS, ROLE_PROFILES, TASK_CLASSES, WORKER_DENIED_TOOLS, WRITER_TOOLS, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
+import { DEFAULT_CONFIG, EFFORTS, POLICIES, READ_ONLY_TOOLS, ROLE_PROFILES, TASK_CLASSES, WORKER_DENIED_TOOLS, WRITER_TOOLS, familyRank, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
 import type { Config, Effort, Limits, Policy, Role, TaskClass } from './routing'
-import { keep, restore } from './keep'
+import { forget, keep, restore } from './keep'
 import { THEME_USAGE, remember, setTheme, syncTheme, themeArg, watchTheme } from './sigma'
-import { renderOutput, statusLineText } from './view'
+import { renderOutput, statusLineText, taskView } from './view'
 import type { OrchestrateOutput } from './view'
 
 // The engine lists a module's $.state reads and writes from the atoms declared
@@ -54,8 +54,11 @@ const HOOK_BUDGET_MS = 10_000
 
 /** The config in force: defaults, the home file, the store, the person's live choices, then the project file's narrowing. */
 let config: Config = DEFAULT_CONFIG
-/** The config the store may hold: everything in force but the project file, which is never persisted (TASK-0239). */
-let trusted: Config = DEFAULT_CONFIG
+/** The choices the person made with /orchestrate (and the store held at load): the only settings the store keeps (TASK-0239). */
+type Chosen = { policy?: Policy; optIn?: Partial<Config['optIn']>; providers?: Config['providers'] }
+let chosen: Chosen = {}
+/** The shape of a stored settings entry: 2 holds only the person's choices. */
+const SETTINGS_VERSION = 2
 /** Auto mode gave a plugin spawn no verdict this session: every later start hands off at once, no spawn tried. */
 let noVerdictSeen = false
 /** What the config files said that was not taken, shown by status so a project file's attempt is seen (TASK-0239). */
@@ -109,12 +112,21 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((one): one is string => typeof one === 'string').map(one => one.trim()).filter(Boolean) : [])
 
+/** What `readJson` answers for a file that exists but holds no valid JSON. */
+const MALFORMED = Symbol('malformed')
+
+/**
+ * A config file's parsed JSON; undefined when there is none. `$.fs.read` rejects for a file that is missing (or over
+ * 4 MiB) and says no more, so a rejected read is "missing"; a read that gives text which does not parse is MALFORMED
+ * (an empty file is a missing one: there is nothing in it to refuse).
+ */
 const readJson = async ($: EngineInterface, path: string): Promise<unknown> => {
+  const text = await $.fs.read(path).catch(() => undefined)
+  if (typeof text !== 'string' || text.trim() === '') return undefined
   try {
-    const text = await $.fs.read(path)
-    return typeof text === 'string' ? JSON.parse(text) : undefined
+    return JSON.parse(text)
   } catch {
-    return undefined
+    return MALFORMED
   }
 }
 
@@ -127,6 +139,7 @@ const envOf = async ($: EngineInterface): Promise<Record<string, string | undefi
   out.ANTHROPIC_SMALL_FAST_MODEL = await $.env.get('ANTHROPIC_SMALL_FAST_MODEL')
   out.CLAUDE_CODE_EFFORT_LEVEL = await $.env.get('CLAUDE_CODE_EFFORT_LEVEL')
   out.HOME = await $.env.get('HOME')
+  out.USERPROFILE = await $.env.get('USERPROFILE')
   out.OPENAI_API_KEY = (await $.env.get('OPENAI_API_KEY')) ? 'set' : undefined
   out.XAI_API_KEY = (await $.env.get('XAI_API_KEY')) ? 'set' : undefined
   return out
@@ -137,14 +150,15 @@ const projectKey = (cwd: string): string => cwd.replace(/\\/g, '/').replace(/\/+
 
 /**
  * What a repository's own `.claude/task-orchestrator.json` may do to the config in force: narrow it. Its `optIn` is
- * refused (the opt-in is the person's, from the home file or `/orchestrate opt-in`), and a limit above the one in force
+ * refused, and `providers` too (the opt-in and the providers are the person's, from the home file or the `/orchestrate` command), and a limit above the one in force
  * is refused: a cloned repository must not widen what runs, nor what it costs (TASK-0239).
  */
 const projectOverride = (base: Config, file: unknown): { config: Config; refused: string[] } => {
   if (!isRecord(file)) return mergeConfig(base, file)
   const refused: string[] = []
-  const { optIn, limits, ...rest } = file
+  const { optIn, limits, providers, ...rest } = file
   if (optIn !== undefined) refused.push('optIn is accepted from the home file or /orchestrate opt-in only')
+  if (providers !== undefined) refused.push('providers is accepted from the home file or /orchestrate providers only')
   const narrowed: Record<string, unknown> = {}
   if (isRecord(limits)) {
     // The known limits, as own keys: a `__proto__` key out of JSON.parse would otherwise set the prototype of `narrowed`.
@@ -160,28 +174,35 @@ const projectOverride = (base: Config, file: unknown): { config: Config; refused
   return { config: merged.config, refused: [...refused, ...merged.refused] }
 }
 
-/** Defaults ← `~/.claude/task-orchestrator.json` ← this project's store entry (the trusted config) ← `<cwd>/.claude/task-orchestrator.json`, narrowing only. */
+/** Defaults ← `~/.claude/task-orchestrator.json` ← this project's store entry (the person's choices) ← `<cwd>/.claude/task-orchestrator.json`, narrowing only. */
 const loadConfig = async ($: EngineInterface, env: Record<string, string | undefined>): Promise<string[]> => {
   const refused: string[] = []
   let next: Config = DEFAULT_CONFIG
-  const home = env.HOME
+  const home = env.HOME || env.USERPROFILE
   const cwd = await $.session.cwd().catch(() => '')
   settingsKey = `${STORE_SETTINGS}:${cwd ? projectKey(cwd) : '(no cwd)'}`
   const homeFile = home ? await readJson($, `${home}/${CONFIG_FILE}`) : undefined
-  if (homeFile !== undefined) {
+  if (homeFile === MALFORMED) refused.push(`${home}/${CONFIG_FILE}: not valid JSON`)
+  else if (homeFile !== undefined) {
     const merged = mergeConfig(next, homeFile)
     next = merged.config
     refused.push(...merged.refused.map(one => `${home}/${CONFIG_FILE}: ${one}`))
   }
   const stored = await $.store.get(settingsKey).catch(() => undefined)
+  chosen = {}
   if (isRecord(stored)) {
-    const merged = mergeConfig(next, { policy: stored.policy, optIn: stored.optIn, providers: stored.providers })
+    // 0.6.0 stored the whole merged config, home-file values included: only a v2 entry holds the person's choices, an older one is read for `enabled` alone.
+    if (stored.v !== SETTINGS_VERSION) refused.push('stored settings from an earlier version: only "enabled" was read; set policy, opt-in and providers again with /orchestrate')
+    const picked = stored.v === SETTINGS_VERSION ? { policy: stored.policy, optIn: stored.optIn, providers: stored.providers } : {}
+    const merged = mergeConfig(next, picked)
     next = merged.config
+    // What the store holds is the person's choices as made with /orchestrate: kept as they are, so the next save writes them back.
+    chosen = Object.fromEntries(Object.entries(picked).filter(([key, value]) => value !== undefined && !merged.refused.some(one => one.startsWith(key)))) as Chosen
     if (stored.enabled === true) await update($, enabled, () => true)
   }
-  trusted = next
   const projectFile = cwd ? await readJson($, `${cwd}/${CONFIG_FILE}`) : undefined
-  if (projectFile !== undefined) {
+  if (projectFile === MALFORMED) refused.push(`${cwd}/${CONFIG_FILE}: not valid JSON`)
+  else if (projectFile !== undefined) {
     const merged = projectOverride(next, projectFile)
     next = merged.config
     refused.push(...merged.refused.map(one => `${cwd}/${CONFIG_FILE}: ${one}`))
@@ -191,10 +212,10 @@ const loadConfig = async ($: EngineInterface, env: Record<string, string | undef
   return refused
 }
 
-/** The store holds the trusted config only: policy, opt-in and providers as the person set them, never a project file's. */
+/** The store holds the person's choices only: `enabled`, and the policy, opt-in and providers `/orchestrate` set, never the home file's values nor a project file's, so a later edit of either is not pinned. */
 const saveSettings = async ($: EngineInterface) => {
   const on = await read($, enabled)
-  await $.store.set(settingsKey, { enabled: on, policy: trusted.policy, optIn: trusted.optIn, providers: trusted.providers }).catch(() => undefined)
+  await $.store.set(settingsKey, { v: SETTINGS_VERSION, enabled: on, ...chosen }).catch(() => undefined)
 }
 
 const audit = async ($: EngineInterface, task: Task) => {
@@ -207,8 +228,8 @@ const statusLine = async ($: EngineInterface) => {
   const on = await read($, enabled)
   if (!on) return $.ui.status(undefined)
   const rows = await read($, ledger)
-  const queued = rows.filter(task => task.status === 'queued').length
-  $.ui.status(statusLineText(config.policy, activeCount(rows), queued))
+  const counts = statusSummary(rows, config.policy)
+  $.ui.status(statusLineText(counts.policy, counts.running, counts.queued))
 }
 
 /** What a profile taken through the Agent tool was registered with: its own name's settings, else its role's row. */
@@ -269,8 +290,11 @@ const routingView = (): OrchestrateOutput['routes'] =>
     return { taskClass, role: routeOf.role, settings: `${routeOf.model}/${routeOf.effort}${seen ? ` (${seen})` : ''}`, ...(gated ? { gated } : {}) }
   })
 
+/** What the collect limit is: a ceiling, below which the hook's own budget caps each call. */
+const collectCeiling = (ms: number): string => `collect waits at most ${Math.round(ms / 1000)}s, a ceiling the ten-second hook budget caps (a call answers sooner and is made again)`
+
 const limitsText = () =>
-  `limits: ${config.limits.maxConcurrent} concurrent, nesting ${config.limits.maxNesting}, ${config.limits.maxRetries} retries, ${config.limits.maxEscalations} escalation(s)`
+  `limits: ${config.limits.maxConcurrent} concurrent, ${config.limits.maxRetries} retries, ${config.limits.maxEscalations} escalation(s); ${collectCeiling(config.limits.collectTimeoutMs)}`
 
 const routingTable = (): string =>
   [
@@ -287,21 +311,13 @@ const routingTable = (): string =>
 const statusAnswer = async ($: EngineInterface): Promise<string> => {
   const text = await statusText($)
   const rows = await read($, ledger)
-  const settings = (one?: { model: string; effort: string }) => (one ? `${one.model}/${one.effort}` : '?')
   const out: OrchestrateOutput = {
     isOn: await read($, enabled),
     policy: config.policy,
     coordinator: await $.session.model().catch(() => 'unknown'),
     coordinatorEffort: coordinatorEffort ?? 'unknown',
     run: overall(rows),
-    tasks: rows.map(task => ({
-      id: task.id,
-      role: task.role,
-      status: task.status,
-      requested: settings(task.requested),
-      observed: task.observed ? settings(task.observed) : task.resolvedModel ? `${task.resolvedModel}, effort unverified` : 'unverified',
-      next: task.report?.next?.trim() || task.reason || '',
-    })),
+    tasks: rows.map(task => taskView(task, blockerFor(rows, task, config.limits), config.limits.maxRetries)),
     overrides: overridesText(await read($, overrides)).split('\n').map(one => one.replace(/^- /, '')),
   }
   return remember(text, out)
@@ -350,6 +366,24 @@ const settle = async ($: EngineInterface, task: Task, patch: Partial<Task>, when
   return true
 }
 
+/**
+ * The one way a row enters `running` (TASK-0265): `admit` over the rows as they are when the write lands, inside the
+ * updater, so the cap, the writer lock and the status compare-and-set hold for `start`, both adoptions and the resume.
+ * Returns why it was refused, or undefined when the row now runs.
+ */
+const admitRow = async ($: EngineInterface, task: Task, patch: Partial<Task>, from: Task['status']): Promise<string | undefined> => {
+  let refused: string | undefined
+  await update($, ledger, rows => {
+    const got = admit(rows, task, patch, from, config.limits)
+    refused = got.refused
+    return got.refused ? rows : got.ledger
+  }).then(() => keep($, assignments))
+  if (refused !== undefined) return refused
+  const now = byId(await read($, ledger), task.id)
+  if (now) await audit($, now)
+  await statusLine($)
+  return undefined
+}
 
 const contractOf = (rows: Ledger, task: Task): string => {
   const assignment = assignments.get(task.id) ?? { inputs: [], prohibited: [], deliverables: [], acceptance: [], tools: ROLE_PROFILES[task.role].readOnly ? `read-only tools (${READ_ONLY_TOOLS.join(', ')}); no shell` : 'the session\'s tools under its permission mode, minus agents, workflows and messaging; writes only inside the allowed files' }
@@ -371,9 +405,6 @@ const baseOf = async ($: EngineInterface, task: Task): Promise<string | undefine
   const git = await $.process.run(['git', 'rev-parse', 'HEAD']).catch(() => undefined)
   return git && git.exitCode === 0 ? git.stdout.trim() : undefined
 }
-
-/** The note a task stopped at its turn cap carries: its agent may be resumed, and its next turn reopens the task (TASK-0260). */
-const TURN_CAP_NOTE = 'stopped at its turn cap'
 
 /**
  * Whether the engine cut an agent's run off mid-step, as it does at the turn cap: its transcript's last entry is a tool
@@ -497,7 +528,7 @@ const start = async ($: EngineInterface, task: Task): Promise<void> => {
   const baseRevision = await baseOf($, task)
   const at = await $.clock.now()
   // The claim: queued → running only while it is still queued, so two ticks start it once and a cancel in between holds.
-  if (!(await settle($, task, { status: 'running', startedAt: at, baseRevision, prompt: task.prompt }, 'queued'))) return
+  if ((await admitRow($, task, { startedAt: at, baseRevision, prompt: task.prompt }, 'queued')) !== undefined) return
   const handOff = async () => { await settle($, task, { status: 'blocked', handoff: true, reason: handoffReason(task), endedAt: await $.clock.now() }, 'running') }
   // Auto mode judged a plugin spawn once this session and gave no verdict: it gives none to the next either (TASK-0239).
   if (noVerdictSeen) return handOff()
@@ -577,9 +608,6 @@ const plain = (task: Task): string => `${task.id} → ${task.role} → ${task.st
 
 type DispatchInput = Record<string, unknown>
 
-/** The index of the ladder's family a model alias or id names, or -1. */
-const familyOf = (model: string): number => MODEL_LADDER.findIndex(alias => model.toLowerCase().includes(alias))
-
 /**
  * The coordinator's effort as its host settings give it, before any request shows it: the environment's
  * CLAUDE_CODE_EFFORT_LEVEL, else `modelSettings.<its model>.effortLevel`, else `effortLevel`; undefined when none is a level.
@@ -596,7 +624,7 @@ const settingsEffort = (settings: unknown, model: string, env: Record<string, st
 /** Why a session may not be started at these settings from this coordinator, or nothing. */
 const sessionGate = async ($: EngineInterface, model: string, effort: Effort): Promise<string | undefined> => {
   const mine = await $.session.model().catch(() => '')
-  const [want, have] = [familyOf(model), familyOf(mine)]
+  const [want, have] = [familyRank(model), familyRank(mine)]
   if (want < 0 || have < 0) return `a session worker's model family cannot be compared: "${model}" against the coordinator's "${mine}"; pass a model alias (haiku, sonnet, opus)`
   if (want > have) return `a session worker may not run above its coordinator: model "${model}" is above the coordinator's family (${mine}); the app would start it lower, in silence`
   if (coordinatorEffort !== undefined && EFFORTS.includes(coordinatorEffort as Effort) && EFFORTS.indexOf(effort) > EFFORTS.indexOf(coordinatorEffort as Effort))
@@ -604,7 +632,14 @@ const sessionGate = async ($: EngineInterface, model: string, effort: Effort): P
   return undefined
 }
 
+/** A dispatch, then the status line over the ledger as it stands: a task that only queued settles nothing, yet the line's counts moved. */
 const answerDispatch = async ($: EngineInterface, input: DispatchInput): Promise<{ result: string }> => {
+  const answer = await dispatchTask($, input)
+  await statusLine($)
+  return answer
+}
+
+const dispatchTask = async ($: EngineInterface, input: DispatchInput): Promise<{ result: string }> => {
   if (!(await read($, enabled))) return { result: 'task-orchestrator is off: nothing was dispatched. Turn it on with /orchestrate on.' }
   const id = String(input.id ?? '').trim()
   if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,31}$/.test(id)) return { result: 'blocked: id must be 1 to 32 characters of letters, digits, "_", "." or "-"' }
@@ -676,7 +711,7 @@ const answerDispatch = async ($: EngineInterface, input: DispatchInput): Promise
   const after = await read($, ledger)
   const root = stalledBy(after, now)
   const handed = root ? undefined : handoffRoot(after, now)
-  return { result: [line(now), ...now.notes.map(one => `note: ${one}`), ...(root ? [`stalled: ${stallText(now, root)}`] : handed ? [`waiting: ${handoffWaitText(now, handed)}`] : []), ...handoffText(now)].join('\n') }
+  return { result: [line(now), ...now.notes.map(one => `note: ${one}`), ...(root ? [`stalled: ${stallText(now, root, config.limits)}`] : handed ? [`waiting: ${handoffWaitText(now, handed)}`] : []), ...handoffText(now)].join('\n') }
 }
 
 /** The text of a tool call's answer: core's `text`, else its result's text blocks. */
@@ -689,6 +724,10 @@ const answerText = (answer: unknown): string => {
 
 /** Whether the app (or the call itself) refused a tool call. */
 const refusedCall = (answer: unknown): string | undefined => (isRecord(answer) && typeof answer.deny === 'string' ? answer.deny : isRecord(answer) && answer.isError === true ? answerText(answer) || 'refused' : undefined)
+
+/** Stops a worker with TaskStop; the reason it was refused (auto mode may refuse a plugin's call), or undefined when it was stopped. */
+const stopWorker = async ($: EngineInterface, agentId: string): Promise<string | undefined> =>
+  refusedCall(await $.tool.call({ tool: 'TaskStop', task_id: agentId }).catch(error => ({ deny: error instanceof Error ? error.message : String(error) })))
 
 /** The text of one event of a session's transcript, or nothing for a person's own message. */
 const eventText = (event: unknown): string => {
@@ -901,16 +940,16 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { r
     interrupted = `collect stopped after ${Math.max(0, at - startedAt)} ms (${reason.slice(0, 120)}): call again`
   }
   const rows = await read($, ledger)
-  const chosen = targets(rows)
-  const extra = afterEnd.map(one => byId(rows, one.id)).filter((one): one is Task => one !== undefined && !chosen.some(task => task.id === one.id))
-  if (!chosen.length) return { result: ids.length ? `no task named ${ids.join(', ')}` : 'No task in the ledger.' }
+  const picked = targets(rows)
+  const extra = afterEnd.map(one => byId(rows, one.id)).filter((one): one is Task => one !== undefined && !picked.some(task => task.id === one.id))
+  if (!picked.length) return { result: ids.length ? `no task named ${ids.join(', ')}` : 'No task in the ledger.' }
   const unknown = ids.filter(one => !rows.some(task => task.id === one))
   const startableNow = new Set(runnable(rows, config.limits, personTurn).map(one => one.id))
   const word = overall(rows)
   return {
     result: [
       ...(unknown.length ? [`no task named ${unknown.join(', ')}`] : []),
-      ...[...chosen, ...extra].map(task => {
+      ...[...picked, ...extra].map(task => {
         // A report named by id prints in full; otherwise only the first time (TASK-0226).
         const again = ids.includes(task.id)
         const repeat = task.report !== undefined && !again && delivered.has(reportKey(task))
@@ -926,7 +965,7 @@ const answerCollect = async ($: EngineInterface, input: DispatchInput, wait: { r
             const root = stalledBy(rows, task)
             const handed = root ? undefined : handoffRoot(rows, task)
             if (handed) return [`  waiting: ${handoffWaitText(task, handed)}`]
-            if (root) return [`  stalled: ${stallText(task, root)}`]
+            if (root) return [`  stalled: ${stallText(task, root, config.limits)}`]
             // Queued and unable to start: said with its reason, and not waited on.
             return task.status === 'queued' && !startableNow.has(task.id) ? [`  queued, not started: ${queuedWhy(rows, task)}; do not poll: end your turn or do other work, and collect it once when its note arrives`] : []
           })(),
@@ -973,19 +1012,28 @@ const answerReset = async ($: EngineInterface): Promise<string> => {
   const handed = rows.filter(waitsForHandoff)
   if (handed.length) return `reset refused: ${handed.length} task(s) handed off, waiting for the coordinator's start call (${handed.map(task => task.id).join(', ')}); cancel them first with /orchestrate cancel, or make the call`
   assignments.clear()
-  await update($, ledger, () => []).then(() => keep($, assignments))
-  await update($, unavailable, () => []).then(() => keep($, assignments))
+  await update($, ledger, () => [])
+  await update($, unavailable, () => [])
+  // The mirror goes too: left in the store it would bring the cleared run back at the next forced reload.
+  await forget($)
   delivered.clear()
   await statusLine($)
   return `reset: ${rows.length} task(s) cleared from the ledger, the refused models and the printed-once record forgotten; run: idle`
 }
 
+/** A cancel, then the status line: a hand-off or a queued task cancelled, and what started in its slot, move the counts. */
 const answerCancel = async ($: EngineInterface, which: string): Promise<string> => {
+  const answer = await cancelTasks($, which)
+  await statusLine($)
+  return answer
+}
+
+const cancelTasks = async ($: EngineInterface, which: string): Promise<string> => {
   const rows = await read($, ledger)
-  const chosen = which === 'all' || which === '' ? rows.filter(task => !ENDED.includes(task.status) || waitsForHandoff(task)) : rows.filter(task => task.id === which)
-  if (!chosen.length) return which === 'all' || which === '' ? 'nothing to cancel' : `no task named ${which}`
+  const targeted = which === 'all' || which === '' ? rows.filter(task => !ENDED.includes(task.status) || waitsForHandoff(task)) : rows.filter(task => task.id === which)
+  if (!targeted.length) return which === 'all' || which === '' ? 'nothing to cancel' : `no task named ${which}`
   const lines: string[] = []
-  for (const task of chosen) lines.push(await cancelTask($, task))
+  for (const task of targeted) lines.push(await cancelTask($, task))
   // A cancel frees a slot: what queued behind the cap starts now, not at some later call (TASK-0239).
   const started = (await tick($, personTurn)).filter(task => task.handoff)
   for (const task of started) lines.push(`${line(task)}`, ...(task.reason ? [task.reason] : []), ...handoffText(task))
@@ -998,12 +1046,25 @@ const isPersonTurn = (origin: { kind?: string } | undefined): boolean => origin 
 /** The session id (`local_<uuid>`) in the app's answer to start_session, which carries it only inside its sentence. */
 const sessionIdIn = (text: string): string | undefined => /session_id:?\s*"?(local_[0-9a-f-]+)/i.exec(text)?.[1]
 
+/** Words that follow "branch" in a sentence without naming one ("no branch yet", "branch is created"). */
+const NOT_A_BRANCH = new Set(['is', 'was', 'yet', 'has', 'will', 'of', 'for', 'and', 'or', 'the', 'a', 'an', 'name', 'names', 'created', 'not', 'none', 'from', 'to', 'in', 'on', 'at', 'with', 'when', 'if', 'but'])
+
+/** The branch the app's answer names (`on branch claude/x`, `branch: x`, `branch named x`), or undefined: none is guessed. A bare word after "branch" counts only when it looks like a name (a `/`, `-` or digit in it) or is introduced by named, called, `:` or `=`. */
+const branchIn = (text: string): string | undefined => {
+  for (const found of text.matchAll(/\bbranch\b(\s+(?:named|called)|\s*[:=])?\s*["'`]?([A-Za-z0-9][A-Za-z0-9._/-]*)/gi)) {
+    const name = found[2]!.replace(/[.,;:]+$/, '')
+    if (!name || NOT_A_BRANCH.has(name.toLowerCase())) continue
+    if (found[1] || /[/\-\d]/.test(name)) return name
+  }
+  return undefined
+}
+
 /** How a start_session call departs from the hand-off's model, effort and worktree, or nothing. */
 const callMismatch = (task: Task, input: DispatchInput): string | undefined => {
   const model = typeof input.model === 'string' ? input.model.trim().toLowerCase() : ''
   const wanted = task.requested.model.toLowerCase()
   const problems = [
-    ...(model !== wanted && !(familyOf(model) >= 0 && familyOf(model) === familyOf(wanted)) ? [`model "${String(input.model ?? '')}" is not "${task.requested.model}"`] : []),
+    ...(model !== wanted && !(familyRank(model) >= 0 && familyRank(model) === familyRank(wanted)) ? [`model "${String(input.model ?? '')}" is not "${task.requested.model}"`] : []),
     ...(input.effort !== task.requested.effort ? [`effort "${String(input.effort ?? '')}" is not "${task.requested.effort}"`] : []),
     ...(input.use_worktree !== true ? ['use_worktree is not true'] : []),
   ]
@@ -1026,7 +1087,7 @@ const adoptSession = async ($: EngineInterface, input: DispatchInput, next: (inp
   // A cancelled hand-off's assignment must not start it after all.
   if (held.status === 'cancelled') return { deny: `${held.id} was cancelled: its hand-off no longer stands; dispatch a new task instead` }
   if (!(held.handoff && held.status === 'blocked')) return { deny: `${held.id} is ${held.status}: only a session task waiting for its hand-off is started by start_session` }
-  const blocker = startBlocker(rows, { ...held, status: 'queued' }, config.limits)
+  const blocker = admit(rows, held, {}, 'blocked', config.limits).refused
   if (blocker) return { deny: `${held.id} cannot start now: ${blocker}` }
   // The call must be the hand-off's: the model, effort and worktree it names, not whatever the coordinator made of them.
   const wrong = callMismatch(held, input)
@@ -1044,8 +1105,13 @@ const adoptSession = async ($: EngineInterface, input: DispatchInput, next: (inp
     return ran
   }
   const at = await $.clock.now()
-  await settle($, held, { status: 'running', handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, sessionId, notes: [...held.notes, 'started by the coordinator\'s start_session call, adopted by its assignment header'] }, 'blocked')
-  return ran
+  const branch = branchIn(answerText(ran))
+  const lost = await admitRow($, held, { handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, sessionId, ...(branch ? { branch } : {}), notes: [...held.notes, 'started by the coordinator\'s start_session call, adopted by its assignment header'] }, 'blocked')
+  if (lost === undefined) return ran
+  // The row was cancelled (or the limits changed) while the app started the session: it runs, untracked. Stop it as a cancel would.
+  const stopped = await $.tool.call({ tool: TOOL.stopSession, session_id: sessionId } as never).catch(error => ({ deny: error instanceof Error ? error.message : String(error) }))
+  const stopRefused = refusedCall(stopped)
+  return { deny: `${held.id} was not admitted after its session started (${lost}); ${stopRefused === undefined ? `session ${sessionId} was stopped` : `session ${sessionId} is still running and untracked: stop it yourself with ${TOOL.stopSession} and session_id "${sessionId}"`}` }
 }
 
 const setOptIn = async ($: EngineInterface, args: string[]): Promise<string> => {
@@ -1053,7 +1119,7 @@ const setOptIn = async ($: EngineInterface, args: string[]): Promise<string> => 
   const key = what === 'high-effort' ? 'highEffort' : what === 'frontier' ? 'frontier' : undefined
   if (!key) return 'usage: /orchestrate opt-in high-effort|frontier [off]'
   config = { ...config, optIn: { ...config.optIn, [key]: state !== 'off' } }
-  trusted = { ...trusted, optIn: { ...trusted.optIn, [key]: state !== 'off' } }
+  chosen = { ...chosen, optIn: { ...chosen.optIn, [key]: state !== 'off' } }
   await saveSettings($)
   return `${what} ${state !== 'off' ? 'enabled' : 'disabled'} for this project's sessions (stored). ${key === 'frontier' ? 'A frontier worker costs the most of any; dispatch one only when a task demonstrably needs it.' : 'xhigh and max are never the default; escalate to them one step at a time.'}`
 }
@@ -1065,7 +1131,7 @@ const setProvider = async ($: EngineInterface, args: string[], env: Record<strin
   if (!provider) return `usage: /orchestrate providers enable|disable <${['openai', 'grok'].join('|')}>`
   if (action === 'disable') {
     config = { ...config, providers: { ...config.providers, [provider.id]: { enabled: false } } }
-    trusted = { ...trusted, providers: { ...trusted.providers, [provider.id]: { enabled: false } } }
+    chosen = { ...chosen, providers: { ...chosen.providers, [provider.id]: { enabled: false } } }
     await saveSettings($)
     return `${provider.id} disabled`
   }
@@ -1073,7 +1139,7 @@ const setProvider = async ($: EngineInterface, args: string[], env: Record<strin
   const blocker = enableBlocker(provider, env)
   if (blocker) return `not enabled: ${blocker}\nDisclosure, for when an adapter exists: ${provider.disclosure}`
   config = { ...config, providers: { ...config.providers, [provider.id]: { enabled: true } } }
-  trusted = { ...trusted, providers: { ...trusted.providers, [provider.id]: { enabled: true } } }
+  chosen = { ...chosen, providers: { ...chosen.providers, [provider.id]: { enabled: true } } }
   await saveSettings($)
   return `${provider.id} enabled. ${provider.disclosure}`
 }
@@ -1103,7 +1169,7 @@ export const register: Register = on => {
       await $.command.register({ name: 'orchestrate', description: 'Lead-coordinator mode: on, off, status, policy, routing, models, opt-in, providers, cancel, reset, theme', argumentHint: 'on|off|status|policy <economy|balanced|quality>|routing|models|opt-in <high-effort|frontier> [off]|providers [enable|disable <id>]|cancel [<task>|all]|reset|theme dark|light|auto' })
       await $.tool.register({
         name: 'dispatch',
-        description: `Delegate one bounded task to a real isolated subagent (or, with runAs "session", a Code-tab session you start by the hand-off the answer names) chosen by the routing table (model and effort per task class), under the orchestrator's limits: ${config.limits.maxConcurrent} concurrent workers, workers never delegate, one non-isolated writer at a time, ${config.limits.maxRetries} retries and ${config.limits.maxEscalations} escalation per task. Returns the task's line; the report arrives through collect, once the task's end note arrives (never poll). Only while /orchestrate is on, whose context holds the coordinator protocol.`,
+        description: `Delegate one bounded task to a real isolated subagent (or, with runAs "session", a Code-tab session you start by the hand-off the answer names) chosen by the routing table (model and effort per task class), under the orchestrator's limits: ${config.limits.maxConcurrent} concurrent workers, workers never delegate, one non-isolated writer at a time, ${config.limits.maxRetries} retries and ${config.limits.maxEscalations} escalation per task. Returns the task's line; the report arrives through collect, once the task's end note arrives (never poll; collect waits about eight seconds at most, whatever the ${config.limits.collectTimeoutMs} ms collect limit says: it is a ceiling the hook budget caps). Only while /orchestrate is on, whose context holds the coordinator protocol.`,
         inputSchema: {
           type: 'object',
           properties: {
@@ -1130,7 +1196,7 @@ ${classGuide()}` },
       })
       await $.tool.register({
         name: 'collect',
-        description: 'Return the reports of the named tasks (or every one), waiting about eight seconds at most: status, findings, files, checks actually run, evidence, risks, next. Call it once per task end note, never in a loop. A report prints once; name its id to print it again.',
+        description: 'Return the reports of the named tasks (or every one), waiting about eight seconds at most (the hook budget; the collectTimeoutMs limit is a ceiling above that, never reached): status, findings, files, checks actually run, evidence, risks, next. Call it once per task end note, never in a loop. A report prints once; name its id to print it again.',
         inputSchema: { type: 'object', properties: { ids: { type: 'array', items: { type: 'string' } }, timeoutMs: { type: 'number' } } },
         isDeferred: false,
       })
@@ -1180,7 +1246,7 @@ ${classGuide()}` },
         const next = args[0]
         if (!next || !(POLICIES as readonly string[]).includes(next)) return { text: `usage: /orchestrate policy <${POLICIES.join('|')}>\n${routingTable()}` }
         config = { ...config, policy: next as Policy }
-        trusted = { ...trusted, policy: next as Policy }
+        chosen = { ...chosen, policy: next as Policy }
         await update($, policy, () => config.policy)
         await saveSettings($)
         for (const problem of await registerProfiles($)) $.ui.log(`${PLUGIN}: ${problem}`)
@@ -1218,10 +1284,11 @@ ${classGuide()}` },
   // Spawns the model or another plugin makes: a worker never delegates, and a
   // worker profile taken through the Agent tool still counts and is fenced.
   on('agent.spawn', async ($, e, next) => {
-    if (!(await read($, enabled))) return next(e)
     const rows = await read($, ledger)
     const parent = e.parentAgentId ? byAgent(rows, e.parentAgentId) : undefined
-    if (parent) return { deny: `${parent.id} (${parent.role}) may not spawn agents: workers do not delegate (nesting limit ${config.limits.maxNesting})` }
+    // The guard stands on the worker's row, not on `enabled`: /orchestrate off leaves a running worker unable to delegate.
+    if (parent) return { deny: `${parent.id} (${parent.role}) may not spawn agents: workers do not delegate` }
+    if (!(await read($, enabled))) return next(e)
     // The mod's own dispatch already applied the limits and holds the ledger row.
     if (next.origin.plugin === PLUGIN) return next(e)
     const type = String(e.subagentType ?? '')
@@ -1245,41 +1312,64 @@ ${classGuide()}` },
     if (held?.handoff && held.status === 'blocked') {
       // The role's own profile (the hand-off's, the effort on the call) or the task's exact one.
       if (type !== `${PLUGIN}:${held.role}` && type !== `${PLUGIN}:${profileOf(held)}`) return { deny: `${held.id} waits for a hand-off as ${PLUGIN}:${held.role}, not ${type}` }
-      const blocker = startBlocker(rows, { ...held, status: 'queued' }, config.limits)
+      const blocker = admit(rows, held, {}, 'blocked', config.limits).refused
       if (blocker) return { deny: `${held.id} cannot start now: ${blocker}` }
       const ran = await next(e)
       if (ran.deny !== undefined || !ran.agentId) return ran
       const at = await $.clock.now()
-      await settle($, held, { status: 'running', handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, agentId: ran.agentId, resolvedModel: ran.model, baseRevision: await baseOf($, held), notes: [...held.notes, 'started by the coordinator\'s Agent call: auto mode gave the orchestrator\'s spawn no verdict'] }, 'blocked')
+      const lost = await admitRow($, held, { handoff: undefined, reason: undefined, endedAt: undefined, startedAt: at, agentId: ran.agentId, resolvedModel: ran.model, baseRevision: await baseOf($, held), notes: [...held.notes, 'started by the coordinator\'s Agent call: auto mode gave the orchestrator\'s spawn no verdict'] }, 'blocked')
+      if (lost === undefined) return ran
+      // Cancelled (or outrun by another start) while the worker started: it would run untracked and unfenced. Stop it.
+      // The engine takes no deny once next() answered, so the stop and a note to the coordinator say what happened.
+      const stopRefusal = await stopWorker($, ran.agentId)
+      await note($, stopRefusal === undefined ? `${held.id} was not admitted after its Agent call started (${lost}); the worker ${ran.agentId} was stopped and ${held.id} stays as it is` : `${held.id} was not admitted after its Agent call started (${lost}); the stop of worker ${ran.agentId} was refused (${stopRefusal}): it runs untracked and unfenced, stop it with TaskStop on ${ran.agentId} from your own call; ${held.id} stays as it is`)
       return ran
     }
-    if (activeCount(rows) >= config.limits.maxConcurrent) return { deny: `${config.limits.maxConcurrent} workers are already running; dispatch it through the orchestrator's dispatch tool, which queues it` }
+    // A worker profile taken straight through the Agent tool is a worker like any: the same admission, before the
+    // spawn on a provisional row and again over the rows as they are when it has started.
+    const taskOf = async (agentId?: string, model?: string): Promise<Task> => {
+      const at = await $.clock.now()
+      return {
+        id: e.name ?? '',
+        taskClass: (Object.entries(routesUnder(config)).find(([, routeOf]) => routeOf.role === role)?.[0] as TaskClass | undefined) ?? 'exploration',
+        role,
+        objective: e.description,
+        description: e.description,
+        deps: [],
+        // No allowed-files list: a non-isolated writer of the whole checkout, so a second writer is refused.
+        allowedFiles: [],
+        isWriter: !profile.readOnly,
+        isolated: false,
+        status: 'running',
+        requested: profileSettings(type.slice(PLUGIN.length + 1), role, e.model),
+        resolvedModel: model,
+        agentId,
+        retries: 0,
+        escalations: 0,
+        createdAt: at,
+        startedAt: at,
+        notes: ['spawned through the Agent tool, not dispatch: no allowed-files list; requested is the profile settings, and an effort on the call itself is not visible to the mod'],
+        prompt: '',
+      }
+    }
+    const before = admitNew(rows, await taskOf(), config.limits).refused
+    if (before) return { deny: `${before}; dispatch it through the orchestrator's dispatch tool, which queues it` }
     const ran = await next(e)
     if (ran.deny !== undefined || !ran.agentId) return ran
-    const at = await $.clock.now()
-    const id = e.name && !byId(rows, e.name) ? e.name : `agent-${rows.length + 1}`
-    const task: Task = {
-      id,
-      taskClass: (Object.entries(routesUnder(config)).find(([, routeOf]) => routeOf.role === role)?.[0] as TaskClass | undefined) ?? 'exploration',
-      role,
-      objective: e.description,
-      description: e.description,
-      deps: [],
-      allowedFiles: [],
-      isWriter: !profile.readOnly,
-      isolated: false,
-      status: 'running',
-      requested: profileSettings(type.slice(PLUGIN.length + 1), role, e.model),
-      resolvedModel: ran.model,
-      agentId: ran.agentId,
-      retries: 0,
-      escalations: 0,
-      createdAt: at,
-      startedAt: at,
-      notes: ['spawned through the Agent tool, not dispatch: no allowed-files list; requested is the profile settings, and an effort on the call itself is not visible to the mod'],
-      prompt: '',
+    const started = await taskOf(ran.agentId, ran.model)
+    let refused: string | undefined
+    await update($, ledger, list => {
+      const got = admitNew(list, started, config.limits)
+      refused = got.refused
+      return got.refused ? list : got.ledger
+    }).then(() => keep($, assignments))
+    if (refused !== undefined) {
+      // Another start took the slot or the writer lock while this one spawned: the worker is stopped, not left untracked.
+      // The engine takes no deny once next() answered, so the stop and a note to the coordinator carry the reason.
+      const stopRefusal = await stopWorker($, ran.agentId)
+      await note($, stopRefusal === undefined ? `the worker ${ran.agentId} taken through the Agent tool was not admitted (${refused}) and was stopped: dispatch it through the orchestrator's dispatch tool, which queues it` : `the worker ${ran.agentId} taken through the Agent tool was not admitted (${refused}) and the stop was refused (${stopRefusal}): it runs untracked and unfenced, stop it with TaskStop on ${ran.agentId} from your own call, then dispatch it through the orchestrator's dispatch tool, which queues it`)
+      return ran
     }
-    await update($, ledger, list => addTask(list, task).ledger).then(() => keep($, assignments))
     await statusLine($)
     return ran
   }).catch(($, e, next) => (next.called ? next(e) : { deny: `${PLUGIN}: the spawn guard failed, so the spawn is refused` }))
@@ -1327,8 +1417,14 @@ ${classGuide()}` },
     if (name === TOOL.dispatch) return answerDispatch($, e as unknown as DispatchInput)
     if (name === TOOL.collect) return answerCollect($, e as unknown as DispatchInput, { remainingMs: next.budget.remainingMs, signal: next.signal })
     if (name === TOOL.status) return { result: await statusText($) }
-    if (name === TOOL.cancel) return { result: await answerCancel($, String((e as unknown as DispatchInput).id ?? 'all')) }
-    if (e.agentId && (await read($, enabled))) {
+    if (name === TOOL.cancel) {
+      const id = (e as unknown as DispatchInput).id
+      // No id, or one that is no string, widens to nothing: only "all" cancels everything.
+      if (typeof id !== 'string' || id.trim() === '') return { result: 'cancel needs a task id or "all"; nothing was cancelled' }
+      return { result: await answerCancel($, id.trim()) }
+    }
+    // The fence stands on the row, not on `enabled`: /orchestrate off leaves a running worker as fenced as it was.
+    if (e.agentId) {
       const rows = await read($, ledger)
       const task = byAgent(rows, e.agentId)
       if (task && task.status === 'running') {
@@ -1354,7 +1450,15 @@ ${classGuide()}` },
   on('turn.start', async ($, e, next) => {
     if (e.agentId) {
       const task = byAgent(await read($, ledger), e.agentId)
-      if (task && isResumable(task)) await settle($, task, { status: 'running', reason: undefined, endedAt: undefined, notes: [...task.notes, 'resumed after its turn cap'] }, 'partial')
+      if (task && isResumable(task)) {
+        const refused = await admitRow($, task, { reason: undefined, endedAt: undefined, notes: [...task.notes, 'resumed after its turn cap'] }, 'partial')
+        // Its turn is already running and cannot be taken back: the row stays partial (the limits are not bypassed), says
+        // so, and the coordinator is told what the worker is doing meanwhile and the two ways out.
+        if (refused !== undefined && byId(await read($, ledger), task.id)?.status === 'partial') {
+          await settle($, task, { notes: withNote(task, `resume refused: ${refused}`) }, 'partial')
+          await note($, `resumed worker ${task.id} could not be readmitted (${refused}): its calls run outside the fence until it ends. Cancel ${task.id}, or wait for a slot and resume it again with SendMessage to ${task.agentId}.`)
+        }
+      }
     }
     return next(e)
   })

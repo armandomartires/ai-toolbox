@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { activeWriters, addTask, blockers, handoffRoot, isNoVerdict, mayEscalate, mayRetry, overall, overlap, retryTask, runnable, setTask, stalledBy, startBlocker, writeBlocker } from './ledger'
+import { TURN_CAP_NOTE, activeWriters, addTask, admit, blockerFor, blockers, statusSummary, escalationOf, handoffRoot, isNoVerdict, mayEscalate, mayRetry, overall, overlap, retryTask, runnable, setTask, stalledBy, startBlocker, stallText, writeBlocker } from './ledger'
 import type { Ledger, Task } from './ledger'
 import { DEFAULT_LIMITS } from './routing'
 
@@ -138,8 +138,8 @@ test('a dependant stuck behind a task that ended without completing says so, thr
   expect(stalledBy(ledger, ledger[4]!)).toBeUndefined()
   expect(stalledBy(setTask(ledger, 'T1', { status: 'completed' }), ledger[1]!)).toBeUndefined()
   expect(blockers(ledger, DEFAULT_LIMITS)).toEqual([
-    'T2: waits on T1 (blocked): dispatch T1 again under its id to retry it, or cancel T2',
-    'T3: waits on T1 (blocked): dispatch T1 again under its id to retry it, or cancel T3',
+    'T2: waits on T1 (blocked): dispatch T1 again under its id to retry it (retry 1 of 2), or cancel T2',
+    'T3: waits on T1 (blocked): dispatch T1 again under its id to retry it (retry 1 of 2), or cancel T3',
     'T5: waiting on T4',
   ])
 })
@@ -211,4 +211,119 @@ test('a dependant of a cancelled task makes the run blocked, naming it; an all-c
   expect(overall([task('T1', { status: 'cancelled' }), task('T2', { status: 'completed' })]).word).toBe('done')
   // Its dependant waiting on a running task is running, not blocked.
   expect(overall([running('T1'), task('D1', { deps: ['T1'] })]).word).toBe('running')
+})
+
+const builderOf = (allowedFiles: string[], patch: Partial<Task> = {}) => running('B1', { role: 'builder', isWriter: true, allowedFiles, ...patch })
+
+test('the write fence resolves .. and refuses a path that climbs out of an allowed directory', () => {
+  const builder = builderOf(['src'])
+  expect(writeBlocker([builder], builder, 'src/../secret.txt', '/p')).toContain('B1 may not write secret.txt')
+  expect(writeBlocker([builder], builder, '/p/src/../secret.txt', '/p')).toContain('outside its allowed files')
+  expect(writeBlocker([builder], builder, 'src/./a/../b.ts', '/p')).toBeUndefined()
+})
+
+test('the write fence refuses an absolute path outside the checkout, with an empty list and with a list', () => {
+  const open = builderOf([])
+  const listed = builderOf(['src'])
+  expect(writeBlocker([open], open, '/etc/passwd', '/p')).toContain('outside the checkout')
+  expect(writeBlocker([listed], listed, '/etc/passwd', '/p')).toContain('outside the checkout')
+  expect(writeBlocker([open], open, '../x.txt', '/p')).toContain('outside the checkout')
+  expect(writeBlocker([open], open, '/p2/a.ts', '/p')).toContain('outside the checkout')
+  expect(writeBlocker([open], open, '/p/any/where.ts', '/p')).toBeUndefined()
+})
+
+test('the write fence treats a drive letter case-insensitively and a backslash as a separator', () => {
+  const builder = builderOf(['src'])
+  expect(writeBlocker([builder], builder, 'c:/p/src/a.ts', 'C:\\p')).toBeUndefined()
+  expect(writeBlocker([builder], builder, 'C:\\p\\src\\a.ts', 'C:\\p')).toBeUndefined()
+  expect(writeBlocker([builder], builder, 'C:\\P\\SRC\\a.ts', 'c:/p')).toBeUndefined()
+  expect(writeBlocker([builder], builder, 'src\\..\\x.ts', 'C:\\p')).toContain('outside its allowed files')
+  expect(writeBlocker([builder], builder, 'D:\\p\\src\\a.ts', 'C:\\p')).toContain('outside the checkout')
+  // Case-sensitive on a POSIX root.
+  expect(writeBlocker([builder], builder, '/p/SRC/a.ts', '/p')).toContain('outside its allowed files')
+})
+
+test('the fence and overlap compare whole segments after normalising both sides', () => {
+  const builder = builderOf(['src'])
+  expect(writeBlocker([builder], builder, 'srcx/a.ts', '/p')).toContain('outside its allowed files')
+  expect(writeBlocker([builder], builder, 'src', '/p')).toBeUndefined()
+  expect(writeBlocker([builder], builder, 'src/a.ts', '/p')).toBeUndefined()
+  expect(overlap(['./src'], ['src'])).toEqual(['src'])
+  expect(overlap(['.'], ['src'])).toEqual(['. ~ src'])
+  expect(overlap(['src'], ['srcx/a.ts'])).toEqual([])
+  expect(overlap(['src/../docs'], ['docs'])).toEqual(['docs'])
+})
+
+test('a write with no path is still refused, and the other-writer rule uses the resolved target', () => {
+  const builder = builderOf(['src'])
+  expect(writeBlocker([builder], builder, '', '/p')).toContain('no path')
+  const other = running('B2', { role: 'builder', isWriter: true, isolated: true, allowedFiles: ['src/b.ts'] })
+  const mine = running('B3', { role: 'builder', isWriter: true, allowedFiles: [] })
+  expect(writeBlocker([other, mine], mine, 'src/x/../b.ts', '/p')).toBe('B3 may not write src/b.ts: writer B2 owns it')
+  expect(writeBlocker([other, mine], mine, '/p/./src/b.ts', '/p')).toBe('B3 may not write src/b.ts: writer B2 owns it')
+  expect(writeBlocker([other, mine], mine, 'srcx/b.ts', '/p')).toBeUndefined()
+})
+
+test('escalationOf ranks by model family, so full ids count', () => {
+  const at = (model: string, effort = 'medium') => ({ model, effort }) as Task['requested']
+  expect(escalationOf(at('claude-haiku-5-5'), at('claude-sonnet-5-5'))).toBe('model claude-haiku-5-5 → claude-sonnet-5-5')
+  expect(escalationOf(at('Haiku'), at('claude-opus-5'))).toContain('model')
+  expect(escalationOf(at('claude-sonnet-5-5'), at('sonnet'))).toBeUndefined()
+  expect(escalationOf(at('claude-opus-5'), at('claude-haiku-5-5'))).toBeUndefined()
+  expect(escalationOf(at('mystery'), at('opus'))).toBeUndefined()
+})
+
+test('stall advice follows the root: cancelled, turn-capped, or retryable (TASK-0265)', () => {
+  const dependant = task('T2', { deps: ['T1'] })
+  expect(stallText(dependant, task('T1', { status: 'cancelled' }), DEFAULT_LIMITS)).toBe('waits on T1 (cancelled): T1 was cancelled: cancel T2, or dispatch a new task with the same dependencies')
+  const capped = task('T1', { status: 'partial', agentId: 'a-1', notes: [TURN_CAP_NOTE] })
+  expect(stallText(dependant, capped, DEFAULT_LIMITS)).toBe('waits on T1 (partial): resume T1 with SendMessage to its agent id a-1; a re-dispatch would start fresh and lose its edits')
+  expect(stallText(dependant, task('T1', { status: 'failed', retries: 1 }), DEFAULT_LIMITS)).toBe('waits on T1 (failed): dispatch T1 again under its id to retry it (retry 2 of 2), or cancel T2')
+  // A partial root with no turn-cap note is the plain retry.
+  expect(stallText(dependant, task('T1', { status: 'partial' }), DEFAULT_LIMITS)).toContain('to retry it (retry 1 of 2)')
+  // The ledger's blockers say the same.
+  expect(blockers([task('T1', { status: 'cancelled' }), dependant], DEFAULT_LIMITS)).toEqual(['T2: waits on T1 (cancelled): T1 was cancelled: cancel T2, or dispatch a new task with the same dependencies'])
+})
+
+test('admit moves a row to running only over the limits and only from the status it expects (TASK-0265)', () => {
+  const ledger: Ledger = [running('T1'), running('T2'), task('T3')]
+  const admitted = admit(ledger, ledger[2]!, { startedAt: 5 }, 'queued', DEFAULT_LIMITS)
+  expect(admitted.refused).toBeUndefined()
+  expect(admitted.ledger.find(one => one.id === 'T3')).toMatchObject({ status: 'running', startedAt: 5 })
+  // The cap.
+  const full: Ledger = [running('T1'), running('T2'), running('T4'), task('T3')]
+  expect(admit(full, full[3]!, {}, 'queued', DEFAULT_LIMITS).refused).toBe('3 workers already running')
+  // The compare-and-set: a cancelled row is not reopened.
+  const gone = setTask(ledger, 'T3', { status: 'cancelled' })
+  expect(admit(gone, ledger[2]!, {}, 'queued', DEFAULT_LIMITS).refused).toContain('cancelled')
+  expect(admit(ledger, task('nope'), {}, 'queued', DEFAULT_LIMITS).refused).toContain('nope')
+  // A resumed turn-capped writer meets the writer lock; a blocked row is admitted only while handed off.
+  const writers: Ledger = [running('B2', { isWriter: true, role: 'builder' }), task('B1', { isWriter: true, role: 'builder', status: 'partial' })]
+  expect(admit(writers, writers[1]!, {}, 'partial', DEFAULT_LIMITS).refused).toContain('one writer at a time')
+  const blocked: Ledger = [task('H1', { status: 'blocked' })]
+  expect(admit(blocked, blocked[0]!, {}, 'blocked', DEFAULT_LIMITS).refused).toContain('H1')
+  const handed: Ledger = [task('H1', { status: 'blocked', handoff: true })]
+  expect(admit(handed, handed[0]!, { handoff: undefined }, 'blocked', DEFAULT_LIMITS).ledger[0]).toMatchObject({ status: 'running' })
+})
+
+test('the status summary counts a hand-off as running, queued apart, with the policy (R5)', () => {
+  const ledger: Ledger = [running('T1'), task('H1', { status: 'blocked', handoff: true }), task('B1', { status: 'blocked', reason: 'denied' }), task('Q1', { deps: ['T1'] }), task('Q2'), task('D1', { status: 'completed' })]
+  expect(statusSummary(ledger, 'balanced')).toEqual({ policy: 'balanced', running: 2, queued: 2 })
+  expect(statusSummary([], 'quality')).toEqual({ policy: 'quality', running: 0, queued: 0 })
+})
+
+test('blockerFor is the one task\'s line of blockers', () => {
+  const ledger: Ledger = [running('T1'), task('Q1', { deps: ['T1'] })]
+  expect(blockerFor(ledger, ledger[1]!, DEFAULT_LIMITS)).toBe('waiting on T1')
+  expect(blockers(ledger, DEFAULT_LIMITS)).toEqual(['Q1: waiting on T1'])
+  expect(blockerFor(ledger, ledger[0]!, DEFAULT_LIMITS)).toBeUndefined()
+})
+
+test('with no usable checkout path every write is refused, not resolved against an empty root (TASK-0265 review B2)', () => {
+  const builder = running('B1', { role: 'builder', isWriter: true, allowedFiles: [] })
+  for (const cwd of ['', 'p', 'relative/dir']) {
+    for (const path of ['/etc/passwd', '../../src/x', 'src/x']) expect(writeBlocker([builder], builder, path, cwd)).toBe('B1: the checkout path is unknown, so the write is refused')
+  }
+  expect(writeBlocker([builder], builder, '/p/src/x', '/p')).toBeUndefined()
+  expect(writeBlocker([builder], builder, 'C:/p/src/x', 'C:\p')).toBeUndefined()
 })

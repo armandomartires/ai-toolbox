@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { escalate, fallback, gate, isBlocked, route } from './router'
-import { DEFAULT_CONFIG, ROLE_PROFILES, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
+import { DEFAULT_CONFIG, ROLE_PROFILES, familyOf, mergeConfig, profileName, roleOfProfile, routesUnder } from './routing'
 import type { Config } from './routing'
 
 const none = { unavailable: [] as string[] }
@@ -115,4 +115,89 @@ test('a builder and a debugger have the turns a mod change with its 5-10 minute 
   expect(ROLE_PROFILES.debugger.maxTurns).toBe(120)
   const readOnly = Object.fromEntries(Object.entries(ROLE_PROFILES).filter(([, one]) => one.readOnly).map(([name, one]) => [name, one.maxTurns]))
   expect(readOnly).toEqual({ utility: 10, scout: 20, investigator: 40, reviewer: 30, planner: 40, 'risk-reviewer': 30 })
+})
+
+test('a full model id unavailable falls back to the next family up, never down to haiku', () => {
+  expect(fallback('claude-sonnet-5-5', none)).toBe('opus')
+  expect(fallback('Sonnet', { unavailable: ['opus'] })).toBe('fable')
+  const out = decided(route({ taskClass: 'lookup', model: 'claude-sonnet-5-5' }, DEFAULT_CONFIG, { unavailable: ['claude-sonnet-5-5'] }))
+  expect(out.model).toBe('opus')
+  expect(out.notes.join(' ')).toContain('falling back up to opus')
+})
+
+test('a model with no known family blocks instead of dropping to haiku', () => {
+  expect(fallback('mystery-1', none)).toBeUndefined()
+  const blocked = route({ taskClass: 'lookup', model: 'mystery-1' }, DEFAULT_CONFIG, { unavailable: ['mystery-1'] })
+  expect(isBlocked(blocked) && blocked.blocked).toContain('cannot be placed on the ladder')
+  const base = decided(route({ taskClass: 'lookup' }, DEFAULT_CONFIG, none))
+  const up = escalate({ ...base, model: 'mystery-1' }, 'model', DEFAULT_CONFIG, none)
+  expect(isBlocked(up) && up.blocked).toContain('cannot be placed on the ladder')
+})
+
+test('every fable-family id or case is gated behind the frontier opt-in', () => {
+  for (const model of ['fable', 'Fable', 'claude-fable-5-1']) {
+    expect(gate(model, 'high', DEFAULT_CONFIG)).toContain('opt-in frontier')
+    expect(gate(model, 'high', { ...DEFAULT_CONFIG, optIn: { ...DEFAULT_CONFIG.optIn, frontier: true } })).toBeUndefined()
+  }
+  const blocked = route({ taskClass: 'lookup', model: 'claude-fable-5-1' }, DEFAULT_CONFIG, none)
+  expect(isBlocked(blocked) && blocked.blocked).toContain('opt-in frontier')
+  expect(gate('claude-sonnet-5-5', 'high', DEFAULT_CONFIG)).toBeUndefined()
+})
+
+test('familyOf matches the family word as a whole token', () => {
+  expect(familyOf('claude-fable-5-1')).toBe('fable')
+  expect(familyOf('Fable')).toBe('fable')
+  expect(familyOf('claude-haiku-5-5')).toBe('haiku')
+  expect(familyOf('OPUS')).toBe('opus')
+  expect(familyOf('claude-sonnet-5-5')).toBe('sonnet')
+  expect(familyOf('unfabled')).toBeUndefined()
+  expect(familyOf('sonnetish')).toBeUndefined()
+  expect(familyOf('gpt-5')).toBeUndefined()
+  expect(familyOf('')).toBeUndefined()
+})
+
+test('escalate by model works from a full id', () => {
+  const base = decided(route({ taskClass: 'lookup', model: 'claude-haiku-5-5' }, DEFAULT_CONFIG, none))
+  const up = decided(escalate(base, 'model', DEFAULT_CONFIG, none))
+  expect(up.model).toBe('sonnet')
+  const top = escalate({ ...base, model: 'claude-opus-5' }, 'model', DEFAULT_CONFIG, none)
+  expect(isBlocked(top) && top.blocked).toContain('opt-in frontier')
+})
+
+test('the full 11-class by 3-policy table', () => {
+  const balanced: Record<string, string[]> = {
+    extraction: ['utility', 'haiku', 'low'], lookup: ['scout', 'haiku', 'low'], exploration: ['investigator', 'sonnet', 'medium'],
+    documentation: ['documentation', 'haiku', 'medium'], implementation: ['builder', 'sonnet', 'medium'], testing: ['tester', 'sonnet', 'medium'],
+    review: ['reviewer', 'sonnet', 'high'], architecture: ['planner', 'opus', 'high'], debugging: ['debugger', 'opus', 'high'],
+    'risk-review': ['risk-reviewer', 'opus', 'high'], frontier: ['frontier-specialist', 'fable', 'high'],
+  }
+  const patch: Record<string, Record<string, [string, string]>> = {
+    economy: { exploration: ['haiku', 'medium'], documentation: ['haiku', 'low'], review: ['sonnet', 'medium'], architecture: ['sonnet', 'high'], debugging: ['sonnet', 'high'] },
+    quality: { lookup: ['sonnet', 'low'], exploration: ['sonnet', 'high'], documentation: ['sonnet', 'medium'], implementation: ['sonnet', 'high'], testing: ['sonnet', 'high'], review: ['opus', 'high'] },
+  }
+  const classes = Object.keys(balanced)
+  expect(classes).toHaveLength(11)
+  for (const policy of ['economy', 'balanced', 'quality'] as const) {
+    const table = routesUnder({ ...DEFAULT_CONFIG, policy })
+    for (const name of classes) {
+      const row = table[name as keyof typeof table]
+      const over = patch[policy]?.[name]
+      const base = balanced[name]!
+      expect([row.role, row.model, row.effort], `${policy} ${name}`).toEqual(over ? [base[0], over[0], over[1]] : base)
+    }
+  }
+})
+
+test('a limit of 0 concurrent workers is refused, and a __proto__ providers key is ignored (R5)', () => {
+  const zero = mergeConfig(DEFAULT_CONFIG, { limits: { maxConcurrent: 0, maxRetries: 0 } })
+  expect(zero.config.limits.maxConcurrent).toBe(DEFAULT_CONFIG.limits.maxConcurrent)
+  expect(zero.refused).toEqual(['limits.maxConcurrent must be at least 1'])
+  // Zero retries is a valid limit.
+  expect(zero.config.limits.maxRetries).toBe(0)
+  const proto = mergeConfig(DEFAULT_CONFIG, JSON.parse('{"providers":{"__proto__":{"enabled":true},"openai":{"enabled":true}}}'))
+  expect(Object.getPrototypeOf(proto.config.providers)).toBe(Object.prototype)
+  expect(({} as Record<string, unknown>).enabled).toBeUndefined()
+  expect(proto.config.providers.openai).toEqual({ enabled: true })
+  expect(Object.keys(proto.config.providers)).toEqual(['openai', 'grok'])
+  expect(proto.refused).toEqual(['providers.__proto__: not a provider id'])
 })

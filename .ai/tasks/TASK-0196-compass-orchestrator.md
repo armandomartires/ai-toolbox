@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: done
+- Status: superseded by TASK-0207 (ADR-0048): the Compass mirror and Subagents panel were removed; Compass hosts agent-watch's contribution
 - Owner: agent (Claude Code)
 - Created: 2026-10-28
 - Updated: 2026-10-28
@@ -62,6 +62,7 @@ While task-orchestrator's ledger holds a task, Compass's Subagents panel draws e
 
 ## Execution log
 
+- 2026-11-10 · superseded by TASK-0207 (ADR-0048): the Compass mirror and Subagents panel were removed; Compass hosts agent-watch's contribution
 - 2026-10-28 · Claude Code (Opus 5.5) · planned in worktree `compass-orchestrator`; built by an orchestrated builder, reviewed by a separate reviewer
   - Evidence: `tests/test-mods.sh --mod task-compass` → `PASS task-compass: 48 pass` (34 before); `python3 scripts/check-mods.py` → `OK (5 mods)`; `tests/validate.sh` → `validate.sh: OK`.
   - Evidence, red-proofs: 0.4.0's model.ts, view.tsx and register.tsx with the new tests → the ledger pane test fails `Expected: defined Received: undefined` (and model.test.ts does not load: no `LINGER_MS` export); `shownRows` as the old `slice(-cap)` → the cap test fails, receiving `["task-T4","task-T5","task-T6","task-T7","x","y"]`.

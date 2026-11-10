@@ -114,6 +114,8 @@ export const parseReport = (text: string): Report => {
   let current: Field | undefined
   let currentStrong = false
   let statusExtra = ''
+  // The first strong `Status:` is the report's: a later one is text of the section it sits in (a findings echo of a tool's output).
+  let statusSeen = false
   for (const raw of text.split('\n')) {
     const trimmed = raw.trim()
     const found = LABEL_LINE.exec(trimmed)
@@ -122,9 +124,11 @@ export const parseReport = (text: string): Report => {
     // section a plain, bold or `#` label began (a findings bullet "- Next: x" is findings); such a strong label always wins.
     const weak = found !== null && (/^[-*]\s+/.test(trimmed) || (!trimmed.includes(':') && !found[2] && !/^(?:#|\*\*|__)/.test(trimmed)))
     const inside = current !== undefined && current !== 'status' && currentStrong && out[current] !== ''
-    if (found && field && !(weak && (out[field] || inside))) {
+    const repeat = field === 'status' && !weak && statusSeen
+    if (found && field && !repeat && !(weak && (out[field] || inside))) {
       current = field
       currentStrong = !weak
+      if (field === 'status' && !weak) statusSeen = true
       out[field] = found[2]!.replace(/^(?:\*\*|__)\s*/, '').replace(/(?:\*\*|__)\s*$/, '').trim()
     } else if (current === 'status') {
       // `## Status` then the word on the next line: the first line is the status itself.

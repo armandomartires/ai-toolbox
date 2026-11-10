@@ -2,30 +2,58 @@
 // escalations and the completion rules. The hooks module holds one in
 // $.state and calls these on it.
 
-import { EFFORTS, MODEL_LADDER } from './routing'
+import { EFFORTS, familyRank } from './routing'
 import type { Limits } from './routing'
 import type { Report, Settings, Task, TaskStatus } from '../types'
 
 export type { Report, Settings, Task, TaskStatus }
 
+/** The note a task stopped at its turn cap carries: its agent may be resumed, and its next turn reopens the task (TASK-0260). */
+export const TURN_CAP_NOTE = 'stopped at its turn cap'
+
 export const ENDED: readonly TaskStatus[] = ['completed', 'partial', 'blocked', 'failed', 'cancelled']
 
 export type Ledger = Task[]
 
-/** `a/b` and `a/b/` and `./a/b` are one path; backslashes are separators. */
-export const normalizePath = (path: string): string => {
-  let out = path.replace(/\\/g, '/').replace(/\/+$/, '')
-  out = out.replace(/^\.\//, '')
+/** A path split for comparison: its drive (lowercased, or ''), whether it is absolute, and its segments. */
+type Parts = { drive: string; absolute: boolean; segments: string[] }
+
+const partsOf = (path: string): Parts => {
+  let rest = path.replace(/\\/g, '/')
+  const found = /^([A-Za-z]):/.exec(rest)
+  const drive = found ? found[1]!.toLowerCase() : ''
+  if (found) rest = rest.slice(2)
+  const absolute = rest.startsWith('/') || drive !== ''
+  return { drive, absolute, segments: rest.split('/').filter(one => one !== '' && one !== '.') }
+}
+
+/** The segments laid onto `stack`, a `..` popping the one before it; a `..` with nothing to pop is kept when `keep`. */
+const collapse = (stack: readonly string[], segments: readonly string[], keep: boolean): string[] => {
+  const out = [...stack]
+  for (const one of segments) {
+    if (one !== '..') out.push(one)
+    else if (out.length && out[out.length - 1] !== '..') out.pop()
+    else if (keep) out.push(one)
+  }
   return out
 }
 
-const covers = (owned: string, path: string): boolean => owned === path || path.startsWith(`${owned}/`) || owned.startsWith(`${path}/`)
+/** `a/b`, `a/b/`, `./a/b` and `a/x/../b` are one path; backslashes are separators; `.` is the empty path. */
+export const normalizePath = (path: string): string => {
+  const parts = partsOf(path)
+  const out = collapse([], parts.segments, !parts.absolute).join('/')
+  return parts.drive ? `${parts.drive}:/${out}` : parts.absolute ? `/${out}` : out
+}
+
+/** Whole segments: `owned` covers `path` when it is `path` or a directory above it; the empty path is the whole root. */
+const covers = (owned: string, path: string): boolean => owned === '' || owned === path || path.startsWith(`${owned}/`)
 
 /** The paths of `a` and `b` that cover one another; a writer with no list covers everything. */
 export const overlap = (a: readonly string[], b: readonly string[]): string[] => {
   if (a.length === 0 || b.length === 0) return ['*']
   const found: string[] = []
-  for (const x of a.map(normalizePath)) for (const y of b.map(normalizePath)) if (covers(x, y)) found.push(x === y ? x : `${x} ~ ${y}`)
+  const shown = (path: string) => path || '.'
+  for (const x of a.map(normalizePath)) for (const y of b.map(normalizePath)) if (covers(x, y) || covers(y, x)) found.push(x === y ? shown(x) : `${shown(x)} ~ ${shown(y)}`)
   return found
 }
 
@@ -81,6 +109,38 @@ export const startBlocker = (ledger: Ledger, task: Task, limits: Limits): string
     }
   }
   return undefined
+}
+
+/**
+ * The one admission gate: over the rows as they are, `task`'s row moved to `running` with `patch` applied, or why not.
+ * A compare-and-set on status (the row must still be `from`: a cancel or an end that got there first wins), then the
+ * start rules (`startBlocker`) as if the row were queued. A blocked row is admitted only while it is a hand-off.
+ */
+export const admit = (ledger: Ledger, task: Task, patch: Partial<Task>, from: TaskStatus, limits: Limits): { ledger: Ledger; refused?: string } => {
+  const row = byId(ledger, task.id)
+  if (!row) return { ledger, refused: `task ${task.id} is no longer in the ledger` }
+  if (row.status !== from || (from === 'blocked' && !isHandedOff(row))) return { ledger, refused: `task ${task.id} is ${row.status}, not ${from === 'blocked' ? 'handed off' : from}` }
+  const blocker = startBlocker(ledger, { ...row, status: 'queued' }, limits)
+  if (blocker) return { ledger, refused: blocker }
+  return { ledger: setTask(ledger, task.id, { ...patch, status: 'running' }) }
+}
+
+/** The first `agent-<n>` no row has, for a worker the mod did not dispatch. */
+export const freeAgentId = (ledger: Ledger): string => {
+  let n = ledger.length + 1
+  while (byId(ledger, `agent-${n}`)) n++
+  return `agent-${n}`
+}
+
+/**
+ * A worker that began outside dispatch (an Agent-tool spawn): its row added as `running` over the rows as they are, or
+ * why not, by the same start rules. The id is the row's own when free, else the first free `agent-<n>`.
+ */
+export const admitNew = (ledger: Ledger, task: Task, limits: Limits): { ledger: Ledger; refused?: string; id: string } => {
+  const id = !task.id || byId(ledger, task.id) ? freeAgentId(ledger) : task.id
+  const row: Task = { ...task, id, status: 'running' }
+  const blocker = startBlocker(ledger, { ...row, status: 'queued' }, limits)
+  return blocker ? { ledger, refused: blocker, id } : { ledger: [...ledger, row], id }
 }
 
 /**
@@ -147,7 +207,7 @@ const reaches = (ledger: Ledger, from: string, target: string, seen = new Set<st
  * queued again in its place as its next retry, its dependants still waiting on it.
  */
 /** The rung of a model alias or id on the ladder, or -1 when it names none. */
-export const modelRank = (model: string): number => MODEL_LADDER.findIndex(alias => model.toLowerCase().includes(alias))
+export const modelRank = (model: string): number => familyRank(model)
 
 /** How a retry asks for more than the run before it, or undefined: a bigger model or a higher effort is an escalation. */
 export const escalationOf = (old: Settings, fresh: Settings): string | undefined => {
@@ -216,9 +276,19 @@ export const handoffRoot = (ledger: Ledger, task: Task, seen = new Set<string>()
 export const handoffWaitText = (task: Task, root: Task): string =>
   `waits on ${root.id} (handed off): its ${isSession(root) ? 'start_session' : 'Agent'} call is not made yet; make the call its hand-off names, or cancel ${task.id}`
 
-/** What a stalled task says: what it waits on and the two ways out. */
-export const stallText = (task: Task, root: Task): string =>
-  `waits on ${root.id} (${root.status}): dispatch ${root.id} again under its id to retry it, or cancel ${task.id}`
+/**
+ * What a stalled task says, by the state of the root it waits on: a cancelled root is never retried, a turn-capped one
+ * is resumed (a re-dispatch starts fresh and loses its edits), any other is retried under its id.
+ */
+export const stallText = (task: Task, root: Task, limits?: Limits): string => {
+  const head = `waits on ${root.id} (${root.status}): `
+  if (root.status === 'cancelled') return `${head}${root.id} was cancelled: cancel ${task.id}, or dispatch a new task with the same dependencies`
+  if (root.status === 'partial' && root.notes.includes(TURN_CAP_NOTE) && root.agentId) return `${head}resume ${root.id} with SendMessage to its agent id ${root.agentId}; a re-dispatch would start fresh and lose its edits`
+  const spent = limits !== undefined && root.retries >= limits.maxRetries
+  const count = limits === undefined ? '' : ` (retry ${root.retries + 1} of ${limits.maxRetries})`
+  if (spent) return `${head}${root.id} has used its ${limits!.maxRetries} retries: cancel ${task.id}, or dispatch a new task with the same dependencies`
+  return `${head}dispatch ${root.id} again under its id to retry it${count}, or cancel ${task.id}`
+}
 
 /** Whether a retry or an escalation is still within the limits. */
 export const mayRetry = (task: Task, limits: Limits): string | undefined =>
@@ -250,19 +320,28 @@ export const line = (task: Task): string => {
   const observed = task.observed ? `observed ${settingsText(task.observed)}` : task.resolvedModel ? `resolved ${task.resolvedModel}, effort unverified` : 'unverified'
   const next = task.report?.next?.trim() || task.reason || (task.status === 'queued' ? 'waits for its turn' : task.status === 'running' ? 'collect it' : '')
   const mismatch = task.notes.find(one => one.startsWith('effort mismatch'))
-  return `${task.id} → ${task.role}${task.agentId ?? task.sessionId ? ` [${task.agentId ?? task.sessionId}]` : ''} → requested ${settingsText(task.requested)} → ${observed}${mismatch ? ` (${mismatch})` : ''} → ${task.status}${task.tokens !== undefined ? ` · ${tokensText(task.tokens)} tok` : ''}${next ? ` → ${next}` : ''}`
+  return `${task.id} → ${task.role}${task.agentId ?? task.sessionId ? ` [${task.agentId ?? task.sessionId}]` : ''} → requested ${settingsText(task.requested)} → ${observed}${mismatch ? ` (${mismatch})` : ''} → ${task.status}${task.tokens !== undefined ? ` · ${tokensText(task.tokens)} tok` : ''}${task.branch ? ` · branch ${task.branch}` : ''}${next ? ` → ${next}` : ''}`
 }
 
 export const summary = (ledger: Ledger): string => (ledger.length ? ledger.map(line).join('\n') : 'No task in the ledger.')
 
+/** Why one queued task waits, in the words `blockers` prints; undefined for a task that is not queued. */
+export const blockerFor = (ledger: Ledger, task: Task, limits: Limits): string | undefined => {
+  if (task.status !== 'queued') return undefined
+  const root = stalledBy(ledger, task)
+  const handed = root ? undefined : handoffRoot(ledger, task)
+  return root ? stallText(task, root, limits) : handed ? handoffWaitText(task, handed) : (startBlocker(ledger, task, limits) ?? (task.reason || 'ready'))
+}
+
 export const blockers = (ledger: Ledger, limits: Limits): string[] =>
-  ledger
-    .filter(task => task.status === 'queued')
-    .map(task => {
-      const root = stalledBy(ledger, task)
-      const handed = root ? undefined : handoffRoot(ledger, task)
-      return `${task.id}: ${root ? stallText(task, root) : handed ? handoffWaitText(task, handed) : (startBlocker(ledger, task, limits) ?? (task.reason || 'ready'))}`
-    })
+  ledger.filter(task => task.status === 'queued').map(task => `${task.id}: ${blockerFor(ledger, task, limits)}`)
+
+/** What the status line counts: the tasks holding a slot (running, and handed off), the queued ones, and the policy. */
+export const statusSummary = (ledger: Ledger, policy: string): { policy: string; running: number; queued: number } => ({
+  policy,
+  running: ledger.filter(task => isActive(task) || holdsSlot(task)).length,
+  queued: ledger.filter(task => task.status === 'queued').length,
+})
 
 /** A row of the audit trail: no prompt, no report body, no secret. */
 export const auditRow = (task: Task) => ({
@@ -290,24 +369,51 @@ export const auditRow = (task: Task) => ({
 /** Tools whose call writes a file the hook can name. */
 export const WRITE_TOOLS: readonly string[] = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
 
-/** A path as the ledger keeps it: relative to `cwd` when under it, else as given. */
-export const relativeTo = (cwd: string, path: string): string => {
-  const base = normalizePath(cwd)
-  const full = normalizePath(path)
-  return full.startsWith(`${base}/`) ? full.slice(base.length + 1) : full
+/**
+ * A path resolved against the worker's root `cwd`, `.` and `..` collapsed, no file system touched. `inside` is its
+ * segments under the root (lowercased when the root starts with a drive letter, so the comparison ignores case), or
+ * undefined when it lies outside; `shown` is what to name: the path under the root, or the full path outside it.
+ */
+const resolveIn = (cwd: string, path: string): { inside: string | undefined; shown: string } => {
+  const root = partsOf(cwd)
+  const target = partsOf(path)
+  const windows = root.drive !== ''
+  const fold = (one: string) => (windows ? one.toLowerCase() : one)
+  const rootSegments = collapse([], root.segments, false)
+  // A path with a root of its own (a drive, or a leading slash) is taken as given; any other is laid onto the cwd.
+  const segments = collapse(target.absolute ? [] : rootSegments, target.segments, false)
+  const drive = target.absolute ? target.drive : root.drive
+  const full = `${drive ? `${drive}:` : ''}${target.absolute || root.absolute ? '/' : ''}${segments.join('/')}`
+  const under = (!target.absolute || (target.drive === root.drive && (root.absolute || !windows))) && segments.length >= rootSegments.length && rootSegments.every((one, at) => fold(one) === fold(segments[at]!))
+  if (!under) return { inside: undefined, shown: full }
+  const rest = segments.slice(rootSegments.length)
+  return { inside: rest.map(fold).join('/'), shown: rest.join('/') }
 }
+
+/** A path as the ledger keeps it: relative to `cwd` when under it, else resolved in full. */
+export const relativeTo = (cwd: string, path: string): string => resolveIn(cwd, path).shown
 
 /** Why a running worker may not write `path` now, or nothing. */
 export const writeBlocker = (ledger: Ledger, task: Task, path: string | undefined, cwd: string): string | undefined => {
   if (!task.isWriter) return `${task.id} (${task.role}) is a read-only assignment and may not write`
+  // An unknown checkout cannot fence: with no root every path would resolve as inside, so every write is refused.
+  const root = normalizePath(cwd ?? '')
+  if (!root.startsWith('/') && !/^[A-Za-z]:/.test(root)) return `${task.id}: the checkout path is unknown, so the write is refused`
   if (path === undefined || path === '') return `${task.id}: a write with no path is refused`
-  const target = relativeTo(cwd, path)
-  if (task.allowedFiles.length && !task.allowedFiles.map(normalizePath).some(owned => covers(owned, target)))
-    return `${task.id} may not write ${target}: outside its allowed files (${task.allowedFiles.join(', ')})`
+  const target = resolveIn(cwd, path)
+  if (target.inside === undefined) return `${task.id} may not write ${target.shown}: outside the checkout (${normalizePath(cwd) || '/'})`
+  const inside = target.inside
+  // An owned path resolves against the same root, one outside it owns nothing here, and an empty list is the whole root.
+  const owns = (owned: readonly string[]): boolean =>
+    owned.length === 0 ||
+    owned.some(one => {
+      const at = resolveIn(cwd, one)
+      return at.inside !== undefined && covers(at.inside, inside)
+    })
+  if (!owns(task.allowedFiles)) return `${task.id} may not write ${target.shown}: outside its allowed files (${task.allowedFiles.join(', ')})`
   for (const other of activeWriters(ledger)) {
     if (other.id === task.id || (other.isolated && task.isolated)) continue
-    if (other.allowedFiles.length === 0 || other.allowedFiles.map(normalizePath).some(owned => covers(owned, target)))
-      return `${task.id} may not write ${target}: writer ${other.id} owns it`
+    if (owns(other.allowedFiles)) return `${task.id} may not write ${target.shown}: writer ${other.id} owns it`
   }
   return undefined
 }
