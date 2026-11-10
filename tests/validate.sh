@@ -1781,6 +1781,15 @@ if ! INSTALL_OUT="$(bash tests/test-install.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# Claude Code agents carry the alias from .ai/context/model-tiers.md, and an
+# unlisted role gets `inherit` (TASK-0268, ADR-0059). Reads the repo, writes
+# only under mktemp. Unconditional (ADR-0009).
+if ! TIERS_OUT="$(bash tests/test-emit-tiers.sh 2>&1)"; then
+  printf '%s\n' "$TIERS_OUT" | grep -v '^ok' | sed 's/^/EMIT-TIERS: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # repo-inventory reports every risk it claims to, and reads without writing
 # (TASK-0167). Fixture repositories under mktemp, local git only; the check
 # compares every file under its roots before and after a run. Unconditional

@@ -283,6 +283,10 @@ Clause 8 is new and is the substantive addition from `TASK-0036`.
    supersedes it must be decided in `TASK-0040`, not improvised — two
    mechanisms coexisting is how a second owner of one fact appears.
 
+   *Superseded for Claude Code emission only by ADR-0059 (2026-11-10): this repo
+   owns the role-to-alias table Claude Code agents are emitted from. This clause
+   stands for every other client.*
+
 8. **The emitter refuses; it never degrades.** *(New — from `TASK-0036`.)*
 
    1. Each term in the capability vocabulary declares **which clients can

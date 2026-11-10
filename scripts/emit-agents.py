@@ -21,19 +21,19 @@ The control is that emission is cheap and idempotent, and install.sh is
 re-run. If you are here to add a staleness check, read those two ADRs
 first.
 
-`model` IS EMITTED UNRESOLVED, AND NOTHING HERE RESOLVES IT
------------------------------------------------------------
-A role's optional `model` is a tier name, emitted verbatim as
-`model: "{tier:<name>}"`. ADR-0018 clause 7 keeps the tier->model mapping in
-one place rather than duplicating it here — but that place,
-`agent-tiers`' models.jsonc, stays in opencode-customization (ADR-0017,
-rejected 2026-09-15). So the placeholder currently resolves nowhere.
+`model` FOR CLAUDE CODE COMES FROM ONE TABLE, .ai/context/model-tiers.md
+-----------------------------------------------------------------------
+ADR-0059 supersedes ADR-0018 clause 7 for Claude Code emission only: this
+repo owns the role->alias table (opus, sonnet, haiku) that Claude Code agents
+are emitted from, and emit_claude_code writes `model: <alias>` from it. A role
+the table does not list gets `model: inherit`. This file holds no table of its
+own, and a role's own `model` key does not override the table: change a
+role's tier by editing its line in .ai/context/model-tiers.md.
 
-Roles should omit `model`; every role authored so far does. Do NOT add a
-tier->model table to this file to "fix" it: two owners of one fact is
-exactly what clause 7 forbids, and worse than the gap. See
-docs/development/authoring-guide.md "Known gap: `model` has no resolver in
-this repo".
+OpenCode is unchanged: emit_opencode still writes `model: "{tier:<name>}"`,
+resolved by agent-tiers' models.jsonc, which stays in opencode-customization
+(ADR-0017, rejected 2026-09-15; clause 7 still applies there). See
+docs/development/authoring-guide.md "`model` and the tier table".
 
 REFUSE, NEVER DEGRADE
 ---------------------
@@ -411,6 +411,26 @@ def allowlist_note(patterns):
             "with a dot and allowing the quoted one (`TASK-0092` finding 12).", ""]
 
 
+TIER_TABLE = os.path.join(".ai", "context", "model-tiers.md")
+
+
+def model_alias(role):
+    """The Claude Code `model` value for `role`: its table tier, else `inherit`.
+
+    Reads the rows of .ai/context/model-tiers.md (`| opus | a, b |`). ADR-0059.
+    """
+    try:
+        with open(TIER_TABLE, encoding="utf-8") as fh:
+            lines = fh.read().split("\n")
+    except OSError:
+        return "inherit"
+    for line in lines:
+        m = re.match(r"^\|\s*(opus|sonnet|haiku)\s*\|(.*)\|\s*$", line)
+        if m and role in [r.strip() for r in m.group(2).split(",")]:
+            return m.group(1)
+    return "inherit"
+
+
 def emit_claude_code(role, fm, body):
     deny, extra, allow_tools = [], {}, []
     for term in fm["capabilities"]:
@@ -451,8 +471,7 @@ def emit_claude_code(role, fm, body):
         out.append("tools: %s" % ", ".join(allow_tools))
     for k in sorted(extra):
         out.append("%s: %s" % (k, extra[k]))
-    if fm.get("model"):
-        out.append("model: \"{tier:%s}\"" % fm["model"])
+    out.append("model: %s" % model_alias(role))
     out += ["---", "", body, ""]
     return "\n".join(out)
 

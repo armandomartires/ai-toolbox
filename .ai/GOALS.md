@@ -576,7 +576,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0266-marketplace-manifest.md
 - [x] TASK-0267 — Anthropic provider in the eval suite (P0.2)
   .ai/tasks/TASK-0267-claude-provider-evals.md
-- [>] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)
+- [x] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)
   .ai/tasks/TASK-0268-model-tier-table.md
 - [ ] TASK-0269 — MCP hygiene: gates annotations and lock drift (P0.4)
   .ai/tasks/TASK-0269-mcp-annotations-and-lock-drift.md

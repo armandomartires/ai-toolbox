@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0268
 - Created: 2026-11-10
@@ -56,35 +56,34 @@ Remove the unresolved `{tier:<name>}` placeholder from emitted Claude Code agent
 7. Wire the test into `tests/validate.sh` and refresh `docs/registry.md` if emission changes it.
 
 ## Acceptance criteria
-
-- [ ] The new ADR exists, is accepted by the human, and supersedes ADR-0018 clause 7 (recording the ADR-0017 reversal for Claude Code emission)
-- [ ] For each of the 15 roles, the Claude Code agent's `model:` equals the table value; an unlisted role emits `inherit`
-- [ ] The test fails when `emit_claude_code` is reverted
-- [ ] The docstring and the authoring guide no longer say the gap is open or that a table must not be added
-- [ ] Secondary: no emitted agent contains `{tier:`
+- [x] The new ADR exists, is accepted by the human, and supersedes ADR-0018 clause 7 (recording the ADR-0017 reversal for Claude Code emission)
+- [x] For each of the 15 roles, the Claude Code agent's `model:` equals the table value; an unlisted role emits `inherit`
+- [x] The test fails when `emit_claude_code` is reverted
+- [x] The docstring and the authoring guide no longer say the gap is open or that a table must not be added
+- [x] Secondary: no emitted agent contains `{tier:`
 
 ## Mandatory validations
-
-- [ ] tests/validate.sh
-- [ ] the new tier test, plus `tests/test-emit-prune.sh` and `tests/test-emit-allowlist-note.sh` (unchanged behaviour)
+- [ ] tests/validate.sh (not run by the builder: the coordinator runs the gate at commit)
+- [x] the new tier test, plus `tests/test-emit-allowlist-note.sh` (unchanged); `test-emit-prune.sh` fails one symlink case at HEAD too (log)
 
 ## Risks and rollback
-
 - The draft may need to reach beyond Claude Code emission (OpenCode or Codex tiers). That is outside the advance acceptance: stop and ask the human.
-- A tier that is too low for a role degrades quality silently; the table is one file and a change is one line.
 - Only 4 roles are emitted for Claude Code until TASK-0271, so the test must cover the table directly as well as the emitted files.
 - Rollback: git revert the task commit
 
 ## Outputs / handover
-
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| ADR-0059 (`.ai/decisions/0059-*.md`) | Accepted (human, in advance, 2026-11-10); Claude Code emission only |
+| ADR-0018 clause 7 | one italic pointer to ADR-0059; nothing else edited |
+| `.ai/context/model-tiers.md`, `scripts/emit-agents.py` | the D3 table; `model_alias()` and `emit_claude_code` read it; docstring rewritten |
+| authoring guide, `tests/test-emit-tiers.sh`, `tests/validate.sh` | "Known gap" replaced; new test wired in after test-install |
 
-Next:
+Next: the coordinator runs `tests/validate.sh` and commits.
 
 ## Execution log
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
-  - Evidence: none yet
-  - Deviation: none
+- 2026-11-10 · builder/Sonnet 5.5 · steps 1-7 done, uncommitted in the worktree
+  - Evidence: `test-emit-tiers.sh` printed 24 FAIL before the change, OK after, and 24 FAIL with `emit_claude_code`'s model line removed (restored, OK). `test-emit-allowlist-note.sh: OK`; `check-private-names: OK`. `sync-registry.sh` changed nothing in content.
+  - Deviation: no full `tests/validate.sh` (disk nearly full); the coordinator runs the gate. `test-emit-prune.sh` fails "a symlink named after a role is left alone" at HEAD too (Windows symlinks).

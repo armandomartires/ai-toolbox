@@ -568,26 +568,24 @@ Admitting `all` then requires, in this order — a run establishing whether an
 with `delegation-allowlist` on it; this section rewritten to say so; and only
 then the gate widened.
 
-#### Known gap: `model` has no resolver in this repo
+#### `model` and the tier table
 
-`scripts/emit-agents.py` emits `model: "{tier:<name>}"` verbatim and **does
-not resolve it**. That is deliberate (ADR-0018 clause 7: model references
-belong in one place), but the file that owns the tier→model mapping —
-`agent-tiers`' `models.jsonc` — **stays in `opencode-customization`**
-(ADR-0017, rejected 2026-09-15). So a role declaring `model` emits an
-unresolved placeholder that no client understands.
+For Claude Code, `scripts/emit-agents.py` writes `model: <alias>` from one
+table, `.ai/context/model-tiers.md`, which maps a role name to `opus`,
+`sonnet` or `haiku`. A role the table does not list gets `model: inherit`.
+ADR-0059 supersedes ADR-0018 clause 7 for Claude Code emission only and
+reverses the ADR-0017 outcome there; the human accepted it on 2026-11-10.
 
-**Therefore: omit `model` until this is resolved.** Every role authored so
-far does. A role needing a specific model is the trigger to decide, not a
-reason to improvise.
+**To change a role's tier, edit its line in the table.** Do not put `model`
+in a role's `agent.md` to set it: for Claude Code the table wins, and every
+role authored so far omits `model`. The table and the emitter are the only
+places that know an alias; do not add a second mapping.
 
-**Do not close this gap by adding a second tier→model mapping here.** Two
-owners of one fact is the defect clause 7 exists to prevent, and it is worse
-than the gap. The real options, when a role forces the question, are: drop
-`model` from this schema; own the mapping here and supersede clause 7 by a
-new ADR; or emit a client-native model ID per client and accept the
-duplication. ADR-0017's "one gap this creates" section carries the full
-reasoning.
+OpenCode is unchanged. `emit_opencode` still writes `model: "{tier:<name>}"`
+for a role that declares one, and `agent-tiers`' `models.jsonc` (which stays
+in `opencode-customization`, ADR-0017) resolves it. Codex has no per-role
+model mapping here. Extending the table to either client needs its own
+decision.
 
 ### Capability vocabulary
 A role declares **intent**; the emitter translates it into each client's
