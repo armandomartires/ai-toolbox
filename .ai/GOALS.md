@@ -572,15 +572,15 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
 Goal: Claude Code becomes the reference harness, with generated ports; see .ai/planning/sprints/SPRINT-S11-claude-alignment.md
 - [x] TASK-0286 — Open sprint S11 and add Phase 11 to the roadmap
   .ai/tasks/TASK-0286-open-sprint-s11.md
-- [ ] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
+- [>] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
   .ai/tasks/TASK-0266-marketplace-manifest.md
-- [ ] TASK-0267 — Anthropic provider in the eval suite (P0.2)
+- [x] TASK-0267 — Anthropic provider in the eval suite (P0.2)
   .ai/tasks/TASK-0267-claude-provider-evals.md
-- [ ] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)
+- [>] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)
   .ai/tasks/TASK-0268-model-tier-table.md
 - [ ] TASK-0269 — MCP hygiene: gates annotations and lock drift (P0.4)
   .ai/tasks/TASK-0269-mcp-annotations-and-lock-drift.md
-- [ ] TASK-0270 — Fix stale loop text (P0.5)
+- [>] TASK-0270 — Fix stale loop text (P0.5)
   .ai/tasks/TASK-0270-stale-loop-text.md
 - [ ] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
   .ai/tasks/TASK-0271-role-guard.md

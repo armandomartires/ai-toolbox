@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0267
 - Created: 2026-11-10
@@ -47,14 +47,14 @@ Add an `anthropic` provider to `evals/run.py` so the roles are measured on the m
 
 ## Acceptance criteria
 
-- [ ] The self-test covers the anthropic provider, including the missing-key case, and fails when the provider is removed
-- [ ] `thresholds.json` carries anthropic floors
-- [ ] `.gitlab/ci/evals.yml`'s `evals-live` matrix lists `anthropic`, `xai` and `openai` and publishes junit for each. The nightly cadence is a pipeline schedule the human sets in GitLab and is not verifiable from the file; a first scheduled run is the human's, not asserted here
+- [x] The self-test covers the anthropic provider, including the missing-key case, and fails when the provider is removed
+- [x] `thresholds.json` carries anthropic floors
+- [x] `.gitlab/ci/evals.yml`'s `evals-live` matrix lists `anthropic`, `xai` and `openai` and publishes junit for each. The nightly cadence is a pipeline schedule the human sets in GitLab and is not verifiable from the file; a first scheduled run is the human's, not asserted here
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] the evals self-test (`python evals/run.py --self-test`, or the form `evals/` documents)
+- [x] tests/validate.sh
+- [x] the evals self-test (`python evals/run.py --self-test`, or the form `evals/` documents)
 
 ## Risks and rollback
 
@@ -66,12 +66,20 @@ Add an `anthropic` provider to `evals/run.py` so the roles are measured on the m
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `evals/run.py` | `anthropic` provider (Messages API, `x-api-key`, `ANTHROPIC_API_KEY`, `EVAL_ANTHROPIC_MODEL` with documented default `claude-sonnet-5-5`); self-test covers missing-key `provider error` and a mocked-transport request/response check |
+| `evals/thresholds.json` | anthropic floors: adjudicator 0.7, refuter 0.5, injection 1.0 (start low, raise after the first week) |
+| `.gitlab/ci/evals.yml` | `evals-live` matrix is `[anthropic, xai, openai]`; header comments name `ANTHROPIC_API_KEY` as scoped to `evals-live` |
+| `evals/README.md` | anthropic model/key and a spend note |
 
-Next:
+Next: the human stores `ANTHROPIC_API_KEY` in Vault (ADR-0030), sets it as a protected, masked project variable scoped to `evals-live`, and sets the nightly pipeline schedule. The live job's first run is unexercised until then; no live call, Vault read or request to api.anthropic.com was made. Trials and timeout sizing stay with TASK-0278.
 
 ## Execution log
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-10 · agent/Sonnet 5.5 · TASK-0267 implemented, left uncommitted
+  - Evidence: self-test extended first and failed with `KeyError: 'anthropic'`; after the provider it passed (rc 0); with the PROVIDERS entry removed it failed again, then restored; `python evals/run.py` mock scores all 1.00; `bash tests/validate.sh` ended `validate.sh: OK`
+  - Deviation: README updated (inside `evals/`, brief asked for a spend note). The worktree base was stale at first; fast-forwarded by the coordinator. The "remove the provider" check was done by deleting the PROVIDERS line only, not the call branch. Only the missing-key and mocked-transport cases are covered; the live path is untested.
+- 2026-11-10 · coordinator (Opus 5.5) · review R-0267 fixes: default model `claude-sonnet-5-5`; a malformed body (`TypeError`, `AttributeError`, `IndexError`) ends as `ProviderError`; HTTP 529 retried; README and CI comment corrected
+  - Evidence: new malformed-body self-test fails with the old except tuple (rc 1), passes with the fix (rc 0); mock run rc 0; `thresholds.json` and `evals.yml` parse

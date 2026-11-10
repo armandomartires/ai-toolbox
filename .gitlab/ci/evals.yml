@@ -3,7 +3,7 @@
 # evals-mock: the default. Replays canned responses, no network, no keys.
 #   Runs on every MR and on master pushes.
 # evals-live: real providers, ONLY on a scheduled pipeline on master. The
-#   keys (XAI_API_KEY, OPENAI_API_KEY) are protected, masked project
+#   keys (ANTHROPIC_API_KEY, XAI_API_KEY, OPENAI_API_KEY) are protected, masked project
 #   variables scoped to the `evals-live` environment, so they exist only in
 #   this job, and only on the protected master ref. They are read
 #   by evals/run.py from the environment and are never echoed: no `set -x`,
@@ -38,7 +38,8 @@ evals-mock:
 evals-live:
   extends: .evals-base
   # The API keys are scoped to this environment (Armando, 2026-11-04: "Limit
-  # both keys to evals-live now"), so no other master job receives them.
+  # both keys to evals-live now"; ANTHROPIC_API_KEY must be scoped the same
+  # way when it is added, TASK-0267), so no other master job receives them.
   # `action: verify` records no deployment; it only selects the environment.
   environment:
     name: evals-live
@@ -47,7 +48,7 @@ evals-live:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   parallel:
     matrix:
-      - EVAL_PROVIDER: [xai, openai]
+      - EVAL_PROVIDER: [anthropic, xai, openai]
   script:
     - python3 evals/run.py --provider "$EVAL_PROVIDER" --out "evals-$EVAL_PROVIDER.json" --junit "evals-$EVAL_PROVIDER.xml"
   artifacts:

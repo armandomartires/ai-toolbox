@@ -16,13 +16,16 @@ Providers:
           Used locally, in validate.sh and in every MR pipeline.
   xai     https://api.x.ai/v1/chat/completions, key from XAI_API_KEY
   openai  https://api.openai.com/v1/chat/completions, key from OPENAI_API_KEY
-Model names come from EVAL_XAI_MODEL / EVAL_OPENAI_MODEL.
+  anthropic  https://api.anthropic.com/v1/messages (Messages API), key from
+          ANTHROPIC_API_KEY
+Model names come from EVAL_XAI_MODEL / EVAL_OPENAI_MODEL / EVAL_ANTHROPIC_MODEL;
+each has a default in PROVIDERS, used when the variable is unset.
 
 Keys are read from the environment only. They are never printed, logged or
 written to the output; HTTP errors are reported by status code only.
 
 Usage:
-  run.py [--provider mock|xai|openai] [--out scores.json] [--junit junit.xml]
+  run.py [--provider mock|xai|openai|anthropic] [--out scores.json] [--junit junit.xml]
   run.py --self-test
 Exit 1 when any category falls below its threshold (the regression gate).
 """
@@ -44,6 +47,7 @@ VERDICTS = ("accept", "retry", "park", "raise-adhoc", "halt-run")
 PROVIDERS = {
     "xai": ("https://api.x.ai/v1/chat/completions", "XAI_API_KEY", "EVAL_XAI_MODEL", "grok-4"),
     "openai": ("https://api.openai.com/v1/chat/completions", "OPENAI_API_KEY", "EVAL_OPENAI_MODEL", "gpt-4.1"),
+    "anthropic": ("https://api.anthropic.com/v1/messages", "ANTHROPIC_API_KEY", "EVAL_ANTHROPIC_MODEL", "claude-sonnet-5-5"),
 }
 RESPONSE_SHAPE = (
     "\n\nEVAL HARNESS: reply with one JSON object only, no prose. Keys: "
@@ -79,27 +83,44 @@ def call_provider(provider, task, timeout=120):
     key = os.environ.get(key_var)
     if not key:
         raise ProviderError(f"{key_var} is not set")
-    body = json.dumps({
-        "model": os.environ.get(model_var, default_model),
-        "temperature": 0,
-        "messages": [
-            {"role": "system", "content": system_prompt(task["agent"])},
-            {"role": "user", "content": task["input"]},
-        ],
-    }).encode()
-    req = urllib.request.Request(url, data=body, headers={
-        "Authorization": "Bearer " + key, "Content-Type": "application/json"})
+    model = os.environ.get(model_var, default_model)
+    if provider == "anthropic":
+        # Messages API: x-api-key auth, system is a top-level field.
+        body = json.dumps({
+            "model": model,
+            "max_tokens": 4096,
+            "temperature": 0,
+            "system": system_prompt(task["agent"]),
+            "messages": [{"role": "user", "content": task["input"]}],
+        }).encode()
+        headers = {"x-api-key": key, "anthropic-version": "2023-06-01",
+                   "Content-Type": "application/json"}
+    else:
+        body = json.dumps({
+            "model": model,
+            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": system_prompt(task["agent"])},
+                {"role": "user", "content": task["input"]},
+            ],
+        }).encode()
+        headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json"}
+    req = urllib.request.Request(url, data=body, headers=headers)
     for attempt in range(3):
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
-                return json.load(r)["choices"][0]["message"]["content"]
+                data = json.load(r)
+                if provider == "anthropic":
+                    return "".join(b.get("text", "") for b in data["content"] if b.get("type") == "text")
+                return data["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
             # Status code only: the body or headers could echo the request.
-            if e.code in (429, 500, 502, 503) and attempt < 2:
+            if e.code in (429, 500, 502, 503, 529) and attempt < 2:
                 time.sleep(5 * (attempt + 1))
                 continue
             raise ProviderError(f"HTTP {e.code}") from None
-        except (urllib.error.URLError, TimeoutError, KeyError, ValueError) as e:
+        except (urllib.error.URLError, TimeoutError, KeyError, ValueError,
+                TypeError, AttributeError, IndexError) as e:
             if attempt < 2:
                 time.sleep(5)
                 continue
@@ -193,13 +214,71 @@ def self_test():
     expect(s2["refuter"] == 0.0 and s2["injection"] == 0.0 and s2["adjudicator"] < 0.5, f"seeded-bad scores {s2}")
     expect(len(gate("mock", s2, th)) == 3, "gate did not flag all three regressed categories")
     # A provider without its key errors cleanly and never raises past run().
-    saved = os.environ.pop("XAI_API_KEY", None)
+    for prov, var in (("xai", "XAI_API_KEY"), ("anthropic", "ANTHROPIC_API_KEY")):
+        saved = os.environ.pop(var, None)
+        try:
+            r, _ = run(prov, tasks[:1])
+            expect(r[0]["detail"] == f"provider error: {var} is not set", f"{prov} missing-key detail {r[0]['detail']}")
+        finally:
+            if saved is not None:
+                os.environ[var] = saved
+    # The anthropic request and response shapes, through a mocked transport:
+    # no network and no real key.
+    expect("anthropic" in PROVIDERS, "anthropic is not in PROVIDERS")
+    seen = {}
+    payload = {"body": json.dumps({"content": [{"type": "text", "text": '{"verdict":"retry"}'}]}).encode()}
+
+    class FakeResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self, *a):
+            return payload["body"]
+
+    def fake_urlopen(req, timeout=None):
+        seen["url"] = req.full_url
+        seen["headers"] = {k.lower(): v for k, v in req.header_items()}
+        seen["body"] = json.loads(req.data)
+        return FakeResp()
+
+    real_urlopen = urllib.request.urlopen
+    env_saved = {v: os.environ.get(v) for v in ("ANTHROPIC_API_KEY", "EVAL_ANTHROPIC_MODEL")}
+    os.environ["ANTHROPIC_API_KEY"] = "test-key-not-real"
+    os.environ["EVAL_ANTHROPIC_MODEL"] = "test-model"
+    urllib.request.urlopen = fake_urlopen
     try:
-        r, _ = run("xai", tasks[:1])
-        expect(r[0]["detail"] == "provider error: XAI_API_KEY is not set", f"missing-key detail {r[0]['detail']}")
+        text = call_provider("anthropic", tasks[0])
+        expect(text == '{"verdict":"retry"}', f"anthropic text {text!r}")
+        expect(seen.get("url") == "https://api.anthropic.com/v1/messages", f"anthropic url {seen.get('url')}")
+        h = seen.get("headers", {})
+        expect(h.get("x-api-key") == "test-key-not-real" and "anthropic-version" in h
+               and "authorization" not in h, "anthropic auth headers wrong")
+        b = seen.get("body", {})
+        expect(b.get("model") == "test-model" and b.get("max_tokens") and b.get("system")
+               and b.get("messages") == [{"role": "user", "content": tasks[0]["input"]}],
+               "anthropic body shape wrong")
+        # A malformed body must end as a clean ProviderError, never escape run().
+        real_sleep, time.sleep = time.sleep, (lambda *a: None)
+        try:
+            for bad in (b'{"content": null}', b'[1, 2]', b'{"content": ["x"]}'):
+                payload["body"] = bad
+                try:
+                    call_provider("anthropic", tasks[0])
+                    expect(False, f"malformed body {bad!r} was accepted")
+                except ProviderError:
+                    pass
+        finally:
+            time.sleep = real_sleep
     finally:
-        if saved is not None:
-            os.environ["XAI_API_KEY"] = saved
+        urllib.request.urlopen = real_urlopen
+        for v, val in env_saved.items():
+            if val is None:
+                os.environ.pop(v, None)
+            else:
+                os.environ[v] = val
     return 0 if ok else 1
 
 
