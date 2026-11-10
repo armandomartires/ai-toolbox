@@ -2,6 +2,8 @@
 
 S10 closed 2026-09-26 on `REVIEW-0012` and is archived in `planning/sprints/`. Opening the next sprint is a human decision. Until then, work runs task by task on the human's routing. The next task id is the next number not yet used in `.ai/tasks/`.
 
+**S11 — Claude-centric alignment is planned, not open** (2026-11-10). Its 20 briefs, `TASK-0266` to `TASK-0285`, come from the answered alignment plan in `docs/reports/2026-11-10-alignment/` and are listed in `planning/sprints/SPRINT-S11-claude-alignment.md`. Opening it, and adding its phase to `ROADMAP.md`, is the human's call.
+
 ## Open, not scheduled
 
 1. **`worktree-only` on Claude Code.** Measured as not enforced (`TASK-0111`). To decide: keep emission refused, redefine the term, or have the roles stop declaring it.

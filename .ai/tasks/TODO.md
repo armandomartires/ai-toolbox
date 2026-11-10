@@ -299,6 +299,29 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0262 — Scripts are checked out with LF, so a Linux bash on a Windows clone runs them
 - [?] TASK-0265 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
 
+## Sprint S11 — Claude-centric alignment (planned 2026-11-10)
+
+- [ ] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
+- [ ] TASK-0267 — Anthropic provider in the eval suite (P0.2)
+- [ ] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)
+- [ ] TASK-0269 — MCP hygiene: gates annotations and lock drift (P0.4)
+- [ ] TASK-0270 — Fix stale loop text (P0.5)
+- [ ] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
+- [ ] TASK-0272 — Claude Code plugins per component kind (P1.2)
+- [ ] TASK-0273 — Loops as invocable skills (P1.3)
+- [ ] TASK-0274 — Claude skill controls in the schema (P1.4)
+- [ ] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
+- [ ] TASK-0276 — Ship permissions and sandbox settings (P1.6)
+- [ ] TASK-0277 — Stop hook runs a fast check (P1.7)
+- [ ] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
+- [ ] TASK-0279 — Claude Code OpenTelemetry (P1.9)
+- [ ] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
+- [ ] TASK-0281 — Codex port completion (P2.2)
+- [ ] TASK-0282 — Long-running harness alignment (P2.3)
+- [ ] TASK-0283 — Signed, versioned releases (P2.4)
+- [ ] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
+- [ ] TASK-0285 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
+
 ## Post-S9 (superseded by the promotion above)
 
 - [x] TASK-0074 — One guard pair for both command allowlists, and a correction to TASK-0071

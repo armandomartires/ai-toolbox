@@ -567,3 +567,46 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   branch: agent/TASK-0262
 - [?] TASK-0265 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
   .ai/tasks/TASK-0265-orchestrator-review-fixes.md
+
+## S11 — Claude-centric alignment
+Goal: Claude Code becomes the reference harness, with generated ports; see .ai/planning/sprints/SPRINT-S11-claude-alignment.md
+- [ ] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
+  .ai/tasks/TASK-0266-marketplace-manifest.md
+- [ ] TASK-0267 — Anthropic provider in the eval suite (P0.2)
+  .ai/tasks/TASK-0267-claude-provider-evals.md
+- [ ] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)
+  .ai/tasks/TASK-0268-model-tier-table.md
+- [ ] TASK-0269 — MCP hygiene: gates annotations and lock drift (P0.4)
+  .ai/tasks/TASK-0269-mcp-annotations-and-lock-drift.md
+- [ ] TASK-0270 — Fix stale loop text (P0.5)
+  .ai/tasks/TASK-0270-stale-loop-text.md
+- [ ] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
+  .ai/tasks/TASK-0271-role-guard.md
+- [ ] TASK-0272 — Claude Code plugins per component kind (P1.2)
+  .ai/tasks/TASK-0272-claude-code-plugins.md
+- [ ] TASK-0273 — Loops as invocable skills (P1.3)
+  .ai/tasks/TASK-0273-loops-as-skills.md
+- [ ] TASK-0274 — Claude skill controls in the schema (P1.4)
+  .ai/tasks/TASK-0274-claude-skill-controls.md
+- [ ] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
+  .ai/tasks/TASK-0275-claude-md-layer.md
+- [ ] TASK-0276 — Ship permissions and sandbox settings (P1.6)
+  .ai/tasks/TASK-0276-permissions-and-sandbox.md
+- [ ] TASK-0277 — Stop hook runs a fast check (P1.7)
+  .ai/tasks/TASK-0277-stop-hook-fast-check.md
+- [ ] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
+  .ai/tasks/TASK-0278-evals-trials-and-growth.md
+- [ ] TASK-0279 — Claude Code OpenTelemetry (P1.9)
+  .ai/tasks/TASK-0279-claude-code-otel.md
+- [ ] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
+  .ai/tasks/TASK-0280-claude-reference-profile.md
+- [ ] TASK-0281 — Codex port completion (P2.2)
+  .ai/tasks/TASK-0281-codex-port-completion.md
+- [ ] TASK-0282 — Long-running harness alignment (P2.3)
+  .ai/tasks/TASK-0282-long-run-harness.md
+- [ ] TASK-0283 — Signed, versioned releases (P2.4)
+  .ai/tasks/TASK-0283-signed-versioned-releases.md
+- [ ] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
+  .ai/tasks/TASK-0284-agent-sdk-runner.md
+- [ ] TASK-0285 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
+  .ai/tasks/TASK-0285-gates-http-transport.md

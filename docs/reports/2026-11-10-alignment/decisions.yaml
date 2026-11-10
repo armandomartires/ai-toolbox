@@ -1,0 +1,376 @@
+# ai-toolbox alignment decisions - answers file
+# Commit a4704caacf609cf22ecdb41193855580a9d7da3b, generated 2026-11-10 (Europe/Brussels).
+# Fill 'answer' with an option key (single) or a list of keys (multi); 'Other' -> answer: other and explain in notes.
+# Keep in sync with ALIGNMENT-PLAN.md (the .md wins on conflict).
+schema: 1
+commit: a4704caacf609cf22ecdb41193855580a9d7da3b
+answered_by: "Armando Martires"
+answered_on: 2026-11-10
+questions:
+  - id: D1
+    title: "Per-role command boundaries in Claude Code (ADR-0018 clause 8.3)"
+    question: "How should the seven refused terms be handled for Claude Code?"
+    select: single
+    recommended: B
+    unblocks: [P1.1, P2.1]
+    unblocks_assessment_ids: [N1, S1]
+    sources: [A4, A5, A12, A2]
+    options:
+      - key: A
+        text: "Keep ADR-0018 as is; Claude Code stays at 4 roles"
+        consequence: "No risk, but design-brief, project-build and unattended-run stay OpenCode-only."
+      - key: B
+        text: "Measure first (fixture per term, like TASK-0107), then supersede 8.3 with a new ADR only for terms that pass"
+        consequence: "Small delay; every enforced boundary is proven before it ships."
+      - key: C
+        text: "Supersede 8.3 now and enforce all seven with the role guard plus permission rules"
+        consequence: "Fastest, but ships unmeasured security boundaries."
+      - key: D
+        text: "Enforce only the push / force-push terms via permission rules; keep the rest refused"
+        consequence: "Covers the highest-impact rules; roles needing bash-allowlist stay OpenCode-only."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
+  - id: D2
+    title: "Claude Code marketplace as the primary distribution"
+    question: "What should be the primary way to install ai-toolbox for Claude Code?"
+    select: single
+    recommended: B
+    unblocks: [P0.1, P1.2]
+    unblocks_assessment_ids: [Q1, N2]
+    sources: [A6, A7, A8, A26]
+    options:
+      - key: A
+        text: "Keep install.sh as primary; add the marketplace only as an optional extra"
+        consequence: "Least change; users still need a clone and a shell script."
+      - key: B
+        text: "Marketplace + plugins primary; install.sh kept for development and non-Claude ports"
+        consequence: "Standard /plugin install flow, versioned; two paths to keep in sync."
+      - key: C
+        text: "Marketplace only; retire install.sh for Claude Code entirely"
+        consequence: "Simplest for users; dev link mode and the current tests need rework."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
+  - id: D3
+    title: "Model tier per role"
+    question: "Which tiering policy should the emitter apply?"
+    select: single
+    recommended: B
+    unblocks: [P0.3]
+    unblocks_assessment_ids: [Q3]
+    sources: [A4]
+    options:
+      - key: A
+        text: "inherit for every role"
+        consequence: "Zero cost decisions now; every role runs on the session model."
+      - key: B
+        text: "Per-role tiers from the table below, default inherit"
+        consequence: "Better cost / quality fit; one table to maintain in .ai/context."
+      - key: C
+        text: "opus for every role"
+        consequence: "Highest quality and cost; unattended runs get expensive."
+      - key: D
+        text: "Per-role tiers, but unattended roles capped at sonnet"
+        consequence: "Bounded cost for long runs; judgement roles may be weaker there."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
+    role_tiers:  # used if answer is B or D; values: opus | sonnet | haiku | inherit
+      adjudicator: {suggested: opus, answer: opus}
+      closer: {suggested: haiku, answer: haiku}
+      critic: {suggested: opus, answer: opus}
+      designer-manager: {suggested: opus, answer: opus}
+      gate-runner: {suggested: haiku, answer: haiku}
+      git-ops: {suggested: sonnet, answer: sonnet}
+      ideator: {suggested: sonnet, answer: sonnet}
+      implementer: {suggested: sonnet, answer: sonnet}
+      park-steward: {suggested: haiku, answer: haiku}
+      preflight: {suggested: haiku, answer: haiku}
+      qa-test: {suggested: sonnet, answer: sonnet}
+      refuter: {suggested: opus, answer: opus}
+      review: {suggested: sonnet, answer: sonnet}
+      run-scribe: {suggested: haiku, answer: haiku}
+      task-planner: {suggested: opus, answer: opus}
+  - id: D4
+    title: "CLAUDE.md layer over AGENTS.md (ADR-0002)"
+    question: "How should Claude-specific instructions be layered?"
+    select: single
+    recommended: B
+    unblocks: [P1.5]
+    unblocks_assessment_ids: [N5]
+    sources: [A11, A2, S5]
+    options:
+      - key: A
+        text: "Keep the symlink"
+        consequence: "No change; no Claude-only layer, no path-scoped rules."
+      - key: B
+        text: "Short CLAUDE.md that imports @AGENTS.md plus Claude-only notes, and track .claude/rules/"
+        consequence: "Recommended layering; supersedes ADR-0002, needs a .gitignore exception."
+      - key: C
+        text: "Keep the symlink, but track .claude/rules/ only"
+        consequence: "Path-scoped rules without touching ADR-0002; no Claude-only top-level notes."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
+  - id: D5
+    title: "Runner for unattended runs"
+    question: "Should unattended runs get an Agent SDK runner?"
+    select: single
+    recommended: D
+    unblocks: [P2.5]
+    unblocks_assessment_ids: [S5]
+    sources: [A17, A25]
+    options:
+      - key: A
+        text: "No; keep the current bindings"
+        consequence: "No new runtime; programmatic control stays limited to claude -p."
+      - key: B
+        text: "Add an Agent SDK runner next to the current binding, compare on the golden run, then pick"
+        consequence: "Evidence-based switch; two runners to maintain during the trial."
+      - key: C
+        text: "Replace the Claude Code binding with the SDK runner"
+        consequence: "One Claude path; Python SDK dependency becomes mandatory."
+      - key: D
+        text: "Defer until P1 items N1 and S3 are done"
+        consequence: "Keeps focus; the decision is re-asked later."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
+  - id: D6
+    title: "Port tiers"
+    question: "Which harnesses are supported, and at what level? (tick one per harness)"
+    select: multi
+    recommended: [A, B, C]
+    unblocks: [P2.2]
+    unblocks_assessment_ids: [S2]
+    sources: [S9, S10, O5, O6, O7, O8]
+    options:
+      - key: A
+        text: "OpenCode: supported, generated port with tests"
+        consequence: "Keeps today's richest port."
+      - key: B
+        text: "Codex: supported, generated port with tests (S2)"
+        consequence: "Extra work in S2; uses shared standards."
+      - key: C
+        text: "Bionic / LM Studio: best-effort, untested"
+        consequence: "Lower maintenance; may break silently."
+      - key: D
+        text: "Bionic / LM Studio: drop"
+        consequence: "Removes a client and its configs; ADR-0020 superseded."
+      - key: E
+        text: "Codex: best-effort only, skip S2"
+        consequence: "Saves S2; Codex users get skills and AGENTS.md only."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: [A, B, C]
+    notes: ""
+  - id: D7
+    title: "Remote MCP endpoint for gates"
+    question: "Should gates be reachable over HTTP for remote harnesses?"
+    select: single
+    recommended: A
+    unblocks: [P2.6]
+    unblocks_assessment_ids: [S6]
+    sources: [X3, S3, S4]
+    options:
+      - key: A
+        text: "No; stdio only"
+        consequence: "No new attack surface; remote providers use function calling only."
+      - key: B
+        text: "Yes, behind OAuth 2.1, sandboxed, with an ADR"
+        consequence: "Remote use possible; execution server exposed to the network."
+      - key: C
+        text: "Defer until a concrete remote use case exists"
+        consequence: "Revisit later; S6 ships docs only."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
+  - id: Q8
+    title: "Marketplace hosting and source type"
+    question: "Where should users add the marketplace from?"
+    select: single
+    recommended: D
+    unblocks: [P0.1, P1.2]
+    unblocks_assessment_ids: [Q1, N2]
+    sources: [A7, A8]
+    options:
+      - key: A
+        text: "GitLab repo, relative-path sources"
+        consequence: "One source of truth; users need GitLab access."
+      - key: B
+        text: "GitHub mirror, relative-path sources"
+        consequence: "Familiar /plugin marketplace add owner/repo form; depends on the mirror."
+      - key: C
+        text: "claude.ai org library only"
+        consequence: "Org-managed; no self-hosted marketplace file needed for users."
+      - key: D
+        text: "GitLab marketplace plus the claude.ai org library"
+        consequence: "Covers both audiences; two release targets."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: D
+    notes: ""
+  - id: Q9
+    title: "Eval budget and trials"
+    question: "What live-eval budget should Q2 and N8 assume?"
+    select: single
+    recommended: B
+    unblocks: [P0.2, P1.8]
+    unblocks_assessment_ids: [Q2, N8]
+    sources: [A23]
+    options:
+      - key: A
+        text: "k=1 trial, weekly, Claude only"
+        consequence: "Cheapest; noisy scores."
+      - key: B
+        text: "k=3 trials, weekly, Claude; xAI / OpenAI monthly"
+        consequence: "Stable Claude signal at moderate cost."
+      - key: C
+        text: "k=5 trials, nightly, all three providers"
+        consequence: "Best signal; highest API spend."
+      - key: D
+        text: "k=3 trials, only on MRs labelled evals plus weekly"
+        consequence: "Spend follows changes; needs a label convention."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: C
+    notes: ""
+  - id: Q10
+    title: "Role-guard rollout mode"
+    question: "How should the guard be rolled out once D1 allows it?"
+    select: single
+    recommended: A
+    unblocks: [P1.1]
+    unblocks_assessment_ids: [N1]
+    sources: [A5, A12]
+    options:
+      - key: A
+        text: "ask for every out-of-allowlist call for two weeks, then deny"
+        consequence: "Surfaces false positives safely; prompts during the trial."
+      - key: B
+        text: "deny immediately, onFailure: block"
+        consequence: "Strict from day one; may stall runs on false positives."
+      - key: C
+        text: "log-only (allow + record) first, then deny"
+        consequence: "No friction; boundaries unenforced during the trial."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: A
+    notes: ""
+  - id: Q11
+    title: "Plugin granularity"
+    question: "How should skills, agents, hooks and MCP be split into plugins?"
+    select: single
+    recommended: A
+    unblocks: [P1.2]
+    unblocks_assessment_ids: [N2]
+    sources: [A6, A8]
+    options:
+      - key: A
+        text: "One ai-toolbox-core plugin (skills, agents, hooks, gates MCP)"
+        consequence: "Simple install; all-or-nothing."
+      - key: B
+        text: "Per component kind: skills, agents + role guard, gates MCP"
+        consequence: "Finer control; dependencies between plugins to manage."
+      - key: C
+        text: "Per workflow: design, build, unattended, ops bundles"
+        consequence: "Matches how users work; skills shared across bundles get duplicated or need dependencies."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
+  - id: Q12
+    title: "graphify MCP server"
+    question: "What should Q4 do with graphify?"
+    select: single
+    recommended: B
+    unblocks: [P0.4]
+    unblocks_assessment_ids: [Q4]
+    sources: [S2, S4, S14]
+    options:
+      - key: A
+        text: "Lock all 17 tools"
+        consequence: "Keeps the full surface; larger attack surface for an unused server."
+      - key: B
+        text: "Narrow cli_scope to the 12 locked tools"
+        consequence: "Closes the drift with no new exposure."
+      - key: C
+        text: "Remove graphify from the repo"
+        consequence: "No drift, no maintenance; re-add when a consumer appears."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: A
+    notes: ""
+  - id: Q13
+    title: "Scope of shipped permissions and sandbox"
+    question: "Where should the shipped permissions and sandbox apply?"
+    select: single
+    recommended: C
+    unblocks: [P1.6]
+    unblocks_assessment_ids: [N6]
+    sources: [A12, A13, A21]
+    options:
+      - key: A
+        text: "Unattended runs only (managed settings)"
+        consequence: "No interactive friction; interactive sessions stay open."
+      - key: B
+        text: "Interactive and unattended, project settings"
+        consequence: "Same guard everywhere; some prompts in daily use."
+      - key: C
+        text: "Permissions everywhere, sandbox unattended only"
+        consequence: "Push and secrets rules always on; network isolation where risk is highest."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: C
+    notes: ""
+  - id: Q14
+    title: "Stop-hook check scope"
+    question: "What should the Stop hook run?"
+    select: single
+    recommended: B
+    unblocks: [P1.7]
+    unblocks_assessment_ids: [N7]
+    sources: [A2, A5]
+    options:
+      - key: A
+        text: "Full tests/validate.sh"
+        consequence: "Strongest; slow turns."
+      - key: B
+        text: "Fast subset (frontmatter, registry, hidden-Unicode) when tracked files changed"
+        consequence: "Quick; full gate still in CI."
+      - key: C
+        text: "No Stop hook; rely on CI"
+        consequence: "No latency; broken trees found later."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
+  - id: Q15
+    title: "Rollout order after the quick wins"
+    question: "Which track goes first after P0?"
+    select: single
+    recommended: B
+    unblocks: [P1.1, P1.2]
+    unblocks_assessment_ids: [N1, N2]
+    sources: [A6, A5]
+    options:
+      - key: A
+        text: "Role guard first (N1), then packaging (N2)"
+        consequence: "Plugin ships with full role coverage; packaging waits."
+      - key: B
+        text: "Packaging first (N2) with the 4 current roles, role guard after"
+        consequence: "Users get /plugin install sooner; roles added later."
+      - key: C
+        text: "Both in parallel"
+        consequence: "Fastest; coordination cost on emit-agents.py."
+      - key: other
+        text: "Other (explain in notes)"
+    answer: B
+    notes: ""
