@@ -265,6 +265,9 @@ def build(out):
     # the server's own default.
     env = {k: "${%s}" % k for k in ("GATES_MAP", "GATES_RUN_ROOT", "GATES_MAP_SHA256",
                                     "GATES_ALLOWED_EXECUTABLES")}
+    # Pinned, so a GATES_TRANSPORT left in the user's environment can never turn
+    # the plugin's server into an HTTP listener (TASK-0285, ADR-0063).
+    env["GATES_TRANSPORT"] = "stdio"
     write_json(os.path.join(base, ".mcp.json"), {"mcpServers": {"gates": {
         "command": "uv",
         "args": ["--directory", "${CLAUDE_PLUGIN_ROOT}/server", "run", "--frozen",

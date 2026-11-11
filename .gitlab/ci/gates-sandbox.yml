@@ -37,3 +37,20 @@ gates-sandbox:
       fi
     - pip install -q uv==0.13.6
     - cd mcp-servers/gates && uv run --frozen pytest -q -rs
+
+# The HTTP transport's enforcement tests (TASK-0285, ADR-0063): no anonymous
+# request, token checks, run scope, gate ownership, running cap, loopback only,
+# the tool lock over HTTP. No bwrap needed and no allowed failure: any red test
+# fails the pipeline. Kept out of tests/validate.sh, which stays offline and
+# does not install Python dependencies; validate.sh asserts this job exists.
+gates-http:
+  stage: test
+  image: python:3.11
+  tags: [docker]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [mcp-servers/gates/**/*, .gitlab/ci/gates-sandbox.yml, scripts/mcp-tool-lock.py, plugins/ai-toolbox-gates/**/*]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - pip install -q uv==0.13.6
+    - cd mcp-servers/gates && uv run --frozen pytest -q -rs tests/test_http.py

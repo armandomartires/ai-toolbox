@@ -6,7 +6,9 @@ requires-python = ">=3.10"
 # `<2` is load-bearing: mcp 2.x renamed the bundled FastMCP to MCPServer, and
 # `mcp>=1.0` alone now resolves to 2.x, where `mcp.server.fastmcp` does not
 # exist (observed 2026-09-24, mcp 2.2.0; TASK-0088).
-dependencies = ["mcp>=1.0,<2"]
+# pyjwt and uvicorn come with mcp, but the HTTP transport (gates.remote) imports
+# them itself, so they are declared here (TASK-0285).
+dependencies = ["mcp>=1.0,<2", "pyjwt[crypto]>=2.15,<3", "uvicorn>=0.30,<1"]
 
 [project.optional-dependencies]
 # OpenTelemetry spans (issue #14); inert unless OTEL_EXPORTER_OTLP_ENDPOINT is set.
@@ -43,6 +45,15 @@ by = "Armando Martires"
 date = "2026-09-24"
 task = ".ai/tasks/TASK-0088-gates-mcp-server.md"
 
+# Transports (TASK-0285; checked by tests/check-mcp-transport.py). stdio is the
+# default and the only one any client wiring uses. streamable-http is OFF unless
+# GATES_TRANSPORT names it, has no anonymous mode (OAuth 2.1 bearer tokens the
+# server validates itself), binds loopback only and needs GATES_SANDBOX=bwrap.
+# ADR-0063 is PROPOSED: no deployment beyond loopback until a human accepts it.
+[tool.ai-toolbox.transports]
+stdio = { default = true }
+streamable-http = { default = false, auth = "oauth2.1", adr = "ADR-0063", enabled_by = "GATES_TRANSPORT=streamable-http" }
+
 [tool.ai-toolbox.environment.GATES_MAP]
 required = true
 description = "Path of the consuming repository's gate map (JSON). The server refuses to start without it"
@@ -74,6 +85,71 @@ description = "Root a map entry's cwd is relative to. Defaults to the gate map's
 [tool.ai-toolbox.environment.GATES_TIMEOUT_SECONDS]
 required = false
 description = "Watchdog default for a gate with no timeout_seconds of its own. Defaults to 3600"
+
+# --- The opt-in HTTP transport (ADR-0063, proposed). None is read on stdio. ---
+[tool.ai-toolbox.environment.GATES_TRANSPORT]
+required = false
+description = "stdio (default) or streamable-http. Anything else refuses to start. streamable-http requires every GATES_HTTP_*/GATES_OAUTH_* variable marked 'required when HTTP' and GATES_SANDBOX=bwrap"
+
+[tool.ai-toolbox.environment.GATES_HTTP_HOST]
+required = false
+description = "Bind address for streamable-http. Defaults to 127.0.0.1; only a loopback IP literal is accepted (never 0.0.0.0, a LAN address or a name)"
+
+[tool.ai-toolbox.environment.GATES_HTTP_PORT]
+required = false
+description = "Port for streamable-http on the loopback address. Defaults to 8765"
+
+[tool.ai-toolbox.environment.GATES_HTTP_RESOURCE_URL]
+required = false
+description = "Required when HTTP. The https URL remote callers use for this endpoint (RFC 8707 resource); an access token's aud must equal it"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_ISSUER]
+required = false
+description = "Required when HTTP. The authorization server's https issuer URL; a token's iss must equal it"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_JWKS_URL]
+required = false
+description = "Required when HTTP. The issuer's https JWKS URL the token signatures are checked against"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_CLIENTS]
+required = false
+description = "Required when HTTP. Comma-separated OAuth client ids (client_id or azp claim) allowed to call; removing one revokes it"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_REQUIRED_SCOPES]
+required = false
+description = "Comma-separated scopes every request's token must carry (scope or scp claim). Defaults to gates:read"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_RUN_SCOPES]
+required = false
+description = "Comma-separated scopes start_gate and kill_gate also need, checked per call. Defaults to gates:run"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_JWKS_CACHE_SECONDS]
+required = false
+description = "How long the issuer's key set is cached. Defaults to 300; a key the issuer removes stops validating within it"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_REQUIRE_AT_JWT]
+required = false
+description = "true (default): a token's header typ must be at+jwt (RFC 9068). false only for an issuer that cannot set it"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_ALLOW_MULTI_AUDIENCE]
+required = false
+description = "false (default): a token whose aud lists more than one resource is refused. true accepts it when one entry is GATES_HTTP_RESOURCE_URL"
+
+[tool.ai-toolbox.environment.GATES_HTTP_MAX_RUNNING]
+required = false
+description = "Most gates running at once from the HTTP server; start_gate is refused above it. Defaults to 2"
+
+[tool.ai-toolbox.environment.GATES_HTTP_MAX_CONNECTIONS]
+required = false
+description = "uvicorn's limit on concurrent HTTP connections. Defaults to 16"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_ALGORITHMS]
+required = false
+description = "Comma-separated JWS algorithms accepted. Defaults to RS256; asymmetric only (HS* and none are refused)"
+
+[tool.ai-toolbox.environment.GATES_OAUTH_MAX_TOKEN_SECONDS]
+required = false
+description = "Longest token lifetime (exp - iat) accepted. Defaults to 900, so a leaked token dies within 15 minutes"
 
 # tests/smoke-mcp.sh: environment for the initialize handshake only, paths
 # relative to this directory. The fixture map runs nothing harmful, and the

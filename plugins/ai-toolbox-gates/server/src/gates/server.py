@@ -11,6 +11,9 @@ are byte-compatible with the OpenCode binding's run-gate.sh, so an evidence
 file reads the same whichever entry point wrote it.
 
 Destructive, and authorized: .ai/tasks/TASK-0088-gates-mcp-server.md.
+
+Transport: stdio. GATES_TRANSPORT=streamable-http opts into gates.remote
+(ADR-0063, proposed): OAuth 2.1 bearer tokens, loopback only, bwrap required.
 """
 from __future__ import annotations
 
@@ -53,8 +56,20 @@ LAUNCHERS = {"sh", "bash", "dash", "zsh", "ksh", "fish", "node", "npx", "npm", "
              "perl", "ruby", "make", "git", "deno", "bun", "php", "lua", "tclsh"}
 SANDBOX_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
+TRANSPORTS = ("stdio", "streamable-http")
+
 mcp = FastMCP("gates")
 _serial = count(1)
+# Every tool with its annotations, so the opt-in HTTP transport (gates.remote,
+# ADR-0063) registers exactly the stdio tools on its own authenticated app.
+TOOLS: list[tuple[Any, ToolAnnotations]] = []
+
+
+def tool(annotations: ToolAnnotations):
+    def register(fn):
+        TOOLS.append((fn, annotations))
+        return mcp.tool(annotations=annotations)(fn)
+    return register
 
 
 class ConfigError(RuntimeError):
@@ -260,7 +275,7 @@ def _terminal(d: Path) -> bool:
     return _read(d, "state", "MISSING") in TERMINAL
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(READ_ONLY)
 def list_gates() -> list[dict[str, Any]]:
     """List the gates the consuming repository's map declares, by name.
 
@@ -273,7 +288,7 @@ def list_gates() -> list[dict[str, Any]]:
             for n, e in sorted(cfg["gates"].items())]
 
 
-@mcp.tool(annotations=DESTRUCTIVE)
+@tool(DESTRUCTIVE)
 def start_gate(
     name: Annotated[str, Field(pattern=NAME, description="A gate name from list_gates")],
 ) -> dict[str, Any]:
@@ -343,7 +358,7 @@ def _start_gate(name: str) -> dict[str, Any]:
     return summary(d)
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(READ_ONLY)
 async def wait_gate(
     handle: Annotated[str, Field(pattern=HANDLE, description="A handle from start_gate")],
     max_wait_seconds: Annotated[int, Field(ge=0, le=MAX_WAIT_SECONDS,
@@ -369,7 +384,7 @@ async def wait_gate(
         return out
 
 
-@mcp.tool(annotations=READ_ONLY)
+@tool(READ_ONLY)
 def gate_status(
     handle: Annotated[str, Field(pattern=HANDLE, description="A handle from start_gate")],
 ) -> dict[str, Any]:
@@ -381,7 +396,7 @@ def gate_status(
     return summary(_dir(config(), handle))
 
 
-@mcp.tool(annotations=DESTRUCTIVE)
+@tool(DESTRUCTIVE)
 async def kill_gate(
     handle: Annotated[str, Field(pattern=HANDLE, description="A handle from start_gate")],
 ) -> dict[str, Any]:
@@ -419,13 +434,33 @@ async def kill_gate(
     return summary(d)
 
 
+def transport() -> str:
+    """GATES_TRANSPORT: stdio unless the operator names streamable-http (ADR-0063)."""
+    name = os.environ.get("GATES_TRANSPORT", "").strip() or "stdio"
+    if name not in TRANSPORTS:
+        raise ConfigError("GATES_TRANSPORT must be one of %s" % ", ".join(TRANSPORTS))
+    return name
+
+
 def main() -> None:
     try:
-        config()
+        cfg = config()
+        name = transport()
+        if name == "streamable-http":
+            # Off by default and never anonymous: gates.remote refuses to start
+            # without its OAuth 2.1 settings or on a non-loopback address.
+            if cfg["sandbox"] != "bwrap":
+                raise ConfigError("GATES_TRANSPORT=streamable-http requires GATES_SANDBOX=bwrap: "
+                                  "a gate a remote caller starts always runs sandboxed")
+            from gates import remote
+            http = remote.http_config()
     except ConfigError as exc:
         print("gates: refusing to start: %s" % exc, file=sys.stderr)
         raise SystemExit(2)
-    mcp.run()
+    if name == "stdio":
+        mcp.run()
+    else:
+        remote.serve(http)
 
 
 if __name__ == "__main__":

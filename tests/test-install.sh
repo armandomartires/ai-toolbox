@@ -433,10 +433,10 @@ check "P6 marketplace lists the three plugins and agents depends on skills" "$([
 # them), the worktree hooks are this repo's rule, and mod-dev needs a checkout.
 nopl="$(cd "$PB" && find . \( -name settings.json -o -name hooks.json -o -name hooks -o -name mod-dev \) | wc -l | tr -d ' ')"
 check "P7 no plugin carries a settings.json, hooks or the mod-dev skill" "$([ "$nopl" = 0 ]; echo $?)" "found $nopl"
-check "P8 the gates .mcp.json passes only the required variables, run frozen without dev" "$(python3 -c '
+check "P8 the gates .mcp.json passes only the required variables plus GATES_TRANSPORT=stdio, run frozen without dev" "$(python3 -c '
 import json, sys
 s = json.load(open(sys.argv[1]))["mcpServers"]["gates"]
-ok = sorted(s["env"]) == ["GATES_ALLOWED_EXECUTABLES", "GATES_MAP", "GATES_MAP_SHA256", "GATES_RUN_ROOT"] and "--frozen" in s["args"] and "--no-dev" in s["args"]
+ok = sorted(s["env"]) == ["GATES_ALLOWED_EXECUTABLES", "GATES_MAP", "GATES_MAP_SHA256", "GATES_RUN_ROOT", "GATES_TRANSPORT"] and s["env"]["GATES_TRANSPORT"] == "stdio" and "--frozen" in s["args"] and "--no-dev" in s["args"]
 sys.exit(0 if ok else 1)' "$PB/ai-toolbox-gates/.mcp.json"; echo $?)"
 # A fake root: CRLF sources, the excluded skill, a --check that ignores line endings.
 FR="$tmp/fakeroot"; mkdir -p "$FR/scripts" "$FR/.ai/context" "$FR/skills/only" "$FR/skills/mod-dev" "$FR/agents" "$FR/mcp-servers/gates"

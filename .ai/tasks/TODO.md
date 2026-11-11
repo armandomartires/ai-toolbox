@@ -325,7 +325,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [ ] TASK-0282 — Long-running harness alignment (P2.3)
 - [?] TASK-0283 — Signed, versioned releases (P2.4)
 - [ ] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
-- [ ] TASK-0285 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
+- [?] TASK-0285 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
 
 ## Post-S9 (superseded by the promotion above)
 

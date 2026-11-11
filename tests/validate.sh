@@ -2217,6 +2217,17 @@ for f in scripts/mcp-sandbox.sh .gitlab/ci/mcp-tool-lock.yml; do
     echo "MCP-PIN: $f uses a node image without a @sha256 digest"; fail=1
   fi
 done
+# A network transport needs an ADR (TASK-0285, ADR-0063). WHAT THIS PROVES: an
+# MCP server declaring a non-stdio transport names an existing ADR, keeps it
+# off by default, requires OAuth 2.1 and names its switch; source that builds an
+# HTTP app is declared. The --self-test is the red proof. WHAT IT DOES NOT
+# PROVE: that the server enforces it (mcp-servers/gates/tests/test_http.py).
+python3 tests/check-mcp-transport.py --self-test >/dev/null || { echo "MCP-TRANSPORT: self-test failed"; fail=1; }
+python3 tests/check-mcp-transport.py || fail=1
+# The enforcement tests need the server's dependencies, so CI runs them (job
+# gates-http); this keeps that job from being dropped silently.
+grep -q '^gates-http:' .gitlab/ci/gates-sandbox.yml && grep -q 'uv run --frozen pytest -q -rs tests/test_http.py' .gitlab/ci/gates-sandbox.yml \
+  || { echo "MCP-TRANSPORT: .gitlab/ci/gates-sandbox.yml no longer runs mcp-servers/gates/tests/test_http.py (job gates-http)"; fail=1; }
 # The run journal is hash-chained (issue #14): edits, deletions, reordering
 # and (against a recorded head) truncation are detected. A red proof.
 if ! python3 skills/unattended-ops/scripts/journal-chain.py --self-test >/dev/null; then

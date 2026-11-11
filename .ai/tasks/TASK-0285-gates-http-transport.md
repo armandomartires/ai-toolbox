@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: planned
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0285
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Applies to: `mcp-servers/gates/`, `.ai/decisions/`, provider docs, `tests/validate.sh`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P2.6 (S6), decisions D7=B (HTTP transport behind OAuth 2.1, sandboxed, with its own ADR; P2.6 stays HIGH risk); related: R-03
 
@@ -50,14 +50,14 @@ Make the gates server reachable over Streamable HTTP for remote harnesses (xAI a
 
 ## Acceptance criteria
 
-- [ ] A transport declaration without an ADR id fails validation
-- [ ] An unauthenticated HTTP call to gates is refused and an authenticated one lists the tools
-- [ ] The HTTP path is off unless configured
-- [ ] Provider docs describe function-calling and remote-MCP use
+- [x] A transport declaration without an ADR id fails validation
+- [x] An unauthenticated HTTP call to gates is refused and an authenticated one lists the tools
+- [x] The HTTP path is off unless configured
+- [x] Provider docs describe function-calling and remote-MCP use
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 - [ ] `bash tests/smoke-mcp.sh` and the new transport check
 
 ## Risks and rollback
@@ -71,12 +71,17 @@ Make the gates server reachable over Streamable HTTP for remote harnesses (xAI a
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `mcp-servers/gates/src/gates/remote.py`, `server.py` | opt-in Streamable HTTP; OAuth 2.1 JWT check, loopback only, bwrap required; stdio unchanged |
+| `pyproject.toml` `[tool.ai-toolbox.transports]`, `tests/check-mcp-transport.py` | declaration (not `server.json`: ADR-0005) and its validate check |
+| ADR-0063 (proposed), `docs/security/gates-http-transport.md`, `docs/development/remote-model-providers.md` | threat model, settings, sandbox, provider use |
 
-Next:
+Next: the human names the issuer and decides deployment (ADR-0063 clause 8), then accepts or rejects the ADR.
 
 ## Execution log
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-11 · agent/Opus 5.5 · built red-first, then the coordinator's risk review F1-F13: ADR renumbered 0063; key-set-only JWKS cache (rotation), at+jwt, single aud, run scope, gate ownership, running cap, scrubbed errors, pyjwt/uvicorn declared, plugin pins stdio, CI job `gates-http` runs test_http.py
+  - Evidence: test_http.py 65 passed; gates suite 83 passed, 10 failed (POSIX-only on Windows, same before), 3 skipped; check-mcp-transport self-test 19 OK; live stdio tools/list equals `tools.lock.json`; mutations turn the guard tests red; `bash tests/validate.sh` → validate.sh: OK
+  - Deviation: declaration in `pyproject.toml` (`server.json` beside it is AMBIGUOUS SHAPE); IdP and deployment left open in the ADR; `smoke-mcp.sh` fails here only on the CRLF fixture hash
