@@ -42,6 +42,7 @@ test('the contract tells a worker to write its report before the turn cap, keepi
   expect(text).toContain('what is done, what is left and where your edits are')
   // The coordinator resumes such a worker rather than retrying it.
   expect(COORDINATOR_PROTOCOL).toContain('except a worker collect says stopped at its turn cap: resume that agent with SendMessage to its agent id')
+  expect(COORDINATOR_PROTOCOL).toContain('resume the same way a worker whose partial or blocked report asks for it') // TASK-0289
   // The stop list names it too.
   expect(text).toContain('- you reach turn 108 (the cap less the reserve), done or not.')
 })

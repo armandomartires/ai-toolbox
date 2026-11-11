@@ -5,7 +5,7 @@
 - Status: in review
 - Owner: agent (Claude Code)
 - Created: 2026-11-08
-- Updated: 2026-11-08
+- Updated: 2026-11-11
 - Applies to: `mods/task-orchestrator/`
 - Source: the 2026-11-08 sprint run. Two workers on switchboard changes in a row, a debugger and a builder, both at `maxTurns` 60, were stopped by the engine mid-step. To the person this looked like a communication failure in the orchestration. The coordinator rescued the work by reading transcripts and resuming the agents by hand.
 
@@ -76,3 +76,5 @@ When a worker runs out of turns, the coordinator should learn that it did, where
 
 - 2026-11-08 · Claude Code (Opus 5.5) · read D2's transcript and meta (ends on a `tool_result`; worktree `agent-<id>` on `worktree-agent-<id>`) and the engine types. Red tests (router, contract, register), then the caps, the reserve, the cut-off detection with the worktree read, and the resume path. Kit tests 105 pass; validate and check pass. Version step to task-orchestrator 0.6.0.
 - 2026-11-08 · Claude Code (Opus 5.5, coordinator) · renumbered from TASK-0259 before the push: origin/master took TASK-0259 for the Vault keychain-session tokens (`a846710`) while this commit was local.
+
+- 2026-11-11 · Claude Code (Opus 5.5, coordinator) · live check on 0.7.0 (desktop 2.1.318): L1, an isolated documentation worker at cap 30, wrote 26 files in its own worktree and stopped itself at turn 27 with a `partial` report naming the worktree; the engine's cut-off was not reached, so `collect`'s turn-cap report is still unseen live. Its resume by `SendMessage` with three workers running was not reopened (it was not turn-capped) and ran unfenced: fixed by `TASK-0289`.

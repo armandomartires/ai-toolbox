@@ -298,6 +298,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0261 — Session branches are named by task, and Claude Code's worktrees follow the sibling rule
 - [x] TASK-0262 — Scripts are checked out with LF, so a Linux bash on a Windows clone runs them
 - [?] TASK-0265 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
+- [?] TASK-0289 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
 
 ## Sprint S11 — Claude-centric alignment (OPEN — promoted 2026-11-10)
 

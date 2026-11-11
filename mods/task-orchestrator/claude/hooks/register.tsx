@@ -371,10 +371,10 @@ const settle = async ($: EngineInterface, task: Task, patch: Partial<Task>, when
  * updater, so the cap, the writer lock and the status compare-and-set hold for `start`, both adoptions and the resume.
  * Returns why it was refused, or undefined when the row now runs.
  */
-const admitRow = async ($: EngineInterface, task: Task, patch: Partial<Task>, from: Task['status']): Promise<string | undefined> => {
+const admitRow = async ($: EngineInterface, task: Task, patch: Partial<Task>, from: Task['status'], resume = false): Promise<string | undefined> => {
   let refused: string | undefined
   await update($, ledger, rows => {
-    const got = admit(rows, task, patch, from, config.limits)
+    const got = admit(rows, task, patch, from, config.limits, resume)
     refused = got.refused
     return got.refused ? rows : got.ledger
   }).then(() => keep($, assignments))
@@ -417,8 +417,13 @@ const cutOffMidStep = async ($: EngineInterface, agentId: string): Promise<boole
   return last?.role === 'user' && Array.isArray(last.toolResults) && last.toolResults.length > 0
 }
 
-/** A task whose worker the cap stopped, still partial: a turn of its agent's reopens it. */
-const isResumable = (task: Task): boolean => task.status === 'partial' && task.notes.includes(TURN_CAP_NOTE)
+/**
+ * A task whose worker stopped and may be resumed by SendMessage: cut off at its cap (TASK-0260), or ended on its own
+ * partial or blocked report, which the assignment tells it to write and to ask for a resume (TASK-0289). A turn of its
+ * agent's reopens it, so the fence and the cap hold and its next report closes the task. A hand-off has no worker yet.
+ */
+const isResumable = (task: Task): boolean =>
+  task.agentId !== undefined && !isSession(task) && (task.status === 'partial' || (task.status === 'blocked' && task.handoff !== true))
 
 /** A git command's standard output, or undefined when it could not run or failed. */
 const gitOut = async ($: EngineInterface, argv: readonly string[]): Promise<string | undefined> => {
@@ -1445,18 +1450,23 @@ ${classGuide()}` },
     return next.called ? next(e) : e.agentId ? { deny: `${PLUGIN}: the worker fence failed, so the call is refused` } : next(e)
   })
 
-  // A worker stopped at its turn cap and resumed by the coordinator's SendMessage runs again: back to running, so the
-  // fence holds its calls and collect waits for its report (TASK-0260).
+  // A worker stopped (at its turn cap, or on its own partial or blocked report) and resumed by the coordinator's
+  // SendMessage runs again: back to running, so the fence holds its calls and collect waits for its report (TASK-0260,
+  // TASK-0289).
   on('turn.start', async ($, e, next) => {
     if (e.agentId) {
       const task = byAgent(await read($, ledger), e.agentId)
       if (task && isResumable(task)) {
-        const refused = await admitRow($, task, { reason: undefined, endedAt: undefined, notes: [...task.notes, 'resumed after its turn cap'] }, 'partial')
-        // Its turn is already running and cannot be taken back: the row stays partial (the limits are not bypassed), says
-        // so, and the coordinator is told what the worker is doing meanwhile and the two ways out.
-        if (refused !== undefined && byId(await read($, ledger), task.id)?.status === 'partial') {
-          await settle($, task, { notes: withNote(task, `resume refused: ${refused}`) }, 'partial')
-          await note($, `resumed worker ${task.id} could not be readmitted (${refused}): its calls run outside the fence until it ends. Cancel ${task.id}, or wait for a slot and resume it again with SendMessage to ${task.agentId}.`)
+        const from = task.status
+        // The last end's reason says how it stopped: notes accumulate over resumes, the reason is set again at each end.
+        const how = task.reason?.includes(TURN_CAP_NOTE) ? 'resumed after its turn cap' : `resumed after its ${from} report`
+        // Its earlier report is spent: status and collect show the running row, not that report's Next (TASK-0289).
+        const refused = await admitRow($, task, { reason: undefined, endedAt: undefined, report: undefined, notes: [...task.notes, how] }, from, true)
+        // Its turn is already running and cannot be taken back: the row stays as it was (the limits are not bypassed),
+        // says so, and the coordinator is told what the worker is doing meanwhile and the two ways out.
+        if (refused !== undefined && byId(await read($, ledger), task.id)?.status === from) {
+          await settle($, task, { notes: withNote(task, `resume refused: ${refused}`) }, from)
+          await note($, `resumed worker ${task.id} could not be readmitted (${refused}): its calls run outside the fence until it ends. Stop it with TaskStop on agent ${task.agentId} (cancel does not stop an ended row's agent), or let it end and resume it again with SendMessage once a slot is free.`)
         }
       }
     }

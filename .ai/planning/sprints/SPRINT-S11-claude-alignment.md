@@ -93,4 +93,4 @@ Four answers differ from what the assessment recommended (Q12 was re-decided to 
 
 ## Task numbering
 
-This sprint allocates `TASK-0266` to `TASK-0285`, in plan order (P0.1 = `TASK-0266` through P2.6 = `TASK-0285`). All briefs were written 2026-11-10 with status `planned`. `TASK-0286` opened the sprint. **Next free id: `TASK-0287`.**
+This sprint allocates `TASK-0266` to `TASK-0285`, in plan order (P0.1 = `TASK-0266` through P2.6 = `TASK-0285`). All briefs were written 2026-11-10 with status `planned`. `TASK-0286` opened the sprint. **Next free id: `TASK-0290`** (`TASK-0289` went to a Backlog fix on 2026-11-11; `TASK-0288` is held by an unpushed commit in the main checkout, and `TASK-0287` stays free).

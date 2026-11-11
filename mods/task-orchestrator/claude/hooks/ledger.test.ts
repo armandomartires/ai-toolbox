@@ -306,6 +306,15 @@ test('admit moves a row to running only over the limits and only from the status
   expect(admit(handed, handed[0]!, { handoff: undefined }, 'blocked', DEFAULT_LIMITS).ledger[0]).toMatchObject({ status: 'running' })
 })
 
+test('a resume admits a row its worker blocked, never a hand-off, and still meets the cap (TASK-0289)', () => {
+  const blocked: Ledger = [task('B1', { status: 'blocked', agentId: 'agent-1' })]
+  expect(admit(blocked, blocked[0]!, {}, 'blocked', DEFAULT_LIMITS, true).ledger[0]).toMatchObject({ status: 'running' })
+  const handed: Ledger = [task('H1', { status: 'blocked', handoff: true })]
+  expect(admit(handed, handed[0]!, {}, 'blocked', DEFAULT_LIMITS, true).refused).toContain('blocked by its worker')
+  const full: Ledger = [running('T1'), running('T2'), running('T3'), task('W1', { status: 'partial', agentId: 'agent-4' })]
+  expect(admit(full, full[3]!, {}, 'partial', DEFAULT_LIMITS, true).refused).toBe('3 workers already running')
+})
+
 test('the status summary counts a hand-off as running, queued apart, with the policy (R5)', () => {
   const ledger: Ledger = [running('T1'), task('H1', { status: 'blocked', handoff: true }), task('B1', { status: 'blocked', reason: 'denied' }), task('Q1', { deps: ['T1'] }), task('Q2'), task('D1', { status: 'completed' })]
   expect(statusSummary(ledger, 'balanced')).toEqual({ policy: 'balanced', running: 2, queued: 2 })

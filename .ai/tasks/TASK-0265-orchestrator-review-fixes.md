@@ -5,7 +5,7 @@
 - Status: in review
 - Owner: agent (Claude Code, coordinator with orchestrated workers)
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Applies to: `mods/task-orchestrator/`
 - Source: `.ai/reviews/REVIEW-0013-task-orchestrator-mod.md` (2026-11-09), eleven defects read from the code and five ranked recommendations, which the human asked to apply in full, tested and validated.
 
@@ -54,7 +54,7 @@ Make the limits the README calls "enforced in code" true on every path, and remo
 - [x] The full 11×3 routing table has a test
 - [x] README, ARCHITECTURE and DEVELOPING say what the code does after this task; `TASK-0196`, `TASK-0234`, `TASK-0238` statuses corrected; the ADR exists
 - [x] Red first: every new test failed against the 0.6.0 code
-- [ ] Live: a worker in a worktree writes through the resolved fence; a resume refused by the cap is reported (not run in this task)
+- [ ] Live: a worker in a worktree writes through the resolved fence (seen 2026-11-11); a resume refused by the cap is reported (not seen: see `TASK-0289`)
 
 ## Mandatory validations
 
@@ -81,3 +81,5 @@ Make the limits the README calls "enforced in code" true on every path, and remo
 - 2026-11-10 · Claude Code (Fable 5.1, coordinator) · brief opened from REVIEW-0013 as TASK-0263; baseline kit 105 pass; wave 1 dispatched.
 - 2026-11-10 · coordinator · renumbered to TASK-0265: `agent/TASK-0263*` and `agent/TASK-0264` branches already exist from the human's worktree-hook test, so the id would have collided with `scripts/worktree.sh add`. Wave 1 (R1, R4) landed: kit 117 pass, validate passed. Wave 2 and the ADR writer were refused once by the host ("the host has ended its input") and re-dispatched as retry 1.
 - 2026-11-10 · coordinator · wave 2 (R2 admission gate, R3 stall text, D6): 126 pass. ADR-0058 written. Wave 3 (R5 status line and panel, mirror cap and `forget`, `Task.branch`, D11, config fixes, `maxNesting` and telemetry removed): 140 pass. Docs wave: README, ARCHITECTURE, DEVELOPING, CHANGELOG, CURRENT_STATE, TASK-0196/0234/0238. Independent review of the whole diff: all defects closed, two blocking items; fixed with 7 tests: 147 pass. Docs corrected for the review's stale-line list. A first `tests/validate.sh` run failed only on REVIEW-0013's section names (the review schema wants Findings, Validation results, Verdict, Follow-up tasks); renamed. Second gate run: see Mandatory validations.
+
+- 2026-11-11 · Claude Code (Opus 5.5, coordinator) · live check on 0.7.0 (desktop 2.1.318): L1, an isolated documentation worker at cap 30, wrote 26 files in its own worktree and stopped itself at turn 27 with a `partial` report naming the worktree; the engine's cut-off was not reached, so `collect`'s turn-cap report is still unseen live. Its resume by `SendMessage` with three workers running was not reopened (it was not turn-capped) and ran unfenced: fixed by `TASK-0289`.

@@ -114,12 +114,14 @@ export const startBlocker = (ledger: Ledger, task: Task, limits: Limits): string
 /**
  * The one admission gate: over the rows as they are, `task`'s row moved to `running` with `patch` applied, or why not.
  * A compare-and-set on status (the row must still be `from`: a cancel or an end that got there first wins), then the
- * start rules (`startBlocker`) as if the row were queued. A blocked row is admitted only while it is a hand-off.
+ * start rules (`startBlocker`) as if the row were queued. A blocked row is admitted only while it is a hand-off, or,
+ * for `resume`, only while it is not: a worker that reported blocked and is resumed by SendMessage (TASK-0289).
  */
-export const admit = (ledger: Ledger, task: Task, patch: Partial<Task>, from: TaskStatus, limits: Limits): { ledger: Ledger; refused?: string } => {
+export const admit = (ledger: Ledger, task: Task, patch: Partial<Task>, from: TaskStatus, limits: Limits, resume = false): { ledger: Ledger; refused?: string } => {
   const row = byId(ledger, task.id)
   if (!row) return { ledger, refused: `task ${task.id} is no longer in the ledger` }
-  if (row.status !== from || (from === 'blocked' && !isHandedOff(row))) return { ledger, refused: `task ${task.id} is ${row.status}, not ${from === 'blocked' ? 'handed off' : from}` }
+  const wrongBlock = from === 'blocked' && isHandedOff(row) === resume
+  if (row.status !== from || wrongBlock) return { ledger, refused: `task ${task.id} is ${row.status}, not ${from === 'blocked' ? (resume ? 'blocked by its worker' : 'handed off') : from}` }
   const blocker = startBlocker(ledger, { ...row, status: 'queued' }, limits)
   if (blocker) return { ledger, refused: blocker }
   return { ledger: setTask(ledger, task.id, { ...patch, status: 'running' }) }

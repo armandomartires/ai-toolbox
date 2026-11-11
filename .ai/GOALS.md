@@ -567,6 +567,8 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   branch: agent/TASK-0262
 - [?] TASK-0265 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
   .ai/tasks/TASK-0265-orchestrator-review-fixes.md
+- [?] TASK-0289 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
+  .ai/tasks/TASK-0289-orchestrator-resume-self-stopped.md
 
 ## S11 — Claude-centric alignment
 Goal: Claude Code becomes the reference harness, with generated ports; see .ai/planning/sprints/SPRINT-S11-claude-alignment.md

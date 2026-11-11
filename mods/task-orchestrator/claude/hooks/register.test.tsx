@@ -1854,6 +1854,71 @@ test('a turn-capped worker resumed while the cap is full stays partial and the c
   expect(await status($)).toMatch(/B1 → builder \[agent-1\].*→ running/)
 })
 
+// TASK-0289: a worker that stopped itself with a partial or blocked report, as the assignment tells it to, is reopened
+// on resume like a capped one. Seen live on 2026-11-11: a resumed self-stopped writer ran beside three workers, outside
+// the fence, and collect kept its first report.
+
+test('a worker that stopped itself with a partial report, resumed by SendMessage, is reopened under the fence and its next report closes the task (TASK-0289)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  capWorld(on, {}, {})
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'W1', class: 'documentation', objective: 'write files', allowedFiles: ['live-check'], isolated: true }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('partial', 'resume me to write the rest'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(await status($)).toMatch(/W1 → documentation \[agent-1\].*→ partial/)
+
+  await $.turn.start({ text: 'finish and report', turnId: 't2', agentId: 'agent-1' })
+  expect(await status($)).toMatch(/W1 → documentation \[agent-1\].*→ running/)
+  expect(await status($)).not.toContain('resume me to write the rest')
+  expect((await $.tool.call({ tool: 'Write', file_path: '/p/src/b.ts', content: 'x', agentId: 'agent-1' })).deny).toContain('outside its allowed files')
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed', 'all written'), durationMs: 1, isAborted: false, turnId: 't2' })
+  const after = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['W1'] })).result)
+  expect(after).toContain('→ completed')
+  expect(after).toContain('→ all written')
+})
+
+test('a self-stopped partial worker resumed while the cap is full stays partial and the coordinator is told (TASK-0289)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on)
+  capWorld(on, {}, {})
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'W1', class: 'documentation', objective: 'write files', allowedFiles: ['live-check'], isolated: true }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('partial', 'resume me'), durationMs: 1, isAborted: false, turnId: 't' })
+  for (const id of ['S1', 'S2', 'S3']) await $.tool.call(dispatch({ id, class: 'lookup', objective: `look ${id}` }))
+  await $.turn.start({ text: 'finish and report', turnId: 't2', agentId: 'agent-1' })
+  expect(await status($)).toMatch(/W1 → documentation \[agent-1\].*→ partial/)
+  const told = world.appended.filter(text => text.includes('W1') && text.includes('could not be readmitted'))
+  expect(told).toHaveLength(1)
+  expect(told[0]).toContain('3 workers already running')
+  expect(told[0]).toContain('TaskStop on agent agent-1')
+  // Its run ends anyway: the report it writes closes the task.
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed', 'all written'), durationMs: 1, isAborted: false, turnId: 't2' })
+  expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['W1'] })).result)).toContain('→ all written')
+})
+
+test('a worker that reported blocked, resumed by SendMessage once unblocked, is reopened and its report closes the task (TASK-0289)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  capWorld(on, {}, {})
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true }))
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('blocked', 'commit the brief, then resume me'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(await status($)).toMatch(/B1 → builder \[agent-1\].*→ blocked/)
+  await $.turn.start({ text: 'the brief is committed; go on', turnId: 't2', agentId: 'agent-1' })
+  expect(await status($)).toMatch(/B1 → builder \[agent-1\].*→ running/)
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't2' })
+  expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['B1'] })).result)).toContain('→ completed')
+})
+
 test('/orchestrate off leaves a running writer fenced and the nesting guard standing (TASK-0265)', async ($, on) => {
   mock.clock(on)
   mock.store(on)
