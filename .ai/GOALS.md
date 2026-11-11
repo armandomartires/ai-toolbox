@@ -569,6 +569,8 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   .ai/tasks/TASK-0265-orchestrator-review-fixes.md
 - [?] TASK-0289 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
   .ai/tasks/TASK-0289-orchestrator-resume-self-stopped.md
+- [?] TASK-0291 — task-orchestrator 0.7.2: writers run through the hand-off, so the write fence sees them
+  .ai/tasks/TASK-0291-orchestrator-fence-live.md
 - [?] TASK-0288 — agent-watch 0.13.5: the band and the Sessions pane agree on steps
   .ai/tasks/TASK-0288-agent-watch-steps-agree.md
   branch: agent/steps-mismatch-20eb29

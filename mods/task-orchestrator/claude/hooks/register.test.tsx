@@ -316,8 +316,11 @@ test('limits hold: three workers, queued fourth, no nesting, no overlapping writ
 
   // Writers: one at a time without isolation; a write outside the allowed files is refused.
   for (const id of ['S2', 'S3', 'S4']) await $.turn.complete({ agentId: world.spawned.find(one => one.name === id) ? `agent-${world.spawned.findIndex(one => one.name === id) + 1}` : '', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
-  const b1 = await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'change a', allowedFiles: ['src/a.ts'] }))
-  expect(String(b1.result)).toContain('B1 → builder [agent-5]')
+  // A writer is handed to the coordinator's own Agent call, never spawned by the orchestrator (TASK-0291).
+  const b1 = await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'change a', allowedFiles: ['src/a.ts'] })
+  expect(b1.answer).toContain('a writer is never spawned by the orchestrator')
+  expect(b1.ran.agentId).toBe('agent-5')
+  expect(await status($)).toContain('B1 → builder [agent-5]')
   const b2 = await $.tool.call(dispatch({ id: 'B2', class: 'implementation', objective: 'change b', allowedFiles: ['src/b.ts'] }))
   expect(String(b2.result)).toContain('queued')
   const edit = await $.tool.call({ tool: 'Edit', file_path: '/p/src/b.ts', old_string: 'a', new_string: 'b', agentId: 'agent-5' })
@@ -333,7 +336,7 @@ test('a failed review blocks a done report, a worker profile taken through the A
   const world = engine(on)
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build', allowedFiles: ['src/a.ts'] }))
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build', allowedFiles: ['src/a.ts'] })
   await $.tool.call(dispatch({ id: 'R1', class: 'review', objective: 'review B1', deps: ['B1'] }))
   await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
   expect(world.spawned.map(one => one.name)).toEqual(['B1', 'R1'])
@@ -579,9 +582,12 @@ test("the person's model and effort: each setting its own profile, the hand-off 
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
   // Two builders on sonnet, one at the table's medium and one at high, isolated so both run.
-  const medium = String((await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true, model: 'sonnet', effort: 'medium' }))).result)
-  const high = String((await $.tool.call(dispatch({ id: 'B2', class: 'implementation', objective: 'build b', allowedFiles: ['src/b.ts'], isolated: true, model: 'sonnet', effort: 'high' }))).result)
-  expect(world.spawned.map(one => one.type)).toEqual(['task-orchestrator:builder--sonnet-medium-wt', 'task-orchestrator:builder--sonnet-high-wt'])
+  // Writers are handed off (TASK-0291): the printed call names the role's own profile with the call's model, effort and
+  // worktree, and the coordinator makes it as printed; the per-settings profiles are still registered.
+  const medium = (await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true, model: 'sonnet', effort: 'medium' })).answer
+  const high = (await dispatchWriter($, { id: 'B2', class: 'implementation', objective: 'build b', allowedFiles: ['src/b.ts'], isolated: true, model: 'sonnet', effort: 'high' })).answer
+  expect(medium).toContain('subagent_type "task-orchestrator:builder", model "sonnet", effort "medium", isolation "worktree", description "B1 builder"')
+  expect(high).toContain('subagent_type "task-orchestrator:builder", model "sonnet", effort "high", isolation "worktree", description "B2 builder"')
   expect(world.registered.find(one => one.name === 'builder--sonnet-medium-wt')).toMatchObject({ model: 'sonnet', effort: 'medium', isolation: 'worktree' })
   expect(world.registered.find(one => one.name === 'builder--sonnet-high-wt')).toMatchObject({ model: 'sonnet', effort: 'high', isolation: 'worktree' })
   // The table's own settings keep the role's name, registered at start.
@@ -744,6 +750,23 @@ const say = ($: Hosted, origin: { kind: string }) => $.prompt.submit({ text: 'go
 const startSession = (input: Record<string, unknown>) => ({ tool: 'mcp__ccd_session__start_session', initiation: 'user_asked', context: 'fresh', model: 'sonnet', effort: 'medium', use_worktree: true, ...input }) as never
 
 const status = async ($: Hosted) => String((await $.tool.call({ tool: 'mcp__task-orchestrator__status' })).result)
+
+/**
+ * A writer's dispatch, then the coordinator's own Agent call its hand-off asks for, adopted by the prompt's header
+ * (TASK-0291): a writer is never spawned by the orchestrator, whose own hooks the engine leaves out of that loop.
+ */
+const dispatchWriter = async ($: Hosted, input: Record<string, unknown>, subagentType?: string) => {
+  const id = String(input.id)
+  const answer = String((await $.tool.call(dispatch(input))).result)
+  // The dispatch answered a hand-off: the row waits blocked for the call, and the answer carries the assignment.
+  expect(answer).toMatch(new RegExp(`${id} → [a-z-]+ → .*→ blocked → a writer is never spawned by the orchestrator`))
+  expect(answer).toContain(`# Assignment ${id} — role `)
+  expect(await status($)).toMatch(new RegExp(`${id} → [a-z-]+ → .*→ blocked`))
+  const role = new RegExp(`${id} → ` + '([a-z-]+)').exec(answer)?.[1] ?? 'builder'
+  const ran = await $.agent.spawn({ prompt: byLine(answer, `# Assignment ${id}`), description: `${id} ${role}`, subagentType: subagentType ?? `task-orchestrator:${role}`, name: id } as AgentSpawnInput)
+  expect(ran.deny).toBeUndefined()
+  return { answer, ran }
+}
 
 /** The coordinator's own effort is read from its model request. */
 const coordinatorStep = async ($: Hosted, effort: string) => {
@@ -1706,7 +1729,7 @@ test('a worker stopped at its turn cap mid-step: collect names the cap, its work
   }, { 'agent-1': cutOff })
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true }))
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true })
   // The engine ends the run at the cap: the answer is the last text it wrote, no report.
   await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: 'Running the gate.', durationMs: 1, isAborted: false, turnId: 't' })
   const got = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['B1'] })).result)
@@ -1739,7 +1762,7 @@ test('a writer in the session checkout stopped at its cap names that checkout; a
   }, { 'agent-1': cutOff, 'agent-2': [{ role: 'assistant', text: 'I am done.', toolUses: [] }] })
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'D1', class: 'debugging', objective: 'find it', allowedFiles: ['src/a.ts'] }))
+  await dispatchWriter($, { id: 'D1', class: 'debugging', objective: 'find it', allowedFiles: ['src/a.ts'] })
   await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: '', durationMs: 1, isAborted: false, turnId: 't' })
   const got = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['D1'] })).result)
   expect(got).toContain('stopped at its turn cap (120 turns) mid-step')
@@ -1839,7 +1862,7 @@ test('a turn-capped worker resumed while the cap is full stays partial and the c
   capWorld(on, { 'git rev-parse HEAD': 'base111\n' }, { 'agent-1': cutOff })
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true }))
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true })
   await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: 'Running the gate.', durationMs: 1, isAborted: false, turnId: 't' })
   for (const id of ['S1', 'S2', 'S3']) await $.tool.call(dispatch({ id, class: 'lookup', objective: `look ${id}` }))
   await $.turn.start({ text: 'finish and report', turnId: 't2', agentId: 'agent-1' })
@@ -1847,7 +1870,7 @@ test('a turn-capped worker resumed while the cap is full stays partial and the c
   const told = world.appended.filter(text => text.includes('B1') && text.includes('could not be readmitted'))
   expect(told).toHaveLength(1)
   expect(told[0]).toContain('3 workers already running')
-  expect(told[0]).toContain('outside the fence')
+  expect(told[0]).toContain('runs past the limits until it ends')
   // A slot frees: the next resume is admitted.
   await $.turn.complete({ agentId: 'agent-2', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
   await $.turn.start({ text: 'finish and report', turnId: 't3', agentId: 'agent-1' })
@@ -1866,7 +1889,7 @@ test('a worker that stopped itself with a partial report, resumed by SendMessage
   capWorld(on, {}, {})
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'W1', class: 'documentation', objective: 'write files', allowedFiles: ['live-check'], isolated: true }))
+  await dispatchWriter($, { id: 'W1', class: 'documentation', objective: 'write files', allowedFiles: ['live-check'], isolated: true })
   await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('partial', 'resume me to write the rest'), durationMs: 1, isAborted: false, turnId: 't' })
   expect(await status($)).toMatch(/W1 → documentation \[agent-1\].*→ partial/)
 
@@ -1888,7 +1911,7 @@ test('a self-stopped partial worker resumed while the cap is full stays partial 
   capWorld(on, {}, {})
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'W1', class: 'documentation', objective: 'write files', allowedFiles: ['live-check'], isolated: true }))
+  await dispatchWriter($, { id: 'W1', class: 'documentation', objective: 'write files', allowedFiles: ['live-check'], isolated: true })
   await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('partial', 'resume me'), durationMs: 1, isAborted: false, turnId: 't' })
   for (const id of ['S1', 'S2', 'S3']) await $.tool.call(dispatch({ id, class: 'lookup', objective: `look ${id}` }))
   await $.turn.start({ text: 'finish and report', turnId: 't2', agentId: 'agent-1' })
@@ -1910,7 +1933,7 @@ test('a worker that reported blocked, resumed by SendMessage once unblocked, is 
   capWorld(on, {}, {})
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true }))
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true })
   await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('blocked', 'commit the brief, then resume me'), durationMs: 1, isAborted: false, turnId: 't' })
   expect(await status($)).toMatch(/B1 → builder \[agent-1\].*→ blocked/)
   await $.turn.start({ text: 'the brief is committed; go on', turnId: 't2', agentId: 'agent-1' })
@@ -1926,7 +1949,7 @@ test('/orchestrate off leaves a running writer fenced and the nesting guard stan
   engine(on)
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'] }))
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'] })
   await $.command.run({ command: 'orchestrate', args: 'off' })
   expect((await $.tool.call({ tool: 'Edit', file_path: '/p/src/b.ts', old_string: 'a', new_string: 'b', agentId: 'agent-1' })).deny).toContain('outside its allowed files')
   expect((await $.tool.call({ tool: 'Agent', prompt: 'x', description: 'y', agentId: 'agent-1' })).deny).toContain('may not call Agent')
@@ -2229,7 +2252,7 @@ test('a session whose cwd cannot be read refuses every worker write: the fence d
   engine(on, options)
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
   await $.command.run({ command: 'orchestrate', args: 'on' })
-  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'] }))
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'] })
   expect((await $.tool.call({ tool: 'Edit', file_path: '/p/src/a.ts', old_string: 'a', new_string: 'b', agentId: 'agent-1' })).deny).toBeUndefined()
   options.cwdFails = true
   for (const file_path of ['/etc/passwd', '../../src/a.ts', '/p/src/a.ts']) {
@@ -2276,4 +2299,123 @@ test('a start_session answer that only mentions branches records no branch (TASK
   const text = await status($)
   expect(text).toContain('T3 → reviewer [local_00000003')
   expect(text).not.toContain('· branch')
+})
+
+// TASK-0291: seen live on 2026-11-11 (desktop 2.1.318, 0.7.1), two isolated writers the mod spawned wrote outside their
+// allowed files. The engine dispatches a tool call of a loop a plugin's `$.agent.spawn` started under that plugin's
+// origin and leaves the plugin's own hooks out of it (re-entry), so the fence never sees those calls; the kit cannot
+// raise a call under the mod's origin. What the mod can do: fence every row its agent has, whatever its status, and say
+// at a writer's end when the fence saw none of its calls, with what its worktree changed outside its allowed files.
+test('a worker whose row has ended is still fenced when its agent calls again (TASK-0291)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'] })
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('blocked', 'resume me'), durationMs: 1, isAborted: false, turnId: 't' })
+  // No turn.start was heard (a resume the cap refused, or one the engine did not raise): the row is blocked, the fence holds.
+  expect(await status($)).toMatch(/B1 → builder \[agent-1\].*→ blocked/)
+  expect((await $.tool.call({ tool: 'Write', file_path: '/p/probe-outside.txt', content: 'x', agentId: 'agent-1' })).deny).toContain('outside its allowed files')
+  expect((await $.tool.call({ tool: 'Agent', prompt: 'x', description: 'y', agentId: 'agent-1' })).deny).toContain('may not call Agent')
+  expect((await $.tool.call({ tool: 'Edit', file_path: '/p/src/a.ts', old_string: 'a', new_string: 'b', agentId: 'agent-1' })).deny).toBeUndefined()
+})
+
+test('a writer whose calls the fence never saw is reported at its end, with what its worktree changed outside its allowed files (TASK-0291)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  const WT = '/p/.claude/worktrees/agent-agent-1'
+  capWorld(on, {
+    'git rev-parse HEAD': 'base111\n',
+    'git worktree list --porcelain': `worktree /p\nHEAD base111\nbranch refs/heads/master\n\nworktree ${WT}\nHEAD base111\nbranch refs/heads/worktree-agent-agent-1\n\n`,
+    [`git -C ${WT} status --porcelain -uall`]: ' M src/a.ts\n?? probe-outside.txt\nR  src/old.ts -> docs/new.md\n',
+  }, {})
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'], isolated: true })
+  await dispatchWriter($, { id: 'B2', class: 'implementation', objective: 'build b', allowedFiles: ['src/b.ts'], isolated: true })
+  // B2's calls reach the fence; B1's and B3's never do.
+  expect((await $.tool.call({ tool: 'Edit', file_path: '/p/src/b.ts', old_string: 'a', new_string: 'b', agentId: 'agent-2' })).deny).toBeUndefined()
+  for (const id of ['agent-1', 'agent-2']) await $.turn.complete({ agentId: id, reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  // A writer in the session checkout waits for the isolated ones to end.
+  await dispatchWriter($, { id: 'B3', class: 'implementation', objective: 'build c', allowedFiles: ['src/c.ts'] })
+  for (const id of ['agent-3']) await $.turn.complete({ agentId: id, reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  const b1 = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['B1'] })).result)
+  expect(b1).toContain('fence not exercised')
+  expect(b1).toContain(`changed outside them in ${WT}: probe-outside.txt, docs/new.md`)
+  const b2 = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['B2'] })).result)
+  expect(b2).not.toContain('fence not exercised')
+  const b3 = String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['B3'] })).result)
+  expect(b3).toContain('fence not exercised')
+  expect(b3).toContain("check the checkout's diff yourself")
+})
+
+test('a writer is never spawned by the orchestrator: its dispatch is a hand-off, a read-only one still spawns, and the adopted writer is fenced (TASK-0291)', async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  const world = engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  // A read-only worker keeps the orchestrator's own spawn.
+  const scout = String((await $.tool.call(dispatch({ id: 'S1', class: 'lookup', objective: 'look' }))).result)
+  expect(scout).toContain('S1 → scout [agent-1]')
+  expect(world.spawned.map(one => one.name)).toEqual(['S1'])
+  // A writer is handed to the coordinator's own Agent call, with the reason and the assignment; nothing is spawned.
+  const writer = String((await $.tool.call(dispatch({ id: 'W1', class: 'documentation', objective: 'write files', allowedFiles: ['live-check'], isolated: true }))).result)
+  expect(world.spawned.map(one => one.name)).toEqual(['S1'])
+  expect(writer).toMatch(/W1 → documentation → .*→ blocked/)
+  expect(writer).toContain("a writer is never spawned by the orchestrator: the engine leaves the orchestrator's own hooks out of the tool calls of an agent it spawns")
+  expect(writer).toContain('subagent_type "task-orchestrator:documentation", model "haiku", effort "medium", isolation "worktree"')
+  expect(writer).toContain('# Assignment W1 — role documentation (documentation)')
+  // The coordinator's Agent call is adopted by the header; its writes outside the allowed files are refused (the L7 probe).
+  const adopted = await $.agent.spawn({ prompt: byLine(writer, '# Assignment W1'), description: 'W1 documentation', subagentType: 'task-orchestrator:documentation' } as AgentSpawnInput)
+  expect(adopted.agentId).toBe('agent-2')
+  expect(await status($)).toMatch(/W1 → documentation \[agent-2\].*→ running/)
+  expect((await $.tool.call({ tool: 'Write', file_path: '/p/probe-outside.txt', content: 'outside', agentId: 'agent-2' })).deny).toContain('outside its allowed files')
+  expect((await $.tool.call({ tool: 'Write', file_path: '/p/live-check/h01.txt', content: 'inside', agentId: 'agent-2' })).deny).toBeUndefined()
+  // Its calls reached the fence: its end carries no unexercised-fence note.
+  await $.turn.complete({ agentId: 'agent-2', reason: 'answer', answer: report('completed'), durationMs: 1, isAborted: false, turnId: 't' })
+  expect(String((await $.tool.call({ tool: 'mcp__task-orchestrator__collect', ids: ['W1'] })).result)).not.toContain('fence not exercised')
+})
+
+test('after /orchestrate off, an Agent call carrying a waiting hand-off is still adopted and fenced; another agent type is refused (TASK-0291 review)', async ($, on) => {
+  mock.clock(on)
+  const store = storeOf(on)
+  on('session.id', () => ({ value: 'sess-A' }))
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  const answer = String((await $.tool.call(dispatch({ id: 'W1', class: 'documentation', objective: 'write files', allowedFiles: ['live-check'], isolated: true }))).result)
+  await $.command.run({ command: 'orchestrate', args: 'off' })
+  const prompt = byLine(answer, '# Assignment W1')
+  expect((await $.agent.spawn({ prompt, description: 'W1', subagentType: 'general-purpose' } as AgentSpawnInput)).deny).toBe('W1 waits for a hand-off as task-orchestrator:documentation, not general-purpose')
+  const adopted = await $.agent.spawn({ prompt, description: 'W1 documentation', subagentType: 'task-orchestrator:documentation' } as AgentSpawnInput)
+  expect(adopted.agentId).toBe('agent-1')
+  expect(await status($)).toMatch(/W1 → documentation \[agent-1\].*→ running/)
+  expect((await $.tool.call({ tool: 'Write', file_path: '/p/probe-outside.txt', content: 'x', agentId: 'agent-1' })).deny).toContain('outside its allowed files')
+  // Its adoption note gives the hand-off's real reason, not auto mode's (the kept run holds the row's notes).
+  const kept = JSON.stringify(store.get(KEPT))
+  expect(kept).toContain("started by the coordinator's Agent call: a writer runs only through it, where the fence sees its calls")
+  expect(kept).not.toContain('auto mode gave')
+})
+
+test("a retried task's earlier agent stays fenced by the row if it runs again (TASK-0291 review)", async ($, on) => {
+  mock.clock(on)
+  mock.store(on)
+  mock.env(on, {})
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.command.run({ command: 'orchestrate', args: 'on' })
+  await dispatchWriter($, { id: 'B1', class: 'implementation', objective: 'build a', allowedFiles: ['src/a.ts'] })
+  await $.turn.complete({ agentId: 'agent-1', reason: 'answer', answer: report('failed', 'try again'), durationMs: 1, isAborted: false, turnId: 't' })
+  // The retry replaces the row; the old agent is no longer the row's, but its calls still meet the fence.
+  await $.tool.call(dispatch({ id: 'B1', class: 'implementation', objective: 'build a again', allowedFiles: ['src/a.ts'] }))
+  expect(await status($)).toMatch(/B1 → builder → .*→ blocked/)
+  expect((await $.tool.call({ tool: 'Write', file_path: '/p/probe-outside.txt', content: 'x', agentId: 'agent-1' })).deny).toContain('outside its allowed files')
+  expect((await $.tool.call({ tool: 'Agent', prompt: 'x', description: 'y', agentId: 'agent-1' })).deny).toContain('may not call Agent')
 })

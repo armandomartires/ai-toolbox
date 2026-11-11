@@ -61,6 +61,10 @@ export const byId = (ledger: Ledger, id: string): Task | undefined => ledger.fin
 
 export const byAgent = (ledger: Ledger, agentId: string): Task | undefined => ledger.find(task => task.agentId === agentId)
 
+/** The row that fences an agent: its own, or the row whose retry replaced it, so an earlier try that runs again stays fenced (TASK-0291). */
+export const fenceRowOf = (ledger: Ledger, agentId: string): Task | undefined =>
+  byAgent(ledger, agentId) ?? ledger.find(task => task.priorAgentIds?.includes(agentId))
+
 /** A session worker is its own process: the mod cannot fence its writes (ADR-0050). */
 export const isSession = (task: Task): boolean => task.runAs === 'session'
 
@@ -238,8 +242,9 @@ export const retryTask = (ledger: Ledger, fresh: Task, limits: Limits): { ledger
   }
   const retries = old.retries + 1
   const escalations = old.escalations + (raised ? 1 : 0)
-  const task: Task = { ...fresh, retries, escalations, createdAt: old.createdAt, notes: [...fresh.notes, `retry ${retries} of ${limits.maxRetries} after ${old.status}`, ...(raised ? [`escalation ${escalations} of ${limits.maxEscalations}: ${raised}`] : [])] }
-  // Replaced, not merged: the old row's agent, report, reason and hand-off go.
+  const prior = [...(old.priorAgentIds ?? []), ...(old.agentId ? [old.agentId] : [])]
+  const task: Task = { ...fresh, retries, escalations, createdAt: old.createdAt, ...(prior.length ? { priorAgentIds: prior } : {}), notes: [...fresh.notes, `retry ${retries} of ${limits.maxRetries} after ${old.status}`, ...(raised ? [`escalation ${escalations} of ${limits.maxEscalations}: ${raised}`] : [])] }
+  // Replaced, not merged: the old row's report, reason and hand-off go; its agent stays only in priorAgentIds, for the fence.
   return { ledger: ledger.map(one => (one.id === fresh.id ? task : one)) }
 }
 

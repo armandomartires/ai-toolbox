@@ -71,6 +71,8 @@ export type Task = {
   /** What the first `turn.step` of the worker's loop carried. */
   observed?: Settings & { at: number }
   agentId?: string
+  /** The agents of this task's earlier tries, which a retry replaced: still fenced by the row if they run again (TASK-0291). */
+  priorAgentIds?: string[]
   /** `session`: a Code-tab session the coordinator started (ADR-0050); absent or `subagent`: a subagent. */
   runAs?: 'subagent' | 'session'
   /** The session's id (`local_<uuid>`), parsed from the coordinator's `start_session` result. */

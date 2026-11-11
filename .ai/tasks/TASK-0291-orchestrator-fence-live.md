@@ -1,0 +1,84 @@
+# TASK-0291 — task-orchestrator 0.7.2: why the write fence did not hold live
+
+## Status
+
+- Status: review
+- Owner: agent (Claude Code)
+- Branch: agent/agent-a1a8a310218f9b6e9
+- Created: 2026-11-11
+- Updated: 2026-11-11
+- Applies to: `mods/task-orchestrator/`
+- Source: the live probes L5-self and L7-fence of 2026-11-11 (desktop 2.1.318, 0.7.1 from the main checkout)
+
+## Objective
+
+Two isolated documentation workers allowed only `live-check` wrote a file at their worktree root with Write and got "File created successfully". Find why the fence did not refuse it and fix it in this repo: every writer runs through the hand-off (the coordinator's own Agent call, which the fence sees), and a writer whose calls the fence still never saw is reported, not passed silently.
+
+## Inputs
+
+| Artifact | Expected state |
+|----------|----------------|
+| `register.tsx` `tool.call` hook | fences a row only while `running` |
+| The engine types, `claude-code/index.d.ts` (2.1.321) | `$.agent.spawn` "runs ... the Agent tool in the background under this call's origin" |
+| The run's ledger and the removed `task-orchestrator:diag` rows | L7 `running` with its agent id before its Write; diag rows all P0-0268, `blocked` |
+
+## Scope
+
+- In: the cause, with evidence; writers always handed off (read-only workers keep the spawn); the fence on any row its agent has; a `fence not exercised` note at a writer's end, with an isolated writer's out-of-bounds changes; the coordinator protocol; tests, version step, README, ARCHITECTURE, CHANGELOG.
+- Out: an engine change; other mods; the live check of 0.7.2.
+
+## Likely files
+
+`mods/task-orchestrator/claude/hooks/register.tsx`, `register.test.tsx`, `contract.ts`, `.claude-plugin/plugin.json`, `README.md`, `ARCHITECTURE.md`, `CHANGELOG.md`.
+
+## Execution plan
+
+1. Read the hook, the ledger rows, the worker transcripts and the engine types; rule out each lead.
+2. Reproduce live from a dispatched worker without changing a file.
+3. Write red tests for what the repo can fix; fix; run the kit and the mod gates.
+4. Hand every writer to the coordinator's Agent call (coordinator's follow-up); red tests first.
+
+## Acceptance criteria
+
+- [x] Root cause named with evidence (engine type and code, ledger rows, a live repro)
+- [x] Red tests failed before the fix and pass after; kit all green
+- [x] A writer dispatch is a hand-off, not a spawn; a read-only dispatch still spawns; the adopted writer's out-of-bounds Write is denied
+- [x] A writer whose calls the fence never saw is reported, not silently allowed
+
+## Mandatory validations
+
+- [x] `cd mods/task-orchestrator && claude plugin test claude`
+- [x] `skills/mod-dev/scripts/mod-dev.sh validate task-orchestrator` and `check`
+- [ ] tests/validate.sh (not run: the coordinator's gate)
+
+## Risks and rollback
+
+- Each writer costs the coordinator an Agent call; a coordinator that does not make it leaves the writer handed off (it holds its slot).
+- `fenceSaw` is in memory: after a reload a writer may be reported unfenced that was not.
+- Rollback: git revert the task commit
+
+## Outputs / handover
+
+| Artifact | End state |
+|----------|-----------|
+| `register.tsx` | writers handed off (`HANDOFF_WHY.writer`); fence on any row; `fenceSaw`; `unfencedText`, `worktreeOf`, `changedPaths`; the note shown by `collect` |
+| `contract.ts` | the protocol says every writer is handed off, and why |
+| `register.test.tsx` | 3 new tests; `dispatchWriter` adopts a writer's hand-off in 11 tests; the refused-resume note's text updated |
+| README, ARCHITECTURE, CHANGELOG, `plugin.json` | 0.7.2, the cause and the limit stated |
+
+Next: reload 0.7.2 and rerun the L7 probe as a hand-off: the root Write must be refused.
+
+## Execution log
+
+- 2026-11-11 · agent/claude-opus-5-5 · cause found outside the repo; the mod now reports an unexercised fence
+  - Evidence: engine 2.1.321 dispatches a model's tool call with `origin: s.hookOrigin`; a plugin-spawned loop's context carries `hookOrigin` = the plugin (`spawnProvenance`, `hookCaller`), and the hooks module of a plugin named in it is "left out for re-entry". `cc-plugin-sec-default` registers no `tool.call` hook (only `classic.*`, `prompt.*`, `skill.prompt`, `session.append`, `settings.read` and the tool-list nouns)
+  - Evidence: L7 row `running`, agent id set, `observed` at 046789 before its first request (046937) and its Write (048267); agent-watch's `tool.call` counted its 3 calls; no live fence deny in any transcript since 0.7.0, the earlier ones from hand-offs
+  - Evidence: live repro, worker W1-fence (`running`, allowed files exclude `AGENTS.md`): `Edit AGENTS.md` with an absent string → core's "String to replace not found", no deny; nothing changed
+  - Evidence: the diag rows are P0-0268 resumed after a `blocked` report under 0.7.0, which did not reopen it (fixed in 0.7.1); its status gate skipped the fence
+  - Evidence: `claude plugin test claude` → 151 pass, 2 fail (new tests) before; 153 pass after
+  - Deviation: no red test of the engine rule: the kit cannot raise a call under the mod's origin
+- 2026-11-11 · agent/claude-opus-5-5 · writers run through the hand-off; read-only workers keep the spawn
+  - Evidence: with `if (task.isWriter) return handOff('writer')` commented out → 140 pass, 14 fail (the new hand-off test among them); restored → 154 pass, 0 fail
+- 2026-11-11 · agent/claude-opus-5-5 · risk-review findings 1-7 and `-uall` fixed
+  - Evidence: fixes 1, 3, 6 and `-uall` reverted → 153 pass, 3 fail (the two review tests, the backstop test); restored → 156 pass, 0 fail
+  - Deviation: finding 2 has no red test: a writer becomes runnable at an earlier tick (an end, `on`), so the kit cannot reach the person-turn tick handing one off
