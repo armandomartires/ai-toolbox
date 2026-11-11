@@ -12,3 +12,4 @@
 *.py text eol=lf
 .githooks/* text eol=lf
 configs/claude-code/hooks/* text eol=lf
+plugins/** text eol=lf

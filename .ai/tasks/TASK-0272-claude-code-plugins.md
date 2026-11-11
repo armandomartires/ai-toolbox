@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: planned
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0272
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Applies to: `scripts/build-plugin.py`, `plugins/`, `.claude-plugin/marketplace.json`, `scripts/install.sh`, `tests/test-install.sh`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.2 (N2), decisions D2=B (marketplace primary), Q8=D (GitLab marketplace plus the claude.ai org library), Q11=B (plugins per component kind), Q15=B (packaging first with 4 roles); related: ADR-0001, ADR-0021
 
@@ -50,14 +50,15 @@ Ship the skills, agents and gates server as installable plugins split by compone
 
 ## Acceptance criteria
 
-- [ ] The three plugins validate and install into a throwaway config dir, giving 8 skills, the agent count the emitter reports for `claude-code` (4 today) and the gates server
-- [ ] Removing a component from the build fails the count
-- [ ] `build-plugin.py` output is generated, and a drift check fails if `plugins/` is stale
+- [x] The three plugins validate and install into a throwaway config dir, giving 7 skills (mod-dev is checkout only), the agent count the emitter reports for `claude-code` (4 today) and the gates server
+- [x] Removing a component from the build fails the count
+- [x] `build-plugin.py` output is generated, and a drift check fails if `plugins/` is stale
+- [ ] (TASK-0276) The skills or agents plugin carries the permission rules: not met, a plugin settings.json is not a known way to ship them
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] `bash tests/test-install.sh`
+- [x] tests/validate.sh
+- [x] `bash tests/test-install.sh`
 
 ## Risks and rollback
 
@@ -70,12 +71,19 @@ Ship the skills, agents and gates server as installable plugins split by compone
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `scripts/build-plugin.py` | builds `plugins/ai-toolbox-{skills,agents,gates}`; `--check` is the drift check |
+| `plugins/`, `.claude-plugin/marketplace.json` | generated 7 skills, 4 agents, gates server; three entries, agents depends on skills |
+| `tests/test-install.sh` | cases P1-P16 (P7 absence of settings/hooks) against the real repo |
+| `configs/claude-code/README.md` | install.sh is the development and non-Claude path |
 
-Next:
+Next: review and commit.
 
 ## Execution log
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
-  - Evidence: none yet
-  - Deviation: none
+- 2026-11-11 · agent/Sonnet 5.5 · built the three plugins; review fixes applied
+  - Red first: P1-P16 failed on the missing plugins/; green after the build. Agent count is read from the emitter (4 today).
+  - Review: worktree hooks and plugin settings.json dropped (install.sh delivers both); mod-dev left out, so the skills plugin holds 7, not 8; LF output, CRLF-blind and mode-aware `--check`; .mcp.json passes only the required variables, run `--frozen --no-dev`; plugins/ added to check-hidden-unicode.py and .gitattributes.
+  - Not met: the TASK-0276 permission criterion. A plugin settings.json is not a known way to ship permission rules, so install.sh (and --unattended) stays the writer.
+  - Known gaps from the plugin cache: unattended-ops, design-flow, ansible-ops point at loops/; the emitted agents cite skills/... paths; check-binding.sh defaults to ../../../loops/unattended-run/loop.md (pass the loop as argument 2). Listed in the plugin READMEs.
+  - Evidence: test-install.sh OK with claude plugin validate and a throwaway install; drift check is P13 there, not a separate validate.sh block.

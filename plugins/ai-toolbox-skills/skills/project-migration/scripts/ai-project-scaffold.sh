@@ -1,0 +1,638 @@
+#!/usr/bin/env bash
+# ai-project-scaffold.sh — generic project scaffold implementing the .ai
+# governance framework (context / decisions / planning / tasks / sessions /
+# reviews / templates) from the project-migration specification.
+#
+# Usage:
+#   ./ai-project-scaffold.sh <project-name> [options]
+#   ./ai-project-scaffold.sh . [options]   # scaffold into existing repo
+#
+# Options:
+#   --type python|node|generic   Stack preset for src/ and .gitignore (default: generic)
+#   --no-git                     Do not run git init / commit
+#   --force                      Add files into a non-empty existing directory
+#                                (existing files are never overwritten)
+#   --tracker files|gitlab|github  Where work is tracked (default: files).
+#                                A forge tracker skips planning/, tasks/,
+#                                sessions/ and reviews/ (ADR-0037)
+#   --gitlab-project group/name  Required with --tracker gitlab
+#   --github-repo owner/name     Required with --tracker github
+#
+# Principles applied from the spec:
+#   - Only create files that provide immediate value; the rest are templates.
+#   - AGENTS.md is the single source of agent instructions; CLAUDE.md imports it with @AGENTS.md.
+#   - No secrets, no .env, no invented requirements — placeholders are marked FILL.
+#
+# THIS SCRIPT OWNS THE LAYOUT, NOT THE SHAPE (ADR-0027, B-040, TASK-0119).
+# Which directories and files exist is decided here. What a TASK / ADR /
+# REVIEW / SESSION artifact looks like is owned by
+# ../schemas/{task,adr,review,session,plan}.md, rendered into ../templates/*.md by
+# ai-toolbox's scripts/sync-templates.sh, and emitted below by reading those
+# files. Do not re-inline them as heredocs: that is what this script used to
+# do, and two of the five had silently drifted into failing their own schemas.
+# ai-toolbox's tests/validate.sh fails when ../templates/ drifts from
+# ../schemas/, and when this script grows a heredoc for one of the four kinds.
+# PLAN.md is read the same way since TASK-0146 (B-042).
+
+set -euo pipefail
+
+# Resolved BEFORE the cd into the target project, because after it a
+# $0-relative path no longer points at the skill.
+SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+TEMPLATE_DIR="$SKILL_DIR/templates"
+
+# Checked up front, and by name, so a missing template is one clear message
+# before anything is written -- not a bare redirect error 300 lines in, after
+# half a repository has been scaffolded. The script needs only these files;
+# it does NOT need the project-workflow skill or a generator at run time.
+for _t in TASK ADR REVIEW SESSION PLAN; do
+  [ -r "$TEMPLATE_DIR/$_t.md" ] || {
+    echo "ai-project-scaffold.sh: missing template $TEMPLATE_DIR/$_t.md" >&2
+    echo "  The skill is incomplete. These are generated from ../schemas/ by" >&2
+    echo "  ai-toolbox's scripts/sync-templates.sh and are shipped with the skill." >&2
+    exit 1
+  }
+done
+unset _t
+
+# ---- Arguments -----------------------------------------------------------------
+usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+
+[ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] && usage
+[ $# -ge 1 ] || usage
+
+PROJECT="$1"; shift || true
+TYPE="generic"; DO_GIT="yes"; FORCE="no"
+TRACKER="files"; GITLAB_PROJECT=""; GITHUB_REPO=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --type)   TYPE="$2"; shift 2 ;;
+    --tracker)        TRACKER="$2"; shift 2 ;;
+    --gitlab-project) GITLAB_PROJECT="$2"; shift 2 ;;
+    --github-repo)    GITHUB_REPO="$2"; shift 2 ;;
+    --no-git) DO_GIT="no"; shift ;;
+    --force)  FORCE="yes"; shift ;;
+    *) echo "Unknown option: $1" >&2; usage ;;
+  esac
+done
+case "$TYPE" in python|node|generic) ;; *) echo "Invalid --type: $TYPE" >&2; exit 1 ;; esac
+
+# The work tracker (ADR-0037). Same rules as project-workflow's tracker.sh,
+# which reads the tracker.conf written below; ai-toolbox's tests/validate.sh
+# runs both against each other. The path is a name, never a host or URL.
+SEG='[A-Za-z0-9][A-Za-z0-9._-]*'
+case "$TRACKER" in
+  files)
+    [ -z "$GITLAB_PROJECT$GITHUB_REPO" ] || {
+      echo "--gitlab-project and --github-repo need --tracker gitlab or github" >&2; exit 1; }
+    TRACKER_PATH="" ;;
+  gitlab)
+    [ -z "$GITHUB_REPO" ] || { echo "--github-repo belongs to --tracker github" >&2; exit 1; }
+    [[ "$GITLAB_PROJECT" =~ ^$SEG(/$SEG)+$ ]] || {
+      echo "--tracker gitlab needs --gitlab-project group/name (a path, not a URL)" >&2; exit 1; }
+    TRACKER_PATH="$GITLAB_PROJECT"; TRACKER_KEY="gitlab_project"; FORGE_NAME="GitLab" ;;
+  github)
+    [ -z "$GITLAB_PROJECT" ] || { echo "--gitlab-project belongs to --tracker gitlab" >&2; exit 1; }
+    [[ "$GITHUB_REPO" =~ ^$SEG/$SEG$ ]] || {
+      echo "--tracker github needs --github-repo owner/name (a path, not a URL)" >&2; exit 1; }
+    TRACKER_PATH="$GITHUB_REPO"; TRACKER_KEY="github_repo"; FORGE_NAME="GitHub" ;;
+  *) echo "Invalid --tracker: $TRACKER (files | gitlab | github)" >&2; exit 1 ;;
+esac
+unset SEG
+if [ "$TRACKER" = files ]; then
+  AI_LAYOUT="context, decisions, planning, tasks, sessions, reviews"
+  NEXT_ACTION="create TASK-0001 in .ai/tasks/"
+else
+  AI_LAYOUT="context, decisions (work is tracked on ${FORGE_NAME}: tracker.conf)"
+  NEXT_ACTION="file the first issue on ${FORGE_NAME} (${TRACKER_PATH})"
+fi
+
+# ---- Guards ---------------------------------------------------------------------
+if [ -d "$PROJECT" ] && [ -n "$(ls -A "$PROJECT" 2>/dev/null)" ] && [ "$FORCE" != "yes" ]; then
+  echo "Directory '$PROJECT' exists and is not empty." >&2
+  echo "Use --force to add missing scaffold files without overwriting." >&2
+  exit 1
+fi
+mkdir -p "$PROJECT"
+cd "$PROJECT"
+PNAME="$(basename "$PWD")"
+YEAR="$(date +%Y)"
+
+# mkfile PATH  — creates parent dirs, never overwrites an existing file.
+mkfile() { mkdir -p "$(dirname "$1")"; if [ ! -e "$1" ]; then cat > "$1"; fi; }
+
+# ---- Top level --------------------------------------------------------------------
+mkfile README.md <<EOF
+# ${PNAME}
+
+<!-- FILL: one-paragraph project description. -->
+
+## Repository layout
+- \`AGENTS.md\` — single source of shared instructions for all agents (read first)
+- \`.ai/\` — governance: ${AI_LAYOUT}
+- \`docs/\` — architecture, development, operations, deployment
+- \`src/\`, \`tests/\`, \`scripts/\` — code and automation
+- \`CHANGELOG.md\` — user-visible changes
+
+## Status
+See \`.ai/context/CURRENT_STATE.md\` for the current project state and the
+recommended next action.
+EOF
+
+# Absent, tracker.conf means files; it is written anyway so the answer shows.
+{
+  echo "# Work tracker for this project: files | gitlab | github (ADR-0037 in"
+  echo "# ai-toolbox; project-workflow's templates/reference/tracker.md)."
+  echo "# Written by ai-project-scaffold.sh on $(date +%Y-%m-%d). Changing it is a"
+  echo "# decision: record an ADR. Absent, this file means files."
+  echo "tracker = ${TRACKER}"
+  [ -z "$TRACKER_PATH" ] || echo "${TRACKER_KEY} = ${TRACKER_PATH}"
+} | mkfile tracker.conf
+
+mkfile CHANGELOG.md <<EOF
+# Changelog
+
+All notable changes to ${PNAME} are documented here.
+
+## [Unreleased]
+- Scaffolded project structure (.ai governance framework).
+EOF
+
+mkfile .gitignore <<'EOF'
+# --- Universal ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+coverage/
+.pytest_cache/
+# --- Governance ---
+.ai/tasks/completed/archive/
+EOF
+
+# ---- AGENTS.md ---------------------------------------------------------------------
+# The appends below must be skipped on re-run: mkfile silently no-ops when
+# AGENTS.md already exists, but a plain `>>` does not, which would
+# duplicate every section on a second invocation. Guard on pre-existence.
+AGENTS_MD_EXISTED="no"
+[ -e AGENTS.md ] && AGENTS_MD_EXISTED="yes"
+mkfile AGENTS.md <<EOF
+# AGENTS.md — ${PNAME}
+
+<!-- FILL: one sentence stating what this project is. -->
+
+## Objective and scope
+<!-- FILL: what the project does, what is explicitly out of scope. -->
+
+## Technology stack
+EOF
+if [ "$AGENTS_MD_EXISTED" = "no" ]; then
+if [ "$TYPE" = "python" ]; then
+  printf 'Python 3.10+ (src layout, pyproject.toml, hatchling), pytest.\n' >> AGENTS.md
+elif [ "$TYPE" = "node" ]; then
+  printf 'Node.js LTS (src layout, package.json), built-in test runner.\n' >> AGENTS.md
+else
+  printf '<!-- FILL: languages, frameworks, runtimes, key dependencies. -->\n' >> AGENTS.md
+fi
+cat >> AGENTS.md <<EOF
+
+## Commands
+<!-- FILL: adjust to the real toolchain. -->
+EOF
+if [ "$TYPE" = "python" ]; then
+  cat >> AGENTS.md <<'EOF'
+- Install: `uv sync` (or `pip install -e .[dev]`)
+- Test: `pytest`
+- Lint / type check: `ruff check . && mypy src`
+- Build: `python -m build`
+EOF
+elif [ "$TYPE" = "node" ]; then
+  cat >> AGENTS.md <<'EOF'
+- Install: `npm ci`
+- Test: `npm test`
+- Lint: `npm run lint`
+- Build: `npm run build`
+EOF
+else
+  printf -- '- Install: <!-- FILL -->\n- Test: <!-- FILL -->\n- Lint: <!-- FILL -->\n- Build: <!-- FILL -->\n' >> AGENTS.md
+fi
+cat >> AGENTS.md <<'EOF'
+
+## Project structure
+- `.ai/` — governance layer: see `.ai/README.md`
+- `docs/` — architecture, development, operations, deployment docs
+- `src/` — application code; `tests/` — automated tests; `scripts/` — automation
+- `docs/registry`-style generated indexes are allowed but must be regenerated
+  by a script, never hand-edited.
+
+## Security and secrets policy
+- Never commit secrets, tokens, passwords, private keys, or `.env` files
+  containing credentials. Provide `.env.example` instead.
+- Do not add dependencies that introduce known vulnerabilities without an ADR.
+
+## Git rules
+- Before changes: check `git status`, current branch, remote, uncommitted
+  changes, recent commits.
+- One task = one commit. Never include unrelated changes in a commit.
+- Never delete or overwrite human changes without explicit authorization.
+- At task end: run validations, review the diff, commit with a subject that
+  names the task (`<Imperative summary> (TASK-NNNN)`), push, and confirm
+  the remote holds the same hash. Git is the record: the brief does not
+  carry its own hash, and no follow-up commit adds it.
+- End every task with a short report: Result, Changed, Verified, Pushed,
+  Next — one line each.
+- Never force-push without explicit authorization. If the push fails,
+  diagnose and document; do not declare the task complete.
+- Simple checks (status, diff analysis, test runs) may be delegated to a
+  subagent; the main agent still verifies results.
+
+## Documentation rules
+- Update `.ai/context/CURRENT_STATE.md` after any significant change: edit
+  the state it describes; do not append a narrative (history is in git).
+- Decisions with lasting impact get an ADR in `.ai/decisions/`; not every
+  small change.
+- Plans must be concrete enough for another agent to implement without a
+  long clarification conversation.
+
+## Definition of done
+A task is complete only when: implementation finished; acceptance criteria
+satisfied; relevant tests pass; known failures documented; documentation
+updated; no secrets included; diff reviewed; task marked `done`; the
+commit subject names the task; the push is confirmed in the task report;
+next action clear.
+
+## Ambiguity policy
+If requirements are significantly ambiguous or risky, stop and ask the
+human. State assumptions explicitly. Do not invent requirements.
+
+## Destructive change policy
+Deletions, overwrites, migrations that discard history, and force-pushes
+require explicit human authorization recorded in the task file.
+
+EOF
+if [ "$TRACKER" = files ]; then
+cat >> AGENTS.md <<'EOF'
+## Planning references
+- Roadmap: `.ai/planning/ROADMAP.md`
+- Backlog: `.ai/planning/BACKLOG.md`
+- Active sprint: `.ai/planning/SPRINT-CURRENT.md`
+- Tasks: `.ai/tasks/` — Current state: `.ai/context/CURRENT_STATE.md`
+EOF
+else
+cat >> AGENTS.md <<EOF
+## Planning references
+- Work tracker: ${FORGE_NAME} project \`${TRACKER_PATH}\` (\`tracker.conf\`).
+  Tasks are issues, sprints are milestones, the board is the plan; the
+  mapping is project-workflow's \`templates/reference/tracker.md\`.
+- Current state: \`.ai/context/CURRENT_STATE.md\`; decisions: \`.ai/decisions/\`
+- End-user documentation lives in the project wiki; developer and
+  operations docs stay in \`docs/\`.
+EOF
+# On a forge the task id is the issue number (tracker.md, *Identifiers*).
+sed 's/(`TASK-NNNN`)/(`#123`, the issue)/; s/(TASK-NNNN)/(#123, the issue)/' AGENTS.md > AGENTS.md.tmp
+mv AGENTS.md.tmp AGENTS.md
+fi
+cat >> AGENTS.md <<'EOF'
+
+## Mandatory task process
+Every task follows the work cycle:
+1. Gather context (AGENTS.md, CURRENT_STATE, sprint, task, git status).
+2. Perceive (knowns, gaps, assumptions — no invented requirements).
+3. Plan (scope, likely files, acceptance criteria, validation commands,
+   stopping conditions; ask the human if ambiguity or risk is significant).
+4. Act (small, reversible changes only within task scope).
+5. Observe (record outputs, errors, tests, git changes).
+6. Evaluate against acceptance criteria; diagnose failures before retry.
+7. Repeat only with a clear next action; stop when criteria are met.
+File templates: `.ai/templates/`.
+EOF
+fi # AGENTS_MD_EXISTED
+
+# ---- CLAUDE.md (regular file importing AGENTS.md, ADR-0061) -----------------------
+# A symlink breaks on checkouts without core.symlinks; the import line does not.
+if [ ! -e "CLAUDE.md" ]; then
+  printf '%s
+' '@AGENTS.md' '' '# Claude Code notes' ''     'Claude-only facts go here. Everything shared lives in AGENTS.md; do not copy it.' > CLAUDE.md
+fi
+
+# ---- .ai governance layer -----------------------------------------------------------
+if [ "$TRACKER" != files ]; then
+mkfile .ai/README.md <<EOF
+# .ai — governance layer
+
+- \`context/\` — CURRENT_STATE.md, PROJECT_MAP.md, GLOSSARY.md
+- \`decisions/\` — ADR-NNNN-*.md (lasting decisions only)
+- \`templates/\` — TASK is the body of an issue; ADR is the decision record
+
+Work is tracked on ${FORGE_NAME} (\`${TRACKER_PATH}\`, declared in \`tracker.conf\`):
+tasks are issues, sprints are milestones, the board is the plan. The
+mapping is project-workflow's \`templates/reference/tracker.md\`.
+Process, statuses, and definition of done are defined in AGENTS.md.
+EOF
+fi
+mkfile .ai/README.md <<'EOF'
+# .ai — governance layer
+
+- `context/` — CURRENT_STATE.md, PROJECT_MAP.md, GLOSSARY.md
+- `decisions/` — ADR-NNNN-*.md (lasting decisions only)
+- `planning/` — ROADMAP.md, BACKLOG.md, SPRINT-CURRENT.md, plans/
+- `tasks/` — TODO.md, TASK-*.md, completed/
+- `sessions/` — SESSION-*.md, INDEX.md (short records, not transcripts)
+- `reviews/` — REVIEW-*.md
+- `templates/` — PLAN, TASK, SESSION, ADR, REVIEW
+
+Process, statuses, and definition of done are defined in AGENTS.md.
+Update context files at the end of every significant task.
+EOF
+
+mkfile .ai/context/CURRENT_STATE.md <<EOF
+# Current State
+
+- Current objective: <!-- FILL -->
+- Product status: scaffolded; no features implemented yet.
+- Completed features: none.
+- Incomplete features: <!-- FILL or "none yet" -->
+- Blockers: none.
+- Risks: <!-- FILL -->
+- Expected current branch: main
+- Latest relevant commit: initial scaffold
+- Recommended next action: ${NEXT_ACTION}
+- Known tests and validations: <!-- FILL -->
+- Environment validated in: <!-- FILL (e.g. Windows 11 + WSL) -->
+- Dev/staging/production differences: <!-- FILL; delete section if single-environment -->
+EOF
+
+mkfile .ai/context/PROJECT_MAP.md <<'EOF'
+# Project Map
+
+Document relationships and responsibilities — not every file.
+
+## Main modules
+<!-- FILL: module → responsibility -->
+
+## Entry points
+<!-- FILL: how the application starts -->
+
+## Data flows and integrations
+<!-- FILL: inputs, outputs, external systems -->
+
+## Configuration and persistence
+<!-- FILL: config files, databases, storage -->
+
+## Tests and scripts
+<!-- FILL: what tests cover, what scripts automate -->
+
+## Fragile or unknown areas
+<!-- FILL -->
+EOF
+
+mkfile .ai/context/GLOSSARY.md <<'EOF'
+# Glossary
+
+- <!-- FILL: term — definition -->
+EOF
+
+mkfile .ai/decisions/ADR-0001-repo-structure.md <<EOF
+# ADR-0001 — Adopt .ai governance structure
+
+## Status
+Accepted (${YEAR})
+
+## Context
+The project needs a structure understandable by humans and by programming
+agents of varying capability, with planning separated from implementation
+and progress resumable in a new conversation.
+
+## Decision
+Adopt the .ai framework (context / decisions / planning / tasks /
+sessions / reviews / templates) with AGENTS.md as the single source of
+agent instructions and CLAUDE.md importing it (@AGENTS.md). Stack preset:
+${TYPE}. Work tracker: ${TRACKER}${TRACKER_PATH:+ (${TRACKER_PATH})}, declared in
+tracker.conf.
+
+## Consequences
+- Every task is documented, validated, and traceable to a commit.
+- Operational context lives in files, not in conversation history.
+EOF
+
+# planning/, tasks/, sessions/ and reviews/ belong to a files tracker. On a
+# forge they are milestones, issues and the board (ADR-0037), so writing
+# them would leave two owners of "what's next".
+if [ "$TRACKER" = files ]; then
+mkfile .ai/planning/ROADMAP.md <<'EOF'
+# Roadmap
+
+## Vision
+<!-- FILL: one paragraph -->
+
+## Phase 1 — <!-- FILL -->
+- Objectives:
+- Milestones:
+- Exit criteria:
+
+## Dependencies between phases
+<!-- FILL -->
+
+## Risks
+<!-- FILL -->
+
+Phases decompose into sprints (.ai/planning/SPRINT-CURRENT.md); sprints
+decompose into executable tasks (.ai/tasks/TASK-*.md).
+EOF
+
+mkfile .ai/planning/BACKLOG.md <<'EOF'
+# Backlog
+
+| ID | Title | Priority | Value | Dependencies | Risk | Status | Ready when |
+|----|-------|----------|-------|--------------|------|--------|-----------|
+EOF
+
+mkfile .ai/planning/SPRINT-CURRENT.md <<'EOF'
+# Sprint — S1
+
+- Objective: <!-- FILL -->
+- Time reference: <!-- FILL -->
+- Included tasks:
+- Recommended order:
+- Dependencies:
+- Success criteria:
+- Risks:
+- Completed tasks: none. Blocked tasks: none.
+- Recommended next task:
+EOF
+
+mkfile .ai/planning/plans/.gitkeep </dev/null
+
+mkfile .ai/tasks/TODO.md <<'EOF'
+# TODO
+
+- [ ] TASK-0001 — <!-- FILL: first executable task --> (planned)
+EOF
+
+mkfile .ai/tasks/completed/.gitkeep </dev/null
+
+mkfile .ai/sessions/INDEX.md <<'EOF'
+# Session Index
+
+| Session | Date | Agent | Objective | Tasks | Result |
+|---------|------|-------|-----------|-------|--------|
+EOF
+
+mkfile .ai/reviews/.gitkeep </dev/null
+fi # TRACKER = files
+
+# ---- .ai templates -----------------------------------------------------------------
+mkfile .ai/templates/TASK.md < "$TEMPLATE_DIR/TASK.md"
+
+mkfile .ai/templates/PLAN.md < "$TEMPLATE_DIR/PLAN.md"
+
+mkfile .ai/templates/SESSION.md < "$TEMPLATE_DIR/SESSION.md"
+
+mkfile .ai/templates/ADR.md < "$TEMPLATE_DIR/ADR.md"
+
+mkfile .ai/templates/REVIEW.md < "$TEMPLATE_DIR/REVIEW.md"
+
+# ---- docs/ ---------------------------------------------------------------------------
+mkfile docs/architecture/README.md <<'EOF'
+# Architecture
+High-level design: modules, components, data flows, integration points,
+and significant technical trade-offs. Reference ADRs in .ai/decisions/.
+EOF
+
+mkfile docs/development/README.md <<'EOF'
+# Development
+How to set up a local environment, run tests, follow coding conventions,
+and structure contributions. Keep AGENTS.md concise and link here for depth.
+EOF
+
+mkfile docs/operations/README.md <<'EOF'
+# Operations
+How to run, configure, and monitor the system; how to deploy, validate a
+deployment, and roll back; which steps require human approval.
+EOF
+
+mkfile docs/deployment/README.md <<'EOF'
+# Deployment
+Environment model (development / staging / production), deployment steps,
+validation gates, backup and rollback procedures.
+Delete this directory if the project has no deployment targets.
+EOF
+
+# ---- Code layer (stack presets) --------------------------------------------------------
+if [ "$TYPE" = "python" ]; then
+  PKG="$(echo "$PNAME" | tr '[:upper:]-' '[:lower:]_')"
+  mkfile pyproject.toml <<EOF
+[project]
+name = "${PKG}"
+version = "0.1.0"
+description = "<!-- FILL -->"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "mypy"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/${PKG}"]
+EOF
+  mkfile "src/${PKG}/__init__.py" <<EOF
+"""${PNAME}"""
+EOF
+  mkfile "src/${PKG}/__main__.py" <<'EOF'
+def main() -> None:
+    raise SystemExit("TODO: implement entry point")
+
+
+if __name__ == "__main__":
+    main()
+EOF
+  mkfile tests/test_placeholder.py <<'EOF'
+def test_placeholder():
+    assert True
+EOF
+elif [ "$TYPE" = "node" ]; then
+  mkfile package.json <<EOF
+{
+  "name": "$(echo "$PNAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/",
+    "lint": "echo 'FILL: configure linter'",
+    "build": "echo 'FILL: configure build'"
+  }
+}
+EOF
+  mkfile src/index.js <<'EOF'
+export function main() {
+  // TODO: implement entry point
+}
+EOF
+  mkfile tests/placeholder.test.js <<'EOF'
+import { test } from "node:test";
+import assert from "node:assert";
+
+test("placeholder", () => {
+  assert.ok(true);
+});
+EOF
+else
+  mkfile src/README.md <<'EOF'
+# src
+<!-- FILL: application code. Keep modules cohesive and documented in
+.ai/context/PROJECT_MAP.md -->
+EOF
+  mkfile tests/README.md <<'EOF'
+# tests
+<!-- FILL: automated tests. A task cannot be done until these pass. -->
+EOF
+fi
+
+mkfile scripts/README.md <<'EOF'
+# scripts
+Automation helpers (setup, validation, deployment). Each script must be
+idempotent, executable, and safe to re-run.
+EOF
+
+# ---- Git ------------------------------------------------------------------------------
+if [ "$DO_GIT" = "yes" ] && [ ! -d .git ]; then
+  git init -q
+  git add -A
+  git commit -qm "chore: scaffold ${PNAME} with .ai governance structure" --no-gpg-sign
+fi
+
+# ---- Report ----------------------------------------------------------------------------
+echo "Scaffolded '${PNAME}' (type: ${TYPE}, tracker: ${TRACKER}${TRACKER_PATH:+ ${TRACKER_PATH}})"
+echo
+echo "Next steps:"
+echo "  1. Fill the <!-- FILL --> markers in AGENTS.md, README.md,"
+echo "     and .ai/context/CURRENT_STATE.md."
+if [ "$TRACKER" = files ]; then
+echo "  2. Replace TODO.md's placeholder with your first executable task."
+echo "     Generate it, do not copy a template and imitate it:"
+echo "       ${SKILL_DIR}/scripts/new-artifact.sh --kind task"
+echo "     and prove it with ${SKILL_DIR}/scripts/check-artifact.sh."
+echo "     Both ship with this skill and need nothing else installed."
+else
+echo "  2. File the first issue on ${FORGE_NAME} (${TRACKER_PATH}). Generate its body,"
+echo "     do not copy a template and imitate it:"
+echo "       ${SKILL_DIR}/scripts/new-artifact.sh --kind task"
+echo "     prove it with ${SKILL_DIR}/scripts/check-artifact.sh, then paste it."
+echo "     Labels and milestones: project-workflow's templates/reference/tracker.md."
+fi
+echo "  3. Delete directories that do not apply (e.g. docs/deployment/)."
+echo "  4. Keep CLAUDE.md to Claude-only notes under its @AGENTS.md first line."

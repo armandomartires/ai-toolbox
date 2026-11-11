@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "gates": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "${CLAUDE_PLUGIN_ROOT}/server",
+        "run",
+        "--frozen",
+        "--no-dev",
+        "gates"
+      ],
+      "env": {
+        "GATES_MAP": "${GATES_MAP}",
+        "GATES_RUN_ROOT": "${GATES_RUN_ROOT}",
+        "GATES_MAP_SHA256": "${GATES_MAP_SHA256}",
+        "GATES_ALLOWED_EXECUTABLES": "${GATES_ALLOWED_EXECUTABLES}"
+      }
+    }
+  }
+}

@@ -370,6 +370,129 @@ check "Q13 --unattended with another --client is refused" "$([ "$rc" -eq 2 ]; ec
 mv "$HOME/.claude.off" "$HOME/.claude"
 rm -rf "$R/.claude" "$R/configs"
 
+# --- P1.2 (TASK-0272): the three Claude Code plugins -------------------------
+# Runs against the REAL repository ($here), not the fake one above. Counts are
+# read from the sources (skills/, the emitter's claude-code output), never
+# hardcoded: 8 skills and 4 agents today, whatever they are tomorrow.
+# WHAT THIS PROVES: the build yields the counts, a dropped component fails
+# them, the permission rules are read from the fragment at build time, plugins/
+# drift is caught, and (with claude on PATH) the plugins validate and install.
+# WHAT IT DOES NOT PROVE: that Claude Code applies a plugin's settings.json
+# permissions; scripts/install.sh --unattended is what writes them.
+BP="$here/scripts/build-plugin.py"
+PB="$tmp/built"
+python3 "$BP" --out "$PB" >/dev/null 2>&1
+check "P1 build-plugin.py builds the three plugins" "$([ -f "$PB/ai-toolbox-skills/.claude-plugin/plugin.json" ] && [ -f "$PB/ai-toolbox-agents/.claude-plugin/plugin.json" ] && [ -f "$PB/ai-toolbox-gates/.mcp.json" ]; echo $?)"
+
+src_skills="$(cd "$here/skills" && for d in */; do d="${d%/}"; case "$d" in _template*|mod-dev) continue ;; esac; [ -f "$d/SKILL.md" ] && echo "$d"; done | wc -l | tr -d ' ')"
+mkdir -p "$tmp/em"
+(cd "$here" && python3 scripts/emit-agents.py claude-code "$tmp/em" >/dev/null 2>&1)
+src_agents="$(ls "$tmp/em" | wc -l | tr -d ' ')"
+# counts_ok <built-dir>: skills, agents and the gates server, against the sources.
+counts_ok() {
+  local b="$1" s a g
+  s="$(ls "$b/ai-toolbox-skills/skills"/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')"
+  a="$(ls "$b/ai-toolbox-agents/agents"/*.md 2>/dev/null | wc -l | tr -d ' ')"
+  g="$(python3 -c 'import json,sys; print("gates" in json.load(open(sys.argv[1]))["mcpServers"])' "$b/ai-toolbox-gates/.mcp.json" 2>/dev/null)"
+  [ "$src_skills" -gt 0 ] && [ "$src_agents" -gt 0 ] && [ "$s" = "$src_skills" ] && [ "$a" = "$src_agents" ] && [ "$g" = True ]
+}
+counts_ok "$PB"
+check "P2 built plugins hold $src_skills skills, $src_agents agents (the emitter's count) and the gates server" "$?"
+rm -rf "$tmp/cut"; cp -r "$PB" "$tmp/cut"
+rm -rf "$tmp/cut/ai-toolbox-skills/skills/$(ls "$tmp/cut/ai-toolbox-skills/skills" | head -n 1)"
+counts_ok "$tmp/cut"; check "P3 dropping a skill from the build fails the count" "$([ $? -ne 0 ]; echo $?)"
+rm -rf "$tmp/cut"; cp -r "$PB" "$tmp/cut"; rm -f "$tmp/cut/ai-toolbox-agents/agents/"critic.md
+counts_ok "$tmp/cut"; check "P4 dropping an agent from the build fails the count" "$([ $? -ne 0 ]; echo $?)"
+rm -rf "$tmp/cut"; cp -r "$PB" "$tmp/cut"; rm -f "$tmp/cut/ai-toolbox-gates/.mcp.json"
+counts_ok "$tmp/cut"; check "P5 dropping the gates server fails the count" "$([ $? -ne 0 ]; echo $?)"
+
+# Dependencies: agents needs skills, in the plugin and in the marketplace.
+dep="$(python3 - "$PB" "$here/.claude-plugin/marketplace.json" <<'PY'
+import json, sys
+b, mk = sys.argv[1], sys.argv[2]
+m = json.load(open(mk, encoding="utf-8"))
+e = {p["name"]: p for p in m["plugins"]}
+ok = all(n in e and e[n]["source"] == "./plugins/" + n
+         for n in ("ai-toolbox-skills", "ai-toolbox-agents", "ai-toolbox-gates"))
+ok = ok and e["ai-toolbox-agents"].get("dependencies") == ["ai-toolbox-skills"]
+pj = json.load(open(b + "/ai-toolbox-agents/.claude-plugin/plugin.json", encoding="utf-8"))
+ok = ok and pj.get("dependencies") == ["ai-toolbox-skills"]
+print("yes" if ok else "no")
+PY
+)"
+check "P6 marketplace lists the three plugins and agents depends on skills" "$([ "$dep" = yes ]; echo $?)" "$dep"
+
+# Not shipped: permission rules, hooks and the checkout-only skill. A plugin
+# settings.json is not a known way to ship permission rules (install.sh writes
+# them), the worktree hooks are this repo's rule, and mod-dev needs a checkout.
+nopl="$(cd "$PB" && find . \( -name settings.json -o -name hooks.json -o -name hooks -o -name mod-dev \) | wc -l | tr -d ' ')"
+check "P7 no plugin carries a settings.json, hooks or the mod-dev skill" "$([ "$nopl" = 0 ]; echo $?)" "found $nopl"
+check "P8 the gates .mcp.json passes only the required variables, run frozen without dev" "$(python3 -c '
+import json, sys
+s = json.load(open(sys.argv[1]))["mcpServers"]["gates"]
+ok = sorted(s["env"]) == ["GATES_ALLOWED_EXECUTABLES", "GATES_MAP", "GATES_MAP_SHA256", "GATES_RUN_ROOT"] and "--frozen" in s["args"] and "--no-dev" in s["args"]
+sys.exit(0 if ok else 1)' "$PB/ai-toolbox-gates/.mcp.json"; echo $?)"
+# A fake root: CRLF sources, the excluded skill, a --check that ignores line endings.
+FR="$tmp/fakeroot"; mkdir -p "$FR/scripts" "$FR/.ai/context" "$FR/skills/only" "$FR/skills/mod-dev" "$FR/agents" "$FR/mcp-servers/gates"
+cp "$BP" "$here/scripts/emit-agents.py" "$FR/scripts/"
+cp "$here/.ai/context/model-tiers.md" "$FR/.ai/context/" 2>/dev/null
+cp -r "$here/agents/critic" "$FR/agents/critic"
+cp -r "$here/mcp-servers/gates/src" "$here/mcp-servers/gates/pyproject.toml" "$FR/mcp-servers/gates/"
+printf -- '---\r\nname: only\r\ndescription: x\r\n---\r\nbody\r\n' > "$FR/skills/only/SKILL.md"
+printf -- '---\nname: mod-dev\ndescription: x\n---\nbody\n' > "$FR/skills/mod-dev/SKILL.md"
+fbo="$(cd "$FR" && python3 scripts/build-plugin.py 2>&1)"
+p9a="$(python3 -c '
+import os, sys
+r = sys.argv[1]
+f = os.path.join(r, "ai-toolbox-skills", "skills", "only", "SKILL.md")
+if not os.path.isfile(f): print("missing"); sys.exit()
+print("cr" if bytes([13]) in open(f, "rb").read() else "mod-dev" if os.path.exists(os.path.join(r, "ai-toolbox-skills", "skills", "mod-dev")) else "ok")' "$FR/plugins")"
+check "P9 the build writes LF for a CRLF source and leaves mod-dev out" "$([ "$p9a" = ok ]; echo $?)" "$p9a $fbo"
+crlf="$(python3 -c '
+import glob, sys
+print(sum(bytes([13]) in open(f, "rb").read() for f in glob.glob(sys.argv[1] + "/plugins/*/*/*.md")))' "$here")"
+check "P9b the committed agent and skill files hold no CR" "$([ "$crlf" = 0 ]; echo $?)" "$crlf"
+
+# Drift: plugins/ must equal a fresh build; an edit or a missing file fails,
+# a line-ending change alone does not.
+(cd "$FR" && python3 scripts/build-plugin.py --check >/dev/null 2>&1)
+check "P10 --check passes on a fresh build" "$?"
+sed -i 's/$/\r/' "$FR/plugins/ai-toolbox-skills/skills/only/SKILL.md"
+(cd "$FR" && python3 scripts/build-plugin.py --check >/dev/null 2>&1)
+check "P10b --check ignores line endings" "$?"
+echo stale >> "$FR/plugins/ai-toolbox-skills/skills/only/SKILL.md"
+(cd "$FR" && python3 scripts/build-plugin.py --check >/dev/null 2>&1)
+check "P11 --check fails when a built file was edited" "$([ $? -ne 0 ]; echo $?)"
+(cd "$FR" && python3 scripts/build-plugin.py >/dev/null 2>&1; rm -f plugins/ai-toolbox-gates/README.md; python3 scripts/build-plugin.py --check >/dev/null 2>&1)
+check "P12 --check fails when a built file is missing" "$([ $? -ne 0 ]; echo $?)"
+(cd "$here" && python3 scripts/build-plugin.py --check >/dev/null 2>&1)
+check "P13 the committed plugins/ matches a fresh build" "$?"
+
+
+# claude plugin validate and a real install into a throwaway config dir.
+if command -v claude >/dev/null 2>&1; then
+  vfail=""
+  for k in skills agents gates; do
+    claude plugin validate "$(cygpath -w "$PB/ai-toolbox-$k" 2>/dev/null || echo "$PB/ai-toolbox-$k")" >/dev/null 2>&1 || vfail="$vfail $k"
+  done
+  check "P14 claude plugin validate passes on each plugin" "$([ -z "$vfail" ]; echo $?)" "$vfail"
+  CC="$tmp/claude-config"; mkdir -p "$CC"
+  MP="$here"; [ "$WIN" -eq 1 ] && MP="$(cygpath -w "$here")"
+  ifail=""
+  CLAUDE_CONFIG_DIR="$CC" claude plugin marketplace add "$MP" >/dev/null 2>&1 || ifail="$ifail marketplace"
+  for k in skills agents gates; do
+    CLAUDE_CONFIG_DIR="$CC" claude plugin install "ai-toolbox-$k@ai-toolbox" --scope user >/dev/null 2>&1 || ifail="$ifail $k"
+  done
+  check "P15 the three plugins install into a throwaway config dir" "$([ -z "$ifail" ]; echo $?)" "$ifail"
+  I="$CC/plugins/cache/ai-toolbox"
+  isk="$(ls "$I"/ai-toolbox-skills/*/skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')"
+  iag="$(ls "$I"/ai-toolbox-agents/*/agents/*.md 2>/dev/null | wc -l | tr -d ' ')"
+  igt="$(ls "$I"/ai-toolbox-gates/*/.mcp.json 2>/dev/null | wc -l | tr -d ' ')"
+  check "P16 the installed copies hold $src_skills skills, $src_agents agents and the gates server" "$([ "$isk" = "$src_skills" ] && [ "$iag" = "$src_agents" ] && [ "$igt" = 1 ]; echo $?)" "skills=$isk agents=$iag gates=$igt"
+else
+  echo "SKIP P14-P16 (claude is not on PATH)"
+fi
+
 if [ "$fails" -ne 0 ]; then
   echo "test-install.sh: $fails of $cases case(s) FAILED"; exit 1
 fi

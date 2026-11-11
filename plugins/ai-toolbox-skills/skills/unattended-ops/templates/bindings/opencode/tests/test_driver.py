@@ -1,0 +1,843 @@
+"""Tests for driver.py, against a stub `opencode` and a logging `git`.
+
+Run from anywhere:  python3 -m unittest discover -s <this dir> -v
+
+Hermetic: a throwaway git repository per test, no network, no model. What
+these prove is the driver's control flow against a MODEL of OpenCode
+(stub_opencode.py). They do not prove OpenCode behaves as modelled — that is
+the pilot's (SPRINT-CURRENT.md, S10.7). NOT run from tests/validate.sh; in
+ai-toolbox, CI's `bindings` job runs it (ADR-0032).
+"""
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+BINDING_DIR = os.path.dirname(HERE)
+DRIVER = os.path.join(BINDING_DIR, "driver.py")
+RUN_GATE = os.path.join(BINDING_DIR, "run-gate.sh")
+TEMPLATE = os.path.join(BINDING_DIR, "binding.md")
+REAL_GIT = shutil.which("git")
+
+ROLES = ("preflight", "task-planner", "implementer", "gate-runner", "refuter",
+         "adjudicator", "closer", "park-steward", "run-scribe")
+
+# Strings that appear only inside the gate map's argv. If any reaches a
+# prompt, rule 2 is broken.
+SENTINELS = ("SENTINEL-UNIT-SWITCH", "SENTINEL-BUILD-SWITCH")
+# An argv element the gate never prints (it is `sh -c`'s $0), so it can be
+# found only where a command is stored. If it is anywhere in the repository
+# tree, a role with `read` can open a gate command (B-030, TASK-0098).
+ARGV_ONLY = "SENTINEL-ARGV-ONLY"
+
+FILL = {
+    "binding_name": "test-binding",
+    "driver_entry": "python3 driver.py --binding binding.md --run-id RUN_ID",
+    "model": "stub/model-1",
+    "queue_source": "queue.txt",
+    "task_file_glob": ".ai/tasks/{id}-*.md",
+    "tracker_path": "TODO.md",
+    "gate_map": "gates.json",
+    "gate_entry_point": RUN_GATE,
+    "long_gate_groups": "[build]",
+    "watchdog_timeout": "60s",
+    "role_timeout": "60s",
+    "evidence_file": ".run/<run-id>/evidence.txt",
+    "journal_file": ".run/<run-id>/journal.jsonl",
+    "commit_shape": "TASK-ID: imperative subject",
+    "handover_path": ".run/<run-id>/handover.md",
+    "task_cap": "5",
+}
+
+
+def fence(obj):
+    return "```json\n%s\n```" % json.dumps(obj)
+
+
+def filled_binding(overrides=None):
+    values = dict(FILL, **(overrides or {}))
+    out = []
+    with open(TEMPLATE, encoding="utf-8") as fh:
+        template = fh.read()
+    for line in template.split("\n"):
+        m = re.match(r"^([a-z_]+): ", line)
+        if m and m.group(1) in values:
+            line = "%s: %s" % (m.group(1), values[m.group(1)])
+        out.append(line)
+    return "\n".join(out)
+
+
+# The two log lines the driver hands the closer (B-031, TASK-0099), as the
+# closer must write them for run id r1.
+LOG_LINES = ("- Commit: in git \u2014 the subject carries the task id (run r1)",
+             "- Push: not taken \u2014 the run pushes nothing")
+
+
+def closer_sh(lines, add="git add -- src/a.txt .ai/tasks/{TASK}-demo.md"):
+    """A closer that appends `lines` to the task file, stages, commits."""
+    sh = ["printf '%%s\\n' %s >> .ai/tasks/{TASK}-demo.md" % " ".join("'%s'" % l for l in lines)]
+    sh += [add, "git commit -q -m '{TASK}: change a'"]
+    return {"sh": sh, "text": fence({"commit": "{HEAD}"})}
+
+
+def with_role_timeouts(text, mapping):
+    """Add the optional role_timeouts mapping (TASK-0100) above `roles:`."""
+    block = "role_timeouts:\n" + "".join("  %s: %s\n" % kv for kv in mapping.items())
+    return text.replace("\nroles:\n", "\n" + block + "roles:\n", 1)
+
+
+def preflight_ok(ids):
+    return [{"text": fence({"verdict": "proceed", "branch": "master", "head": "x",
+                            "porcelain": "", "tasks": [
+                                {"id": i, "criteria_present": True, "sources_agree": True,
+                                 "status_task_file": "planned", "status_tracker": "planned"}
+                                for i in ids]})}]
+
+
+def happy(ids=("TASK-0001",)):
+    return {
+        "preflight": preflight_ok(ids),
+        "task-planner": [{"text": fence({"files": ["src/a.txt"], "reused": [],
+                                         "order": ["edit"], "verification": ["unit"]})}],
+        "implementer": [{"sh": ["echo change >> src/a.txt"],
+                         "text": fence({"status": "done", "files_changed": ["src/a.txt"],
+                                        "unsatisfied_criteria": []})}],
+        "gate-runner": [{"auto": "gate-runner"}],
+        "refuter": [{"text": fence({"refuted": False, "unevidenced_criteria": [],
+                                    "undeclared_changes": [], "breached_invariants": []})}],
+        "adjudicator": [{"text": fence({"verdict": "accept", "reasoning": "evidenced",
+                                        "overrides": [], "adhoc_titles": []})}],
+        "closer": [closer_sh(LOG_LINES)],
+        "park-steward": [{"auto": "stash"}],
+        "run-scribe": [{"sh": ["mkdir -p .run/r1 && printf '# handover\\n' > .run/r1/handover.md"],
+                        "text": fence({"written": ".run/r1/handover.md"})}],
+    }
+
+
+class Harness(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="driver-test-")
+        self.repo = os.path.join(self.tmp, "repo")
+        self.bin = os.path.join(self.tmp, "bin")
+        self.state = os.path.join(self.tmp, "state")
+        for d in (self.repo, self.bin, self.state):
+            os.makedirs(d)
+        for name, target in (("opencode", "stub_opencode.py"), ("git", "git_wrapper.py")):
+            path = os.path.join(self.bin, name)
+            with open(path, "w") as fh:
+                fh.write('#!/bin/sh\nexec python3 "%s" "$@"\n' % os.path.join(HERE, target))
+            os.chmod(path, 0o755)
+        self.stub_log = os.path.join(self.tmp, "stub.jsonl")
+        self.git_log = os.path.join(self.tmp, "git.jsonl")
+        self.scenario = os.path.join(self.tmp, "scenario.json")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def make_repo(self, ids=("TASK-0001",), queue=None, binding=None, gates=None,
+                  binding_overrides=None, map_in_repo=False, tracker_conf=None):
+        r = lambda *a: subprocess.run([REAL_GIT, *a], cwd=self.repo, check=True,
+                                      capture_output=True)
+        r("init", "-q", "-b", "master")
+        r("config", "user.email", "t@example.invalid")
+        r("config", "user.name", "Test")
+        # The map lives outside the repository, where every role's
+        # worktree-only boundary keeps it unreadable (TASK-0098).
+        gate_map = "gates.json" if map_in_repo else os.path.join(self.tmp, "gates.json")
+        if binding is None:
+            binding = filled_binding(dict({"gate_map": gate_map}, **(binding_overrides or {})))
+        files = {
+            ".gitignore": ".run/\n",
+            "src/a.txt": "original\n",
+            "TODO.md": "".join("- [ ] %s\n" % i for i in ids),
+            "queue.txt": queue if queue is not None else "".join("%s\n" % i for i in ids),
+            "binding.md": binding,
+        }
+        gate_map_text = json.dumps(gates or {
+            "gates": {
+                "unit": {"argv": ["sh", "-c", "echo SENTINEL-UNIT-SWITCH 3 passed, 0 failed",
+                                  ARGV_ONLY]},
+                "build": {"argv": ["sh", "-c", "echo SENTINEL-BUILD-SWITCH built"]},
+            },
+            "kinds": {"default": ["unit"]},
+            "long_groups": {"build": {"gates": ["build"], "paths": ["src/*"]}},
+        })
+        if map_in_repo:
+            files["gates.json"] = gate_map_text
+        else:
+            with open(gate_map, "w") as fh:
+                fh.write(gate_map_text)
+        for i in ids:
+            files[".ai/tasks/%s-demo.md" % i] = (
+                "# %s\n\n## Acceptance criteria\n- [ ] a.txt changes\n" % i)
+        if tracker_conf is not None:
+            # A forge tracker (ADR-0038): the lock is a committed snapshot of
+            # each queued issue, and there is no tracker file.
+            files["tracker.conf"] = tracker_conf
+            del files["TODO.md"]
+            for i in ids:
+                del files[".ai/tasks/%s-demo.md" % i]
+                files[".ai/run-queue/%s.md" % i] = (
+                    "# Issue %s\n\n## Acceptance criteria\n- [ ] a.txt changes\n" % i)
+        for rel, body in files.items():
+            path = os.path.join(self.repo, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w") as fh:
+                fh.write(body)
+        r("add", "-A")
+        r("commit", "-q", "-m", "fixture")
+
+    def driver_argv(self, agents, agent_list=None, extra=(), run_id="r1"):
+        if agent_list is None:
+            agent_list = "".join("%s (primary)\n  []\n" % r for r in ROLES)
+        with open(self.scenario, "w") as fh:
+            json.dump({"agent_list": agent_list, "agents": agents}, fh)
+        env = dict(os.environ, PATH=self.bin + os.pathsep + os.environ["PATH"],
+                   STUB_SCENARIO=self.scenario, STUB_LOG=self.stub_log,
+                   STUB_STATE=self.state, GIT_LOG=self.git_log, REAL_GIT=REAL_GIT)
+        env.pop("GIT_CALLER", None)
+        return [sys.executable, DRIVER, "--binding", "binding.md", "--run-id", run_id, *extra], env
+
+    def run_driver(self, agents, agent_list=None, extra=(), run_id="r1"):
+        argv, env = self.driver_argv(agents, agent_list, extra, run_id)
+        self.proc = subprocess.run(argv, cwd=self.repo, env=env, capture_output=True,
+                                   text=True, timeout=300)
+        return self.proc.returncode
+
+    def start_driver(self, agents):
+        argv, env = self.driver_argv(agents)
+        return subprocess.Popen(argv, cwd=self.repo, env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True)
+
+    def wait_for_invocation(self, role, limit=60):
+        deadline = time.time() + limit
+        while not self.invocations(role):
+            if time.time() > deadline:
+                self.fail("%s was never invoked" % role)
+            time.sleep(0.2)
+
+    # -- readers --------------------------------------------------------------
+
+    def invocations(self, role=None):
+        if not os.path.exists(self.stub_log):
+            return []
+        with open(self.stub_log) as fh:
+            rows = [json.loads(l)["argv"] for l in fh]
+        rows = [a for a in rows if a[:1] == ["run"]]
+        return [a for a in rows if role is None or a[a.index("--agent") + 1] == role]
+
+    def prompt_inputs(self, argv):
+        m = re.search(r"Inputs:\n```json\n(.*?)\n```", argv[-1], re.S)
+        return json.loads(m.group(1))
+
+    def journal(self, run_id="r1"):
+        path = os.path.join(self.repo, ".run", run_id, "journal.jsonl")
+        if not os.path.exists(path):
+            return []
+        with open(path) as fh:
+            return [json.loads(l) for l in fh]
+
+    def events(self, name):
+        return [e for e in self.journal() if e["event"] == name]
+
+    def driver_git(self):
+        if not os.path.exists(self.git_log):
+            return []
+        with open(self.git_log) as fh:
+            rows = [json.loads(l) for l in fh]
+        return [r["argv"] for r in rows if r["caller"] == "driver"]
+
+    def porcelain(self):
+        return subprocess.run([REAL_GIT, "status", "--porcelain"], cwd=self.repo,
+                              capture_output=True, text=True).stdout
+
+
+FORGE_CONF = "# test\ntracker = gitlab\ngitlab_project = group/app\n"
+FORGE_BINDING = {"task_file_glob": ".ai/run-queue/{id}.md", "tracker_path": "not-applicable"}
+FORGE_LOG_LINES = ("- Commit: in git \u2014 the subject carries the issue reference (run r1)",
+                   LOG_LINES[1])
+
+
+def forge_closer(message="Change a (#{TASK})"):
+    """A closer for a forge run: appends to the snapshot, stages, commits."""
+    sh = ["printf '%%s\\n' %s >> .ai/run-queue/{TASK}.md" % " ".join("'%s'" % l for l in FORGE_LOG_LINES)]
+    sh += ["git add -- src/a.txt .ai/run-queue/{TASK}.md", "git commit -q -m '%s'" % message]
+    return {"sh": sh, "text": fence({"commit": "{HEAD}"})}
+
+
+def forge_agents(ids=("42",), message="Change a (#{TASK})"):
+    agents = happy(ids)
+    agents["closer"] = [forge_closer(message)]
+    return agents
+
+
+class TestForgeTracker(Harness):
+    """ADR-0038, TASK-0172: tracker.conf names a forge."""
+
+    def make_forge(self, ids=("42",), conf=FORGE_CONF, binding=None):
+        self.make_repo(ids=ids, tracker_conf=conf,
+                       binding_overrides=dict(FORGE_BINDING, **(binding or {})))
+
+    def handover(self):
+        with open(os.path.join(self.repo, ".run", "r1", "handover.md")) as fh:
+            return fh.read()
+
+    def test_closes_an_issue_and_hands_the_update_to_the_human(self):
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        self.assertEqual([e["task"] for e in self.events("close")], ["42"])
+        self.assertEqual(self.events("run-start")[0]["tracker"], "gitlab")
+        closer = self.invocations("closer")[0]
+        self.assertEqual(self.prompt_inputs(closer)["issue_reference"], "#42")
+        self.assertIn("write nothing to the forge", closer[-1])
+        updates = self.events("run-end")[0]["forge_updates"]
+        self.assertEqual([u["issue"] for u in updates], ["#42"])
+        self.assertEqual(updates[0]["snapshot"], ".ai/run-queue/42.md")
+        text = self.handover()
+        self.assertIn("## Forge updates, NOT taken", text)
+        self.assertIn("gitlab (group/app)", text)
+        self.assertRegex(text, r"- #42 @[0-9a-f]+: update the issue from the snapshot")
+
+    def test_the_journal_is_hash_chained_and_an_edit_is_detected(self):
+        # Issue #14: every line links to the previous line's SHA-256.
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        path = os.path.join(self.repo, ".run", "r1", "journal.jsonl")
+        tool = os.path.join(HERE, "..", "..", "..", "..", "scripts", "journal-chain.py")
+        ok = subprocess.run([sys.executable, tool, "verify", path], capture_output=True, text=True)
+        self.assertEqual(ok.returncode, 0, ok.stdout)
+        self.assertEqual(self.journal()[0]["prev"], "0" * 64)
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+        lines[1] = lines[1].replace('"event": "', '"event": "x', 1)
+        with open(path, "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+        bad = subprocess.run([sys.executable, tool, "verify", path], capture_output=True, text=True)
+        self.assertEqual(bad.returncode, 1, bad.stdout)
+        self.assertIn("line 3", bad.stdout)
+
+    def test_the_journal_head_is_recorded_and_checked_on_resume(self):
+        # Review note_1350 item 1: the anchor lives outside the journal (the
+        # handover and stdout), and a resume halts if the journal no longer
+        # chains up to it.
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        path = os.path.join(self.repo, ".run", "r1", "journal.jsonl")
+        tool = os.path.join(HERE, "..", "..", "..", "..", "scripts", "journal-chain.py")
+        head = subprocess.run([sys.executable, tool, "verify", path], capture_output=True,
+                              text=True).stdout.split()[-1]
+        self.assertIn("Journal head: %s" % head, self.handover())
+        self.assertIn("journal-head: %s" % head, self.proc.stdout)
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+        with open(path, "w") as fh:
+            fh.write("\n".join(lines[:-1]) + "\n")
+        self.assertEqual(self.run_driver(forge_agents()), 1, self.proc.stderr)
+        halts = [r for r in self.journal() if r.get("event") == "halt"]
+        self.assertTrue(halts and "head recorded in the handover" in halts[-1]["reason"], halts)
+
+    def test_no_role_is_asked_to_run_glab_or_gh(self):
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents()), 0, self.proc.stderr)
+        for argv in self.invocations():
+            asks = re.sub(r"run no glab or gh[^.]*\.", "", argv[-1])
+            self.assertNotRegex(asks, r"\b(glab|gh) (issue|api|pr)\b")
+
+    def test_a_commit_carrying_421_but_not_42_halts(self):
+        self.make_forge()
+        self.assertEqual(self.run_driver(forge_agents(message="Change a (#421)")), 1)
+        self.assertIn("does not verify", self.events("halt")[0]["reason"])
+        self.assertEqual(self.events("close"), [])
+
+    def test_a_parked_issue_is_listed_with_status_blocked(self):
+        self.make_forge()
+        agents = forge_agents()
+        agents["adjudicator"] = [{"text": fence({"verdict": "park", "reasoning": "criterion unevidenced",
+                                                 "overrides": [], "adhoc_titles": []})}]
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        updates = self.events("run-end")[0]["forge_updates"]
+        self.assertEqual([u["issue"] for u in updates], ["#42"])
+        self.assertIn("status::blocked", updates[0]["action"])
+        self.assertIn("status::blocked", self.handover())
+
+    def test_a_tracker_file_halts_before_any_role(self):
+        self.make_forge(binding={"tracker_path": "TODO.md"})
+        self.assertEqual(self.run_driver(forge_agents()), 1)
+        self.assertIn("tracker_path must be not-applicable", self.events("halt")[0]["reason"])
+        self.assertEqual(self.invocations("preflight"), [])
+
+    def test_a_queue_id_that_is_not_an_issue_number_halts(self):
+        self.make_forge(ids=("TASK-0001",))
+        self.assertEqual(self.run_driver(forge_agents(ids=("TASK-0001",))), 1)
+        self.assertIn("queue id is the issue number", self.events("halt")[0]["reason"])
+        self.assertEqual(self.invocations("preflight"), [])
+
+    def test_a_tracker_conf_that_does_not_read_halts(self):
+        for conf in ("tracker = jira\n", "tracker gitlab\n", "tracker = gitlab\ntracker = github\n"):
+            with self.subTest(conf=conf):
+                self.tearDown(); self.setUp()
+                self.make_forge(conf=conf)
+                self.assertEqual(self.run_driver(forge_agents()), 1)
+                self.assertIn("tracker.conf", self.events("halt")[0]["reason"])
+
+    def test_an_explicit_files_tracker_runs_as_no_conf(self):
+        self.make_repo(tracker_conf=None)
+        with open(os.path.join(self.repo, "tracker.conf"), "w") as fh:
+            fh.write("tracker = files\n")
+        subprocess.run([REAL_GIT, "add", "tracker.conf"], cwd=self.repo, check=True)
+        subprocess.run([REAL_GIT, "commit", "-q", "-m", "conf"], cwd=self.repo, check=True)
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        self.assertEqual(self.events("run-start")[0]["tracker"], "files")
+        self.assertEqual(self.events("run-end")[0]["forge_updates"], [])
+        with open(os.path.join(self.repo, ".run", "r1", "handover.md")) as fh:
+            self.assertNotIn("Forge updates", fh.read())
+
+
+class TestHappyPath(Harness):
+    def test_closes_and_the_driver_issues_no_git_write(self):
+        self.make_repo()
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        self.assertEqual(len(self.events("close")), 1)
+        self.assertEqual(self.porcelain(), "")
+        writes = [a for a in self.driver_git()
+                  if a and a[0] in ("add", "commit", "push", "stash", "reset", "checkout", "clean")]
+        self.assertEqual(writes, [], "the driver itself ran a git write")
+
+    def test_no_prompt_contains_a_gate_command(self):
+        self.make_repo()
+        self.run_driver(happy())
+        self.assertTrue(self.invocations())
+        for argv in self.invocations():
+            for s in SENTINELS:
+                self.assertNotIn(s, argv[-1], "a gate command reached a prompt")
+
+    def test_roles_are_told_to_read_resolved_paths_never_glob(self):
+        # TASK-0092 finding 1: OpenCode's glob tool does not see dot-directories,
+        # so a role that globs for .ai/tasks/ finds nothing (TASK-0095).
+        self.make_repo()
+        self.run_driver(happy())
+        for argv in self.invocations():
+            self.assertIn("never glob", argv[-1])
+        pre = self.invocations("preflight")[0]
+        self.assertIn(".ai/tasks/TASK-0001-demo.md", pre[-1])
+        self.assertIn("already resolved", pre[-1])
+
+    def test_roles_are_told_the_skill_is_not_theirs_to_open(self):
+        # TASK-0092 findings 7, 13 / B-029: 57 of 92 denied calls were reads
+        # of the skill, outside every role's worktree-only boundary (TASK-0101).
+        self.make_repo()
+        self.run_driver(happy())
+        self.assertTrue(self.invocations())
+        for argv in self.invocations():
+            self.assertIn("do not open the skill's files", argv[-1])
+
+    def test_only_a_permission_refusal_is_journaled_as_denied(self):
+        # B-067 / TASK-0228: TASK-0176's pilot journaled 40 tool-denied where
+        # opencode's log showed 8 denials; every errored tool counted. The
+        # texts are opencode 1.18's PermissionRejectedError, PermissionDeniedError,
+        # PermissionCorrectedError and a dismissed question, the four its own
+        # UI tells from other errors.
+        agents = happy()
+        agents["task-planner"][0]["tool_errors"] = [
+            ["bash", "The user has specified a rule which prevents you from using "
+                     "this specific tool call. Here are some of the relevant rules []"],
+            ["read", "The user rejected permission to use this specific tool call."],
+            ["edit", "The user rejected permission to use this specific tool call "
+                     "with the following feedback: no"],
+            ["question", "QuestionRejectedError: The user dismissed this question"],
+            ["write", "The write tool was called with invalid arguments: SchemaError("
+                      "Missing key\n  at [\"content\"])."],
+            ["read", "File not found: /x"],
+        ]
+        self.make_repo()
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        denied = [e for e in self.events("tool-denied") if e["role"] == "task-planner"]
+        errors = [e for e in self.events("tool-error") if e["role"] == "task-planner"]
+        self.assertEqual([e["tools"] for e in denied], [["bash", "read", "edit", "question"]])
+        self.assertEqual([e["tools"] for e in errors], [["write", "read"]])
+
+    def test_preflight_is_handed_the_drivers_own_checks(self):
+        # TASK-0096: the second dry run halted because the driver ran the
+        # model and primary-mode checks and handed the role neither result.
+        self.make_repo()
+        self.run_driver(happy())
+        checks = self.prompt_inputs(self.invocations("preflight")[0])["driver_checks"]
+        self.assertEqual(checks["model"], "stub/model-1")
+        self.assertEqual(set(checks["agent_list"]), set(ROLES))
+        for role in ROLES:
+            self.assertEqual(checks["agent_list"][role], "%s (primary)" % role)
+
+    def test_no_file_in_the_tree_holds_a_gate_command(self):
+        # TASK-0092 finding 10 / B-030: the refuter read the gate map with its
+        # `read` tool. With the map outside the repository, nothing inside it
+        # may hold a command either — run-gate.sh once copied argv into
+        # <run root>/<handle>/spec.json, inside the tree (TASK-0098).
+        self.make_repo()
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        holders = []
+        for root, dirs, names in os.walk(self.repo):
+            dirs[:] = [d for d in dirs if d != ".git"]
+            for name in names:
+                path = os.path.join(root, name)
+                with open(path, "rb") as fh:
+                    if ARGV_ONLY.encode() in fh.read():
+                        holders.append(os.path.relpath(path, self.repo))
+        self.assertEqual(holders, [], "a gate command is readable inside the tree")
+
+    def test_every_invocation_carries_the_model(self):
+        self.make_repo()
+        self.run_driver(happy())
+        for argv in self.invocations():
+            i = argv.index("-m")
+            self.assertEqual(argv[i + 1], "stub/model-1")
+
+    def test_long_gate_runs_for_the_touched_group(self):
+        self.make_repo()
+        self.run_driver(happy())
+        with open(os.path.join(self.repo, ".run/r1/evidence.txt")) as fh:
+            evidence = fh.read()
+        self.assertIn("GATE r1.long.build NAME=build STATE=PASSED", evidence)
+
+
+class TestRefuterFailsClosed(Harness):
+    def test_null_empty_and_unparseable_returns_are_refuted(self):
+        for label, resp in (("null", {"text": None}), ("empty", {"text": ""}),
+                            ("unparseable", {"text": "looks fine to me"})):
+            with self.subTest(label):
+                self.tearDown()
+                self.setUp()
+                self.make_repo()
+                agents = happy()
+                agents["refuter"] = [resp]
+                self.run_driver(agents)
+                self.assertEqual(len(self.invocations("refuter")), 1, "refuter was retried")
+                adj = self.invocations("adjudicator")
+                self.assertTrue(adj, "adjudication did not run")
+                refutation = self.prompt_inputs(adj[0])["refutation"]
+                self.assertIs(refutation["refuted"], True)
+                self.assertIs(refutation.get("synthesised"), True)
+
+
+class TestVerdictDispatch(Harness):
+    def test_out_of_enum_verdict_is_reprompted_once_then_parked(self):
+        for label, resp in (("out-of-enum", {"text": fence({"verdict": "ship-it"})}),
+                            ("unparseable", {"text": "I think it is done"})):
+            with self.subTest(label):
+                self.tearDown()
+                self.setUp()
+                self.make_repo()
+                agents = happy()
+                agents["adjudicator"] = [resp]
+                self.run_driver(agents)
+                self.assertEqual(len(self.invocations("adjudicator")), 2)
+                self.assertEqual(len(self.events("verdict-reprompt")), 1)
+                self.assertEqual(self.events("close"), [])
+                self.assertEqual(len(self.events("park")), 1)
+                self.assertEqual(self.porcelain(), "", "park left a dirty tree")
+
+    def test_retry_on_attempt_two_parks(self):
+        self.make_repo()
+        agents = happy()
+        agents["adjudicator"] = [{"text": fence({"verdict": "retry", "reasoning": "fix it",
+                                                 "overrides": [], "guidance": "fix it"})}]
+        self.run_driver(agents)
+        self.assertEqual(len(self.invocations("implementer")), 2)
+        self.assertEqual(self.events("close"), [])
+        self.assertIn("attempt 2", self.events("park")[0]["reason"])
+
+    def test_accept_over_a_refutation_without_overrides_parks(self):
+        self.make_repo()
+        agents = happy()
+        agents["refuter"] = [{"text": fence({"refuted": True, "unevidenced_criteria": ["a"],
+                                             "undeclared_changes": [], "breached_invariants": []})}]
+        self.run_driver(agents)
+        self.assertEqual(self.events("close"), [])
+        self.assertIn("no overrides", self.events("park")[0]["reason"])
+
+    def test_the_adjudicator_is_handed_the_decision_standard(self):
+        # B-035 / TASK-0106: the role is documented to decide by
+        # references/verdicts.md and references/evidence.md, and cannot open
+        # either — worktree-only denies the skill. So the text travels in the
+        # prompt. Asserted on sentences each reference owns, not on a
+        # substring of the file, so a truncated embed still fails.
+        self.make_repo()
+        self.run_driver(happy())
+        body = self.invocations("adjudicator")[0][-1]
+        self.assertIn("--- BEGIN DECISION STANDARD ---", body)
+        self.assertIn("The adjudicator returns **exactly one** of these", body)
+        self.assertIn("the only admissible source for a figure", body)
+        for verdict in ("accept", "retry", "park", "raise-adhoc", "halt-run"):
+            self.assertIn("## `%s`" % verdict, body)
+
+    def test_no_other_role_is_handed_the_decision_standard(self):
+        # It is the adjudicator's standard. Pasting it into every prompt
+        # would put a verdict vocabulary in front of roles that must not
+        # reach one, and cost tokens on all nine.
+        self.make_repo()
+        self.run_driver(happy())
+        for argv in self.invocations():
+            if argv[-1].startswith("You are the adjudicator"):
+                continue
+            self.assertNotIn("--- BEGIN DECISION STANDARD ---", argv[-1])
+
+    def test_a_missing_decision_standard_is_refused_before_any_role(self):
+        # A driver that prompts without the standard still returns verdicts,
+        # and they are indistinguishable from judged ones (ADR-0009: a check
+        # that silently does nothing is worse than no check).
+        standard = os.path.join(BINDING_DIR, "decision-standard.md")
+        saved = standard + ".testsaved"
+        self.make_repo()
+        shutil.move(standard, saved)
+        try:
+            self.assertEqual(self.run_driver(happy()), 2)
+            self.assertEqual(self.invocations(), [])
+            self.assertIn("decision standard unreadable", self.proc.stderr)
+        finally:
+            shutil.move(saved, standard)
+
+    def test_a_bulk_staged_commit_halts_the_run(self):
+        # TASK-0097 / TASK-0092 finding 18: the closer's permissions allow
+        # `git add -- .`, so the driver checks the commit's file list.
+        self.make_repo()
+        agents = happy()
+        agents["implementer"] = [{"sh": ["echo change >> src/a.txt", "echo stray > stray.txt"],
+                                  "text": fence({"status": "done", "files_changed": ["src/a.txt"],
+                                                 "unsatisfied_criteria": []})}]
+        agents["closer"] = [closer_sh(LOG_LINES, add="git add -- .")]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertIn("stray.txt", self.events("halt")[0]["reason"])
+        self.assertEqual(self.events("close"), [])
+
+    def test_the_closers_own_commit_claim_halts_the_run(self):
+        # TASK-0092 finding 17 / B-031: the closer wrote this, verbatim, and
+        # made no follow-up commit.
+        claim = "- Commit: recorded by the closer role in a follow-up commit."
+        self.make_repo()
+        agents = happy()
+        agents["closer"] = [closer_sh((claim, LOG_LINES[1]))]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertIn("recorded by the closer role", self.events("halt")[0]["reason"])
+        self.assertEqual(self.events("close"), [])
+
+    def test_a_close_without_the_commit_placeholder_halts_the_run(self):
+        self.make_repo()
+        agents = happy()
+        agents["closer"] = [{"sh": ["git add -- src/a.txt", "git commit -q -m '{TASK}: change a'"],
+                             "text": fence({"commit": "{HEAD}"})}]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertIn("placeholder", self.events("halt")[0]["reason"])
+        self.assertEqual(self.events("close"), [])
+
+    def test_the_closer_is_handed_its_log_lines_verbatim(self):
+        self.make_repo()
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        got = self.prompt_inputs(self.invocations("closer")[0])["log_lines"]
+        self.assertEqual(got, [l[2:] for l in LOG_LINES])
+
+    def test_the_closer_is_handed_the_gate_runners_figures(self):
+        # B-043 / TASK-0121: the evidence line carries no figure, so the
+        # figure the gate-runner quoted from the log is the only path by
+        # which the closer can obtain the one it is told to copy.
+        self.make_repo()
+        agents = happy()
+        agents["gate-runner"] = [{"auto": "gate-runner", "figures": ["241 passed, 0 failed"]}]
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        reports = self.prompt_inputs(self.invocations("closer")[0])["gate_reports"]
+        self.assertEqual([r["figures"] for r in reports], [["241 passed, 0 failed"]])
+
+    def test_closer_refusal_parks_and_is_not_retried(self):
+        self.make_repo()
+        agents = happy()
+        agents["closer"] = [{"text": fence({"refused": "undeclared path x"})}]
+        self.run_driver(agents)
+        self.assertEqual(len(self.invocations("closer")), 1)
+        self.assertIn("closer refused", self.events("park")[0]["reason"])
+
+
+class TestChangesAndPark(Harness):
+    """TASK-0210: the driver records the working tree; a park matches by namespace."""
+
+    def test_the_change_list_is_recorded_and_handed_to_both_judges(self):
+        self.make_repo()
+        self.assertEqual(self.run_driver(happy()), 0, self.proc.stderr)
+        with open(os.path.join(self.repo, ".run", "r1", "evidence.txt")) as fh:
+            lines = [l for l in fh.read().splitlines() if l.startswith("CHANGES ")]
+        self.assertEqual(len(lines), 1, lines)
+        self.assertTrue(lines[0].startswith("CHANGES TASK-0001.a1 PATHS=1 LOG="), lines[0])
+        with open(lines[0].split("LOG=", 1)[1]) as fh:
+            self.assertEqual(fh.read(), " M src/a.txt\n")
+        for role in ("refuter", "adjudicator"):
+            got = self.prompt_inputs(self.invocations(role)[0])
+            self.assertEqual(got.get("changes_line"), lines[0], role)
+
+    def test_a_multi_line_park_reason_parks_without_a_halt(self):
+        self.make_repo()
+        agents = happy()
+        agents["adjudicator"] = [{"text": fence({
+            "verdict": "park", "reasoning": "criterion 5 is unevidenced.\n\nAccept  declined.",
+            "overrides": [], "adhoc_titles": []})}]
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        self.assertEqual(self.events("halt"), [])
+        self.assertEqual(len(self.events("park")), 1)
+        self.assertEqual(self.porcelain(), "")
+
+
+class TestIdentityAndPreconditions(Harness):
+    FALLBACK = "Agent task-planner is a subagent, not a primary agent. Falling back to default agent"
+
+    def test_default_agent_fallback_halts_the_run(self):
+        self.make_repo()
+        agents = happy()
+        agents["task-planner"] = [dict(agents["task-planner"][0], stderr=self.FALLBACK)]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertEqual(self.invocations("implementer"), [])
+        self.assertTrue(self.events("halt"))
+        self.assertTrue(os.path.exists(os.path.join(self.repo, ".run/r1/handover.md")))
+
+    def test_subagent_in_the_agent_list_halts_before_preflight(self):
+        self.make_repo()
+        listing = "".join("%s (%s)\n" % (r, "subagent" if r == "refuter" else "primary")
+                          for r in ROLES)
+        self.assertEqual(self.run_driver(happy(), agent_list=listing), 1)
+        self.assertEqual(self.invocations("preflight"), [])
+
+    def test_dirty_tree_is_refused_before_any_role_but_the_handover(self):
+        self.make_repo()
+        with open(os.path.join(self.repo, "stray.txt"), "w") as fh:
+            fh.write("someone else's work\n")
+        self.assertEqual(self.run_driver(happy()), 1)
+        roles = {a[a.index("--agent") + 1] for a in self.invocations()}
+        self.assertLessEqual(roles, {"run-scribe"})
+        self.assertIn("dirty", self.events("halt")[0]["reason"])
+
+    def test_a_binding_without_a_usable_model_is_refused(self):
+        for model in ("unknown", "<FILL: provider/model>", "sonnet"):
+            with self.subTest(model):
+                self.tearDown()
+                self.setUp()
+                self.make_repo(binding_overrides={"model": model})
+                self.assertEqual(self.run_driver(happy()), 2)
+                self.assertEqual(self.invocations(), [])
+                self.assertIn("model", self.proc.stderr)
+
+    def test_a_gate_map_inside_the_repository_is_refused(self):
+        # B-030 / TASK-0098: inside the tree, any role with `read` can open it.
+        self.make_repo(map_in_repo=True)
+        self.assertEqual(self.run_driver(happy()), 2)
+        self.assertEqual(self.invocations(), [])
+        self.assertIn("inside the repository", self.proc.stderr)
+
+
+class TestTimeoutsAndStopping(Harness):
+    """B-033 / TASK-0100: TASK-0092 findings 3, 9 and 11."""
+
+    def test_a_role_timeout_override_applies_to_that_role_only(self):
+        self.make_repo(binding=with_role_timeouts(
+            filled_binding({"gate_map": os.path.join(self.tmp, "gates.json")}),
+            {"refuter": "2s"}))
+        agents = happy()
+        agents["refuter"] = [dict(agents["refuter"][0], sh=["sleep 4"])]
+        self.run_driver(agents)
+        retries = self.events("mechanical-retry")
+        self.assertTrue(retries, "the refuter's own 2s timeout was not applied")
+        for e in retries:
+            self.assertEqual(e["role"], "refuter")
+            self.assertIn("within 2s", e["error"])
+
+    def test_a_bad_role_timeouts_entry_is_refused(self):
+        for mapping in ({"refuterx": "5m"}, {"refuter": "soon"}):
+            with self.subTest(mapping):
+                self.tearDown()
+                self.setUp()
+                self.make_repo(binding=with_role_timeouts(
+                    filled_binding({"gate_map": os.path.join(self.tmp, "gates.json")}), mapping))
+                self.assertEqual(self.run_driver(happy()), 2)
+                self.assertEqual(self.invocations(), [])
+                self.assertIn("role_timeouts", self.proc.stderr)
+
+    def test_sigterm_mid_role_stops_cleanly_with_a_handover(self):
+        # Finding 11: the human's stop left a retried orphan and no handover.
+        self.make_repo()
+        agents = happy()
+        agents["implementer"] = [dict(agents["implementer"][0], sh=["sleep 31.7"])]
+        driver = self.start_driver(agents)
+        try:
+            self.wait_for_invocation("implementer")
+            time.sleep(1)
+            driver.send_signal(signal.SIGTERM)
+            driver.communicate(timeout=60)
+        finally:
+            if driver.poll() is None:
+                driver.kill()
+        self.assertEqual(driver.returncode, 1)
+        self.assertEqual(len(self.invocations("implementer")), 1, "the stopped role was retried")
+        time.sleep(1)
+        left = subprocess.run(["pgrep", "-f", "sleep 31.7"], capture_output=True, text=True)
+        self.assertEqual(left.stdout.strip(), "", "the role's process group outlived the stop")
+        self.assertIn("SIGTERM", self.events("halt")[0]["reason"])
+        self.assertTrue(self.events("run-end"))
+        self.assertEqual(self.invocations("run-scribe"), [], "a stop started another model call")
+        with open(os.path.join(self.repo, ".run/r1/handover.md")) as fh:
+            self.assertIn("STOPPED", fh.read())
+
+    def test_a_role_killed_from_outside_halts_without_a_retry(self):
+        self.make_repo()
+        agents = happy()
+        agents["implementer"] = [dict(agents["implementer"][0], sh=["kill -TERM $PPID"])]
+        self.assertEqual(self.run_driver(agents), 1)
+        self.assertEqual(len(self.invocations("implementer")), 1, "a killed role was retried")
+        self.assertIn("killed", self.events("halt")[0]["reason"])
+        self.assertTrue(os.path.exists(os.path.join(self.repo, ".run/r1/handover.md")))
+
+
+class TestQueue(Harness):
+    def test_unsatisfied_dependency_parks_and_skips_forward(self):
+        ids = ("TASK-0001", "TASK-0002")
+        self.make_repo(ids=ids, queue="TASK-0001 after=TASK-0002\nTASK-0002\n")
+        self.run_driver(happy(ids))
+        self.assertEqual([e["task"] for e in self.events("park")], ["TASK-0001"])
+        self.assertEqual([e["task"] for e in self.events("close")], ["TASK-0002"])
+
+    def test_gate_runner_line_not_in_evidence_is_mechanical_then_park(self):
+        self.make_repo()
+        agents = happy()
+        agents["gate-runner"] = [{"text": fence({"gates": [
+            {"handle": "TASK-0001.a1.unit", "evidence_line": "GATE made up"}]})}]
+        self.run_driver(agents)
+        self.assertEqual(len(self.invocations("gate-runner")), 3)
+        self.assertIn("mechanical", self.events("park")[0]["reason"])
+
+    def test_dry_run_plans_and_gates_but_never_implements(self):
+        self.make_repo()
+        self.assertEqual(self.run_driver(happy(), extra=("--dry-run",)), 0, self.proc.stderr)
+        self.assertEqual(self.invocations("implementer"), [])
+        self.assertEqual(self.invocations("closer"), [])
+        self.assertEqual(len(self.events("dry-run")), 1)
+
+
+class TestBindingChecker(unittest.TestCase):
+    CHECKER = os.path.join(BINDING_DIR, "..", "..", "..", "scripts", "check-binding.sh")
+
+    def check(self, path):
+        return subprocess.run(["bash", self.CHECKER, path], capture_output=True, text=True)
+
+    def test_filled_binding_passes_and_template_fails(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as fh:
+            fh.write(filled_binding())
+        try:
+            got = self.check(fh.name)
+            self.assertEqual(got.returncode, 0, got.stdout)
+        finally:
+            os.unlink(fh.name)
+        self.assertNotEqual(self.check(TEMPLATE).returncode, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

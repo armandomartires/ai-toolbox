@@ -583,7 +583,7 @@ def main():
             continue
         os.makedirs(target, exist_ok=True)
         dest = os.path.join(target, "%s.md" % role)
-        with open(dest, "w", encoding="utf-8") as fh:
+        with open(dest, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(text)
         print("  agent emitted: %s -> %s (%s)" % (role, client, dest))
     return rc

@@ -1,0 +1,459 @@
+/* ==========================================================================
+   30-charts.css — the binding layer between SVG marks and theme tokens.
+
+   js/10-svg.js writes class names and never a colour; this file is the only
+   place those classes acquire paint. That split is what makes the token editor
+   in js/40-theme.js re-theme every chart on the page without any JS module
+   knowing a palette exists. Every declaration below therefore reads a token
+   from css/00-tokens.css (SCHEMA.md §6) — a literal here would be a hole in
+   the same wall the JS modules are keeping.
+
+   Two cascade facts drive most of the odd-looking choices in this file:
+
+     1. A CSS declaration beats an SVG *presentation attribute*. 10-svg.js
+        writes `stroke-width` on lines, `r` on dots, `opacity` on the focus
+        marks and `rx` on bars as attributes, so a blanket rule here would
+        silently overrule a per-call argument. Where a property is set
+        per-call in JS, this file leaves it alone and says so.
+     2. Theme-dependent non-inherited properties (fill-opacity) cannot rely on
+        proximity the way custom properties can: `[data-theme="dark"] .x` and
+        `[data-theme="auto"] .x` both match the same element at equal
+        specificity, so source order is the tie-break and the order below is
+        load-bearing.
+   ========================================================================== */
+
+/* === Canvas === */
+
+/* `height: auto` overrides the height attribute PM.svg writes on purpose: the
+   attribute plus viewBox supplies the intrinsic ratio, and letting height
+   follow width is what keeps a chart legible between two resize re-renders.
+   `overflow: visible` because axis labels, reference labels and the y-axis
+   title are all drawn outside the plot rect. */
+.pm-svg,
+.pm-chart {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: var(--pm-font);
+}
+
+/* === Axes, ticks and gridlines === */
+
+/* crispEdges on the 1px rules here and on the heatmap's square day cells.
+   Curved and diagonal marks keep antialiasing — a diagonal burn-up line
+   rendered crisply looks like a staircase. */
+.pm-axis-line,
+.pm-tick {
+  stroke: var(--pm-axis);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.pm-gridline {
+  stroke: var(--pm-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.pm-axis-label {
+  fill: var(--pm-fg-muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-axis-title {
+  fill: var(--pm-fg-faint);
+  font-size: 10.5px;
+}
+
+/* === Lines === */
+
+/* No stroke-width here: handle.line() passes `cfg.width || 2` as an
+   attribute, and a rule on .pm-line would flatten every per-call weight to
+   one value. */
+.pm-line {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* The pm-aN aliases are not redundant. handle.area({ stroke: true }) reuses
+   the area's own `pm-aN` class for the outline path, so every pm-aN must also
+   resolve to a stroke on .pm-line or that outline paints nothing. */
+.pm-line.pm-s1, .pm-line.pm-a1 { stroke: var(--pm-series-1); }
+.pm-line.pm-s2, .pm-line.pm-a2 { stroke: var(--pm-series-2); }
+.pm-line.pm-s3, .pm-line.pm-a3 { stroke: var(--pm-series-3); }
+.pm-line.pm-s4, .pm-line.pm-a4 { stroke: var(--pm-series-4); }
+.pm-line.pm-s5, .pm-line.pm-a5 { stroke: var(--pm-series-5); }
+.pm-line.pm-s6, .pm-line.pm-a6 { stroke: var(--pm-series-6); }
+.pm-line.pm-s7, .pm-line.pm-a7 { stroke: var(--pm-series-7); }
+.pm-line.pm-s8, .pm-line.pm-a8 { stroke: var(--pm-series-8); }
+
+/* Semantic strokes, for the few series that genuinely carry a judgment
+   (ideal line, over-p95 band). There is no --pm-muted token — the closed set
+   expresses "muted" as --pm-fg-faint. */
+.pm-line.pm-ok    { stroke: var(--pm-ok); }
+.pm-line.pm-warn  { stroke: var(--pm-warn); }
+.pm-line.pm-bad   { stroke: var(--pm-bad); }
+.pm-line.pm-ref   { stroke: var(--pm-ref); }
+.pm-line.pm-muted { stroke: var(--pm-fg-faint); }
+
+/* Dashes mean "not an observation": an ideal line, a projection, a lower
+   bound. 5 4 stays readable at 1.5px (the sparkline weight). */
+.pm-line.is-dashed {
+  stroke-dasharray: 5 4;
+}
+
+/* === Areas === */
+
+.pm-area {
+  stroke: none;
+  fill-opacity: 0.18;
+}
+
+.pm-area.pm-a1 { fill: var(--pm-series-1); fill-opacity: 0.18; }
+.pm-area.pm-a2 { fill: var(--pm-series-2); fill-opacity: 0.18; }
+.pm-area.pm-a3 { fill: var(--pm-series-3); fill-opacity: 0.18; }
+.pm-area.pm-a4 { fill: var(--pm-series-4); fill-opacity: 0.18; }
+.pm-area.pm-a5 { fill: var(--pm-series-5); fill-opacity: 0.18; }
+.pm-area.pm-a6 { fill: var(--pm-series-6); fill-opacity: 0.18; }
+.pm-area.pm-a7 { fill: var(--pm-series-7); fill-opacity: 0.18; }
+.pm-area.pm-a8 { fill: var(--pm-series-8); fill-opacity: 0.18; }
+
+.pm-area.pm-ok    { fill: var(--pm-ok); }
+.pm-area.pm-warn  { fill: var(--pm-warn); }
+.pm-area.pm-bad   { fill: var(--pm-bad); }
+.pm-area.pm-muted { fill: var(--pm-fg-faint); }
+
+/* === Dark-mode area weight === */
+
+/* A .18 fill over a near-black surface is all but invisible, so the stacked
+   CFD loses its lower bands entirely. These rules must stay *after* the ramp
+   above: they match at the same specificity as `.pm-area.pm-aN`, so source
+   order is the only thing that makes them win. */
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .pm-area { fill-opacity: 0.26; }
+  /* An element that explicitly opted into light inside an `auto` ancestor
+     (template.html ships `auto` on both <html> and <body>) would otherwise
+     pick up the dark weight through the ancestor that is still `auto`. */
+  [data-theme="light"] .pm-area { fill-opacity: 0.18; }
+}
+
+[data-theme="dark"] .pm-area { fill-opacity: 0.26; }
+
+/* === Bars === */
+
+.pm-bar {
+  cursor: default;
+}
+
+/* Full opacity, unlike areas: bars are never layered, so the transparency
+   that keeps two overlapping areas readable only mutes a bar here. The pm-sN
+   aliases exist because SCHEMA.md §5.3's own example passes a series class to
+   c.bars(). */
+.pm-bar.pm-a1, .pm-bar.pm-s1 { fill: var(--pm-series-1); }
+.pm-bar.pm-a2, .pm-bar.pm-s2 { fill: var(--pm-series-2); }
+.pm-bar.pm-a3, .pm-bar.pm-s3 { fill: var(--pm-series-3); }
+.pm-bar.pm-a4, .pm-bar.pm-s4 { fill: var(--pm-series-4); }
+.pm-bar.pm-a5, .pm-bar.pm-s5 { fill: var(--pm-series-5); }
+.pm-bar.pm-a6, .pm-bar.pm-s6 { fill: var(--pm-series-6); }
+.pm-bar.pm-a7, .pm-bar.pm-s7 { fill: var(--pm-series-7); }
+.pm-bar.pm-a8, .pm-bar.pm-s8 { fill: var(--pm-series-8); }
+
+.pm-bar.pm-ok    { fill: var(--pm-ok); }
+.pm-bar.pm-warn  { fill: var(--pm-warn); }
+.pm-bar.pm-bad   { fill: var(--pm-bad); }
+.pm-bar.pm-muted { fill: var(--pm-fg-faint); }
+
+/* Hover is a hint that the bar has a tooltip, not a selection state. */
+.pm-bar:hover {
+  fill-opacity: 0.8;
+}
+
+/* === Dots === */
+
+/* The hairline is the surface colour, not a border colour: it cuts a gap
+   between two overlapping cycle-time samples so a cluster reads as several
+   points rather than one blob. No `r` here — handle.dots() sizes each point. */
+.pm-dot {
+  stroke: var(--pm-bg-elev);
+  stroke-width: 1;
+}
+
+.pm-dot.pm-s1, .pm-dot.pm-a1 { fill: var(--pm-series-1); }
+.pm-dot.pm-s2, .pm-dot.pm-a2 { fill: var(--pm-series-2); }
+.pm-dot.pm-s3, .pm-dot.pm-a3 { fill: var(--pm-series-3); }
+.pm-dot.pm-s4, .pm-dot.pm-a4 { fill: var(--pm-series-4); }
+.pm-dot.pm-s5, .pm-dot.pm-a5 { fill: var(--pm-series-5); }
+.pm-dot.pm-s6, .pm-dot.pm-a6 { fill: var(--pm-series-6); }
+.pm-dot.pm-s7, .pm-dot.pm-a7 { fill: var(--pm-series-7); }
+.pm-dot.pm-s8, .pm-dot.pm-a8 { fill: var(--pm-series-8); }
+
+.pm-dot.pm-ok    { fill: var(--pm-ok); }
+.pm-dot.pm-warn  { fill: var(--pm-warn); }
+.pm-dot.pm-bad   { fill: var(--pm-bad); }
+.pm-dot.pm-muted { fill: var(--pm-fg-faint); }
+
+/* The count printed inside a matrix bubble. It sits on top of a filled mark in
+   any of four tones, so it takes the inverse text colour rather than the body
+   one — the latter is near-black in light mode and would disappear into the
+   `pm-bad` fill. `--pm-fg-inverse` is an existing token; adding a new one for
+   this would require editing `PM.theme.tokens()` in the same change, and one
+   label does not earn a token. `pointer-events: none` keeps the bubble's own
+   tooltip reachable through the text on top of it. */
+.pm-bubble-label {
+  fill: var(--pm-fg-inverse);
+  font-size: var(--pm-fs-sm);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Grow the ring, not the radius: `r` is a per-call attribute (cascade fact 1
+   above), so a CSS `r` would flatten every size handle.dots() was asked for. */
+.pm-dot:hover {
+  stroke-width: 2;
+}
+
+/* === Reference marks === */
+
+/* Always dashed, in every variant. A reference line is a threshold someone
+   chose (p85, today, a target), never a measured series, and the dash is what
+   says so at a glance. */
+.pm-refline {
+  stroke: var(--pm-ref);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  fill: none;
+}
+
+.pm-refline.pm-ok   { stroke: var(--pm-ok); }
+.pm-refline.pm-warn { stroke: var(--pm-warn); }
+.pm-refline.pm-bad  { stroke: var(--pm-bad); }
+
+.pm-reflabel {
+  fill: var(--pm-fg-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-xband {
+  fill: var(--pm-accent);
+  fill-opacity: 0.06;
+}
+
+/* The forecast band wants to read as "not measured yet". A hatch would need
+   either a CSS gradient (which cannot paint an SVG fill) or an external
+   image, and an external image breaks the one requirement the whole dashboard
+   is built around — opening from file:// with no network. So the distinction
+   is carried by weight alone, and the cone's own dashed percentile lines do
+   the rest of the work. */
+.pm-xband.is-forecast {
+  fill-opacity: 0.11;
+}
+
+/* === Hover affordances === */
+
+/* No `opacity` in these two rules: handle.hover() toggles the opacity
+   attribute between 0 and 1 to show and hide them, and a declaration here
+   would pin them permanently visible. */
+.pm-focus-line {
+  stroke: var(--pm-fg-faint);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.pm-focus-dot {
+  fill: var(--pm-accent);
+  stroke: var(--pm-bg-elev);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.pm-overlay {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+/* === Legend === */
+
+.pm-legend {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+}
+
+.pm-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Swatches are HTML spans, not SVG marks, so they take background-color —
+   the one place in this file where a token is not bound to fill or stroke. */
+.pm-legend-swatch {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: var(--pm-fg-faint);
+}
+
+.pm-legend-swatch.pm-a1, .pm-legend-swatch.pm-s1 { background-color: var(--pm-series-1); }
+.pm-legend-swatch.pm-a2, .pm-legend-swatch.pm-s2 { background-color: var(--pm-series-2); }
+.pm-legend-swatch.pm-a3, .pm-legend-swatch.pm-s3 { background-color: var(--pm-series-3); }
+.pm-legend-swatch.pm-a4, .pm-legend-swatch.pm-s4 { background-color: var(--pm-series-4); }
+.pm-legend-swatch.pm-a5, .pm-legend-swatch.pm-s5 { background-color: var(--pm-series-5); }
+.pm-legend-swatch.pm-a6, .pm-legend-swatch.pm-s6 { background-color: var(--pm-series-6); }
+.pm-legend-swatch.pm-a7, .pm-legend-swatch.pm-s7 { background-color: var(--pm-series-7); }
+.pm-legend-swatch.pm-a8, .pm-legend-swatch.pm-s8 { background-color: var(--pm-series-8); }
+
+.pm-legend-swatch.pm-ok    { background-color: var(--pm-ok); }
+.pm-legend-swatch.pm-warn  { background-color: var(--pm-warn); }
+.pm-legend-swatch.pm-bad   { background-color: var(--pm-bad); }
+.pm-legend-swatch.pm-ref   { background-color: var(--pm-ref); }
+.pm-legend-swatch.pm-muted { background-color: var(--pm-fg-faint); }
+
+/* The value is the figure a reader compares across rows, so it gets full
+   contrast and monospaced digits while the label stays muted. */
+.pm-legend-value {
+  color: var(--pm-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* === Sparklines === */
+
+/* Fixed-size by design — PM.svg.sparkline() sits inline in a KPI tile or a
+   table cell, so it must not take the responsive treatment .pm-svg gets. */
+.pm-spark {
+  vertical-align: middle;
+}
+
+/* Fewer than two points is not a trend, so sparkline() returns an empty
+   <span> carrying this class instead of an <svg>. Hiding it here keeps the
+   caller's markup uniform — it appends whatever sparkline() returned, either
+   way — without leaving an inline box beside the label it would have
+   trailed. */
+.pm-spark.is-empty {
+  display: none;
+}
+
+/* === Calendar heatmap === */
+
+/* The 1px surface-coloured stroke is the gap between day cells; drawing it as
+   a stroke rather than a geometry inset keeps the cell's hit area full size
+   for the tooltip and for keyboard focus. */
+.pm-hm-cell {
+  stroke: var(--pm-bg-elev);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/* Step 0 is a distinct surface, not a faint accent: "nothing happened" and
+   "a little happened" must not be a matter of squinting. */
+.pm-hm-0 { fill: var(--pm-bg-sunken); fill-opacity: 1; }
+.pm-hm-1 { fill: var(--pm-accent); fill-opacity: 0.25; }
+.pm-hm-2 { fill: var(--pm-accent); fill-opacity: 0.45; }
+.pm-hm-3 { fill: var(--pm-accent); fill-opacity: 0.7; }
+.pm-hm-4 { fill: var(--pm-accent); fill-opacity: 1; }
+
+.pm-hm-label {
+  fill: var(--pm-fg-faint);
+  font-size: 9.5px;
+}
+
+/* === Dependency graph === */
+
+/* No `rx` here. 24-deps.js writes `rx="6" ry="6"` on every node rect, and `rx`
+   is a CSS geometry property, so a declaration would beat the attribute
+   (cascade fact 1 above) — and, by overriding `rx` without `ry`, would leave
+   every node with elliptical corners rather than the rounded square asked
+   for. */
+.pm-node {
+  fill: var(--pm-bg-elev);
+  stroke: var(--pm-border-strong);
+  stroke-width: 1;
+}
+
+.pm-node.is-done    { stroke: var(--pm-ok);   fill: var(--pm-ok-weak); }
+.pm-node.is-pending { stroke: var(--pm-info); fill: var(--pm-info-weak); }
+.pm-node.is-blocked { stroke: var(--pm-bad);  fill: var(--pm-bad-weak); }
+
+/* Weight, not colour, marks the critical path — the state colours above are
+   already spoken for, and a node can be critical in any of the three. */
+.pm-node.is-critical {
+  stroke-width: 2;
+}
+
+.pm-node-label {
+  fill: var(--pm-fg);
+  font-size: 10px;
+  font-family: var(--pm-font-mono);
+}
+
+/* marker-end: none is defensive — 24-deps.js writes no marker. Direction in
+   this graph is carried by the left-to-right layer layout instead, because one
+   arrowhead per edge at this node size reads as noise. */
+.pm-edge {
+  stroke: var(--pm-border-strong);
+  stroke-width: 1;
+  fill: none;
+  marker-end: none;
+}
+
+.pm-edge.is-unsatisfied {
+  stroke: var(--pm-bad);
+  stroke-dasharray: 4 3;
+}
+
+.pm-edge.is-critical {
+  stroke: var(--pm-accent);
+  stroke-width: 1.75;
+}
+
+/* === Focus === */
+
+/* PM.svg.bindTip() puts tabindex="0" on whatever node it is handed, which is
+   the only way to reach a chart's values from the keyboard. An `outline` on an
+   SVG child is unreliable — several engines either drop it or draw it around
+   the whole <svg> — so the focus ring is a stroke. Scoped to .pm-svg so it
+   cannot reach the HTML controls in the header, which have a real outline of
+   their own.
+
+   The second selector is not redundant. 24-deps.js hands bindTip the <g>
+   wrapping a node's rect and its label, not the rect, and `stroke` inherits:
+   a ring on that group would paint the label's glyphs and leave the box
+   untouched, because .pm-node carries its own `stroke` declaration and a
+   declaration beats an inherited value. */
+.pm-svg [tabindex]:focus-visible,
+.pm-svg [tabindex]:focus-visible > .pm-node {
+  stroke: var(--pm-accent);
+  stroke-width: 2;
+}
+
+/* A label inside that focused group inherits the ring's stroke and would
+   otherwise render as outlined text. */
+.pm-svg [tabindex]:focus-visible > .pm-node-label {
+  stroke: none;
+}
+
+/* === Tooltip rows === */
+
+/* 20-components.css owns #pm-tooltip and both of PM.svg.showTip()'s row
+   classes — the head's weight, the row's deliberate `opacity` in place of a
+   muted token, and the `color: var(--pm-tooltip-fg)` both inherit from the
+   container. Restating any of that here would make this file a second owner of
+   it. Only the chart-specific part belongs here: a tooltip row is nearly
+   always `label: number`, and unaligned digits make stacked rows look
+   ragged. */
+.pm-tip-row {
+  font-variant-numeric: tabular-nums;
+}

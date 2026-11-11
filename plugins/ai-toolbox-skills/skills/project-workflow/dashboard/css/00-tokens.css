@@ -1,0 +1,183 @@
+/* ==========================================================================
+   00-tokens.css — the ONLY file that may define a CSS custom property.
+   The token set is closed and documented in SCHEMA.md §6; the theme editor in
+   js/40-theme.js enumerates exactly these names, so adding a token here
+   without adding it there leaves it uneditable.
+
+   Three layers, in cascade order:
+     1. :root            shape/type tokens that do not change with theme
+     2. light palette    applied for [data-theme="light"] and for
+                         [data-theme="auto"] under prefers-color-scheme: light
+     3. dark palette     the mirror of the above
+   ========================================================================== */
+
+:root {
+  /* --- Shape ------------------------------------------------------------ */
+  --pm-radius: 10px;
+  --pm-radius-sm: 6px;
+  --pm-gap: 16px;
+  --pm-pad: 18px;
+  --pm-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.05);
+
+  /* --- Type ------------------------------------------------------------- */
+  --pm-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto,
+             "Helvetica Neue", Arial, sans-serif;
+  --pm-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                  "Liberation Mono", monospace;
+  --pm-fs-base: 14px;
+  --pm-fs-sm: 12px;
+  --pm-fs-lg: 17px;
+  --pm-fs-xl: 26px;
+
+  /* --- Layout (not user-facing tokens, but kept here for one-file edit) -- */
+  --pm-maxw: 1680px;
+  --pm-header-h: 56px;
+}
+
+/* ==========================================================================
+   Light palette
+   ========================================================================== */
+[data-theme="light"],
+[data-theme="auto"] {
+  color-scheme: light;
+
+  --pm-bg: #f6f7f9;
+  --pm-bg-elev: #ffffff;
+  --pm-bg-sunken: #eceef2;
+  --pm-border: #dfe3e9;
+  --pm-border-strong: #c3cad4;
+
+  --pm-fg: #16202e;
+  --pm-fg-muted: #57637a;
+  --pm-fg-faint: #8b94a6;
+  --pm-fg-inverse: #ffffff;
+
+  --pm-accent: #2f6fd0;
+  --pm-accent-fg: #ffffff;
+  --pm-accent-weak: #e4edfb;
+
+  --pm-ok: #1f8f5f;
+  --pm-ok-weak: #e0f3ea;
+  --pm-warn: #b5750d;
+  --pm-warn-weak: #fbf0da;
+  --pm-bad: #c8412f;
+  --pm-bad-weak: #fbe6e3;
+  --pm-info: #2f6fd0;
+  --pm-info-weak: #e4edfb;
+
+  /* Eight-step categorical ramp. Ordered so the first three are
+     distinguishable in the most common forms of colour-vision deficiency, and
+     so series 1-2 (the burn-up pair) never read as "good vs bad". */
+  --pm-series-1: #2f6fd0;
+  --pm-series-2: #1f8f5f;
+  --pm-series-3: #8a5cd6;
+  --pm-series-4: #c87a12;
+  --pm-series-5: #0d8fa3;
+  --pm-series-6: #c8412f;
+  --pm-series-7: #5a6b86;
+  --pm-series-8: #a8447e;
+
+  --pm-grid: #e6e9ee;
+  --pm-axis: #9aa3b2;
+  --pm-ref: #8b94a6;
+  --pm-tooltip-bg: #16202e;
+  --pm-tooltip-fg: #ffffff;
+}
+
+/* ==========================================================================
+   Dark palette
+   ========================================================================== */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --pm-bg: #12161d;
+  --pm-bg-elev: #1a2029;
+  --pm-bg-sunken: #0d1116;
+  --pm-border: #29313d;
+  --pm-border-strong: #3d4756;
+
+  --pm-fg: #e8ecf3;
+  --pm-fg-muted: #a0abbd;
+  --pm-fg-faint: #6f7b8d;
+  --pm-fg-inverse: #12161d;
+
+  --pm-accent: #6aa5f0;
+  --pm-accent-fg: #0d1116;
+  --pm-accent-weak: #1e2c40;
+
+  --pm-ok: #4cc38a;
+  --pm-ok-weak: #16302a;
+  --pm-warn: #e0a640;
+  --pm-warn-weak: #332a16;
+  --pm-bad: #f0796a;
+  --pm-bad-weak: #3a1f1d;
+  --pm-info: #6aa5f0;
+  --pm-info-weak: #1e2c40;
+
+  --pm-series-1: #6aa5f0;
+  --pm-series-2: #4cc38a;
+  --pm-series-3: #b18cf0;
+  --pm-series-4: #e0a640;
+  --pm-series-5: #45bdd4;
+  --pm-series-6: #f0796a;
+  --pm-series-7: #92a0b8;
+  --pm-series-8: #e07ab0;
+
+  --pm-grid: #232b36;
+  --pm-axis: #6f7b8d;
+  --pm-ref: #6f7b8d;
+  --pm-tooltip-bg: #e8ecf3;
+  --pm-tooltip-fg: #12161d;
+
+  --pm-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+/* `auto` follows the OS. Written as an override of the light block above so
+   that a browser without prefers-color-scheme support still gets light rather
+   than an unstyled page. */
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    color-scheme: dark;
+
+    --pm-bg: #12161d;
+    --pm-bg-elev: #1a2029;
+    --pm-bg-sunken: #0d1116;
+    --pm-border: #29313d;
+    --pm-border-strong: #3d4756;
+
+    --pm-fg: #e8ecf3;
+    --pm-fg-muted: #a0abbd;
+    --pm-fg-faint: #6f7b8d;
+    --pm-fg-inverse: #12161d;
+
+    --pm-accent: #6aa5f0;
+    --pm-accent-fg: #0d1116;
+    --pm-accent-weak: #1e2c40;
+
+    --pm-ok: #4cc38a;
+    --pm-ok-weak: #16302a;
+    --pm-warn: #e0a640;
+    --pm-warn-weak: #332a16;
+    --pm-bad: #f0796a;
+    --pm-bad-weak: #3a1f1d;
+    --pm-info: #6aa5f0;
+    --pm-info-weak: #1e2c40;
+
+    --pm-series-1: #6aa5f0;
+    --pm-series-2: #4cc38a;
+    --pm-series-3: #b18cf0;
+    --pm-series-4: #e0a640;
+    --pm-series-5: #45bdd4;
+    --pm-series-6: #f0796a;
+    --pm-series-7: #92a0b8;
+    --pm-series-8: #e07ab0;
+
+    --pm-grid: #232b36;
+    --pm-axis: #6f7b8d;
+    --pm-ref: #6f7b8d;
+    --pm-tooltip-bg: #e8ecf3;
+    --pm-tooltip-fg: #12161d;
+
+    --pm-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+}

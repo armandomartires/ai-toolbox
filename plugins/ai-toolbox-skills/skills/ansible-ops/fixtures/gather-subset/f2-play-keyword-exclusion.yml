@@ -1,0 +1,15 @@
+---
+# FIXTURE 2 — MUST PASS.
+#
+# The first accepted fix form, quoted verbatim from the hazard's own
+# documentation: `gather_subset: "!mounts"` as a PLAY-LEVEL KEYWORD.
+#
+# A guard that rejects this blocks correct code and gets disabled.
+- name: Gather facts against PVE nodes with mounts excluded (safe)
+  hosts: pve_voting
+  gather_facts: true
+  gather_subset: "!mounts"
+  tasks:
+    - name: Facts are available, minus the hazardous subset
+      ansible.builtin.debug:
+        var: ansible_hostname

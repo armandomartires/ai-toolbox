@@ -593,7 +593,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0290-first-live-ci-fixes.md
 - [ ] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
   .ai/tasks/TASK-0271-role-guard.md
-- [ ] TASK-0272 — Claude Code plugins per component kind (P1.2)
+- [?] TASK-0272 — Claude Code plugins per component kind (P1.2)
   .ai/tasks/TASK-0272-claude-code-plugins.md
 - [ ] TASK-0273 — Loops as invocable skills (P1.3)
   .ai/tasks/TASK-0273-loops-as-skills.md
@@ -605,7 +605,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0276-permissions-and-sandbox.md
 - [?] TASK-0277 — Stop hook runs a fast check (P1.7)
   .ai/tasks/TASK-0277-stop-hook-fast-check.md
-- [ ] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
+- [>] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
   .ai/tasks/TASK-0278-evals-trials-and-growth.md
 - [?] TASK-0279 — Claude Code OpenTelemetry (P1.9)
   .ai/tasks/TASK-0279-claude-code-otel.md

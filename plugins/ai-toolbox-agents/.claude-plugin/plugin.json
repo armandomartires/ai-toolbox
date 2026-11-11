@@ -1,0 +1,12 @@
+{
+  "name": "ai-toolbox-agents",
+  "version": "0.1.0",
+  "description": "The ai-toolbox role agents emitted for Claude Code. Needs the ai-toolbox-skills plugin.",
+  "author": {
+    "name": "Armando Martires"
+  },
+  "license": "MIT",
+  "dependencies": [
+    "ai-toolbox-skills"
+  ]
+}

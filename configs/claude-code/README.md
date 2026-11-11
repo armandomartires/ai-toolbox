@@ -451,11 +451,11 @@ Permission rules everywhere, the sandbox for unattended runs only.
   unattended run is the OpenCode driver. TASK-0284 (the Agent SDK runner) is
   where it gets wired. Until then sandboxing an unattended run needs the
   managed settings below.
-- Under a marketplace-primary install (D2=B) `install.sh` is not the path, so
-  the agents or skills plugin has to carry the same permission rules: the build
-  (TASK-0272) must read `settings.permissions.json`, not a copy. That build
-  does not exist yet; the check that the plugin carries them belongs to that
-  task.
+- Under a marketplace-primary install (D2=B) the plugins do NOT carry these
+  permission rules: a plugin `settings.json` is not a known way to ship them
+  (TASK-0272 found nothing that applies them). `install.sh` (and
+  `--unattended`) stays the writer, so a consumer that installs only the
+  plugins gets no deny or ask rules from this repo.
 
 **Recommended: managed settings.** For a host that runs unattended work, put
 the `sandbox` block in the managed settings file (the organisation level,
@@ -546,3 +546,23 @@ skill deployed: unattended-ops -> claude-code (link)
 
 Resulting additions, from a before/after listing: `unattended-ops` in the
 skills directory; `adjudicator.md` and `task-planner.md` in `~/.claude/agents/` — exactly the two of nine that declare `claude-code`. **`~/.claude/agents/designer-manager.md` was a stale file** from an earlier install: the role is OpenCode-only now, and at the time nothing removed the old emission. **Pruned 2026-09-24** by the next `install.sh link` (`TASK-0091`, `ADR-0026`): *"agent pruned: designer-manager -> claude-code (… the role no longer declares this client, ADR-0026)"* — the only file removed from either client. **Nothing is pruned**, as install.sh itself states.
+
+## Plugins (marketplace, TASK-0272)
+
+`.claude-plugin/marketplace.json` lists three generated plugins under
+`plugins/`, one per component kind: `ai-toolbox-skills` (the skills except
+`mod-dev`), `ai-toolbox-agents` (the agents emitted for `claude-code`; depends
+on the skills plugin) and `ai-toolbox-gates` (the gates MCP server, wired by
+`.mcp.json`). `python3 scripts/build-plugin.py` regenerates them and `--check`
+fails when `plugins/` is stale; never edit `plugins/` by hand.
+
+The plugins carry no hooks and no permission rules. The worktree hooks are this
+repo's sibling-worktree rule and come from `install.sh` (a consumer repo has no
+`scripts/worktree.sh`, and they would run twice); permission rules come from
+`install.sh` too (see above). Skills and agents were written for an ai-toolbox
+checkout, so from the plugin cache some references do not resolve (the plugin
+READMEs list them).
+
+`scripts/install.sh` stays the development and non-Claude path (link mode,
+OpenCode, the worktree hooks, the permission and unattended settings merge). It
+is not replaced by the plugins.

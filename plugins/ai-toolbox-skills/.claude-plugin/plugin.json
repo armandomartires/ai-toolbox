@@ -1,0 +1,9 @@
+{
+  "name": "ai-toolbox-skills",
+  "version": "0.1.0",
+  "description": "The ai-toolbox skills for Claude Code: project workflow, design flow, vault secrets, repo inventory, migration, ansible and unattended operations, generated from the repository's skills/.",
+  "author": {
+    "name": "Armando Martires"
+  },
+  "license": "MIT"
+}

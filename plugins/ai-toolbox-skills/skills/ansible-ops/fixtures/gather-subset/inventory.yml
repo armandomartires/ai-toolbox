@@ -1,0 +1,38 @@
+# Fixture inventory for the gather_subset guard.
+#
+# Deliberately mirrors the SHAPE of a real PVE estate's inventory without
+# copying one: a nested group-of-groups, so a host reaches its hazard class
+# only transitively. That nesting is the whole point — the guard must resolve
+# `hosts: fixturepve1` to the hazard class through `children:`, and a guard
+# that string-matches `hosts:` against group names cannot.
+#
+# No real hostnames, addresses or credentials. Names are `fixture*` so they
+# cannot be confused with an estate's.
+all:
+  children:
+
+    # The hazard class. Two levels of nesting, matching how a real cluster
+    # inventory splits voting from non-voting members.
+    pve_cluster:
+      children:
+        pve_voting:
+          hosts:
+            fixturepve1:
+              pve_nodeid: 1
+            fixturepve2:
+              pve_nodeid: 2
+        pve_nonvoting:
+          hosts:
+            fixturepve3:
+              pve_nodeid: 3
+
+    # NOT the hazard class. Present so the guard has something it must stay
+    # silent about: a fixture that only ever fires proves nothing about
+    # discrimination.
+    domain_controllers:
+      hosts:
+        fixturedc1:
+
+    network_devices:
+      hosts:
+        fixturesw1:

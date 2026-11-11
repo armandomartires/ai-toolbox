@@ -1,0 +1,24 @@
+---
+# FIXTURE 5a — MUST PASS (guard silent).
+#
+# Mirrors the real estate's `capture_pve_baseline.yml`: a PVE node addressed by
+# BARE HOSTNAME with `gather_facts: false`, plus a `module_defaults:` block
+# scoped to something other than `setup`.
+#
+# READ THE CAVEAT BEFORE TRUSTING THIS FIXTURE (TASK-0052, defect D2):
+# this case is satisfied by a correct guard AND by a guard that classifies
+# nothing at all, because `gather_facts: false` makes it safe for a reason that
+# has nothing to do with host resolution. It is retained as a regression check
+# against FALSE POSITIVES — it must not fire — and it is **not** evidence that
+# the guard works. Fixture 6 is that evidence.
+- name: Query a PVE node without gathering facts (safe)
+  hosts: fixturepve1
+  gather_facts: false
+  module_defaults:
+    group/community.proxmox.proxmox:
+      api_host: "fixture.invalid"
+      api_timeout: 30
+  tasks:
+    - name: No setup module runs, so no mounts are stat-ed
+      ansible.builtin.debug:
+        msg: "safe because facts are not gathered at all"

@@ -1,6 +1,9 @@
 # Component Authoring Guide
 
 ## Skills
+Editing `skills/` or `agents/` also needs `python3 scripts/build-plugin.py`,
+which regenerates `plugins/`; `tests/test-install.sh` fails while it is stale.
+
 SKILL.md is required, case-sensitive. No README.md inside skill folders.
 `tests/validate.sh` enforces the **Gated** column below. Rows marked *no* are
 conventions a reader must uphold; nothing checks them.

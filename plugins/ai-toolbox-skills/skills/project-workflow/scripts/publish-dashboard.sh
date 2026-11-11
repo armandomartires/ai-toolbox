@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Publish the delivery dashboard to GitHub Pages and/or GitLab Pages.
+#
+# A LOCAL BUILD NEEDS NONE OF THIS. build-dashboard.sh writes one
+# self-contained HTML file; unpublished, that is the whole dashboard.
+# Publishing is optional: a project that wants the page on the web declares
+# its destinations in `dashboard-publish.conf` at its root, and this script
+# renders, from ../assets/publish/, the CI pipeline that builds and publishes
+# the page for each one. See references/dashboard.md, "Publishing it".
+#
+# WHY RENDERED, NOT COPIED (TASK-0127, closing B-048). The pipeline carries
+# rules that were learned by publishing a wrong page - most of all that a
+# shallow clone yields a complete-looking dashboard with a truncated history.
+# A copy made by hand keeps those rules only until someone edits it. A rendered
+# copy is checked: `render --check` exits non-zero when it drifts.
+#
+# Usage:
+#   publish-dashboard.sh render [--check] [--adopt] [--repo DIR]
+#   publish-dashboard.sh guard --model PATH [--expect-shape SHAPE] [--repo DIR]
+#   publish-dashboard.sh decision [--repo DIR]
+#
+#   render   write each configured target's CI file:
+#              github-pages -> .github/workflows/dashboard.yml
+#              github-pages-daily -> .github/workflows/dashboard-daily.yml,
+#                              which dispatches the github-pages workflow
+#                              once a day (refused without github-pages)
+#              gitlab-pages -> .gitlab/ci/dashboard-pages.yml, included from
+#                              .gitlab-ci.yml (a stub is written only when the
+#                              project has none; an existing one is never
+#                              edited, and --check fails if it lacks the include)
+#            Refuses to overwrite a file it did not generate.
+#   --check  write nothing; exit 1 naming every stale, missing or orphaned file.
+#   --adopt  replace a hand-written CI file with the rendered one, once.
+#   guard    run inside a pipeline, after build-dashboard.sh --json: exit 1 if
+#            the clone is shallow, the history has <= 1 commit, no task parsed,
+#            git was unavailable, or the corpus shape is not SHAPE.
+#   decision list each remote as `name host forge` (github | gitlab |
+#            unknown - a self-hosted GitLab is usually unknown) and say whether
+#            the human has been asked about publishing: exit 1 when a remote
+#            exists and there is no conf yet. Prints hosts, never URLs.
+#   --repo   repository root. Default: the enclosing git work tree, else CWD.
+#
+# FILES TRACKER ONLY (ADR-0037). When tracker.conf names gitlab or github,
+# `decision` answers `not applicable` (exit 0), `render --check` reports only
+# a conf that still declares targets or a pipeline still deploying (exit 1),
+# and `render` refuses to write one (exit 2). See tracker.sh.
+#
+# dashboard-publish.conf (`key = value`; a `#` comment must start its own line,
+# so the notes on the right are for reading, not for the file):
+#   targets        = github-pages gitlab-pages     # one or more targets above,
+#                                                  # or `none` alone: asked, declined
+#   skill_dir      = skills/project-workflow       # inside the repo: a runner
+#                                                  # clones the repo, nothing else
+#   branch         = master                        # the branch that publishes
+#   root           = .ai                           # optional, default .ai
+#   expect_shape   = numbered_task                 # optional: numbered_task | sprint_brief
+#   status.github-pages = UNVERIFIED - never run   # required per target
+#   status.github-pages-daily = UNVERIFIED - never run
+#   status.gitlab-pages = UNVERIFIED - never run
+#
+# Exit codes: 0 ok, 1 stale (render --check), guard failed or decision
+# pending, 2 refused.
+# Requires python3, standard library only.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+usage() { sed -n '2,62p' "$0" | sed 's/^# \{0,1\}//'; }
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  "")        usage >&2; exit 2 ;;
+esac
+
+command -v python3 >/dev/null 2>&1 || {
+  echo "publish-dashboard.sh: MISSING prerequisite: python3" >&2; exit 2; }
+
+exec python3 "$HERE/publish_lib.py" "$@"

@@ -1,0 +1,319 @@
+#!/usr/bin/env bash
+# Prove publish-dashboard.sh renders, refuses and guards as documented.
+#
+# Every case runs in a throwaway git repository under mktemp, against the real
+# script and the real templates, so it needs no network and touches nothing in
+# the repository it is run from. tests/validate.sh runs it: it is hermetic and
+# takes about a second, and B-037 measured what a suite outside the gate costs
+# - it goes red and nothing says so.
+#
+# THE CASE THAT MATTERS MOST is `guard refuses a shallow clone of more than one
+# commit`. GitLab clones 20 commits by default. The guard this replaced checked
+# `commits <= 1`, which a 20-commit truncated history passes - so on GitLab it
+# would have published a plausible, wrong page.
+#
+# WHAT THIS PROVES: the renderer's refusals, its drift detection, the guard's
+# failure conditions, the lines the daily dispatcher cannot work without (the
+# branch it names, the file it dispatches, its schedule, its one scope, the
+# pipeline's dispatch trigger), and the dispatcher's wait-and-mirror logic, run
+# against a fake API - each by a case that fails when the behaviour is removed.
+# WHAT IT DOES NOT PROVE: that a rendered pipeline runs on GitHub or GitLab, or
+# that GitHub fires a schedule. Only an observed run proves that, and the
+# STATUS line in each rendered file says whether one has been.
+set -uo pipefail
+
+# SAFETY, AND IT WAS LEARNED THE EXPENSIVE WAY (TASK-0127). A pre-commit hook
+# runs with GIT_DIR and GIT_INDEX_FILE exported, and both override `git -C`.
+# The first run of this suite from the hook therefore did its throwaway
+# `git init`, `add -A` and `commit` against the REAL repository: it set
+# `core.bare = true` in the shared config, replaced the index, and committed a
+# 423-file deletion on the session branch. Every git call below must reach the
+# scratch repository it names and nothing else, so the variables that locate a
+# repository are cleared before any of them runs.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX \
+      GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE \
+      GIT_CEILING_DIRECTORIES GIT_DISCOVERY_ACROSS_FILESYSTEM
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+SKILL="$(dirname "$HERE")"
+
+command -v python3 >/dev/null 2>&1 || { echo "check-publish.sh: MISSING prerequisite: python3" >&2; exit 1; }
+command -v git >/dev/null 2>&1 || { echo "check-publish.sh: MISSING prerequisite: git" >&2; exit 1; }
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+# Run a byte-identical copy from local disk. On a WSL /mnt/c checkout every
+# read crosses the 9p bridge, and ~40 invocations of the script and its
+# templates cost ~1 s of a gate that must stay fast. The templates resolve
+# script-relative, so the copy carries its own.
+mkdir -p "$TMP/skill"
+cp -R "$SKILL/scripts" "$SKILL/assets" "$TMP/skill/"
+PUB="$TMP/skill/scripts/publish-dashboard.sh"
+fails=0
+count=0
+
+g() { git -C "$1" -c user.name=check -c user.email=check@example.invalid \
+        -c core.hooksPath=/dev/null -c init.defaultBranch=master "${@:2}"; }
+
+# expect CODE DESCRIPTION [grep-pattern] -- command...
+expect() {
+  local want="$1" desc="$2" pat=""; shift 2
+  if [ "$1" != "--" ]; then pat="$1"; shift; fi
+  shift
+  local out code
+  out="$("$@" 2>&1)"; code=$?
+  count=$((count + 1))
+  if [ "$code" -ne "$want" ]; then
+    echo "FAIL  $desc (exit $code, want $want)"; printf '%s\n' "$out" | sed 's/^/        /'
+    fails=$((fails + 1)); return
+  fi
+  if [ -n "$pat" ] && ! printf '%s' "$out" | grep -q -- "$pat"; then
+    echo "FAIL  $desc (output lacks '$pat')"; printf '%s\n' "$out" | sed 's/^/        /'
+    fails=$((fails + 1)); return
+  fi
+  echo "PASS  $desc"
+}
+
+# A repository with a tracked skill directory inside it and a commit behind it.
+mkrepo() {
+  local r="$TMP/$1"
+  mkdir -p "$r/tools/pw/scripts"
+  g "$r" init -q
+  : > "$r/tools/pw/scripts/build-dashboard.sh"
+  : > "$r/tools/pw/scripts/publish-dashboard.sh"
+  cat > "$r/dashboard-publish.conf" <<'EOF'
+# test config
+targets   = github-pages gitlab-pages
+skill_dir = tools/pw
+branch    = master
+expect_shape = numbered_task
+status.github-pages = UNVERIFIED - test
+status.gitlab-pages = UNVERIFIED - test
+EOF
+  g "$r" add -A && g "$r" commit -q -m one
+  printf '%s' "$r"
+}
+
+conf_set() { # repo key value : replace or append one key
+  python3 - "$1/dashboard-publish.conf" "$2" "$3" <<'PY'
+import sys
+path, key, value = sys.argv[1:]
+lines = [l for l in open(path).read().split("\n") if l and not l.split("=")[0].strip() == key]
+if value != "-":
+    lines.append("%s = %s" % (key, value))
+open(path, "w").write("\n".join(lines) + "\n")
+PY
+}
+
+GH=.github/workflows/dashboard.yml
+GL=.gitlab/ci/dashboard-pages.yml
+
+# --- render ---------------------------------------------------------------
+R="$(mkrepo render)"
+expect 0 "render writes both destinations and a stub .gitlab-ci.yml" "wrote    .gitlab-ci.yml" -- "$PUB" render --repo "$R"
+expect 0 "rendered files carry the generated marker" -- grep -q '^# GENERATED by tools/pw/' "$R/$GH" "$R/$GL" "$R/.gitlab-ci.yml"
+expect 1 "no placeholder survives rendering" -- grep -q '@@' "$R/$GH" "$R/$GL"
+expect 0 "render --check is clean straight after render" -- "$PUB" render --check --repo "$R"
+expect 0 "the guard call carries expect_shape" -- grep -q 'guard --model _site/model.json --expect-shape numbered_task' "$R/$GH"
+expect 0 "GitLab job clones full depth" -- grep -q 'GIT_DEPTH: "0"' "$R/$GL"
+
+echo "# edited" >> "$R/$GH"
+expect 1 "render --check fails on a hand-edited copy and names it" "$GH" -- "$PUB" render --check --repo "$R"
+expect 0 "render repairs the edited copy" -- "$PUB" render --repo "$R"
+
+python3 -c "import sys; p=sys.argv[1]; d=open(p,newline='').read(); open(p,'w',newline='').write(d.replace('\n','\r\n'))" "$R/$GH"
+expect 0 "CRLF line endings are not drift" -- "$PUB" render --check --repo "$R"
+
+# --- refusals ---------------------------------------------------------------
+R="$(mkrepo handwritten)"
+mkdir -p "$R/.github/workflows"; echo "name: mine" > "$R/$GH"
+expect 2 "render refuses to overwrite a CI file it did not generate" "refusing to overwrite" -- "$PUB" render --repo "$R"
+expect 0 "the refused file is untouched" -- grep -qx 'name: mine' "$R/$GH"
+expect 0 "--adopt replaces it once" -- "$PUB" render --adopt --repo "$R"
+expect 0 "and the adopted file is now generated" -- grep -q '^# GENERATED by ' "$R/$GH"
+
+R="$(mkrepo ownci)"
+printf 'test:\n  script: [ "true" ]\n' > "$R/.gitlab-ci.yml"
+expect 1 "an existing .gitlab-ci.yml without the include fails --check" "does not include the dashboard job" -- "$PUB" render --check --repo "$R"
+expect 1 "render reports it but still exits non-zero" "does not include" -- "$PUB" render --repo "$R"
+expect 0 "and never edits the project's own CI file" -- grep -qx 'test:' "$R/.gitlab-ci.yml"
+printf 'include:\n  - local: %s\n' "$GL" >> "$R/.gitlab-ci.yml"
+expect 0 "once it includes the fragment, --check is clean" -- "$PUB" render --check --repo "$R"
+
+R="$(mkrepo outside)"
+conf_set "$R" skill_dir ../elsewhere
+expect 2 "skill_dir with .. is refused" "inside the repository" -- "$PUB" render --repo "$R"
+mkdir -p "$TMP/elsewhere/scripts"; : > "$TMP/elsewhere/scripts/build-dashboard.sh"; : > "$TMP/elsewhere/scripts/publish-dashboard.sh"
+# Git Bash's `ln -s` silently COPIES the target unless MSYS asks for a native
+# link, and a copy is an untracked directory inside the repo: the case then
+# met the "not tracked" refusal and never the symlink one. nativestrict makes
+# ln fail instead of copying; the MSYS variable means nothing to Linux's ln.
+if MSYS="${MSYS:+$MSYS }winsymlinks:nativestrict" ln -s "$TMP/elsewhere" "$R/linked" 2>/dev/null &&
+   [ -L "$R/linked" ]; then
+  conf_set "$R" skill_dir linked
+  expect 2 "skill_dir symlinked out of the repo is refused" "resolves outside the repository" -- "$PUB" render --repo "$R"
+else
+  echo "SKIP  skill_dir symlinked out of the repo is refused (this host cannot create a symlink; on Windows enable Developer Mode)"
+fi
+
+R="$(mkrepo untracked)"
+mkdir -p "$R/other/scripts"; : > "$R/other/scripts/build-dashboard.sh"; : > "$R/other/scripts/publish-dashboard.sh"
+conf_set "$R" skill_dir other
+expect 2 "an untracked skill_dir is refused - a clone would not have it" "not tracked" -- "$PUB" render --repo "$R"
+
+R="$(mkrepo badconf)"
+conf_set "$R" colour blue
+expect 2 "an unknown key is refused" "unknown key" -- "$PUB" render --repo "$R"
+conf_set "$R" colour -; conf_set "$R" targets "github-pages netlify"
+expect 2 "an unknown target is refused" "unknown target" -- "$PUB" render --repo "$R"
+conf_set "$R" targets github-pages; conf_set "$R" status.github-pages -
+expect 2 "a target without a status line is refused" "status.github-pages is required" -- "$PUB" render --repo "$R"
+conf_set "$R" status.github-pages "UNVERIFIED"; conf_set "$R" branch 'master; rm -rf /'
+expect 2 "a value that could inject into YAML or shell is refused" "may hold only" -- "$PUB" render --repo "$R"
+
+R="$(mkrepo orphan)"
+"$PUB" render --repo "$R" >/dev/null 2>&1
+conf_set "$R" targets github-pages
+expect 1 "a generated file for a dropped target is reported" "no longer in targets" -- "$PUB" render --check --repo "$R"
+
+expect 2 "no config means no publishing, and says so" "Publishing is optional" -- "$PUB" render --repo "$TMP"
+
+# --- the daily dispatcher ----------------------------------------------------
+# Its own fixture, publishing `trunk`: a template that hard-coded `master`
+# would pass against the master fixtures above by coincidence.
+GD=.github/workflows/dashboard-daily.yml
+R="$(mkrepo daily)"
+conf_set "$R" branch trunk
+conf_set "$R" targets "github-pages github-pages-daily"
+conf_set "$R" status.github-pages-daily "UNVERIFIED - test"
+expect 0 "render writes the daily dispatcher beside the pipeline" "wrote    $GD (github-pages-daily)" -- "$PUB" render --repo "$R"
+expect 0 "render --check is clean with the daily target" -- "$PUB" render --check --repo "$R"
+expect 1 "no placeholder survives in the dispatcher" -- grep -q '@@' "$R/$GD"
+expect 0 "the dispatcher names the configured branch" -- grep -qF '"ref":"trunk"' "$R/$GD"
+expect 0 "the dispatcher starts the github-pages workflow by its file name" -- grep -qF "actions/workflows/${GH##*/}/dispatches" "$R/$GD"
+expect 0 "the dispatcher runs daily, just after UTC midnight" -- grep -qxF "    - cron: '23 0 * * *'" "$R/$GD"
+expect 0 "the dispatcher asks for the one scope a dispatch needs" -- grep -qxF '  actions: write' "$R/$GD"
+expect 0 "the workflow it dispatches accepts a dispatch" -- grep -qx '  workflow_dispatch:' "$R/$GH"
+
+# Its wait-and-mirror logic, run for real: the step's `run:` block is lifted
+# out of the rendered file and executed with `curl` and `sleep` stubbed, so
+# what is tested is the shell GitHub will run.
+python3 - "$R/$GD" > "$TMP/dispatch.sh" <<'EXTRACT'
+import sys
+out, ind = [], None
+for line in open(sys.argv[1]).read().split("\n"):
+    if ind is None:
+        if line.strip() == "run: |":
+            ind = len(line) - len(line.lstrip()) + 2
+        continue
+    if line.strip() and len(line) - len(line.lstrip()) < ind:
+        break
+    out.append(line[ind:])
+print("\n".join(out))
+EXTRACT
+FAKE="$TMP/fakebin"; mkdir -p "$FAKE"
+cat > "$FAKE/curl" <<'STUB'
+#!/usr/bin/env bash
+# POST: the canned dispatch reply and exit code. GET: the next canned run state.
+case " $* " in
+  *" -X POST "*) cat "$FAKE_API/reply"; exit "$(cat "$FAKE_API/rc")" ;;
+esac
+n=$(( $(cat "$FAKE_API/n") + 1 )); echo "$n" > "$FAKE_API/n"
+sed -n "${n}p" "$FAKE_API/states"
+STUB
+cat > "$FAKE/sleep" <<'STUB'
+#!/usr/bin/env bash
+# The loop's only pause. A poll that never ends is a defect, not a wait, so
+# after 20 polls this stops the script under test instead of hanging the suite.
+n=$(( $(cat "$FAKE_API/polls" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$FAKE_API/polls"
+[ "$n" -le 20 ] || kill -TERM "$PPID"
+STUB
+chmod +x "$FAKE/curl" "$FAKE/sleep"
+api_case() { # name rc reply [state...] : a fake API, printed as its directory
+  local d="$TMP/api-$1"; mkdir -p "$d"
+  printf '%s' "$2" > "$d/rc"; printf '%s' "$3" > "$d/reply"; echo 0 > "$d/n"
+  shift 3; printf '%s\n' "$@" > "$d/states"; printf '%s' "$d"
+}
+dispatch() { FAKE_API="$1" PATH="$FAKE:$PATH" GH_TOKEN=t API=http://api.invalid REPO=o/r bash "$TMP/dispatch.sh"; }
+RID='{"workflow_run_id":7}'
+expect 0 "the dispatcher mirrors a run that succeeds" "run 7: completed success" -- dispatch "$(api_case ok 0 "$RID" '{"status":"queued","conclusion":null}' '{"status":"completed","conclusion":"success"}')"
+expect 1 "the dispatcher fails with a run that fails" "concluded failure" -- dispatch "$(api_case bad 0 "$RID" '{"status":"completed","conclusion":"failure"}')"
+expect 0 "a cancelled run is not a failure" "was cancelled" -- dispatch "$(api_case cancelled 0 "$RID" '{"status":"completed","conclusion":"cancelled"}')"
+expect 1 "a dispatch reply that names no run fails loudly" "names no run" -- dispatch "$(api_case norun 0 '')"
+expect 1 "a refused dispatch fails loudly" "dispatch refused" -- dispatch "$(api_case refused 22 '{"message":"Resource not accessible by integration"}')"
+
+conf_set "$R" targets github-pages-daily
+expect 2 "the daily target without github-pages is refused" "needs github-pages in targets" -- "$PUB" render --repo "$R"
+conf_set "$R" targets github-pages
+expect 1 "a dispatcher left by a dropped daily target is reported" "$GD was generated for github-pages-daily" -- "$PUB" render --check --repo "$R"
+
+# --- targets = none (TASK-0159) ---------------------------------------------
+# A "no" to the publishing question is written down, so it is not asked again.
+R="$(mkrepo declined)"
+printf '# asked 2026-10-11, declined\ntargets = none\n' > "$R/dashboard-publish.conf"
+expect 0 "targets = none renders nothing and says so" "publishing declined" -- "$PUB" render --repo "$R"
+expect 1 "targets = none wrote no pipeline" -- test -e "$R/$GH" -o -e "$R/$GL" -o -e "$R/.gitlab-ci.yml"
+conf_set "$R" targets "none github-pages"
+expect 2 "none mixed with a real target is refused" "must be the only target" -- "$PUB" render --repo "$R"
+printf 'targets = none\nstatus.github-pages = UNVERIFIED - test\n' > "$R/dashboard-publish.conf"
+expect 2 "none with a status line is refused" "nothing to configure" -- "$PUB" render --repo "$R"
+R="$(mkrepo yes-then-no)"
+"$PUB" render --repo "$R" >/dev/null 2>&1
+printf 'targets = none\n' > "$R/dashboard-publish.conf"
+expect 1 "switching to none reports the pipeline left deploying" "$GH was generated for github-pages" -- "$PUB" render --check --repo "$R"
+
+# --- decision ---------------------------------------------------------------
+R="$(mkrepo decision)"
+rm "$R/dashboard-publish.conf"
+expect 0 "decision: no remote, nothing to ask" "no remote" -- "$PUB" decision --repo "$R"
+g "$R" remote add github "https://github.com/example/project.git"
+expect 1 "decision: a GitHub remote and no conf is pending" "PENDING" -- "$PUB" decision --repo "$R"
+expect 1 "decision: github.com is named github" "remote   github github.com github" -- "$PUB" decision --repo "$R"
+g "$R" remote add origin "git@git.example.internal:group/project.git"
+expect 1 "decision: a self-hosted host is unknown, not guessed" "remote   origin git.example.internal unknown" -- "$PUB" decision --repo "$R"
+g "$R" remote add lab "https://ci-user:s3cr3t-t0ken@gitlab.example.org:8443/group/project.git"
+expect 1 "decision: a host naming gitlab is gitlab" "remote   lab gitlab.example.org gitlab" -- "$PUB" decision --repo "$R"
+"$PUB" decision --repo "$R" > "$TMP/decision.out" 2>&1
+expect 1 "decision: never prints a token from a remote URL" -- grep -q -e s3cr3t -e ci-user "$TMP/decision.out"
+printf 'targets = none\n' > "$R/dashboard-publish.conf"
+expect 0 "decision: targets = none is answered" "answered declined" -- "$PUB" decision --repo "$R"
+# A declared files tracker is the same as none declared (TASK-0171); the forge
+# cases live in check-tracker.sh.
+printf 'tracker = files\n' > "$R/tracker.conf"
+expect 0 "decision: an explicit tracker = files changes nothing" "answered declined" -- "$PUB" decision --repo "$R"
+
+# --- guard -------------------------------------------------------------------
+model() { # path commits tasks shape [drop-key]
+  python3 - "$@" <<'PY'
+import json, sys
+path, commits, tasks, shape = sys.argv[1:5]
+m = {"metrics": {"totals": {"commits": int(commits), "tasks": int(tasks), "sprints": 0}},
+     "project": {"git_available": True, "corpus_shape": shape}}
+if len(sys.argv) > 5:
+    del m["metrics"]["totals"][sys.argv[5]]
+json.dump(m, open(path, "w"))
+PY
+}
+R="$(mkrepo guard)"
+for n in two three; do echo "$n" > "$R/$n"; g "$R" add -A; g "$R" commit -q -m "$n"; done
+model "$TMP/good.json" 3 5 numbered_task
+expect 0 "guard passes a full clone with history and tasks" "history OK" -- "$PUB" guard --model "$TMP/good.json" --expect-shape numbered_task --repo "$R"
+model "$TMP/m.json" 1 5 numbered_task
+expect 1 "guard refuses a 1-commit history" "degenerate" -- "$PUB" guard --model "$TMP/m.json" --repo "$R"
+model "$TMP/m.json" 3 0 numbered_task
+expect 1 "guard refuses a page with no tasks" "no task brief" -- "$PUB" guard --model "$TMP/m.json" --repo "$R"
+model "$TMP/m.json" 3 5 sprint_brief
+expect 1 "guard refuses the wrong corpus shape" "corpus shape" -- "$PUB" guard --model "$TMP/m.json" --expect-shape numbered_task --repo "$R"
+model "$TMP/m.json" 3 5 numbered_task commits
+expect 1 "guard FAILS on a missing key rather than skipping it" "model has no metrics.totals.commits" -- "$PUB" guard --model "$TMP/m.json" --repo "$R"
+
+g "$TMP" clone -q --depth 2 "file://$R" shallow
+expect 1 "guard refuses a shallow clone of more than one commit (GitLab's default case)" "shallow" -- "$PUB" guard --model "$TMP/good.json" --repo "$TMP/shallow"
+
+echo
+if [ "$fails" -ne 0 ]; then
+  echo "check-publish.sh: $fails of $count case(s) FAILED"
+  exit 1
+fi
+echo "check-publish.sh: OK ($count cases)"

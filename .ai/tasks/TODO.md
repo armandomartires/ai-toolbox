@@ -312,7 +312,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0270 — Fix stale loop text (P0.5)
 - [?] TASK-0290 — Fix the first live CI runs of the eval and tool-lock jobs
 - [ ] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
-- [ ] TASK-0272 — Claude Code plugins per component kind (P1.2)
+- [?] TASK-0272 — Claude Code plugins per component kind (P1.2)
 - [ ] TASK-0273 — Loops as invocable skills (P1.3)
 - [?] TASK-0274 — Claude skill controls in the schema (P1.4)
 - [?] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)

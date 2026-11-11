@@ -1,0 +1,318 @@
+/* ==========================================================================
+   90-print.css — print / save-as-PDF rules, plus the `.pm-print-all` escape
+   hatch that PM.app applies to <body> before calling window.print().
+
+   Print is a different document, not a screenshot of the screen one. Someone
+   who prints this dashboard is producing a status report: they want every
+   panel, on paper, with no controls and no dark chrome. So this file
+   overrides the theme, reveals the hidden tabs, and paginates — it does not
+   try to reproduce what is on screen.
+
+   Loaded last of the css/ files (filename order), so it wins over layout,
+   components and charts without needing specificity tricks for anything
+   except the two cases called out below.
+   ========================================================================== */
+
+@media print {
+
+  /* ------------------------------------------------------------------------
+     14mm on every edge fits both A4 and US Letter without a per-size rule,
+     and leaves the two-column grid below clear of the non-printable margin
+     on consumer inkjets.
+     ------------------------------------------------------------------------ */
+  @page { margin: 14mm; }
+
+  /* ------------------------------------------------------------------------
+     Force the light palette regardless of [data-theme]. A dark dashboard
+     prints as a solid black page: a printer that honours the background
+     empties a cartridge, and one that drops it renders light text on white
+     paper. Neither is readable, so the theme is not respected here.
+
+     The values below are copied verbatim from 00-tokens.css's light block.
+     That file is normally the *only* place a custom property may be defined
+     (SCHEMA.md §6); this is the one sanctioned duplication, because the
+     alternative — a print variant of all forty-odd tokens carried in
+     00-tokens.css — is paid for on screen too. If a light value changes
+     there, it must be changed here as well.
+
+     `!important` is load-bearing twice: `[data-theme="dark"]` is an attribute
+     selector and outranks the `html, body` type selectors, and the Data-tab
+     token editor writes its values onto `document.body.style`, which outranks
+     any non-important stylesheet declaration. A dashboard.custom.css author
+     using !important still wins, since that file is linked last and equal
+     weight resolves in source order — the precedence README.md documents.
+     ------------------------------------------------------------------------ */
+  html, body {
+    color-scheme: light !important;
+
+    --pm-bg: #f6f7f9 !important;
+    --pm-bg-elev: #ffffff !important;
+    --pm-bg-sunken: #eceef2 !important;
+    --pm-border: #dfe3e9 !important;
+    --pm-border-strong: #c3cad4 !important;
+
+    --pm-fg: #16202e !important;
+    --pm-fg-muted: #57637a !important;
+    --pm-fg-faint: #8b94a6 !important;
+    --pm-fg-inverse: #ffffff !important;
+
+    --pm-accent: #2f6fd0 !important;
+    --pm-accent-fg: #ffffff !important;
+    --pm-accent-weak: #e4edfb !important;
+
+    --pm-ok: #1f8f5f !important;
+    --pm-ok-weak: #e0f3ea !important;
+    --pm-warn: #b5750d !important;
+    --pm-warn-weak: #fbf0da !important;
+    --pm-bad: #c8412f !important;
+    --pm-bad-weak: #fbe6e3 !important;
+    --pm-info: #2f6fd0 !important;
+    --pm-info-weak: #e4edfb !important;
+
+    --pm-series-1: #2f6fd0 !important;
+    --pm-series-2: #1f8f5f !important;
+    --pm-series-3: #8a5cd6 !important;
+    --pm-series-4: #c87a12 !important;
+    --pm-series-5: #0d8fa3 !important;
+    --pm-series-6: #c8412f !important;
+    --pm-series-7: #5a6b86 !important;
+    --pm-series-8: #a8447e !important;
+
+    --pm-grid: #e6e9ee !important;
+    --pm-axis: #9aa3b2 !important;
+    --pm-ref: #8b94a6 !important;
+    --pm-tooltip-bg: #16202e !important;
+    --pm-tooltip-fg: #ffffff !important;
+
+    /* Paper has no elevation to simulate. */
+    --pm-shadow: none !important;
+  }
+
+  /* ------------------------------------------------------------------------
+     Chrome that has no meaning on paper: nothing here can be clicked, and a
+     printed <select> shows one of its options as though it were a label.
+
+     `.pm-field` goes as a whole, not just the control inside it: the Forecast
+     tab wraps its target-date <input> in one alongside a `.pm-field-label`,
+     so hiding only the input would leave a "Target date" label with nothing
+     after it. The `.pm-note` readout beside it states the date in prose, so
+     the figure itself survives.
+     ------------------------------------------------------------------------ */
+  #pm-header .pm-header-actions,
+  #pm-tabs,
+  .pm-skip,
+  #pm-tooltip,
+  .pm-card-actions,
+  .pm-field,
+  input,
+  select,
+  button {
+    display: none !important;
+  }
+
+  /* The shared tooltip is the one node a view may touch outside its own root,
+     so it can be left visible from a hover that happened just before the
+     print dialog opened. It is hidden above unconditionally, not by [hidden].
+
+     The same stale hover can leave PM.svg's in-plot focus line and dot showing
+     a stray dashed rule across a chart. They are hidden here rather than in
+     the list above because they live inside the svg, and with `display`, never
+     `opacity`: 30-charts.css documents that handle.hover() toggles the opacity
+     *attribute*, so an opacity declaration would pin them permanently visible
+     on screen as well. */
+  .pm-focus-line,
+  .pm-focus-dot {
+    display: none !important;
+  }
+
+  /* ------------------------------------------------------------------------
+     The header becomes the report masthead: the project name and the
+     generated-at stamp are the two facts that make a printout attributable
+     six months later, so they are forced visible and given their own lines.
+     Sticky positioning would otherwise repeat or clip the band.
+     ------------------------------------------------------------------------ */
+  #pm-header {
+    position: static !important;
+    top: auto !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  #pm-project-name,
+  #pm-project-sub,
+  #pm-generated-at {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* The interpunct only made sense between inline spans. */
+  .pm-sep { display: none !important; }
+
+  /* ------------------------------------------------------------------------
+     Reveal every panel. PM.app keeps ten of the eleven tabs `hidden`, but
+     printing a single tab is almost never what the reader wants — they asked
+     for a status report, and a status report that silently omits the forecast,
+     the risks and the provenance notes is the dishonest version of this
+     dashboard. Paper has no tab bar to click, so all eleven print.
+
+     `grid`, not `block`: 10-base.css lays a panel out as a grid with a
+     row gap, so un-hiding to `block` would print ten of the eleven panels
+     with their section bands butted together while the one tab that was on
+     screen keeps its spacing.
+     ------------------------------------------------------------------------ */
+  .pm-panel[hidden] {
+    display: grid !important;
+  }
+
+  /* One tab per page. The first needs no break — it already starts one. */
+  .pm-panel {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .pm-panel:first-of-type {
+    break-before: auto;
+    page-break-before: auto;
+  }
+
+  /* A card, a KPI tile, a board column, a board ticket or a table row split
+     across a page boundary is worse than a short page. `page-break-inside` is
+     the legacy alias, still the only one some engines honour.
+
+     `.pm-ticket` is listed as well as `.pm-col`, and is the rule that actually
+     does the work on the Board tab: an engine ignores `break-inside: avoid` on
+     a box taller than the page, and the Done column holds every closed brief,
+     so without the per-ticket rule the column breaks wherever it likes —
+     through the middle of a ticket. */
+  .pm-card,
+  .pm-kpi,
+  .pm-col,
+  .pm-ticket,
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* ------------------------------------------------------------------------
+     Density. On screen the grid is fluid; on a fixed page it has to be told a
+     column count. Two for cards and three for board columns fills the sheet
+     without squeezing an axis into illegibility.
+     ------------------------------------------------------------------------ */
+  .pm-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .pm-board {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  /* A card built with `card(..., {span: 3})` asked for more columns than a
+     printed page has; give it the full width rather than letting it overflow. */
+  .pm-card[class*="pm-span-"] {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Shadows are elevation cues that print as grey smudges. Borders are the
+     structure, and 1px survives at print resolution. */
+  .pm-card,
+  .pm-kpi,
+  .pm-col {
+    box-shadow: none !important;
+  }
+
+  /* `.pm-col` is the only one of the three that has no border of its own: its
+     shape comes from a `--pm-bg-sunken` fill, which print drops (it is
+     deliberately absent from the print-color-adjust list below), so without a
+     border a board column would print as unbounded whitespace.
+
+     `.pm-kpi` is excluded on purpose. It already carries exactly this border,
+     plus a 3px tone stripe on the left edge that is the only good/warn/bad
+     signal a tile has. The `border` shorthand — !important, so beating the
+     longhand `.pm-kpi.is-bad { border-left-color }` — would reset that stripe
+     to the neutral border colour and print every tile as untoned. */
+  .pm-col {
+    border: 1px solid var(--pm-border) !important;
+  }
+
+  /* ------------------------------------------------------------------------
+     Clipping. Every scroll container on screen is a silent content-loss bug on
+     paper, and an engine will not fragment a box with a non-visible `overflow`
+     across pages — it clips at the first page boundary instead. So every one
+     of them is opened up, not just the table wrap:
+
+       .pm-table-wrap  scrolls sideways; clipping loses whole columns
+       .pm-card        `overflow: hidden` for grid-track reasons on screen, but
+                       it holds the 105-row tables and the charts whose axis
+                       labels rely on `.pm-svg { overflow: visible }`
+       .pm-code        the Data tab's exported CSS and raw JSON, capped at
+                       340px with `overflow: auto` — on paper that cap ends the
+                       text mid-file with nothing to say it did
+     ------------------------------------------------------------------------ */
+  .pm-table-wrap,
+  .pm-card,
+  .pm-code {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* `white-space: pre` is correct on screen, where the reader copies the text
+     and a soft wrap would misrepresent it. On paper there is nothing to copy
+     and no horizontal scrollbar, so a long line would run off the sheet. */
+  .pm-code {
+    white-space: pre-wrap !important;
+  }
+
+  /* `table-header-group` repeats the header on each page a long table spills
+     onto — which is incompatible with the `position: sticky` that 20-components
+     gives `.pm-table th` for the scroll case, exactly as it was for the page
+     header above. */
+  .pm-table th {
+    position: static !important;
+  }
+
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+
+  /* ------------------------------------------------------------------------
+     Ink. Chrome drops every background and fill unless print-color-adjust is
+     exact, and a stacked-area chart with no fills is a blank box. This is
+     scoped to the marks and the swatches rather than to html/body on purpose:
+     the page tint stays dropped, so the ink goes to the data.
+
+     `.pm-progress-fill` belongs here for an honesty reason, not a cosmetic
+     one: the bar's value is carried entirely by the width of a background, so
+     a dropped fill prints a part-complete sprint as an empty track — a figure
+     that is not merely missing but wrong. The track is listed with it so the
+     fill has something to be a fraction of.
+     ------------------------------------------------------------------------ */
+  .pm-svg,
+  .pm-legend-swatch,
+  .pm-badge,
+  .pm-kpi,
+  .pm-progress,
+  .pm-progress-fill {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* ==========================================================================
+   .pm-print-all — a SCREEN-mode class, deliberately outside @media print.
+
+   Safari and older WebKit/Gecko builds resolve `display` for hidden elements
+   from the screen cascade before the print stylesheet applies, so a panel
+   still carrying [hidden] when window.print() fires can be dropped from the
+   output even though the rule above un-hides it in print media. PM.app
+   therefore adds this class to <body>, prints, and removes it — the same
+   "show every panel" trick, expressed where those engines will see it.
+
+   `grid` for the same reason as the print-media rule above: a panel is a grid
+   in 10-base.css, and `block` here would reflow ten panels on screen for the
+   instant the class is applied.
+   ========================================================================== */
+.pm-print-all .pm-panel[hidden] {
+  display: grid !important;
+}

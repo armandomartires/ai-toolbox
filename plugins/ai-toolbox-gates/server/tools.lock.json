@@ -1,0 +1,12 @@
+{
+  "all": "88798bd5661bf6d7089f245765000db80a54ce5e60340f4c8b9ac8c573fd7bde",
+  "server": "gates",
+  "tools": {
+    "gate_status": "e22e55ebefa3f33a34f99496fda318aee551cf7caa664631f2a5f1b1ec251f9a",
+    "kill_gate": "5d845d68c492777129693459864b2fcecc9c824b8c87477c2e86b71671c0cba8",
+    "list_gates": "32742c272475d58d513163e7fdb8a50bb156c79aee3c0832b3708b574b308573",
+    "start_gate": "023a9d2c782659847e9d16eca00e03ef274cabd3b040852696d203f210c306ef",
+    "wait_gate": "3f449c7003e5e54b5e8c458f69087e8f1ad6ff99af9019985b134e8be80c1534"
+  },
+  "version": "0.1.0"
+}

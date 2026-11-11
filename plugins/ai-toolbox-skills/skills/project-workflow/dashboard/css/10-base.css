@@ -1,0 +1,524 @@
+/* ==========================================================================
+   10-base.css — reset, page frame, header, tab strip, footer, responsive grid.
+
+   Consumes tokens from 00-tokens.css and defines none of its own: every value
+   that can differ between light and dark is a var(), so the token editor in
+   js/40-theme.js can move it without this file knowing. Card, KPI, table,
+   badge and note surfaces belong to 20-components.css, which also owns
+   #pm-tooltip; chart internals belong to 30-charts.css and print to
+   90-print.css. Nothing here names a colour.
+
+   Selectors are the ones template.html actually ships (SCHEMA.md §4) plus the
+   structural classes PM.util builds — .pm-section*, .pm-grid, .pm-span-*.
+   ========================================================================== */
+
+/* ==========================================================================
+   Reset — light on purpose. This is one generated page, not a site: only the
+   defaults that would visibly break the layout are neutralised.
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+h1, h2, h3, h4,
+p,
+ul, ol, li,
+figure,
+blockquote,
+table {
+  margin: 0;
+  padding: 0;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+/* Charts are block-level so the inline baseline gap under every <svg> does not
+   accumulate into a card that is 4px taller than the chart it holds.
+   `.pm-spark` is excluded, not overlooked: 30-charts.css declares the
+   sparkline inline with `vertical-align: middle` because PM.svg.sparkline()
+   sits beside text in a KPI tile or a table cell, and a blanket
+   `display: block` here would silently blockify it and make that rule inert. */
+svg:not(.pm-spark) {
+  display: block;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font-family: var(--pm-font);
+  font-size: var(--pm-fs-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--pm-font-mono);
+  font-size: 0.92em;
+}
+
+a {
+  color: var(--pm-accent);
+}
+
+/* Form controls do not inherit type by default, and the header's two selects
+   sit inline with body text. */
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+[hidden] {
+  display: none;
+}
+
+/* ==========================================================================
+   Skip link — visually hidden until focused, never display:none, or keyboard
+   users could not reach it at all.
+   ========================================================================== */
+.pm-skip {
+  position: absolute;
+  top: 0;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pm-skip:focus {
+  left: 8px;
+  top: 8px;
+  z-index: 40;
+  width: auto;
+  height: auto;
+  padding: 8px 12px;
+  background: var(--pm-accent);
+  color: var(--pm-accent-fg);
+  border-radius: var(--pm-radius-sm);
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   Header — sticky, because the sprint/lane filters and the tab strip are the
+   two controls a reader reaches for after scrolling a long panel.
+   ========================================================================== */
+#pm-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;                    /* above panel content, below #pm-tooltip */
+  background: var(--pm-bg-elev);
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.pm-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pm-gap);
+  max-width: var(--pm-maxw);
+  margin-inline: auto;
+  min-height: var(--pm-header-h);
+  padding: 10px var(--pm-pad);
+}
+
+.pm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;                   /* lets a long project name ellipsise */
+}
+
+.pm-brand-mark {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--pm-radius-sm);
+  background: var(--pm-accent);
+}
+
+.pm-brand-text {
+  min-width: 0;
+}
+
+#pm-project-name {
+  margin: 0;
+  font-size: var(--pm-fs-lg);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-brand-sub {
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+}
+
+.pm-sep {
+  margin: 0 6px;
+  color: var(--pm-fg-faint);
+}
+
+.pm-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   Controls — deliberately quiet. The data is the loud thing on this page.
+   ========================================================================== */
+.pm-btn,
+.pm-select {
+  padding: 5px 10px;
+  background: var(--pm-bg-elev);
+  color: var(--pm-fg);
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius-sm);
+  font-size: var(--pm-fs-sm);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease,
+              color 120ms ease;
+}
+
+.pm-btn:hover,
+.pm-select:hover {
+  background: var(--pm-bg-sunken);
+  border-color: var(--pm-border-strong);
+}
+
+.pm-btn:active {
+  background: var(--pm-bg-sunken);
+  border-color: var(--pm-border-strong);
+}
+
+.pm-btn-icon {
+  min-width: 54px;
+  text-align: center;
+}
+
+.pm-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-field-label {
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+  white-space: nowrap;
+}
+
+.pm-select {
+  max-width: 220px;
+}
+
+.pm-btn:focus-visible,
+.pm-select:focus-visible,
+.pm-field:focus-within .pm-select,
+.pm-tab:focus-visible {
+  outline: 2px solid var(--pm-accent);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Tab strip — eleven tabs, so it scrolls rather than wraps. Wrapping would
+   change the sticky header's height as the window narrows, and every panel
+   below it would jump.
+   ========================================================================== */
+#pm-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  max-width: var(--pm-maxw);
+  margin-inline: auto;
+  padding: 0 var(--pm-pad);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pm-border-strong) transparent;
+}
+
+#pm-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+#pm-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#pm-tabs::-webkit-scrollbar-thumb {
+  background: var(--pm-border-strong);
+  border-radius: var(--pm-radius-sm);
+}
+
+.pm-tab {
+  flex: none;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--pm-fg-muted);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font-size: var(--pm-fs-base);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.pm-tab:hover {
+  color: var(--pm-fg);
+}
+
+.pm-tab[aria-selected="true"] {
+  color: var(--pm-fg);
+  font-weight: 600;
+  border-bottom-color: var(--pm-accent);
+}
+
+/* ==========================================================================
+   Main and panels
+   ========================================================================== */
+/* The sticky header is two bands, and --pm-header-h sizes only the first:
+   the tab strip adds .pm-tab's 10px of padding on each side of a
+   --pm-fs-base line box. Both have to be cleared, or the skip link scrolls
+   #pm-main's first row underneath the tabs instead of below them. */
+#pm-main {
+  max-width: var(--pm-maxw);
+  margin-inline: auto;
+  padding: var(--pm-pad);
+  scroll-margin-top: calc(var(--pm-header-h) + 20px + var(--pm-fs-base) * 1.5);
+}
+
+.pm-panel {
+  display: grid;
+  align-content: start;
+  gap: calc(var(--pm-gap) * 1.5);
+}
+
+/* Required, not decorative: `display: grid` above and the UA's own
+   `[hidden] { display: none }` have equal specificity, so without this rule
+   the ten inactive panels all render at once. */
+.pm-panel[hidden] {
+  display: none;
+}
+
+/* ==========================================================================
+   Sections — one band of cards, with its own heading and caveat line.
+   ========================================================================== */
+.pm-section-head {
+  margin-bottom: var(--pm-gap);
+}
+
+.pm-section-title {
+  font-size: var(--pm-fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pm-section-sub {
+  max-width: 90ch;                /* long caveat sentences stay readable */
+  font-size: var(--pm-fs-sm);
+  color: var(--pm-fg-muted);
+}
+
+/* ==========================================================================
+   Responsive card grid. 340px is the narrowest a chart card can be and still
+   carry a legible x-axis, so it is the auto-fit floor.
+   ========================================================================== */
+.pm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  align-items: start;
+  gap: var(--pm-gap);
+}
+
+.pm-span-2 {
+  grid-column: span 2;
+}
+
+/* PM.util.card() renders `pm-span-` + whatever span it is handed. The views
+   pass 1, 2 and "full"; `pm-span-1` needs no rule because one track is
+   already the default, and 3 is bound because card() will emit it for any
+   span it is given. */
+.pm-span-3 {
+  grid-column: span 3;
+}
+
+.pm-span-full {
+  grid-column: 1 / -1;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+#pm-footer {
+  max-width: var(--pm-maxw);
+  margin-inline: auto;
+  margin-top: var(--pm-gap);
+  padding: var(--pm-pad);
+  border-top: 1px solid var(--pm-border);
+  color: var(--pm-fg-muted);
+  font-size: var(--pm-fs-sm);
+}
+
+#pm-footer p {
+  max-width: 100ch;
+}
+
+#pm-footer code,
+#pm-footer strong {
+  color: var(--pm-fg);
+}
+
+/* ==========================================================================
+   No-JavaScript fallback. Every figure is rendered client-side, so this is
+   the whole page when scripting is off — it is centred and framed rather than
+   left as bare text at the top of a blank viewport.
+   ========================================================================== */
+.pm-noscript {
+  max-width: 560px;
+  margin: calc(var(--pm-gap) * 3) auto;
+  padding: var(--pm-pad);
+  background: var(--pm-bg-elev);
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius);
+  box-shadow: var(--pm-shadow);
+  text-align: center;
+}
+
+.pm-noscript h2 {
+  margin-bottom: 8px;
+  font-size: var(--pm-fs-lg);
+  font-weight: 600;
+}
+
+.pm-noscript p {
+  color: var(--pm-fg-muted);
+}
+
+/* ==========================================================================
+   Narrow layouts
+   ========================================================================== */
+
+/* Below this width auto-fit resolves to one or two tracks. A `span 2` item in
+   a one-track grid creates an *implicit* second column and overflows the
+   viewport instead of wrapping, so the counted spans collapse here.
+   `.pm-span-full` is deliberately not in this list: `grid-column: 1 / -1`
+   resolves against the *explicit* grid, so it can never add an implicit
+   column, and collapsing it would drop a full-bleed card to half width in
+   the two-track range this query also covers. */
+@media (max-width: 900px) {
+  .pm-span-2,
+  .pm-span-3 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .pm-header-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .pm-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .pm-select {
+    max-width: 130px;
+  }
+
+  /* Only 00-tokens.css may define a custom property, so the large type steps
+     down per element here rather than by re-declaring --pm-fs-lg/--pm-fs-xl. */
+  #pm-project-name,
+  .pm-section-title,
+  .pm-noscript h2 {
+    font-size: var(--pm-fs-base);
+  }
+
+  #pm-tabs {
+    padding: 0 6px;
+  }
+
+  #pm-main,
+  #pm-footer {
+    padding: var(--pm-gap) 12px;
+  }
+
+  .pm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Print — the header's Print button exists, so the frame has to survive it:
+   nothing sticky, no controls, full width. Only the frame. 90-print.css owns
+   print density, panel reveal and the forced light palette, and it declares
+   them !important; a grid-track count here would be dead code that
+   contradicts the file that owns the decision.
+   ========================================================================== */
+@media print {
+  #pm-header {
+    position: static;
+  }
+
+  .pm-skip,
+  .pm-header-actions,
+  #pm-tabs {
+    display: none;
+  }
+
+  #pm-main,
+  #pm-footer,
+  .pm-header-inner {
+    max-width: none;
+    padding: 0;
+  }
+
+  .pm-noscript {
+    box-shadow: none;
+  }
+}
+
+/* ==========================================================================
+   Reduced motion — every transition in this file is cosmetic, so all of them
+   go, including any a later stylesheet adds.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "ai-toolbox-gates",
+  "version": "0.1.0",
+  "description": "The ai-toolbox gates MCP server: named verification gates run detached behind a watchdog and polled in bounded calls.",
+  "author": {
+    "name": "Armando Martires"
+  },
+  "license": "MIT"
+}

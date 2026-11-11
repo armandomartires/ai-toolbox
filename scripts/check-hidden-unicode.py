@@ -36,7 +36,8 @@ def classify(cp):
 
 def default_files():
     pats = ["AGENTS.md", "CLAUDE.md", "agents/**/*", "loops/**/*",
-            "skills/*/SKILL.md", "prompts/**/*", ".claude/rules/**/*"]
+            "skills/*/SKILL.md", "prompts/**/*", ".claude/rules/**/*",
+            "plugins/**/agents/*.md", "plugins/**/skills/*/SKILL.md"]
     out = set()
     for p in pats:
         for f in glob.glob(p, recursive=True):

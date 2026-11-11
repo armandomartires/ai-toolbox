@@ -1,0 +1,1456 @@
+#!/usr/bin/env python3
+"""Fetch secrets from HashiCorp Vault into one command's environment.
+
+Environment variables stay the interface (ADR-0009); Vault owns the values
+(ADR-0030, TASK-0131). A map file names which variable comes from which KV v2
+secret -- names and paths only, never values:
+
+    GITHUB_TOKEN=kv/ai-toolbox/github#token
+
+A project may instead declare where its values live in a tracked secrets.conf
+(ADR-0034): backend = local | vault | gitlab | github. With no secrets.conf,
+the map-driven Vault behaviour above applies unchanged.
+
+Subcommands:
+  init --backend B --project P [--role NAME]
+                         write secrets.conf and the files that backend needs;
+                         a second identical run changes nothing
+  login                  vault_role: LDAP/TOTP daily session in OS keychain; no token file.
+                         Legacy LDAP: password, then TOTP when Vault asks for MFA
+                         (prompts, no echo); stores a read-only child token in
+                         ~/.vault-token (mode 600). approle: verify the credential, store nothing
+  exec VAR... -- CMD...  fetch the named variables, then exec CMD with them
+                         set; --all exports every mapped variable instead
+  check                  report, by name only, what is readable and what an
+                         exported variable shadows
+  put VAR                write one value, read from stdin, with a fresh login
+                         (AppRole, LDAP or VAULT_TOKEN) -- never the stored token.
+                         local backend: into .env, mode 600. gitlab: a masked,
+                         protected CI/CD variable; github: an Actions secret
+                         (through gh, the value on its stdin)
+  import --from FILE [VAR...]
+                         move values from an existing env file into the
+                         declared backend; --dry-run lists names only
+  logout                 revoke the stored token and delete the file
+  issue --agent NAME --token-fd FD  hand an agent token only to an inherited pipe
+                         Windows also accepts --token-handle HANDLE; no stdout/file
+  provision [--dry-run]  superseded for aligned development; legacy vault backend:
+                         create the project's own KV v2 mount,
+                         its read/write/app policies and its AppRole, with an
+                         admin token held in memory; never deletes or rewrites
+
+Configuration, from the environment:
+  VAULT_ADDR         https://<host>:<port> -- required. http:// is refused
+                     unless the host is loopback.
+  VAULT_CACERT       PEM file of the CA that issued Vault's certificate
+                     (default: the system trust store).
+  VAULT_AUTH_METHOD  ldap (default), approle or token.
+  VAULT_AUTH_MOUNT   auth mount path (default: the method's name).
+  VAULT_USER         login name for ldap (default: the current user).
+  VAULT_APPROLE_FILE approle: JSON file holding role_id and secret_id, mode 600.
+                     Each command logs in with it; the token it gets is revoked
+                     as soon as the values are fetched (ADR-0031).
+  VAULT_TOKEN        use this token instead of logging in or ~/.vault-token.
+  VAULT_SECRETS_MAPS colon-separated map files, used when no --map is given
+                     (default: secrets.map). On Windows ';' separates too, and
+                     the colon of a drive letter (as in C:/x) does not.
+                     --map may be repeated; a variable mapped twice is an error.
+  VAULT_PROJECTS_MOUNT aligned: shared projects mount, resolved only at runtime.
+  VAULT_LDAP_MOUNT  aligned: daily login auth mount (default ldap), separate from
+                     VAULT_AUTH_MOUNT and shell AppRole settings.
+  GITLAB_URL         gitlab backend: the instance. http:// needs --allow-http.
+  GITLAB_TOKEN       gitlab backend: a token with api scope (else a prompt).
+
+A variable already set in the environment wins: Vault is not consulted for it.
+
+Exit status: 0 ok; 1 failure; 2 usage; 3 not logged in, or the token was
+rejected. Nothing this script prints contains a secret value or a token.
+NOT run from tests/validate.sh directly; tests/test-vault-secrets.sh drives it
+against a loopback stub.
+"""
+import argparse
+import getpass
+import ipaddress
+import json
+import os
+import re
+import socket
+import ssl
+import stat
+import subprocess
+import sys
+import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
+
+READ_POLICY = "workstation-read"
+CHILD_TTL = "8h"
+MAP_LINE = re.compile(
+    r"^(?P<var>[A-Z_][A-Z0-9_]*)="
+    r"(?P<mount>[A-Za-z0-9_-]+)/(?P<path>[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)"
+    r"#(?P<field>[A-Za-z0-9_.-]+)$"
+)
+EXIT_FAIL, EXIT_USAGE, EXIT_LOGIN = 1, 2, 3
+
+CONF_FILE, ENV_FILE, ENV_EXAMPLE, MAP_FILE = "secrets.conf", ".env", ".env.example", "secrets.map"
+BACKENDS = ("local", "vault", "gitlab", "github")
+# key -> the backend it belongs to (None: every backend).
+CONF_KEYS = {"backend": None, "project": None, "gitlab_project": "gitlab", "github_repo": "github", "vault_role": "vault"}
+PROJECT_NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
+REPO_PATH = re.compile(r"^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+$")
+# A project's name becomes its Vault mount: never one Vault or the shared store owns.
+RESERVED_MOUNTS = {"sys", "auth", "identity", "cubbyhole", "kv", "secret"}
+ENV_LINE = re.compile(r"^(?:export\s+)?(?P<var>[A-Z_][A-Z0-9_]*)=(?P<value>.*)$")
+EXAMPLE_NAME = re.compile(r"(?m)^([A-Z_][A-Z0-9_]*)=")
+# Appended together, in this order: `!.env.example` must come after `.env.*`.
+GITIGNORE_LINES = (".env", ".env.*", "!.env.example")
+
+
+def prompt_secret(prompt):
+    """getpass's hidden prompt. Windows getpass reads the console, never a pipe,
+    so there a piped stdin gives one line instead; elsewhere getpass already
+    falls back to stdin when there is no terminal, so it is left to do that."""
+    if os.name != "nt" or sys.stdin.isatty():
+        return getpass.getpass(prompt)
+    return sys.stdin.readline().rstrip("\r\n")
+
+
+def die(msg, code=EXIT_FAIL):
+    print("vault-secrets: %s" % msg, file=sys.stderr)
+    sys.exit(code)
+
+
+class VaultError(Exception):
+    def __init__(self, status, errors):
+        super().__init__("HTTP %d: %s" % (status, "; ".join(errors) or "no detail"))
+        self.status = status
+        self.errors = errors
+
+
+class Unreadable(Exception):
+    """One mapped variable could not be read; the message names it, never a value."""
+
+
+def is_loopback(host):
+    if not host:
+        return False
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+class Vault:
+    def __init__(self):
+        addr = os.environ.get("VAULT_ADDR", "").strip().rstrip("/")
+        if not addr:
+            die("VAULT_ADDR is not set (see .env.example)")
+        parts = urllib.parse.urlsplit(addr)
+        if parts.scheme == "http" and not is_loopback(parts.hostname):
+            die("refusing http:// for a non-loopback Vault: the login and every "
+                "secret would cross the network in cleartext. Use https:// (ADR-0030).")
+        if parts.scheme not in ("http", "https"):
+            die("VAULT_ADDR must start with https://")
+        self.addr = addr
+        cafile = os.environ.get("VAULT_CACERT") or None
+        try:
+            self.ctx = ssl.create_default_context(cafile=cafile)
+        except (OSError, ssl.SSLError) as e:
+            die("VAULT_CACERT cannot be loaded: %s" % e)
+
+    def call(self, method, path, token=None, body=None):
+        req = urllib.request.Request(
+            "%s/v1/%s" % (self.addr, path),
+            method=method,
+            data=None if body is None else json.dumps(body).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        if token:
+            req.add_header("X-Vault-Token", token)
+        try:
+            with urllib.request.urlopen(req, context=self.ctx, timeout=15) as r:
+                raw = r.read()
+                return json.loads(raw) if raw else {}
+        except urllib.error.HTTPError as e:
+            try:
+                errors = json.loads(e.read() or b"{}").get("errors") or []
+            except ValueError:
+                errors = []
+            raise VaultError(e.code, [str(x) for x in errors])
+        except urllib.error.URLError as e:
+            die("cannot reach Vault: %s" % e.reason)
+
+
+# -- token file ------------------------------------------------------------
+
+def token_path():
+    return os.path.join(os.path.expanduser("~"), ".vault-token")
+
+
+def stored_token():
+    try:
+        with open(token_path(), encoding="utf-8") as fh:
+            return fh.read().strip() or None
+    except FileNotFoundError:
+        return None
+
+
+
+def storage_policies(info):
+    result = []
+    for key in ("policies", "token_policies", "identity_policies"):
+        value = info.get(key) or []
+        if not isinstance(value, list) or not all(isinstance(p, str) for p in value):
+            die("refusing to store a token without verified policies")
+        result.extend(value)
+    return list(set(result)) if result else None
+
+
+def write_token(token, policies):
+    # Applies to every legacy storage method too; LDAP may still derive its
+    # existing narrow child from a broader login without persisting the parent.
+    if not isinstance(policies, list):
+        die("refusing to store a token without verified policies")
+    if "root" in policies:
+        die("refusing to store a root token on disk: create a narrower one")
+    if "admin" in policies:
+        die("refusing to store an admin token on disk: use a narrower identity")
+    path = token_path()
+    # mkstemp creates the file 0600; os.replace keeps that mode, so the token
+    # is never readable by others, not even for a moment.
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".vault-token.")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(token)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
+def session_token(vault):
+    """(token, minted) for reading: VAULT_TOKEN, else an AppRole login, else the
+    stored token. A minted token was created for this command alone and is
+    revoked by the caller as soon as it is done with it."""
+    if os.environ.get("VAULT_TOKEN"):
+        return os.environ["VAULT_TOKEN"], False
+    if method() == "approle":
+        return approle_login(vault), True
+    return stored_token(), False
+
+
+def revoke(vault, token):
+    try:
+        vault.call("POST", "auth/token/revoke-self", token)
+    except VaultError:
+        pass  # already expired or revoked
+
+
+# -- map -------------------------------------------------------------------
+
+def load_map(path):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except FileNotFoundError:
+        die("map file not found: %s (pass --map)" % path)
+    entries = {}
+    for n, line in enumerate(lines, 1):
+        text = line.strip()
+        if not text or text.startswith("#"):
+            continue
+        conf = load_conf()
+        if conf and conf.get("vault_role") and "${VAULT_PROJECTS_MOUNT}" in text:
+            mount = os.environ.get("VAULT_PROJECTS_MOUNT") or ""
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", mount):
+                die("VAULT_PROJECTS_MOUNT must name the shared projects mount", EXIT_USAGE)
+            text = text.replace("${VAULT_PROJECTS_MOUNT}", mount)
+        m = MAP_LINE.match(text)
+        if not m:
+            # The line itself is not echoed: a malformed line may be a value.
+            die("%s:%d: expected VAR=<mount>/<path>#<field>" % (path, n))
+        if m["var"] in entries:
+            die("%s:%d: %s is mapped twice" % (path, n, m["var"]))
+        entries[m["var"]] = (m["mount"], m["path"], m["field"])
+    return entries
+
+
+# Windows: ';' (os.pathsep) separates, and so does every ':' except a drive
+# letter's -- one letter at the start of a piece -- so C:/a.map;D:/b.map:C:/c.map and the
+# documented secrets.map:other.map both split as meant.
+WINDOWS_MAP_SEP = re.compile(r";|(?<!^[A-Za-z])(?<![;:][A-Za-z]):")
+
+
+def split_maps(value):
+    """VAULT_SECRETS_MAPS as paths: colon-separated; on Windows see WINDOWS_MAP_SEP."""
+    pieces = WINDOWS_MAP_SEP.split(value) if os.name == "nt" else value.split(":")
+    return [p for p in pieces if p]
+
+
+def map_paths(args):
+    if args.map:
+        paths = args.map
+    elif not (load_conf() or {}).get("vault_role") and os.environ.get("VAULT_SECRETS_MAPS"):
+        paths = split_maps(os.environ["VAULT_SECRETS_MAPS"])
+    else:
+        paths = ["secrets.map"]
+    return [os.path.expanduser(p) for p in paths]
+
+
+def load_maps(paths):
+    entries, source = {}, {}
+    for path in paths:
+        for var, entry in load_map(path).items():
+            if var in entries:
+                die("%s is mapped twice: in %s and in %s" % (var, source[var], path))
+            entries[var], source[var] = entry, path
+    return entries
+
+
+def where(entry):
+    mount, path, field = entry
+    return "%s/%s#%s" % (mount, path, field)
+
+
+def read_secret(vault, token, mount, path):
+    """The data dict and version of one KV v2 secret, or None if it does not exist."""
+    try:
+        d = vault.call("GET", "%s/data/%s" % (mount, path), token)["data"]
+        return d.get("data") or {}, (d.get("metadata") or {}).get("version", 0)
+    except VaultError as e:
+        if e.status == 404:
+            return None
+        if e.status == 403 and not getattr(vault, "session_mode", False) and not token_valid(vault, token):
+            die("the Vault token was rejected (expired or revoked): run "
+                "`vault_secrets.py login`", EXIT_LOGIN)
+        raise
+
+
+def token_valid(vault, token):
+    try:
+        vault.call("GET", "auth/token/lookup-self", token)
+        return True
+    except VaultError:
+        return False
+
+
+def fetch(vault, token, entries, names):
+    values, cache = {}, {}
+    for name in names:
+        mount, path, field = entries[name]
+        if (mount, path) not in cache:
+            try:
+                cache[(mount, path)] = read_secret(vault, token, mount, path)
+            except VaultError as e:
+                raise Unreadable("%s: cannot read %s (%s)" % (name, where(entries[name]), e))
+        found = cache[(mount, path)]
+        if found is None:
+            raise Unreadable("%s: no secret at %s/%s -- write it with `put %s`"
+                             % (name, mount, path, name))
+        data, _ = found
+        if field not in data:
+            raise Unreadable("%s: secret %s/%s has no field %r" % (name, mount, path, field))
+        values[name] = str(data[field])
+    return values
+
+
+# -- the declared backend (ADR-0034) ---------------------------------------
+
+def load_conf(path=CONF_FILE):
+    """The declared backend, or None when the project declares none."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except FileNotFoundError:
+        return None
+    conf = {}
+    for n, line in enumerate(lines, 1):
+        text = line.strip()
+        if not text or text.startswith("#"):
+            continue
+        key, sep, value = text.partition("=")
+        key, value = key.strip(), value.strip()
+        if not sep or key not in CONF_KEYS:
+            die("%s:%d: expected one of %s = <value>" % (path, n, ", ".join(CONF_KEYS)))
+        if key in conf:
+            die("%s:%d: %s is set twice" % (path, n, key))
+        conf[key] = value
+    return validate_conf(conf, path)
+
+
+def validate_conf(conf, source):
+    backend = conf.get("backend")
+    if backend not in BACKENDS:
+        die("%s: backend must be one of %s" % (source, ", ".join(BACKENDS)))
+    project = conf.get("project") or ""
+    if not PROJECT_NAME.match(project):
+        die("%s: project must match [a-z0-9][a-z0-9-]{0,62}" % source)
+    if project in RESERVED_MOUNTS:
+        die("%s: project %r is a reserved Vault mount name" % (source, project))
+    for key, owner in CONF_KEYS.items():
+        if key == "vault_role":
+            if key in conf and (backend != "vault" or not PROJECT_NAME.fullmatch(conf[key]) or conf[key] in RESERVED_MOUNTS):
+                die("%s: vault_role needs backend vault and a valid registered project name" % source)
+            continue
+        if owner is None:
+            continue
+        if owner == backend and not conf.get(key):
+            die("%s: backend %s needs %s" % (source, backend, key))
+        if owner != backend and conf.get(key):
+            die("%s: %s belongs to backend %s, not %s" % (source, key, owner, backend))
+        if conf.get(key) and not REPO_PATH.match(conf[key]):
+            die("%s: %s must look like group/name" % (source, key))
+    return conf
+
+
+def render_conf(conf):
+    lines = ["# Where this project's secret values live (ADR-0034 in ai-toolbox).",
+             "# Names only, never a value. Written by vault_secrets.py init; to change",
+             "# backend, edit it by hand and run init again.",
+             ""]
+    lines += ["%s = %s" % (k, conf[k]) for k in CONF_KEYS if conf.get(k)]
+    return "\n".join(lines) + "\n"
+
+
+def write_text(path, text, mode=None):
+    """Replace PATH atomically; with MODE, the file never exists with a looser one."""
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(path)), prefix=".%s." % os.path.basename(path))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+        os.chmod(tmp, mode if mode is not None else 0o644)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
+def read_lines(path):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return fh.read().splitlines()
+    except FileNotFoundError:
+        return None
+
+
+def ensure_gitignore():
+    """Append the .env ignores if any is missing. True if .gitignore changed."""
+    lines = read_lines(".gitignore")
+    present = {l.strip() for l in lines or []}
+    if all(l in present for l in GITIGNORE_LINES):
+        return False
+    # All three, in order, even if one exists: a lone earlier `!.env.example`
+    # followed by an appended `.env.*` would ignore the template.
+    block = ["# Local secret values are never committed (vault_secrets.py init)"] + list(GITIGNORE_LINES)
+    text = "\n".join((lines or []) + ([""] if lines else []) + block) + "\n"
+    write_text(".gitignore", text)
+    return True
+
+
+def cmd_init(args):
+    conf = {"backend": args.backend, "project": args.project or args.role,
+            "gitlab_project": args.gitlab_project, "github_repo": args.github_repo}
+    if args.role is not None:
+        conf["vault_role"] = args.role
+    conf = validate_conf({k: v for k, v in conf.items() if v}, "init")
+    existing, changed = load_conf(), []
+    if existing is None:
+        write_text(CONF_FILE, render_conf(conf))
+        changed.append(CONF_FILE)
+    elif existing != conf:
+        die("%s already declares backend=%s project=%s: edit it by hand to change it"
+            % (CONF_FILE, existing["backend"], existing["project"]))
+    if ensure_gitignore():
+        changed.append(".gitignore")
+    if read_lines(ENV_EXAMPLE) is None:
+        write_text(ENV_EXAMPLE, "# Every variable this project reads: names and placeholders, never a value.\n"
+                                "# EXAMPLE_TOKEN=\n")
+        changed.append(ENV_EXAMPLE)
+    if conf["backend"] == "vault" and read_lines(MAP_FILE) is None:
+        if conf.get("vault_role"):
+            write_text(MAP_FILE, "# Names and paths only; the shared mount is resolved at runtime.\n"
+                                 "# Keep the private mount name out of tracked files.\n"
+                                 "# EXAMPLE_TOKEN=${VAULT_PROJECTS_MOUNT}/%s/example#token\n" % conf["vault_role"])
+        else:
+            write_text(MAP_FILE, "# Which variable comes from which secret in this project's own KV v2\n"
+                                 "# mount: names and paths only, never a value. Every variable here also\n"
+                                 "# appears in .env.example.\n"
+                                 "# EXAMPLE_TOKEN=%s/example#token\n" % conf["project"])
+        changed.append(MAP_FILE)
+    print("init: %s" % (", ".join(changed) + " written" if changed else "nothing to change"))
+    if conf.get("vault_role"):
+        print("next: the owner registers the project and token roles; map named variables and use the daily LDAP/TOTP login")
+        return
+    print("next: " + {
+        "local": "name each variable in .env.example, then `put VAR` writes it to .env (mode 600)",
+        "vault": "a Vault admin runs `provision`; then map each variable in secrets.map and `put` it",
+        "gitlab": "name each variable in .env.example, then `put VAR` sets it as a GitLab CI variable",
+        "github": "name each variable in .env.example, then `put VAR` sets it as a GitHub Actions secret",
+    }[conf["backend"]])
+
+
+# -- the local backend: a git-ignored .env --------------------------------
+
+def example_names():
+    lines = read_lines(ENV_EXAMPLE)
+    if lines is None:
+        die("%s not found: run `vault_secrets.py init`" % ENV_EXAMPLE)
+    return list(dict.fromkeys(EXAMPLE_NAME.findall("\n".join(lines))))
+
+
+def load_dotenv(path=ENV_FILE):
+    values = {}
+    for n, line in enumerate(read_lines(path) or [], 1):
+        text = line.strip()
+        if not text or text.startswith("#"):
+            continue
+        m = ENV_LINE.match(text)
+        if not m:
+            die("%s:%d: expected VAR=value" % (path, n))  # never echoed: it may be a value
+        value = m["value"]
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        values[m["var"]] = value
+    return values
+
+
+def git_ignored(path):
+    """True or False, or None outside a git work tree (or without git)."""
+    try:
+        rc = subprocess.run(["git", "check-ignore", "-q", "--no-index", path],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+    except FileNotFoundError:
+        return None
+    return {0: True, 1: False}.get(rc)
+
+
+def known_local(names):
+    unknown = [n for n in names if n not in example_names()]
+    if unknown:
+        die("not in %s: %s" % (ENV_EXAMPLE, ", ".join(unknown)), EXIT_USAGE)
+
+
+def exec_local(args, command):
+    names = example_names() if args.all else args.vars
+    if not names:
+        die("name the variables the command needs (or pass --all)", EXIT_USAGE)
+    known_local(names)
+    values, env = load_dotenv(), dict(os.environ)
+    for name in names:
+        if os.environ.get(name):
+            continue
+        if not values.get(name):
+            die("%s: not set in %s -- write it with `put %s`" % (name, ENV_FILE, name))
+        env[name] = values[name]
+    run_command(command, env)
+
+
+def put_local(var, value=None):
+    known_local([var])
+    if git_ignored(ENV_FILE) is False:
+        die("refusing to write: %s is not git-ignored -- run `vault_secrets.py init`" % ENV_FILE)
+    value = read_value(var) if value is None else value
+    if "\n" in value or "\r" in value:
+        die("a %s value is one line: nothing written" % ENV_FILE)
+    if value != value.strip() or value[0] in "\"'":
+        value = "'%s'" % value  # the reader strips exactly one outer pair
+    out, replaced = [], False
+    for line in read_lines(ENV_FILE) or []:
+        m = ENV_LINE.match(line.strip())
+        if m and m["var"] == var:
+            if not replaced:
+                out.append("%s=%s" % (var, value))
+            replaced = True
+            continue
+        out.append(line)
+    if not replaced:
+        out.append("%s=%s" % (var, value))
+    write_text(ENV_FILE, "\n".join(out) + "\n", mode=0o600)
+    print("wrote %s to %s (mode 600)" % (var, ENV_FILE))
+
+
+def check_local():
+    ok, ignored = True, git_ignored(ENV_FILE)
+    if ignored is None:
+        print("%s: not in a git work tree, ignore rule not checked" % ENV_FILE)
+    elif ignored:
+        print("%s: git-ignored" % ENV_FILE)
+    else:
+        print("%s: NOT git-ignored -- run `vault_secrets.py init`" % ENV_FILE)
+        ok = False
+    if os.path.exists(ENV_FILE) and os.name == "nt":
+        # Python reports every Windows file as mode 666: judge its access list
+        # instead, as approle_login does (TASK-0227).
+        try:
+            others, fix = windows_exposure(os.path.abspath(ENV_FILE))
+        except OSError as e:
+            others, fix = ["unknown (cannot read its access list: %s)" % e], "icacls to check it"
+        if others:
+            print("%s: can be read by %s, besides its owner, SYSTEM and Administrators -- run %s"
+                  % (ENV_FILE, ", ".join(others), fix))
+            ok = False
+    elif os.path.exists(ENV_FILE):
+        mode = stat.S_IMODE(os.stat(ENV_FILE).st_mode)
+        if mode & 0o077:
+            print("%s: readable by group or others (mode %03o) -- chmod 600 it" % (ENV_FILE, mode))
+            ok = False
+    values = load_dotenv()
+    for name in example_names():
+        if os.environ.get(name):
+            print("%s: set in the environment, shadows %s" % (name, ENV_FILE))
+        elif values.get(name):
+            print("%s: set in %s" % (name, ENV_FILE))
+        else:
+            print("%s: MISSING -- write it with `put %s`" % (name, name))
+            ok = False
+    sys.exit(0 if ok else EXIT_FAIL)
+
+
+# -- the CI backends: GitLab CI/CD variables, GitHub Actions secrets ---------
+
+def ci_names(found, store):
+    """Report each .env.example name as present in STORE or MISSING; exit."""
+    ok = True
+    for name in example_names():
+        if name in found:
+            print("%s: set in %s" % (name, store))
+        else:
+            print("%s: MISSING -- write it with `put %s`" % (name, name))
+            ok = False
+    sys.exit(0 if ok else EXIT_FAIL)
+
+
+def gh(args, value=None):
+    """Run the GitHub CLI; a value goes on its stdin, never in its argv."""
+    try:
+        return subprocess.run(["gh"] + args, input=value, capture_output=True, text=True)
+    except FileNotFoundError:
+        die("the GitHub CLI (gh) is not installed: https://cli.github.com")
+
+
+def put_github(conf, var, value=None):
+    known_local([var])
+    value = read_value(var) if value is None else value
+    p = gh(["secret", "set", var, "--repo", conf["github_repo"]], value)
+    if p.returncode != 0:
+        die("gh secret set %s failed (exit %d): %s" % (var, p.returncode,
+                                                      p.stderr.replace(value, "<value>").strip()))
+    print("set %s as a GitHub Actions secret on %s" % (var, conf["github_repo"]))
+
+
+def check_github(conf):
+    p = gh(["secret", "list", "--repo", conf["github_repo"], "--json", "name"])
+    if p.returncode != 0:
+        die("gh secret list failed (exit %d): %s" % (p.returncode, p.stderr.strip()))
+    try:
+        found = {s["name"] for s in json.loads(p.stdout or "[]")}
+    except (ValueError, KeyError, TypeError):
+        die("gh secret list returned something other than JSON names")
+    print("github: %s, %d secret(s), names only" % (conf["github_repo"], len(found)))
+    ci_names(found, "GitHub")
+
+
+class GitLab:
+    def __init__(self, conf, allow_http):
+        url = os.environ.get("GITLAB_URL", "").strip().rstrip("/")
+        if not url:
+            die("GITLAB_URL is not set (the GitLab instance; never in a tracked file)")
+        parts = urllib.parse.urlsplit(url)
+        if parts.scheme not in ("http", "https"):
+            die("GITLAB_URL must start with https://")
+        if parts.scheme == "http" and not is_loopback(parts.hostname):
+            if not allow_http:
+                die("refusing http:// GitLab: the token (and a value, for put) would cross the "
+                    "network in cleartext. Pass --allow-http to accept that (ADR-0028, ADR-0034).")
+            print("warning: http:// -- the GitLab token crosses the network in cleartext", file=sys.stderr)
+        self.base = "%s/api/v4/projects/%s/variables" % (url, urllib.parse.quote(conf["gitlab_project"], safe=""))
+        self.project = conf["gitlab_project"]
+        self.token = os.environ.get("GITLAB_TOKEN") or prompt_secret(
+            "GitLab token with api scope on %s (held in memory): " % self.project).strip()
+        if not self.token:
+            die("empty token")
+        self.ctx = ssl.create_default_context()
+
+    def call(self, verb, suffix="", body=None):
+        """(status, parsed body). A refused request's message is returned, not raised."""
+        req = urllib.request.Request(self.base + suffix, method=verb, headers={
+            "PRIVATE-TOKEN": self.token, "Content-Type": "application/json"},
+            data=None if body is None else json.dumps(body).encode())
+        try:
+            with urllib.request.urlopen(req, context=self.ctx, timeout=15) as r:
+                raw = r.read()
+                return r.status, (json.loads(raw) if raw else None)
+        except urllib.error.HTTPError as e:
+            try:
+                return e.code, json.loads(e.read() or b"null")
+            except ValueError:
+                return e.code, None
+        except urllib.error.URLError as e:
+            die("cannot reach GitLab: %s" % e.reason)
+
+
+def gitlab_failed(what, status, body, value=None):
+    msg = json.dumps((body or {}).get("message", body) if isinstance(body, dict) else body)
+    if value:
+        msg = msg.replace(value, "<value>")
+    hint = " -- the token needs api scope and Maintainer on the project" if status in (401, 403) else ""
+    die("%s failed: HTTP %d %s%s" % (what, status, msg, hint))
+
+
+def put_gitlab(conf, var, allow_http, value=None, lab=None):
+    known_local([var])
+    lab = lab or GitLab(conf, allow_http)
+    value = read_value(var) if value is None else value
+    body = {"key": var, "value": value, "masked": True, "protected": True, "raw": True}
+    status, found = lab.call("GET", "/" + var)
+    if status == 200:
+        status, reply = lab.call("PUT", "/" + var, body)
+        verb = "updated"
+    elif status == 404:
+        status, reply = lab.call("POST", "", body)
+        verb = "created"
+    else:
+        gitlab_failed("reading %s" % var, status, found)
+    if status not in (200, 201):
+        gitlab_failed("writing %s" % var, status, reply, value)
+    print("%s %s as a masked, protected GitLab CI/CD variable on %s" % (verb, var, lab.project))
+
+
+def check_gitlab(conf, allow_http):
+    lab, found, page = GitLab(conf, allow_http), set(), 1
+    while True:
+        status, rows = lab.call("GET", "?per_page=100&page=%d" % page)
+        if status != 200:
+            gitlab_failed("listing variables", status, rows)
+        # The rows carry values; only the keys are ever kept.
+        found |= {r["key"] for r in rows or []}
+        if len(rows or []) < 100:
+            break
+        page += 1
+    print("gitlab: %s, %d variable(s), names only" % (lab.project, len(found)))
+    ci_names(found, "GitLab")
+
+
+# -- provisioning a project's own mount (ADR-0034) --------------------------
+
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# ADR-0031's limits: tokens live 10m (at most 30m), a secret_id one year.
+ROLE_LIMITS = {"token_ttl": 600, "token_max_ttl": 1800, "secret_id_ttl": 31536000}
+
+
+def asset(name):
+    return os.path.join(SKILL_DIR, "assets", name)
+
+
+def policy_texts(mount):
+    texts = {}
+    for suffix, path in (("read", asset("policies/read.hcl")), ("write", asset("policies/write.hcl")),
+                         ("app", asset("policies/app.hcl"))):
+        with open(path, encoding="utf-8") as fh:
+            texts["%s-%s" % (mount, suffix)] = fh.read().replace("@@MOUNT@@", mount)
+    return texts
+
+
+def vault_project(cmd):
+    conf = load_conf()
+    if not conf or conf["backend"] != "vault":
+        die("%s needs a %s declaring backend = vault (run init)" % (cmd, CONF_FILE), EXIT_USAGE)
+    return conf["project"]
+
+
+def admin_get(vault, token, path, absent=(404,)):
+    """GET with the admin token: the data, or None when the object is absent."""
+    try:
+        r = vault.call("GET", path, token)
+    except VaultError as e:
+        if e.status in absent:
+            return None
+        die("cannot read %s (%s): the token needs the secrets-provisioner policy "
+            "-- see references/vault-layout.md" % (path, e))
+    return r.get("data", r)
+
+
+def plan_provision(vault, token, mount, policies):
+    """(writes, kept). Everything is read before anything is written, so a
+    refusal leaves Vault exactly as it was."""
+    writes, kept, role = [], [], dict(ROLE_LIMITS, token_policies=["%s-app" % mount])
+    found = admin_get(vault, token, "sys/mounts/%s" % mount, absent=(400, 404))
+    if found is None:
+        writes.append(("POST", "sys/mounts/%s" % mount, {"type": "kv", "options": {"version": "2"},
+                       "description": "%s secrets (ADR-0034)" % mount}, "mount %s/ (KV v2)" % mount))
+    elif found.get("type") != "kv" or str((found.get("options") or {}).get("version")) != "2":
+        die("mount %s/ exists and is not KV v2 (type %s): refusing to touch it" % (mount, found.get("type")))
+    else:
+        kept.append("mount %s/ (KV v2)" % mount)
+    for name, text in policies.items():
+        found = admin_get(vault, token, "sys/policies/acl/%s" % name)
+        if found is None:
+            writes.append(("PUT", "sys/policies/acl/%s" % name, {"policy": text}, "policy %s" % name))
+        elif (found.get("policy") or "").strip() != text.strip():
+            die("policy %s exists with a different body: refusing to overwrite it" % name)
+        else:
+            kept.append("policy %s" % name)
+    if "approle/" not in (admin_get(vault, token, "sys/auth") or {}):
+        die("the approle auth method is not enabled: a Vault admin enables it; provision never does")
+    found = admin_get(vault, token, "auth/approle/role/%s" % mount)
+    if found is None:
+        writes.append(("POST", "auth/approle/role/%s" % mount, role, "AppRole %s" % mount))
+    elif any(found.get(k) != v for k, v in role.items()):
+        die("AppRole %s exists with different settings: refusing to change it" % mount)
+    else:
+        kept.append("AppRole %s" % mount)
+    return writes, kept
+
+
+def admin_token(vault):
+    """(token, minted): VAULT_TOKEN, a fresh LDAP login, or a pasted token --
+    held in memory only. An application identity never provisions."""
+    if os.environ.get("VAULT_TOKEN"):
+        return os.environ["VAULT_TOKEN"], False
+    if method() == "approle":
+        die("an AppRole identity cannot provision: log in as the Vault admin (ldap or token)")
+    if method() == "ldap":
+        return ldap_login(vault), True
+    token = prompt_secret("Vault admin token (held in memory, never stored): ").strip()
+    if not token:
+        die("empty token")
+    return token, False
+
+
+def cmd_provision(args):
+    mount = vault_project("provision")
+    policies = policy_texts(mount)
+    if args.dry_run:
+        print("dry run: nothing read, nothing written")
+        print("would ensure mount %s/ (KV v2)" % mount)
+        for name, text in policies.items():
+            print("would ensure policy %s:\n%s" % (name, "".join("  " + l for l in text.splitlines(True))))
+        print("would ensure AppRole %s: token_policies [%s-app], ttl 10m, max 30m, secret_id_ttl 8760h"
+              % (mount, mount))
+    else:
+        vault = Vault()
+        token, minted = admin_token(vault)
+        try:
+            if "root" in (lookup(vault, token).get("policies") or []):
+                die("refusing a root token: use one with the secrets-provisioner policy "
+                    "(references/vault-layout.md)")
+            writes, kept = plan_provision(vault, token, mount, policies)
+            for what in kept:
+                print("unchanged: %s" % what)
+            for verb, path, body, what in writes:
+                try:
+                    vault.call(verb, path, token, body)
+                except VaultError as e:
+                    die("creating %s failed: %s" % (what, e))
+                print("created: %s" % what)
+        finally:
+            if minted:
+                revoke(vault, token)
+    print("ldap: who may read %s/ is the estate's call -- it maps %s-read (and %s-write) to "
+          "groups; provision never configures LDAP" % (mount, mount, mount))
+    print("approle: one secret_id per host is a human step -- runbook, *New project secrets*")
+
+
+def read_value(var):
+    if sys.stdin.isatty():
+        value = prompt_secret("Value for %s (hidden): " % var)
+    else:
+        value = sys.stdin.read().rstrip("\r\n")
+    if not value:
+        die("empty value: nothing written")
+    return value
+
+
+# -- authentication --------------------------------------------------------
+
+def method():
+    m = os.environ.get("VAULT_AUTH_METHOD", "ldap")
+    if m not in ("ldap", "approle", "token"):
+        die("VAULT_AUTH_METHOD must be ldap, approle or token, not %r" % m)
+    return m
+
+
+# -- who may read a file on Windows (TASK-0227) -------------------------------
+# Python on Windows reports every file as mode 666 or 444, whatever its access
+# list says, so a mode check there refuses every file, a locked-down one too.
+# On Windows the access list is the answer: the file is private when only its
+# owner, SYSTEM and Administrators are granted read. A file under %USERPROFILE%
+# inherits exactly that, so a plain copy there passes.
+
+# OWNER RIGHTS stands for whoever owns the file, so it is the owner too.
+WINDOWS_TRUSTED = {"S-1-5-18": "SYSTEM", "S-1-5-32-544": "Administrators", "S-1-3-4": "OWNER RIGHTS"}
+# FILE_READ_DATA, GENERIC_ALL, GENERIC_READ
+WINDOWS_READ_MASK = 0x00000001 | 0x10000000 | 0x80000000
+
+
+def windows_read_grants(path):
+    """(owner SID, [SIDs an allow ACE grants read]) for a file; the list is None
+    when the file has no access list at all, which lets everyone in."""
+    import ctypes
+    from ctypes import wintypes
+    advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    vp = ctypes.c_void_p
+    advapi.GetNamedSecurityInfoW.argtypes = [wintypes.LPCWSTR, ctypes.c_int, wintypes.DWORD,
+                                             ctypes.POINTER(vp), ctypes.POINTER(vp),
+                                             ctypes.POINTER(vp), ctypes.POINTER(vp), ctypes.POINTER(vp)]
+    advapi.GetNamedSecurityInfoW.restype = wintypes.DWORD
+    advapi.ConvertSidToStringSidW.argtypes = [vp, ctypes.POINTER(vp)]
+    advapi.GetAclInformation.argtypes = [vp, vp, wintypes.DWORD, ctypes.c_int]
+    advapi.GetAce.argtypes = [vp, wintypes.DWORD, ctypes.POINTER(vp)]
+    kernel.LocalFree.argtypes = [vp]
+    kernel.LocalFree.restype = vp
+
+    class AclSizeInformation(ctypes.Structure):
+        _fields_ = [("AceCount", wintypes.DWORD), ("AclBytesInUse", wintypes.DWORD),
+                    ("AclBytesFree", wintypes.DWORD)]
+
+    def sid_string(psid):
+        out = vp()
+        if not advapi.ConvertSidToStringSidW(psid, ctypes.byref(out)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            return ctypes.wstring_at(out.value)
+        finally:
+            kernel.LocalFree(out)
+
+    owner, dacl, sd = vp(), vp(), vp()
+    # SE_FILE_OBJECT = 1; OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION
+    rc = advapi.GetNamedSecurityInfoW(path, 1, 0x1 | 0x4, ctypes.byref(owner), None,
+                                      ctypes.byref(dacl), None, ctypes.byref(sd))
+    if rc:
+        raise ctypes.WinError(rc)
+    try:
+        owner_sid = sid_string(owner)
+        if not dacl.value:
+            return owner_sid, None
+        info = AclSizeInformation()
+        if not advapi.GetAclInformation(dacl, ctypes.byref(info), ctypes.sizeof(info), 2):
+            raise ctypes.WinError(ctypes.get_last_error())
+        readers = []
+        for i in range(info.AceCount):
+            ace = vp()
+            if not advapi.GetAce(dacl, i, ctypes.byref(ace)):
+                raise ctypes.WinError(ctypes.get_last_error())
+            # ACE_HEADER: type (byte), flags (byte), size (word); then the mask
+            # and, for ACCESS_ALLOWED_ACE (type 0), the SID at offset 8.
+            ace_type = ctypes.c_ubyte.from_address(ace.value).value
+            flags = ctypes.c_ubyte.from_address(ace.value + 1).value
+            mask = wintypes.DWORD.from_address(ace.value + 4).value
+            if ace_type != 0 or flags & 0x08:  # not an allow ACE, or inherit-only
+                continue
+            if mask & WINDOWS_READ_MASK:
+                readers.append(sid_string(vp(ace.value + 8)))
+        return owner_sid, readers
+    finally:
+        kernel.LocalFree(sd)
+
+
+def windows_other_readers(owner, readers):
+    """Who besides the owner, SYSTEM and Administrators may read; [] when nobody."""
+    if readers is None:
+        return ["everyone (the file has no access list)"]
+    return sorted({r for r in readers if r != owner and r not in WINDOWS_TRUSTED})
+
+
+def windows_exposure(path):
+    """(who besides the owner, SYSTEM and Administrators may read PATH, the
+    icacls command that leaves it to its owner); ([], None) when it is private.
+    OSError when the access list cannot be read."""
+    others = windows_other_readers(*windows_read_grants(path))
+    if not others:
+        return [], None
+    # /grant:r replaces only the named account's grants, so every other
+    # explicit reader is removed by name too.
+    remove = "".join(" /remove:g *%s" % o for o in others if o.startswith("S-"))
+    return others, 'icacls "%s" /inheritance:r /grant:r "%s:F"%s' % (
+        path, os.environ.get("USERNAME") or "<you>", remove)
+
+
+def approle_login(vault):
+    """A short-lived token from the AppRole credential file, held in memory only."""
+    path = os.path.expanduser(os.environ.get("VAULT_APPROLE_FILE") or "")
+    if not path:
+        die("VAULT_AUTH_METHOD=approle needs VAULT_APPROLE_FILE (the role_id/secret_id file)")
+    try:
+        mode = stat.S_IMODE(os.stat(path).st_mode)
+    except FileNotFoundError:
+        die("AppRole credential file not found: %s" % path)
+    # Checked before the file is even read.
+    if os.name == "nt":
+        try:
+            others, fix = windows_exposure(path)
+        except OSError as e:
+            die("cannot read the access list of %s (%s): refusing to trust it" % (path, e))
+        if others:
+            die("%s can be read by %s, besides its owner, SYSTEM and Administrators: run %s"
+                % (path, ", ".join(others), fix))
+    elif mode & 0o077:
+        # On /mnt/c every file reads as 0777, so a credential copied there is
+        # refused rather than trusted.
+        die("%s is readable by group or others (mode %03o): chmod 600 it, on the "
+            "Linux filesystem -- /mnt/c cannot hold it" % (path, mode))
+    try:
+        with open(path, encoding="utf-8") as fh:
+            cred = json.load(fh)
+        body = {"role_id": cred["role_id"], "secret_id": cred["secret_id"]}
+    except (ValueError, KeyError, TypeError):
+        die("%s: expected JSON with role_id and secret_id" % path)
+    mount = os.environ.get("VAULT_AUTH_MOUNT") or "approle"
+    try:
+        return vault.call("POST", "auth/%s/login" % mount, body=body)["auth"]["client_token"]
+    except VaultError as e:
+        die("AppRole login failed: %s" % e, EXIT_LOGIN)
+
+
+def ldap_login(vault, mount=None):
+    """A token for the user's own LDAP login, held in memory only."""
+    user = os.environ.get("VAULT_USER") or getpass.getuser()
+    mount = mount or os.environ.get("VAULT_AUTH_MOUNT") or "ldap"
+    password = prompt_secret("Password for %s: " % user)
+    if not password:
+        die("empty password")
+    try:
+        r = vault.call("POST", "auth/%s/login/%s" % (mount, urllib.parse.quote(user, safe="")),
+                       body={"password": password})
+    except VaultError as e:
+        die("login failed for %s: %s" % (user, e), EXIT_LOGIN)
+    auth = r.get("auth") or {}
+    mfa = auth.get("mfa_requirement")
+    if mfa:
+        auth = totp_validate(vault, user, mfa)
+    token = auth.get("client_token")
+    if not token:
+        die("login for %s returned no token" % user, EXIT_LOGIN)
+    return token
+
+
+def totp_validate(vault, user, mfa):
+    """Vault's login MFA: answer the TOTP requirement of an LDAP login and return
+    the auth block that carries the real token. The code is never printed."""
+    # Every constraint must be met, and any ONE method in its `any` list meets it:
+    # send exactly one TOTP method id per constraint (the first one offered).
+    methods = []
+    constraints = mfa.get("mfa_constraints") or {}
+    if not constraints or not mfa.get("mfa_request_id"):
+        die("login for %s needs MFA, but Vault offers no TOTP method" % user, EXIT_LOGIN)
+    for name, constraint in constraints.items():
+        mid = next((m["id"] for m in (constraint or {}).get("any") or []
+                    if m.get("type") == "totp" and m.get("id")), None)
+        if not mid:
+            die("login for %s needs MFA, but constraint %s offers no TOTP method" % (user, name),
+                EXIT_LOGIN)
+        methods.append(mid)
+    code = prompt_secret("TOTP code for %s: " % user).strip()
+    if not code:
+        die("empty TOTP code")
+    try:
+        r = vault.call("POST", "sys/mfa/validate",
+                       body={"mfa_request_id": mfa["mfa_request_id"],
+                             "mfa_payload": {mid: [code] for mid in methods}})
+    except VaultError as e:
+        die("MFA validation failed for %s: %s" % (user, e), EXIT_LOGIN)
+    return r.get("auth") or {}
+
+
+def lookup(vault, token):
+    try:
+        return vault.call("GET", "auth/token/lookup-self", token)["data"]
+    except VaultError as e:
+        die("token rejected: %s" % e, EXIT_LOGIN)
+
+
+def cmd_login(args):
+    vault = Vault()
+    if method() == "approle":
+        token = approle_login(vault)
+        info = lookup(vault, token)
+        revoke(vault, token)
+        print("approle: the credential logs in, policies %s. Nothing stored: each "
+              "command logs in for itself." % info.get("policies"))
+        return
+    if method() == "token":
+        token = prompt_secret("Vault token: ").strip()
+        if not token:
+            die("empty token")
+        info = lookup(vault, token)
+        if "root" in (info.get("policies") or []):
+            die("refusing to store a root token on disk: create a narrower one")
+        write_token(token, storage_policies(info))
+        policies, ttl = info.get("policies"), info.get("ttl", 0)
+    else:
+        parent = ldap_login(vault)
+        # The LDAP token carries every policy mapped to the user -- possibly
+        # admin. Only a child limited to READ_POLICY (and, for a project with
+        # its own mount, that mount's read policy) is ever written to disk.
+        wanted, conf = [READ_POLICY], load_conf()
+        if conf and conf["backend"] == "vault":
+            extra = "%s-read" % conf["project"]
+            if extra in (lookup(vault, parent).get("policies") or []):
+                wanted.append(extra)
+            else:
+                print("warning: your login does not carry %s, so the stored token cannot read %s/ "
+                      "-- the estate maps it" % (extra, conf["project"]), file=sys.stderr)
+        try:
+            child = vault.call("POST", "auth/token/create", parent, {
+                "policies": wanted,
+                "ttl": CHILD_TTL,
+                "display_name": "workstation",
+                "meta": {"host": socket.gethostname()},
+            })["auth"]
+        except VaultError as e:
+            die("cannot create a %s child token (%s). The %s policy needs "
+                "`update` on auth/token/create -- see references/vault-layout.md"
+                % (READ_POLICY, e, READ_POLICY))
+        write_token(child["client_token"], storage_policies(child))
+        policies, ttl = child.get("policies"), child.get("lease_duration", 0)
+    print("logged in: policies %s, valid %dh%02dm, stored in ~/.vault-token (mode 600)"
+          % (policies, ttl // 3600, ttl % 3600 // 60))
+
+
+def cmd_exec(args, command):
+    if not command:
+        die("nothing to run: exec [VAR ...|--all] -- CMD [ARG ...]", EXIT_USAGE)
+    entries = load_maps(args.maps)
+    names = list(entries) if args.all else args.vars
+    if not names:
+        die("name the variables the command needs (or pass --all): exporting "
+            "every secret into every command is what this refuses", EXIT_USAGE)
+    unknown = [n for n in names if n not in entries]
+    if unknown:
+        die("not in %s: %s" % (", ".join(args.maps), ", ".join(unknown)), EXIT_USAGE)
+    env = dict(os.environ)
+    needed = [n for n in names if not os.environ.get(n)]
+    if needed:
+        vault = Vault()
+        token, minted = session_token(vault)
+        if not token:
+            die("not logged in: run `vault_secrets.py login`", EXIT_LOGIN)
+        try:
+            env.update(fetch(vault, token, entries, needed))
+        except Unreadable as e:
+            die(str(e))
+        finally:
+            # The child never needs Vault, so a token minted for this command
+            # dies before the child starts.
+            if minted:
+                revoke(vault, token)
+    run_command(command, env)
+
+
+def run_command(command, env, spawn=os.name == "nt"):
+    """Become COMMAND, or on Windows run it and exit with its status.
+
+    Windows has no exec: os.execvpe there starts the command and exits at
+    once, so the caller sees status 0 before the command has finished, and
+    an MSYS program started that way can crash (TASK-0149).
+    """
+    try:
+        if spawn:
+            sys.exit(subprocess.run(command, env=env).returncode)
+        os.execvpe(command[0], command, env)
+    except FileNotFoundError:
+        die("command not found: %s" % command[0], 127)
+
+
+def cmd_check(args):
+    entries = load_maps(args.maps)
+    conf = load_conf()
+    if conf and conf["backend"] == "vault":
+        for name, entry in entries.items():
+            if entry[0] != conf["project"]:
+                print("%s: on mount %s, outside this project's own %s/" % (name, entry[0], conf["project"]))
+    vault = Vault()
+    try:
+        vault.call("GET", "sys/health")
+        print("vault: reachable, certificate verified")
+    except VaultError as e:
+        print("vault: reachable but not healthy (%s)" % e)
+    (token, minted), ok = session_token(vault), True
+    if token:
+        try:
+            info = vault.call("GET", "auth/token/lookup-self", token)["data"]
+            ttl = info.get("ttl", 0)
+            print("token: policies %s, %dh%02dm left%s" % (info.get("policies"), ttl // 3600, ttl % 3600 // 60,
+                                                          " (AppRole, revoked after this check)" if minted else ""))
+        except VaultError:
+            print("token: rejected (expired or revoked) -- run login")
+            token = None
+    else:
+        print("token: none -- run login")
+    for name, entry in entries.items():
+        if os.environ.get(name):
+            print("%s: set in the environment, shadows Vault (%s)" % (name, where(entry)))
+        elif not token:
+            print("%s: not checked, no valid token" % name)
+            ok = False
+        else:
+            try:
+                fetch(vault, token, entries, [name])
+                print("%s: readable from %s" % (name, where(entry)))
+            except Unreadable as e:
+                print("%s: MISSING -- %s" % (name, str(e).split(": ", 1)[1]))
+                ok = False
+    if minted and token:
+        revoke(vault, token)
+    sys.exit(0 if ok else EXIT_FAIL)
+
+
+def cmd_put(args):
+    entries = load_maps(args.maps)
+    if args.var not in entries:
+        die("not in %s: %s" % (", ".join(args.maps), args.var), EXIT_USAGE)
+    vault = Vault()
+    token, minted = writer_token(vault)
+    try:
+        write_value(vault, token, entries, args.var)
+    finally:
+        if minted:
+            revoke(vault, token)
+
+
+def writer_token(vault):
+    """A write never uses the stored read-only token: it takes VAULT_TOKEN or a
+    fresh login, held in memory only; a minted one is revoked by the caller."""
+    if os.environ.get("VAULT_TOKEN"):
+        return os.environ["VAULT_TOKEN"], False
+    if method() == "approle":
+        return approle_login(vault), True
+    if method() == "ldap":
+        return ldap_login(vault), True
+    return prompt_secret("Vault token with write access: ").strip(), False
+
+
+def write_value(vault, token, entries, var, value=None):
+    mount, path, field = entries[var]
+    value = read_value(var) if value is None else value
+    try:
+        found = read_secret(vault, token, mount, path)
+    except VaultError as e:
+        die("cannot read %s before writing: %s" % (where(entries[var]), e))
+    data, version = found if found is not None else ({}, 0)
+    data[field] = value
+    try:
+        r = vault.call("POST", "%s/data/%s" % (mount, path), token,
+                       {"options": {"cas": version}, "data": data})
+    except VaultError as e:
+        die("write to %s failed: %s" % (where(entries[var]), e))
+    print("wrote %s to %s (version %s)" % (var, where(entries[var]),
+                                           (r.get("data") or {}).get("version", "?")))
+
+
+def cmd_import(args):
+    """Move values from an existing env file into the declared backend. Each
+    value passes from the file to the store inside this process; none is printed."""
+    conf = load_conf()
+    backend = (conf or {}).get("backend", "vault")
+    if backend != "vault" and args.map:
+        die("--map is for the vault backend; %s declares %s" % (CONF_FILE, backend), EXIT_USAGE)
+    if backend != "gitlab" and args.allow_http:
+        die("--allow-http is for the gitlab backend only", EXIT_USAGE)
+    if read_lines(args.source) is None:
+        die("source not found: %s" % args.source, EXIT_USAGE)
+    if backend == "local" and os.path.abspath(args.source) == os.path.abspath(ENV_FILE):
+        die("%s is already where the local backend keeps values: nothing to import" % ENV_FILE, EXIT_USAGE)
+    source, declared = load_dotenv(args.source), example_names()
+    entries = load_maps(args.maps) if backend == "vault" else None
+    plan, skipped = [], []
+    for name in args.vars or list(source):
+        if name not in declared:
+            skipped.append("%s: not in %s" % (name, ENV_EXAMPLE))
+        elif not source.get(name):
+            skipped.append("%s: empty or absent in %s" % (name, args.source))
+        elif entries is not None and name not in entries:
+            skipped.append("%s: not in %s" % (name, ", ".join(args.maps)))
+        else:
+            plan.append(name)
+    for line in skipped:
+        print("skipped %s" % line)
+    if args.vars and skipped:
+        die("not every named variable can be imported: nothing written", EXIT_USAGE)
+    if not plan:
+        die("nothing to import from %s" % args.source)
+    if args.dry_run:
+        dest = {"local": ENV_FILE, "gitlab": "GitLab", "github": "GitHub"}.get(backend)
+        for name in plan:
+            print("would import %s to %s" % (name, dest or where(entries[name])))
+        return
+    if backend == "local":
+        for name in plan:
+            put_local(name, source[name])
+    elif backend == "github":
+        for name in plan:
+            put_github(conf, name, source[name])
+    elif backend == "gitlab":
+        lab = GitLab(conf, args.allow_http)
+        for name in plan:
+            put_gitlab(conf, name, args.allow_http, source[name], lab)
+    elif conf and conf.get("vault_role"):
+        try:
+            session_model(conf).write_import(entries, plan, source)
+        except Exception:
+            die("session import failed safely; no legacy identity fallback", EXIT_LOGIN)
+    else:
+        vault = Vault()
+        token, minted = writer_token(vault)
+        try:
+            for name in plan:
+                write_value(vault, token, entries, name, source[name])
+        finally:
+            if minted:
+                revoke(vault, token)
+    print("imported %d variable(s). %s still holds every value: delete it yourself once "
+          "`check` passes (a re-run is safe)" % (len(plan), args.source))
+
+
+def cmd_logout(args):
+    token = stored_token()
+    if token:
+        if os.environ.get("VAULT_ADDR"):
+            try:
+                Vault().call("POST", "auth/token/revoke-self", token)
+            except VaultError:
+                pass  # already expired or revoked; the file goes either way
+        else:
+            print("VAULT_ADDR unset: token not revoked, it expires on its own", file=sys.stderr)
+        os.remove(token_path())
+    print("logged out")
+
+
+_SESSION_CLASS = None
+
+
+def keychain_backend():
+    from vault_keychain import create_backend
+    return create_backend()
+
+
+def session_model(conf):
+    global _SESSION_CLASS
+    directory = os.path.dirname(os.path.abspath(__file__))
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    sys.path.insert(0, directory)
+    try:
+        if _SESSION_CLASS is None:
+            from vault_sessions import SessionModel
+            _SESSION_CLASS = SessionModel
+        return _SESSION_CLASS(globals(), conf, keychain_backend())
+    finally:
+        sys.path.pop(0)
+        sys.dont_write_bytecode = previous
+
+
+def main(argv):
+    command = []
+    if "--" in argv:
+        i = argv.index("--")
+        argv, command = argv[:i], argv[i + 1:]
+    ap = argparse.ArgumentParser(prog="vault_secrets.py", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("init")
+    p.add_argument("--backend", required=True, choices=BACKENDS)
+    p.add_argument("--project")
+    p.add_argument("--role", help="vault: registered session token role; project defaults to this name")
+    p.add_argument("--gitlab-project", metavar="GROUP/NAME")
+    p.add_argument("--github-repo", metavar="OWNER/NAME")
+    sub.add_parser("login")
+    p = sub.add_parser("exec")
+    p.add_argument("--map", action="append", metavar="FILE")
+    p.add_argument("--all", action="store_true")
+    p.add_argument("vars", nargs="*", metavar="VAR")
+    p = sub.add_parser("check")
+    p.add_argument("--map", action="append", metavar="FILE")
+    p.add_argument("--allow-http", action="store_true", help="gitlab backend: accept a cleartext http:// GitLab")
+    p = sub.add_parser("put")
+    p.add_argument("--map", action="append", metavar="FILE")
+    p.add_argument("--allow-http", action="store_true", help="gitlab backend: accept a cleartext http:// GitLab")
+    p.add_argument("var", metavar="VAR")
+    p = sub.add_parser("import")
+    p.add_argument("--from", dest="source", required=True, metavar="FILE")
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--map", action="append", metavar="FILE")
+    p.add_argument("--allow-http", action="store_true", help="gitlab backend: accept a cleartext http:// GitLab")
+    p.add_argument("vars", nargs="*", metavar="VAR")
+    sub.add_parser("logout")
+    p = sub.add_parser("issue", help="hand a project-agent token to a launcher through an inherited pipe, never stdout")
+    p.add_argument("--agent", required=True, metavar="NAME")
+    transport = p.add_mutually_exclusive_group(required=True)
+    transport.add_argument("--token-fd", type=int, metavar="FD")
+    transport.add_argument("--token-handle", type=int, metavar="HANDLE", help="Windows inherited pipe HANDLE")
+    p = sub.add_parser("provision", help="superseded for aligned dev projects; legacy mount/AppRole provisioner retained")
+    p.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args(argv)
+    conf = load_conf()
+    args.maps = map_paths(args) if hasattr(args, "map") else []
+    if args.cmd != "exec" and command:
+        die("`--` is only for exec", EXIT_USAGE)
+    if conf and conf.get("vault_role") and args.cmd == "provision":
+        die("provision is superseded for vault_role projects; the owner registers the prefix and token roles separately", EXIT_USAGE)
+    if conf and conf.get("vault_role") and args.cmd in ("login", "logout", "exec", "check", "put", "issue"):
+        directory = os.path.dirname(os.path.abspath(__file__))
+        previous = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
+        sys.path.insert(0, directory)
+        try:
+            from vault_keychain import KeychainError
+        finally:
+            sys.path.pop(0)
+            sys.dont_write_bytecode = previous
+        try:
+            model = session_model(conf)
+            {"login": lambda: model.login(), "logout": model.logout,
+             "exec": lambda: model.exec(args, command), "check": lambda: model.check(args),
+             "put": lambda: model.put(args), "issue": lambda: model.handoff(args)}[args.cmd]()
+        except KeychainError as exc:
+            die(str(exc), EXIT_LOGIN)
+        except Exception:
+            die("session operation failed safely; no legacy identity fallback", EXIT_LOGIN)
+        return
+    if args.cmd == "issue":
+        die("issue needs backend vault and vault_role in this repository's secrets.conf", EXIT_USAGE)
+    backend = (conf or {}).get("backend", "vault") if args.cmd in ("exec", "check", "put") else None
+    if backend not in (None, "vault") and args.map:
+        die("--map is for the vault backend; %s declares %s" % (CONF_FILE, backend), EXIT_USAGE)
+    if backend != "gitlab" and getattr(args, "allow_http", False):
+        die("--allow-http is for the gitlab backend only", EXIT_USAGE)
+    if backend == "local":
+        if args.cmd == "exec":
+            if not command:
+                die("nothing to run: exec [VAR ...|--all] -- CMD [ARG ...]", EXIT_USAGE)
+            exec_local(args, command)
+        elif args.cmd == "check":
+            check_local()
+        else:
+            put_local(args.var)
+    elif backend in ("gitlab", "github"):
+        if args.cmd == "exec":
+            # GitHub secrets cannot be read back at all; GitLab's would need a
+            # GitLab token over the network for every command. CI owns them.
+            die("backend %s: values live in CI and are not readable here -- a local run "
+                "exports the variable itself (it wins over any store)" % backend, EXIT_USAGE)
+        conf = load_conf()
+        if backend == "github":
+            put_github(conf, args.var) if args.cmd == "put" else check_github(conf)
+        else:
+            put_gitlab(conf, args.var, args.allow_http) if args.cmd == "put" \
+                else check_gitlab(conf, args.allow_http)
+    elif args.cmd == "exec":
+        cmd_exec(args, command)
+    else:
+        {"init": cmd_init, "login": cmd_login, "check": cmd_check, "put": cmd_put,
+         "logout": cmd_logout, "provision": cmd_provision, "import": cmd_import}[args.cmd](args)
+
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv[1:])
+    except KeyboardInterrupt:
+        die("interrupted", 130)
