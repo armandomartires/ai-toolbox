@@ -2,7 +2,7 @@ import { atom, read } from 'claude-code'
 import type { EngineInterface, On, RenderInput } from 'claude-code'
 
 import { fit, iconOf, isEnded, ledgerBadge, memberTone, progressOf } from './model'
-import { isOrchWorker, workersOf } from './sessions'
+import { drawnBackground, isOrchWorker, workersOf } from './sessions'
 import { color, elapsed, kit } from './sigma'
 import { stateGlyph, stateTone } from './sunburst'
 import { PANE, TITLE } from './names'
@@ -15,6 +15,7 @@ const now = atom({ plugin: 'agent-watch', key: 'now' } as const, 0)
 const tasks = atom({ plugin: 'agent-watch', key: 'tasks' } as const, [])
 const runs = atom({ plugin: 'agent-watch', key: 'runs' } as const, [])
 const tones = atom({ plugin: 'agent-watch', key: 'tones' } as const, {})
+const background = atom({ plugin: 'agent-watch', key: 'background' } as const, [])
 // task-orchestrator's ledger, read and never written (types/index.d.ts, the mirror).
 const ledger = atom({ plugin: 'task-orchestrator', key: 'ledger' } as const, [])
 // Its switch and policy, read the same way (the `enabled` and `policy` of the mirror).
@@ -47,7 +48,7 @@ const waitOf = (all: readonly { id: string; status: string; deps: string[] }[], 
  * import only into one.
  */
 export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'> | RenderInput<'Pane'>) {
-  const [list, rows, tick, at, all, held, orchTasks, isOn, mode] = await Promise.all([
+  const [list, rows, tick, at, all, held, orchTasks, isOn, mode, shells] = await Promise.all([
     read($, tasks),
     read($, agents),
     read($, frame),
@@ -57,6 +58,7 @@ export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'
     read($, ledger),
     read($, enabled),
     read($, policy),
+    read($, background),
   ])
   const running = rows.filter(row => row.status === 'running')
   const { done, total, current } = progressOf(list)
@@ -71,8 +73,9 @@ export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'
   const cols = Math.max(20, e.props.bodyColumns)
   const width = Math.min(BAR_MAX, Math.max(5, Math.floor(cols / 4)))
   const count = `${done}/${total}`
-  // Done only when nothing runs: a finished list with an agent still working is not done.
-  const isDone = total > 0 && done === total && running.length === 0
+  // Done only when nothing runs: a finished list with an agent or a background command still working is not done.
+  const shellsRunning = drawnBackground(shells).filter(task => task.status === 'running').length
+  const isDone = total > 0 && done === total && running.length === 0 && shellsRunning === 0
   const sessions = { rows, runs: all, tones: held, tasks: list, ledger: orchTasks }
   // A glyph opens its agent's transcript in the main view; the step text
   // opens the Agents pane. No hotkeys: a bare digit in an empty composer
@@ -181,9 +184,11 @@ export async function drawMeter($: EngineInterface, e: RenderInput<'AbovePrompt'
   }
   const room = cols - width - count.length - 6 - running.length * 2 - 12
   // The ORCH label closes the line, and goes when the step would be cut for it.
-  const text = isDone ? 'ALL DONE' : (current ?? '')
+  // Every step ticked while a background command runs: the band says what it waits on.
+  const waiting = !isDone && current === undefined && total > 0 && done === total && shellsRunning > 0 ? `${shellsRunning} BACKGROUND RUNNING` : undefined
+  const text = isDone ? 'ALL DONE' : (current ?? waiting ?? '')
   const hasOrch = orch !== '' && room - orch.length - 1 >= text.length
-  const step = isDone ? 'ALL DONE' : current ? fit(current, Math.max(8, room - (hasOrch ? orch.length + 1 : 0))) : ''
+  const step = isDone ? 'ALL DONE' : text !== '' ? fit(text, Math.max(8, room - (hasOrch ? orch.length + 1 : 0))) : ''
 
   return (
     <Box flexDirection="row">
