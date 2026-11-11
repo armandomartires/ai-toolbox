@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: planned
+- Status: blocked (parked by the human, 2026-11-12)
 - Owner: agent
 - Branch: agent/TASK-0271
 - Created: 2026-11-10
@@ -83,3 +83,4 @@ Next:
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-12 · Claude Code (Opus 5.5, coordinator) · parked by the human after four Opus risk reviews. The work (guard, launcher, emitter tables, 366 fixtures, ADR-0062 proposed) is unlanded in worktree `agent-a30ca3af10fe59891`, saved as `../ai-toolbox-worktrees/TASK-0271-parked.patch` (untracked, outside the repo); its gate passed. Open: R-0271d HIGH-1 (mixed operator tokens such as `;(`, `>|` read as words) and HIGH-2 (`-S` optional value skips `-nq`), MEDIUM `~/.claude.json`. Proposed next round: deny every shell operator for guarded roles, `-S` consumes its cluster, protect `~/.claude.json`.
