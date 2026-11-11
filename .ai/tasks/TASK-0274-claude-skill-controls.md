@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: planned
+- Status: in review
 - Owner: agent
 - Branch: agent/TASK-0274
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Applies to: `skills/*/SKILL.md`, the ADR-0003 schema, the frontmatter linter (ADR-0008), ports
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.4 (N4), no decision applies; related: ADR-0003, ADR-0008
 
@@ -45,15 +45,15 @@ Let skills use `allowed-tools`, `disable-model-invocation` and `context: fork` w
 
 ## Acceptance criteria
 
-- [ ] The linter accepts the new keys
-- [ ] The three skills carry the stated controls
-- [ ] OpenCode and Codex still load 8 skills
-- [ ] Reverting a skill edit fails the test
+- [x] The linter accepts the new keys
+- [x] The three skills carry the stated controls
+- [x] OpenCode and Codex still load 8 skills (OpenCode 8 stripped copies; Codex gets no skills from install.sh)
+- [x] Reverting a skill edit fails the test
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] `bash tests/test-install.sh`
+- [x] tests/validate.sh
+- [x] `bash tests/test-install.sh`
 
 ## Risks and rollback
 
@@ -74,3 +74,10 @@ Next:
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-11 · agent/Sonnet 5.5 · red test first (tests/test-skill-controls.sh, 13 of 22 cases failed), then the change
+  - Done: moved the linter to scripts/check-skill-frontmatter.py and added the three keys; edited the three skills (versions 1.1.0, 1.5.2, 2.4.1; slash command added to the two descriptions); install.sh strips the keys for OpenCode as a copy; ADR-0060; authoring guide rows; registry regenerated; test wired into validate.sh.
+  - Decision: `context: fork` on no skill, recorded in ADR-0060 clause 3.
+  - Evidence: test-skill-controls.sh OK (22 cases); removing vault-secrets' key failed 3 cases and restoring it passed; test-install.sh OK (54 cases); validate.sh: OK (exit 0).
+  - Deviation: the linter moved out of validate.sh (needed to test it on a fixture). Codex has no skill port in install.sh, so "loads 8" holds for OpenCode only; Codex is asserted to get none. Whether OpenCode rejects the keys was not tested live.
+- 2026-11-11 · agent/Sonnet 5.5 · review fixes
+  - Done: test cleanup removes junctions before rm -rf; install.sh runs from a throwaway git repo copy so the real checkout's core.hooksPath is not touched; K1 asserts every Bash scope is exactly the inventory script (a `Bash(rm -rf *)` scope fails it, verified); P3 compares the description; repo-inventory allowed-tools also has the installed-path rule; ADR-0060 and K1 reworded to "pre-approves only"; versions unattended-ops 1.6.0, vault-secrets 2.5.0; CURRENT_STATE.md skill versions updated (a file outside the assignment's allowed list, edited at the coordinator's request).

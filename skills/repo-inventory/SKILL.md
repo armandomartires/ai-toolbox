@@ -2,9 +2,10 @@
 name: repo-inventory
 description: "Find every git repository under one or more directories and report, per repository, what exists nowhere else - uncommitted work, stashes, commits on no remote, detached commits, gone upstreams, no remote at all - read-only and offline. USE FOR: taking stock of the clones on a host before consolidating, archiving or deleting any; checking a machine for unpushed work; the inventory, classify and rescue steps of a repository migration. DO NOT USE FOR: pushing, archiving or deleting what it finds (those are the human's, repository by repository); fetching or checking a remote's live state; a single repository's governance overlay, which is project-migration."
 license: MIT
+allowed-tools: Read Grep Glob Bash(python3 scripts/repo_inventory.py *) Bash(python3 */repo-inventory/scripts/repo_inventory.py *)
 metadata:
   author: armando.martires
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # repo-inventory

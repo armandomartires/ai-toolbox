@@ -60,3 +60,6 @@ next imported skill.
   struck through rather than deleted — this was a real gap carried
   knowingly for three sprints, and the record of that is worth more than a
   tidy list.
+
+## Update (2026-11-11)
+ADR-0060 adds three optional Claude Code keys to the schema: `allowed-tools`, `disable-model-invocation` and `context`.

@@ -1,10 +1,11 @@
 ---
 name: vault-secrets
-description: "Supply named secrets to one command from a repository-selected Vault project session held in the OS keychain, legacy Vault/AppRole access, a git-ignored .env, or GitLab/GitHub CI variables. Declare the backend and optional vault_role in secrets.conf. USE FOR: initializing a secrets backend, running a command that needs named credentials, setting up a new host, owner login and rotation, or issuing an agent token to a pipe for an isolated launcher. DO NOT USE FOR: reading, printing or copying a secret value, a token or a credential file; administering Vault auth, policies or roles; or substituting a plaintext token cache for a missing keychain. Legacy provision is a human admin step, superseded for session-aligned development projects."
+description: "Supply named secrets to one command from a repository-selected Vault project session held in the OS keychain, legacy Vault/AppRole access, a git-ignored .env, or GitLab/GitHub CI variables. Declare the backend and optional vault_role in secrets.conf. USE FOR: initializing a secrets backend, running a command that needs named credentials, setting up a new host, owner login and rotation, or issuing an agent token to a pipe for an isolated launcher. DO NOT USE FOR: reading, printing or copying a secret value, a token or a credential file; administering Vault auth, policies or roles; or substituting a plaintext token cache for a missing keychain. Legacy provision is a human admin step, superseded for session-aligned development projects. Invoke by hand with /vault-secrets."
 license: MIT
+disable-model-invocation: true
 metadata:
   author: armando.martires
-  version: "2.4.0"
+  version: "2.5.0"
 ---
 
 # vault-secrets

@@ -212,6 +212,21 @@ make_link() {
   fi
 }
 
+# The Claude Code skill controls (ADR-0060): top-level frontmatter keys other
+# clients may reject. One list; the linter validates them, install.sh strips them.
+CLAUDE_ONLY_KEYS='allowed-tools|disable-model-invocation|context'
+has_claude_keys() { # has_claude_keys SKILL.md: any such key in the frontmatter?
+  awk -v re="^($CLAUDE_ONLY_KEYS):" 'NR==1 && !/^---/ {exit 1} NR>1 && /^---/ {exit f?0:1} $0 ~ re {f=1} END {exit f?0:1}' "$1"
+}
+strip_claude_keys() { # strip_claude_keys SKILL.md: the file without them (and their continuations)
+  awk -v re="^($CLAUDE_ONLY_KEYS):" '
+    NR==1 {fm=1; print; next}
+    fm && /^---/ {fm=0; print; next}
+    fm && $0 ~ re {skip=1; next}
+    fm && skip && /^[ 	]/ {next}
+    {skip=0; print}' "$1"
+}
+
 # Deploy every non-template skill into $1, in mode $2, reporting as $3.
 #
 # Shared by the global CLIENTS loop below and the Bionic project path, which
@@ -221,7 +236,7 @@ make_link() {
 # registry generator's duplicated per-section loops were removed for the
 # same reason in TASK-0011.
 deploy_skills() {
-  local target="$1" mode="$2" label="$3" d name dest
+  local target="$1" mode="$2" label="$3" strip="${4:-}" d name dest smode
   mkdir -p "$target"
   for d in skills/*; do
     name=$(basename "$d")
@@ -248,11 +263,20 @@ deploy_skills() {
       echo "  NOTICE: replacing pre-existing directory $dest (repo owns skill '$name')"
       rm -rf "$dest"
     fi
-    case "$mode" in
+    # A client that rejects unknown keys gets a COPY with the Claude-only
+    # keys removed (TASK-0274, ADR-0060); a link would hand it the source.
+    smode="$mode"
+    if [ -n "$strip" ] && has_claude_keys "$d/SKILL.md"; then smode=copy; fi
+    case "$smode" in
       link) make_link "$(pwd)/$d" "$dest" ;;
       copy) cp -r "$d" "$dest" ;;
     esac
-    echo "skill deployed: $name -> $label ($mode)"
+    if [ "$smode" = copy ] && [ -n "$strip" ] && has_claude_keys "$d/SKILL.md"; then
+      strip_claude_keys "$d/SKILL.md" > "$dest/SKILL.md.tmp" && mv "$dest/SKILL.md.tmp" "$dest/SKILL.md"
+      echo "skill deployed: $name -> $label (copy, Claude-only keys stripped)"
+    else
+      echo "skill deployed: $name -> $label ($smode)"
+    fi
   done
 }
 
@@ -697,7 +721,8 @@ while IFS='|' read -r client target parent agents_target; do
     continue
   fi
   deployed_any=1
-  deploy_skills "$target" "$MODE" "$client"
+  strip=""; [ "$client" = opencode ] && strip=1
+  deploy_skills "$target" "$MODE" "$client" "$strip"
   if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
     plugin_dirs "$parent/settings.json" write || exit 1
   fi

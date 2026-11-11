@@ -1,10 +1,11 @@
 ---
 name: unattended-ops
-description: "The method behind the unattended-run loop - the harness's five rules and the measured failure each answers, the five verdicts, the evidence rule, how a gate command map is built, and what a per-client binding must supply. USE FOR: running or supporting loops/unattended-run/, writing or reviewing a binding, deciding whether a gate result may be quoted, choosing between accept, retry, park, raise-adhoc and halt-run. DO NOT USE FOR: a task whose design or scope is still open - that is loops/design-brief/; a single task with a human present - that is loops/project-build/; or governance and planning documentation, which is project-workflow and project-migration."
+description: "The method behind the unattended-run loop - the harness's five rules and the measured failure each answers, the five verdicts, the evidence rule, how a gate command map is built, and what a per-client binding must supply. USE FOR: running or supporting loops/unattended-run/, writing or reviewing a binding, deciding whether a gate result may be quoted, choosing between accept, retry, park, raise-adhoc and halt-run. DO NOT USE FOR: a task whose design or scope is still open - that is loops/design-brief/; a single task with a human present - that is loops/project-build/; or governance and planning documentation, which is project-workflow and project-migration. Invoke by hand with /unattended-ops."
 license: MIT
+disable-model-invocation: true
 metadata:
   author: armando.martires
-  version: "1.5.1"
+  version: "1.6.0"
 ---
 
 # unattended-ops

@@ -21,6 +21,9 @@ The length and character limits come from the Agent Skills specification
 | `name` | Required, non-empty, and **must equal the directory name** — it determines the install path, so a mismatch deploys to somewhere no client looks. `_template*` directories are exempt from the equality rule only. At most 64 characters of `a-z`, `0-9` and `-`, with no leading, trailing or doubled hyphen (Agent Skills spec). | **yes** |
 | `description` | Required, non-empty, **single line**. It renders into one registry table cell; a folded (`>`) or block (`|`) scalar breaks that row — including a bare sigil like `>-`, which reaches the registry as the sigil with the text dropped. At most 1024 characters (Agent Skills spec); every skill's description is loaded into every session, so say when to use the skill, not everything it does. | **yes** |
 | `compatibility` | Optional; 1–500 characters when present (Agent Skills spec). | **yes**, when present |
+| `allowed-tools` | Optional Claude Code control (ADR-0060); non-empty if present. Space-separated tool names, e.g. `Read Grep Bash(python3 scripts/x.py *)`. `install.sh` strips it for OpenCode. | **yes**, when present |
+| `disable-model-invocation` | Optional Claude Code control (ADR-0060); `true` or `false`. When `true`, end the description with the slash command: the model never sees it. Stripped for OpenCode. | **yes**, when present |
+| `context` | Optional Claude Code control (ADR-0060); `fork` is the only value. No skill uses it yet. Stripped for OpenCode. | **yes**, when present |
 | `license` | Optional, but non-empty if present. | **yes** |
 | `license` backed by a repo `LICENSE` file | A `license:` claim should be backed by a real `LICENSE`. | **no** — convention only; `validate.sh` never reads `LICENSE` |
 | `metadata.author` | Optional. | not applicable |
