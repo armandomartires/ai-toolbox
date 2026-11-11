@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0269
 - Created: 2026-11-10
@@ -87,3 +87,4 @@ Next: run tests/validate.sh, then commit; confirm the CI job on the docker runne
   - Deviation: graphify not run live on this host
 - 2026-11-10 · agent/Sonnet 5.5 · review fixes in tests/test-mcp-tools.py: no vacuous pass (empty or unknown MCP_TOOLS_ONLY and a reworded CI loop fail), minimal env for the gates launch, MCP_LOCK_PASS_ENV refused when CI is set, docstring corrected
 - 2026-11-11 · Claude Code (Opus 5.5, coordinator) · live CI read through the GitLab API: `mcp-tool-lock` failed at install on every master pipeline from 910: `node:24-bookworm` has no `ensurepip`, so the venv and `uv` never existed and no lock was checked; fixed by `TASK-0290`.
+- 2026-11-11 · Claude Code (Opus 5.5, coordinator) · first real `mcp-tool-lock` run, pipeline 929 at `6ffcf0a` (after `TASK-0290`): success. "gates: 5 tool definitions match tools.lock.json"; "locks match the live tools/list for mcp-servers/ansible, mcp-servers/graphify, mcp-servers/gates; gates annotations present". Done.

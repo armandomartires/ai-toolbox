@@ -49,13 +49,13 @@ Make the two jobs that `TASK-0267` and `TASK-0269` added pass on the runner. Eac
 
 - [x] `python -I evals/run.py --self-test` failed with "anthropic body sends a sampling parameter", then passes
 - [x] The mock run scores 1.00 on all three suites
-- [ ] `mcp-tool-lock` passes on the master pipeline of this commit
+- [x] `mcp-tool-lock` passes on the master pipeline of this commit (pipeline 929, job 2371)
 - [ ] `evals-live: [anthropic]` makes real calls (no HTTP 400) on the next scheduled run
 
 ## Mandatory validations
 
 - [x] `python -I evals/run.py --self-test`: exit 0
-- [ ] `tests/validate.sh`: run by the pre-commit hook at the commit
+- [x] `tests/validate.sh`: validate.sh: OK, at the commit
 
 ## Risks and rollback
 
