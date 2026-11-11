@@ -1,0 +1,9 @@
+{
+  "id": "trg-12-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Why does my regex `^(\\d+)\\s*$` fail on '12 ' with a trailing tab?",
+  "mock_response": "{\"skill\": \"none\"}"
+}

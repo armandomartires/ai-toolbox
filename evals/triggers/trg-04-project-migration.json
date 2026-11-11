@@ -1,0 +1,9 @@
+{
+  "id": "trg-04-project-migration",
+  "category": "trigger",
+  "expected": {
+    "skill": "project-migration"
+  },
+  "input": "This repo has grown without any shared conventions for agents. Bring it in line so a person and a weaker model can both pick work up from files alone.",
+  "mock_response": "{\"skill\": \"project-migration\"}"
+}

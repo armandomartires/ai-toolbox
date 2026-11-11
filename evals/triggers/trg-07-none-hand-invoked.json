@@ -1,0 +1,9 @@
+{
+  "id": "trg-07-none-hand-invoked",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Someone told me to review the way the overnight agent run decides whether a task is done. Is a green gate enough to quote in the morning handover?",
+  "mock_response": "{\"skill\": \"none\"}"
+}

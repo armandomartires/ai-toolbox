@@ -1,0 +1,9 @@
+{
+  "id": "trg-03-mod-dev",
+  "category": "trigger",
+  "expected": {
+    "skill": "mod-dev"
+  },
+  "input": "I changed one of the panes in our task-compass mod. Walk me through getting it from the template state to something loaded in a session, and what to run before I call it done.",
+  "mock_response": "{\"skill\": \"mod-dev\"}"
+}

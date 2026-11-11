@@ -1,0 +1,9 @@
+{
+  "id": "trg-05-project-workflow",
+  "category": "trigger",
+  "expected": {
+    "skill": "project-workflow"
+  },
+  "input": "Write up why we picked the new retry policy and what is queued next, in the planning folder we already keep, as a brief a teammate could act on.",
+  "mock_response": "{\"skill\": \"project-workflow\"}"
+}

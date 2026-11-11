@@ -1,0 +1,9 @@
+{
+  "id": "trg-11-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Convert this CSV of invoices into a table of totals per customer.",
+  "mock_response": "{\"skill\": \"none\"}"
+}

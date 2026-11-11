@@ -1,0 +1,9 @@
+{
+  "id": "trg-06-repo-inventory",
+  "category": "trigger",
+  "expected": {
+    "skill": "repo-inventory"
+  },
+  "input": "I'm about to wipe this laptop. Which of the repositories under my work folder hold something that exists nowhere else?",
+  "mock_response": "{\"skill\": \"repo-inventory\"}"
+}

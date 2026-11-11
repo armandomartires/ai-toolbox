@@ -1,0 +1,9 @@
+{
+  "id": "trg-08-none-hand-invoked",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Run the migration script using the database password stored for this project; I don't want to paste it.",
+  "mock_response": "{\"skill\": \"none\"}"
+}

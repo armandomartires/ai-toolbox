@@ -7,7 +7,7 @@
 #   variables scoped to the `evals-live` environment, so they exist only in
 #   this job, and only on the protected master ref. They are read
 #   by evals/run.py from the environment and are never echoed: no `set -x`,
-#   no `env` dump, and the artifacts hold only scores.
+#   no `env` dump, and the artifacts hold scores and model transcripts only.
 #
 # Sized for the `docker` runner (2 GB, 2 CPU): stdlib Python, one request at
 # a time, no build step.
@@ -49,12 +49,25 @@ evals-live:
   parallel:
     matrix:
       - EVAL_PROVIDER: [anthropic, xai, openai]
+  # Q9=C (TASK-0278): k=5 trials per task. 34 tasks x 5 trials = 170 calls per
+  # provider. One call is estimated at 20 s (a 4096-token answer; the harness
+  # retries add up to 15 s on 429/5xx), so ~57 min serial: over the 30m base.
+  # The estimate is NOT measured (no live run yet); 2h leaves about 2x margin,
+  # and 2h is not verified against the runner's maximum job timeout.
+  # Read `elapsed_seconds` in the first evals-<provider>.json and resize.
+  # --max-calls is the per-job cap on HTTP attempts, retries included: the run
+  # refuses to start above 250 and stops when 250 attempts have been made.
+  # Not interruptible: a newer pipeline must not cancel a nightly run half-way.
+  # Transcripts and a partial JSON are written as work finishes, so a timeout keeps them.
+  timeout: 2h
+  interruptible: false
   script:
-    - python3 evals/run.py --provider "$EVAL_PROVIDER" --out "evals-$EVAL_PROVIDER.json" --junit "evals-$EVAL_PROVIDER.xml"
+    - python3 evals/run.py --provider "$EVAL_PROVIDER" --trials 5 --max-calls 250 --out "evals-$EVAL_PROVIDER.json" --junit "evals-$EVAL_PROVIDER.xml" --transcripts "evals-$EVAL_PROVIDER-transcripts"
   artifacts:
     when: always
-    # Kept a year so scores can be tracked run over run.
+    # Kept a year so scores can be tracked run over run. The transcripts hold
+    # model output only (never keys or request headers).
     expire_in: 1 year
-    paths: ["evals-$EVAL_PROVIDER.json"]
+    paths: ["evals-$EVAL_PROVIDER.json", "evals-$EVAL_PROVIDER-transcripts/"]
     reports:
       junit: "evals-$EVAL_PROVIDER.xml"

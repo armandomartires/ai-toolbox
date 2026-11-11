@@ -1,0 +1,27 @@
+{
+  "id": "ref-04-python-sampling-and-swallowed-error",
+  "category": "refuter",
+  "agent": "refuter",
+  "expected": {
+    "defects": [
+      {
+        "id": "sampling-param",
+        "keywords": [
+          "temperature",
+          "top_p",
+          "sampling"
+        ]
+      },
+      {
+        "id": "swallowed-error",
+        "keywords": [
+          "bare except",
+          "swallow",
+          "except:"
+        ]
+      }
+    ]
+  },
+  "input": "Claimed: 'the Anthropic eval provider is ready for the nightly run'.\nDiff:\n+body = {\"model\": model, \"max_tokens\": 4096, \"temperature\": 0,\n+        \"messages\": [{\"role\": \"user\", \"content\": prompt}]}\n+try:\n+    r = urlopen(req)\n+except:\n+    return ''\n",
+  "mock_response": "{\"findings\": [{\"summary\": \"temperature is sent to a model that rejects a non-default sampling value (HTTP 400)\"}, {\"summary\": \"bare except swallows every error and returns an empty string silently\"}]}"
+}

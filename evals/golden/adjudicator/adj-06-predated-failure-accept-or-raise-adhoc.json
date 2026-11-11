@@ -1,0 +1,14 @@
+{
+  "id": "adj-06-predated-failure-accept-or-raise-adhoc",
+  "category": "adjudicator",
+  "agent": "adjudicator",
+  "expected": {
+    "verdict": "accept",
+    "allowed": [
+      "accept",
+      "raise-adhoc"
+    ]
+  },
+  "input": "Task T-106 acceptance criteria: (1) `scripts/check-foo.py --self-test` exits 0; (2) the new `--strict` flag is documented in its usage text.\nImplementer report: 'both done'.\nGate evidence: (1) exit 0; (2) usage text shows --strict. Separately `bash tests/validate.sh` fails on `docs/old.md: broken link`; `git show HEAD:docs/old.md` shows the same broken link before this task's diff; the task did not touch docs/.\nRefutation: no findings against the task's own criteria.\nAttempt: 1.",
+  "mock_response": "{\"verdict\": \"accept\", \"reasoning\": \"Both criteria are evidenced. The broken link predates the task and is out of scope; it is raised as a title-only ad-hoc item alongside, not a reason to refuse.\", \"overrides\": []}"
+}

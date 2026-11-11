@@ -1,0 +1,9 @@
+{
+  "id": "trg-02-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Two of the options we sketched for the notification system look the same to me underneath. Can you help me tell, and then push on each one until we know which to take forward?",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "trg-10-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Make this paragraph of my blog post shorter and more direct.",
+  "mock_response": "{\"skill\": \"none\"}"
+}

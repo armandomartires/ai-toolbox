@@ -1,0 +1,9 @@
+{
+  "id": "trg-01-ansible-ops",
+  "category": "trigger",
+  "expected": {
+    "skill": "ansible-ops"
+  },
+  "input": "We have a playbook that restarts nginx on the production web tier. I want to change when the handler fires. How careful do I have to be, and what would show that a dry run actually told us something?",
+  "mock_response": "{\"skill\": \"ansible-ops\"}"
+}

@@ -2226,6 +2226,9 @@ python3 scripts/check-mod-status.py || fail=1
 # WHAT IT DOES NOT PROVE: how a real model scores; that is the scheduled
 # evals-live job.
 python3 evals/run.py --self-test || { echo "EVALS: self-test failed"; fail=1; }
+# TASK-0278: the suite stays at 20 golden tasks or more (a second, shell-side count).
+golden_n=$(find evals/golden -name '*.json' | wc -l)
+if [ "$golden_n" -lt 20 ]; then echo "EVALS: $golden_n golden tasks, need at least 20"; fail=1; fi
 # Unattended-run sandbox, Level 1 (issue #11).
 # WHY: unattended runs executed on the dev host with user credentials.
 # WHAT THIS PROVES: the CI jobs are pinned to runner tag docker, run

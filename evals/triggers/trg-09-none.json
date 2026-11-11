@@ -1,0 +1,9 @@
+{
+  "id": "trg-09-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "What is the difference between a list and a tuple in Python?",
+  "mock_response": "{\"skill\": \"none\"}"
+}

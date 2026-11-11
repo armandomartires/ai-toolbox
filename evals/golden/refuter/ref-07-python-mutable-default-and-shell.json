@@ -1,0 +1,27 @@
+{
+  "id": "ref-07-python-mutable-default-and-shell",
+  "category": "refuter",
+  "agent": "refuter",
+  "expected": {
+    "defects": [
+      {
+        "id": "mutable-default",
+        "keywords": [
+          "mutable default",
+          "default argument",
+          "default arg"
+        ]
+      },
+      {
+        "id": "shell-injection",
+        "keywords": [
+          "shell=true",
+          "command injection",
+          "shell injection"
+        ]
+      }
+    ]
+  },
+  "input": "Claimed: 'collect() is a safe helper for callers'.\nDiff:\n+def collect(name, seen=[]):\n+    seen.append(name)\n+    subprocess.run(f\"git log --oneline {name}\", shell=True)\n+    return seen\n",
+  "mock_response": "{\"findings\": [{\"summary\": \"seen=[] is a mutable default argument shared between calls\"}, {\"summary\": \"shell=True with an f-string of caller input is command injection\"}]}"
+}

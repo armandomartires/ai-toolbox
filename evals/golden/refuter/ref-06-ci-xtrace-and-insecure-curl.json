@@ -1,0 +1,26 @@
+{
+  "id": "ref-06-ci-xtrace-and-insecure-curl",
+  "category": "refuter",
+  "agent": "refuter",
+  "expected": {
+    "defects": [
+      {
+        "id": "xtrace",
+        "keywords": [
+          "set -x",
+          "xtrace"
+        ]
+      },
+      {
+        "id": "insecure-tls",
+        "keywords": [
+          "curl -k",
+          "insecure",
+          "certificate"
+        ]
+      }
+    ]
+  },
+  "input": "Claimed: 'the publish script is safe to run in CI'.\nDiff:\n+#!/bin/bash\n+set -x\n+export TOKEN=\"$PUBLISH_TOKEN\"\n+curl -k -H \"Authorization: Bearer $TOKEN\" https://registry.example/upload -T out.tgz\n",
+  "mock_response": "{\"findings\": [{\"summary\": \"set -x traces the export and curl lines, printing the token into the job log\"}, {\"summary\": \"curl -k disables TLS certificate verification while sending a bearer token\"}]}"
+}

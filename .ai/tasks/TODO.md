@@ -318,7 +318,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [?] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
 - [?] TASK-0276 — Ship permissions and sandbox settings (P1.6)
 - [?] TASK-0277 — Stop hook runs a fast check (P1.7)
-- [ ] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
+- [?] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
 - [?] TASK-0279 — Claude Code OpenTelemetry (P1.9)
 - [ ] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
 - [ ] TASK-0281 — Codex port completion (P2.2)
