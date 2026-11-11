@@ -303,6 +303,14 @@ A loop is a repeatable multi-step agent workflow. `loop.md` is required;
 copy from `loops/_template/`. `tests/validate.sh` enforces the **Gated**
 column below — and only that column.
 
+A loop may also carry a thin `SKILL.md` wrapper (`TASK-0273`): `name: run-<loop>`,
+`disable-model-invocation: true`, an `argument-hint`, and a pointer to the
+sibling `loop.md`, with no rule of its own. Its gate is
+`tests/test-loop-skills.sh`, not the skill linter run over `skills/`. The
+wrappers reach Claude Code only through the `ai-toolbox-skills` plugin
+(`scripts/build-plugin.py` copies the wrapper and its `loop.md`);
+`scripts/install.sh` deploys `skills/` only, so it installs no loop skill.
+
 The Gated column exists because this sentence previously read *"enforces
 every element below"*, which was false: the gate checks that the three
 headings are present, not that `## Steps` are numbered or that each failure

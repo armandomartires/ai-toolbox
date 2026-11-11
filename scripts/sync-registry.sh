@@ -70,11 +70,12 @@ fm_seq() {
 extract() {
   local kind="$1" d="$2" f name desc clients
   case "$kind" in
-    skill|loop|agent)
-      # All three kinds carry YAML frontmatter with the same two keys; they
-      # differ only in filename.
+    skill|loopskill|loop|agent)
+      # All kinds carry YAML frontmatter with the same two keys; they
+      # differ only in filename. loopskill is the thin /run-<loop> wrapper
+      # inside a loop's folder (TASK-0273); it is not counted as a skill.
       case "$kind" in
-        skill) f="$d/SKILL.md" ;;
+        skill|loopskill) f="$d/SKILL.md" ;;
         loop)  f="$d/loop.md" ;;
         agent) f="$d/agent.md" ;;
       esac
@@ -190,6 +191,9 @@ emit_section() {
   emit_section "MCP Servers" mcp   mcp-servers Shape
   echo
   emit_section "Loops"       loop  loops
+  echo
+  # The loops' invocable wrappers (disable-model-invocation, TASK-0273).
+  emit_section "Loop skills" loopskill loops
   echo
   # Mods are Claude Code plugins; the registry reads their plugin.json
   # (ADR-0040) and their status.json (issue #5: experimental or verified).

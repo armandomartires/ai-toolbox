@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: planned
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0273
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Applies to: `loops/`, `scripts/sync-registry.sh`, `docs/registry.md`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.3 (N3), no decision applies directly; the wrappers ship inside the skills plugin from TASK-0272; related: ADR-0004
 
@@ -47,13 +47,13 @@ Make the five loop procedures one command away with thin wrappers that set `disa
 
 ## Acceptance criteria
 
-- [ ] Five loop skills exist with `disable-model-invocation: true` and link to `loop.md`
-- [ ] The registry lists them
-- [ ] Deleting a wrapper fails the validate check
+- [x] Five loop skills exist with `disable-model-invocation: true` and link to `loop.md`
+- [x] The registry lists them
+- [x] Deleting a wrapper fails the validate check
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh
 
 ## Risks and rollback
 
@@ -65,12 +65,19 @@ Make the five loop procedures one command away with thin wrappers that set `disa
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `loops/<n>/SKILL.md` x5 | thin `run-<n>` wrappers: disable-model-invocation, argument-hint, link to sibling loop.md |
+| `tests/test-loop-skills.sh` | 9-case audit, wired into `tests/validate.sh` |
+| `scripts/sync-registry.sh`, `docs/registry.md` | new "Loop skills" section; Skills section still lists 8 |
+| `scripts/build-plugin.py`, `plugins/` | skills plugin ships `skills/run-<n>/{SKILL.md,loop.md}`; 13 skills there |
 
-Next:
+Next: review, then commit (the worktree holds the change uncommitted).
 
 ## Execution log
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-11 · agent/Sonnet 5.5 · five wrappers, audit test, registry section, plugin build
+  - Evidence: tests/test-loop-skills.sh red before the wrappers (4 of 9 failed), then OK (9 cases); deleting a wrapper, adding a rule word and dropping disable-model-invocation each fail the audit on a fixture copy; `build-plugin.py --check`: plugins/ matches a fresh build; tests/test-install.sh OK (86 cases); tests/validate.sh result in the run report
+  - Deviation: layout is `loops/<n>/SKILL.md` (name `run-<n>`), not `skills/run-<n>/`, so the 8-skill counts (test-skill-controls P0/P1, install ports) stay 8; install.sh does not deploy them, only the plugin does. In the plugin each wrapper gets loop.md copied beside it (the cache has no loops/), so the relative link works; test-install P2 now counts skills plus loop skills. The skills plugin README gap text notes the other loops/ pointers still do not resolve.
+- 2026-11-11 · Claude Code (Opus 5.5, coordinator) · independent review: approve; the plugin-only deployment and `run-<n>` naming added to the authoring guide's Loops section. Open: whether a plugin skill is invoked as `/run-<n>` or namespaced (`/ai-toolbox-skills:run-<n>`) is unverified, so the wrappers' "Invoke with" text may need the namespace; each shipped `loop.md` links repo files absent from the plugin cache (AGENTS.md, docs/security/untrusted-content.md and loop-specific paths).

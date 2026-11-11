@@ -385,6 +385,9 @@ python3 "$BP" --out "$PB" >/dev/null 2>&1
 check "P1 build-plugin.py builds the three plugins" "$([ -f "$PB/ai-toolbox-skills/.claude-plugin/plugin.json" ] && [ -f "$PB/ai-toolbox-agents/.claude-plugin/plugin.json" ] && [ -f "$PB/ai-toolbox-gates/.mcp.json" ]; echo $?)"
 
 src_skills="$(cd "$here/skills" && for d in */; do d="${d%/}"; case "$d" in _template*|mod-dev) continue ;; esac; [ -f "$d/SKILL.md" ] && echo "$d"; done | wc -l | tr -d ' ')"
+# The plugin also carries the run-<loop> wrappers from loops/<n>/SKILL.md (TASK-0273).
+loop_skills="$(cd "$here/loops" && for d in */; do d="${d%/}"; case "$d" in _template*) continue ;; esac; [ -f "$d/SKILL.md" ] && echo "$d"; done | wc -l | tr -d ' ')"
+src_skills=$((src_skills + loop_skills))
 mkdir -p "$tmp/em"
 (cd "$here" && python3 scripts/emit-agents.py claude-code "$tmp/em" >/dev/null 2>&1)
 src_agents="$(ls "$tmp/em" | wc -l | tr -d ' ')"

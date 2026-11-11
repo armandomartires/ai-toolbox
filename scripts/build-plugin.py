@@ -4,7 +4,9 @@
 One plugin per component kind, generated from the existing sources so no
 second copy is ever edited by hand:
 
-  ai-toolbox-skills  skills/ (every skill but _template and mod-dev)
+  ai-toolbox-skills  skills/ (every skill but _template and mod-dev), plus the
+                     five run-<loop> wrappers from loops/<n>/SKILL.md with
+                     their loop.md beside them
   ai-toolbox-agents  the agents emitted for claude-code by scripts/emit-agents.py;
                      depends on ai-toolbox-skills
   ai-toolbox-gates   .mcp.json and the gates server (mcp-servers/gates)
@@ -56,7 +58,10 @@ GAPS = ("Known gaps from the plugin cache: skills and agents were written for an
               "loops/ (not shipped); the emitted agents cite skills/... paths that "
               "resolve only in a checkout; unattended-ops/scripts/check-binding.sh "
               "defaults to ../../../loops/unattended-run/loop.md and needs the loop "
-              "file passed as its second argument. mod-dev is left out (checkout only). ")
+              "file passed as its second argument. mod-dev is left out (checkout only). "
+              "The five run-<loop> skills (invoked by hand, never by the model) carry "
+              "their loop.md beside them, so they work without loops/; the other "
+              "loops/ pointers in the skills still do not resolve here. ")
 
 READMES = {
     "skills": "Skills from the ai-toolbox repository, one folder per skill under "
@@ -188,6 +193,16 @@ def skill_names():
                   and os.path.isfile(os.path.join(d, n, "SKILL.md")))
 
 
+def loop_skill_names():
+    """Loops that carry a SKILL.md wrapper and a loop.md (none in a fake root)."""
+    d = os.path.join(ROOT, "loops")
+    if not os.path.isdir(d):
+        return []
+    return sorted(n for n in os.listdir(d) if not n.startswith("_template")
+                  and os.path.isfile(os.path.join(d, n, "SKILL.md"))
+                  and os.path.isfile(os.path.join(d, n, "loop.md")))
+
+
 def build(out):
     """Write the three plugins under out; return the executable paths (relative
     to out, '/'-separated)."""
@@ -203,6 +218,16 @@ def build(out):
         copy_tree(os.path.join(ROOT, "skills", n),
                   os.path.join(out, PREFIX + "skills", "skills", n), execs,
                   "skills/" + n, PREFIX + "skills/skills/" + n)
+
+    # The loop skills (TASK-0273): loops/<n>/SKILL.md becomes skills/run-<n>/
+    # with loop.md copied beside it, so the wrapper's relative link resolves
+    # in a plugin that ships no loops/ folder.
+    for n in loop_skill_names():
+        for f in ("SKILL.md", "loop.md"):
+            copy_file(os.path.join(ROOT, "loops", n, f),
+                      os.path.join(out, PREFIX + "skills", "skills", "run-" + n, f),
+                      execs, "loops/%s/%s" % (n, f),
+                      "%sskills/skills/run-%s/%s" % (PREFIX, n, f))
 
     emit_agents(os.path.join(out, PREFIX + "agents", "agents"))
 

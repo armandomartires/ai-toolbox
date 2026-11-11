@@ -41,6 +41,15 @@ The repo root is a Claude Code marketplace (`.claude-plugin/marketplace.json`) l
 | release-check | Verify, index, review, and commit a completed unit of work in this repo. Run at the end of any task that changed a component, a script, or documentation. | loops/release-check |
 | unattended-run | Drive a queue of settled, committed tasks to committed and evidenced completion with no human in the session, parking anything that cannot be proven and stopping before push. Run overnight or batched, never for a task whose design or scope is still open. | loops/unattended-run |
 
+## Loop skills
+| Name | Description | Path |
+|------|-------------|------|
+| run-ansible-change | Run the ansible-change loop by hand: loop.md in this folder is the procedure. Invoke with /run-ansible-change. | loops/ansible-change |
+| run-design-brief | Run the design-brief loop by hand: loop.md in this folder is the procedure. Invoke with /run-design-brief. | loops/design-brief |
+| run-project-build | Run the project-build loop by hand: loop.md in this folder is the procedure. Invoke with /run-project-build. | loops/project-build |
+| run-release-check | Run the release-check loop by hand: loop.md in this folder is the procedure. Invoke with /run-release-check. | loops/release-check |
+| run-unattended-run | Run the unattended-run loop by hand: loop.md in this folder is the procedure. Invoke with /run-unattended-run. | loops/unattended-run |
+
 ## Mods
 | Name | Status | Description | Path |
 |------|--------|-------------|------|

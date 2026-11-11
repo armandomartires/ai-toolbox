@@ -1701,6 +1701,16 @@ if ! CONTROLS_OUT="$(bash tests/test-skill-controls.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# Loop skills: five thin run-<loop> wrappers, disable-model-invocation, linking
+# loop.md, listed in the registry and shipped in the skills plugin (TASK-0273).
+# Fixture copies under mktemp prove a deleted wrapper fails. Unconditional
+# (ADR-0009).
+if ! LOOPSK_OUT="$(bash tests/test-loop-skills.sh 2>&1)"; then
+  printf '%s\n' "$LOOPSK_OUT" | grep -v '^PASS' | sed 's/^/LOOP-SKILLS: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # CLAUDE.md is a regular file importing @AGENTS.md and the .claude/rules/ files
 # carry a paths filter and are tracked (TASK-0275, ADR-0061). Reads only.
 # Unconditional (ADR-0009).
