@@ -356,6 +356,17 @@ Two hooks, tracked here because `.claude/` is gitignored, replace that default
   unlanded commits, a locked worktree) is printed and the hook exits 0, so the
   worktree is kept.
 
+A third hook, `Stop` -> `hooks/stop-fast-check.sh` (TASK-0277), runs
+`scripts/fast-check.sh` (skill frontmatter, registry, hidden Unicode; about 10 s
+on Windows, measured) only when `git status` shows tracked changes, and blocks
+the stop with exit 2 and the failure text. A clean tree is not delayed.
+Untracked new files and changes already committed are not checked (the full
+gate and CI cover them). When the payload's `stop_hook_active` is true it lets
+the stop through: a failure is reported once per turn and cannot trap the
+session, and the next turn that changes tracked files checks again. The tree
+checked is the payload's `cwd` repository, else `CLAUDE_PROJECT_DIR`, else this
+checkout. `FAST_CHECK_SKIP=1` turns the hook off. Proof: `tests/test-stop-hook.sh`.
+
 The branch is `agent/<slug>` because the hook has no task id. When the task is
 known, create the worktree with `worktree.sh add TASK-nnnn` instead, which
 gives `agent/TASK-nnnn` and resumes that branch on a later session.

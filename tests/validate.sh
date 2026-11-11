@@ -1635,6 +1635,17 @@ if ! WORKTREE_OUT="$(bash tests/test-worktree.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# The Claude Code Stop hook runs scripts/fast-check.sh (frontmatter, registry,
+# hidden Unicode) only when tracked files changed and blocks with its output
+# (TASK-0277, P1.7). tests/test-stop-hook.sh runs the hook against a mktemp
+# repository: blocked on a broken skill, silent on a clean or untracked-only
+# tree, one report per turn. Deliberately unconditional (ADR-0009).
+if ! STOP_OUT="$(bash tests/test-stop-hook.sh 2>&1)"; then
+  printf '%s\n' "$STOP_OUT" | grep -v '^PASS' | sed 's/^/STOP-HOOK: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # No tracked file names a private host (TASK-0162).
 #
 # WHY: the mirror is public (ADR-0028), and AGENTS.md's "the intranet hostname

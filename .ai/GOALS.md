@@ -603,7 +603,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0275-claude-md-layer.md
 - [ ] TASK-0276 — Ship permissions and sandbox settings (P1.6)
   .ai/tasks/TASK-0276-permissions-and-sandbox.md
-- [>] TASK-0277 — Stop hook runs a fast check (P1.7)
+- [?] TASK-0277 — Stop hook runs a fast check (P1.7)
   .ai/tasks/TASK-0277-stop-hook-fast-check.md
 - [ ] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
   .ai/tasks/TASK-0278-evals-trials-and-growth.md

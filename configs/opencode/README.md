@@ -381,3 +381,11 @@ skill deployed: unattended-ops -> opencode (link)
 
 Resulting additions, from a before/after listing: `unattended-ops` in the
 skills directory; all nine unattended-run roles in `~/.config/opencode/agents/`, and `opencode agent list` reports each as `(primary)` — the check the OpenCode driver's preflight makes, observed against the real client. **Nothing is pruned**, as install.sh itself states.
+
+## Stop-time fast check (TASK-0277)
+
+Claude Code runs `scripts/fast-check.sh` from a `Stop` hook when tracked files
+changed (`configs/claude-code/README.md`). No OpenCode or Codex equivalent is
+wired: this task did not verify that either client offers a hook that can
+block a turn from ending, so that is unknown, not a finding. Run
+`bash scripts/fast-check.sh` by hand, or rely on the pre-commit gate and CI.

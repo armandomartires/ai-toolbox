@@ -17,7 +17,7 @@
 # than reaching a commit.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-REG=docs/registry.md
+REG="${REGISTRY_OUT:-docs/registry.md}"   # REGISTRY_OUT: scripts/fast-check.sh renders to a scratch file
 
 # Strip one matching pair of surrounding quotes from a YAML scalar.
 #
