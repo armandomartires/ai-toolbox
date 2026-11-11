@@ -601,7 +601,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0274-claude-skill-controls.md
 - [?] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
   .ai/tasks/TASK-0275-claude-md-layer.md
-- [ ] TASK-0276 — Ship permissions and sandbox settings (P1.6)
+- [?] TASK-0276 — Ship permissions and sandbox settings (P1.6)
   .ai/tasks/TASK-0276-permissions-and-sandbox.md
 - [?] TASK-0277 — Stop hook runs a fast check (P1.7)
   .ai/tasks/TASK-0277-stop-hook-fast-check.md

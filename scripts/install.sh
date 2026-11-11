@@ -46,6 +46,19 @@
 # THIS checkout's .claude/settings.json, created if absent. Other hooks are
 # kept, and a file that does not parse is never written.
 #
+# Permissions and sandbox (TASK-0276, Q13=C). The claude-code step also merges
+# configs/claude-code/settings.permissions.json (deny Read of .env*, deny
+# force-push, ask on push and WebFetch) into the same project settings, for
+# every install. The sandbox block (settings.sandbox.json) is for unattended
+# runs only: `--unattended` writes it, with the permission rules, to
+# .claude/settings.unattended.json, which the unattended driver passes to
+# `claude --settings`; settings.json never gets it. No launcher passes it
+# yet (TASK-0284 wires the Agent SDK runner). It fails when a fragment is
+# missing. The sandbox keys are overwritten from the fragment, so a weakened
+# value does not survive a re-run; --status reports it. Lists are merged without
+# duplicates, an existing scalar is kept, a file that does not parse is never
+# written.
+#
 # Mod status (issue #5): every mod line names its status.json status, e.g.
 # [experimental]. A label only: what is deployed does not depend on it.
 #
@@ -78,12 +91,13 @@ cd "$(dirname "$0")/.."
 MODE="link"
 WANT_CLIENT="all"
 BIONIC_PROJECT=""
-STATUS=0
+STATUS=0 UNATTENDED=0
 ONLY="" ONLY_SET=0
 while [ $# -gt 0 ]; do
   case "$1" in
     link|copy) MODE="$1" ;;
     --status)  STATUS=1 ;;
+    --unattended) UNATTENDED=1 ;;
     --only)    shift; ONLY="${ONLY:+$ONLY,}${1:-}"; ONLY_SET=1 ;;
     --only=*)  ONLY="${ONLY:+$ONLY,}${1#*=}"; ONLY_SET=1 ;;
     --client)  shift; WANT_CLIENT="${1:-all}" ;;
@@ -101,6 +115,11 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+if [ "$UNATTENDED" -eq 1 ] && [ "$WANT_CLIENT" != all ] && [ "$WANT_CLIENT" != claude-code ]; then
+  echo "--unattended writes Claude Code settings; it cannot be combined with --client $WANT_CLIENT" >&2
+  exit 2
+fi
 
 WINDOWS_LINKS=0
 case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) WINDOWS_LINKS=1 ;; esac
@@ -524,6 +543,90 @@ print("hooks added: %s -> claude-code (%s in %s; from the next session)"
 PYHOOKS
 }
 
+# Merge permission or sandbox fragments into a settings file (TASK-0276).
+# $1 `write` or `status`, $2 the settings file, $3 the label, $4... fragments.
+# Objects merge recursively, lists are unioned in order, an existing scalar is
+# kept (the sandbox label overwrites them). An absent fragment is skipped; an unparsable file is never written.
+settings_fragments() {
+  local action="$1" target="$2" label="$3"; shift 3
+  local frags=() f
+  for f in "$@"; do [ -f "$f" ] && frags+=("$f"); done
+  [ "${#frags[@]}" -gt 0 ] || return 0
+  if [ "$action" = write ]; then mkdir -p "$(dirname "$target")" || return 1; fi
+  python3 - "$target" "$action" "$label" "${frags[@]}" <<'PYFRAG'
+import json, os, sys
+target, action, label = sys.argv[1:4]
+frags = sys.argv[4:]
+
+
+# The sandbox label OVERWRITES scalars from the fragment: a weakened value
+# (sandbox.enabled false) must not survive a re-run. Lists are still unioned,
+# so a domain added locally stays.
+force = label == "sandbox"
+
+
+def merge(have, want):
+    out = dict(have)
+    for k, v in want.items():
+        if k not in out:
+            out[k] = v
+        elif isinstance(out[k], dict) and isinstance(v, dict):
+            out[k] = merge(out[k], v)
+        elif force and not isinstance(v, (dict, list)):
+            out[k] = v
+        elif isinstance(out[k], list) and isinstance(v, list):
+            out[k] = list(out[k]) + [x for x in v if x not in out[k]]
+    return out
+
+
+data = {}
+if os.path.exists(target):
+    try:
+        with open(target, encoding="utf-8") as f:
+            text = f.read()
+        data = json.loads(text) if text.strip() else {}
+    except ValueError as e:
+        print("ERROR: %s does not parse as JSON (%s); its %s were not written."
+              % (target, e, label), file=sys.stderr)
+        sys.exit(1)
+    if not isinstance(data, dict):
+        print("ERROR: %s is not a JSON object; not written." % target, file=sys.stderr)
+        sys.exit(1)
+new = data
+for fr in frags:
+    with open(fr, encoding="utf-8") as f:
+        new = merge(new, json.load(f))
+changed = new != data
+if action == "status":
+    print("%-12s %-18s %s" % ("claude-code", label,
+          ("present in " if not changed else
+           ("MISSING or WEAKENED in " if force else "MISSING from ")) + target))
+    sys.exit(0)
+if not changed:
+    sys.exit(0)
+tmp = target + ".tmp"
+with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+    json.dump(new, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+os.replace(tmp, target)
+print("%s added -> claude-code (%s; from the next session)" % (label, target))
+PYFRAG
+}
+
+# Both settings merges of the claude-code step. $1 is `write` or `status`.
+claude_permissions() {
+  local action="$1" d="configs/claude-code"
+  if [ "$UNATTENDED" -eq 1 ]; then
+    for f in "$d/settings.permissions.json" "$d/settings.sandbox.json"; do
+      [ -f "$f" ] || { echo "ERROR: --unattended needs $f, which is missing; nothing written." >&2; return 1; }
+    done
+  fi
+  settings_fragments "$action" "$(pwd)/.claude/settings.json" permissions "$d/settings.permissions.json" || return 1
+  if [ "$UNATTENDED" -eq 1 ] || { [ "$action" = status ] && [ -f .claude/settings.unattended.json ]; }; then
+    settings_fragments "$action" "$(pwd)/.claude/settings.unattended.json" sandbox       "$d/settings.permissions.json" "$d/settings.sandbox.json" || return 1
+  fi
+}
+
 # Copy each selected mod's port for another client (TASK-0254, TASK-0255;
 # ADR-0040 clause 2, amended). $1 is opencode or codex, $2 the client's
 # config dir, $3 `write` or `status`. A port is mods/<name>/<client>/, a
@@ -661,7 +764,7 @@ if [ "$STATUS" -eq 1 ]; then
     if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
       plugin_dirs "$parent/settings.json" status
     fi
-    if [ "$client" = "claude-code" ]; then worktree_hooks status; fi
+    if [ "$client" = "claude-code" ]; then worktree_hooks status; claude_permissions status; fi
     if [ "$client" = opencode ]; then mod_ports opencode "$parent" status; fi
   done <<EOF
 $CLIENTS
@@ -718,6 +821,11 @@ while IFS='|' read -r client target parent agents_target; do
   esac
   if [ ! -d "$parent" ]; then
     echo "client skipped: $client (not installed: $parent absent)"
+    # --unattended must not exit 0 having written nothing: the unattended
+    # file is a project file and needs no ~/.claude.
+    if [ "$client" = "claude-code" ] && [ "$UNATTENDED" -eq 1 ]; then
+      claude_permissions write || exit 1
+    fi
     continue
   fi
   deployed_any=1
@@ -726,7 +834,7 @@ while IFS='|' read -r client target parent agents_target; do
   if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
     plugin_dirs "$parent/settings.json" write || exit 1
   fi
-  if [ "$client" = "claude-code" ]; then worktree_hooks write || exit 1; fi
+  if [ "$client" = "claude-code" ]; then worktree_hooks write || exit 1; claude_permissions write || exit 1; fi
   if [ "$client" = opencode ]; then mod_ports opencode "$parent" write; fi
 
   # Agents are EMITTED, never linked (ADR-0018 clause 3): a per-client file's

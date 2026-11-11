@@ -413,6 +413,65 @@ and **Branch prefix** (Settings > Code) are account-wide, not per project, so
 this repo asks for no value there; if they are set, a folder outside every
 repository satisfies ADR-0023's "never inside the repo".
 
+## Permissions and sandbox (TASK-0276, Q13=C)
+
+Permission rules everywhere, the sandbox for unattended runs only.
+
+- `settings.permissions.json`, merged by `bash scripts/install.sh --client
+  claude-code` into this checkout's `.claude/settings.json` on every install.
+  Deny: `Read` of `.env`, `.env.local`, `.env.*.local` and the named
+  `.env.development|staging|production|test`, at any depth (`**/`); `git push`
+  with `--force` or `-f` anywhere in the line, a `+refspec`, `--mirror`,
+  `--delete` and a `:branch` delete. Ask: `git push*` (so `--force-with-lease`
+  asks, it is not denied), `git -C * push*`, `git -c * push*`, and `WebFetch`.
+  Lists are merged without duplicates, every other rule is kept, a second run
+  changes nothing. The role guard and role rules are TASK-0271's, not here.
+- `.env.example` stays readable on purpose: a deny always beats an allow, so
+  the deny list names the secret-bearing files instead of `.env*`. A secret
+  file under another name needs its own rule in `.claude/settings.local.json`.
+- **Read rules do not stop `cat .env` through Bash.** Outside the sandbox a
+  shell command reads any file the user can. Only the sandbox (unattended) and
+  Vault (AGENTS.md: values never live in a `.env`) close that.
+- `settings.sandbox.json`, written only by `install.sh --unattended`, to
+  `.claude/settings.unattended.json` (with the same permission rules), never to
+  `settings.json`. It sets `sandbox.enabled` true, `allowUnsandboxedCommands`
+  false, and `sandbox.network.allowedDomains` to `gitlab.com`, `github.com`,
+  `pypi.org`, `files.pythonhosted.org` and `registry.npmjs.org`. A re-run
+  overwrites these scalars (a weakened `enabled: false` does not survive; 
+  `--status` prints `MISSING or WEAKENED`) and keeps domains you added.
+  `--unattended` exits non-zero when either fragment is missing, and when
+  `~/.claude` is absent it still writes the file, says the client was skipped
+  and exits non-zero. The key name `allowUnsandboxedCommands` could not be
+  checked against a Claude Code settings schema in this repo; check it on the
+  first live run.
+- **Nothing applies the unattended file yet.** The file is produced for a
+  launcher that starts Claude Code with `claude --settings
+  .claude/settings.unattended.json`. No launcher does that today: the Claude
+  Code binding runs as a Workflow inside an existing session, and the CI
+  unattended run is the OpenCode driver. TASK-0284 (the Agent SDK runner) is
+  where it gets wired. Until then sandboxing an unattended run needs the
+  managed settings below.
+- Under a marketplace-primary install (D2=B) `install.sh` is not the path, so
+  the agents or skills plugin has to carry the same permission rules: the build
+  (TASK-0272) must read `settings.permissions.json`, not a copy. That build
+  does not exist yet; the check that the plugin carries them belongs to that
+  task.
+
+**Recommended: managed settings.** For a host that runs unattended work, put
+the `sandbox` block in the managed settings file (the organisation level,
+which a project or user file cannot override) instead of relying on a flag a
+launcher may forget.
+
+**Tuning `allowedDomains`.** Too narrow a list stalls an unattended run on its
+first blocked fetch, and the sandbox CI job is the check. Add the intranet
+GitLab host and anything else a run needs to the `allowedDomains` of your own
+`.claude/settings.unattended.json` or managed settings, not to the tracked
+fragment: the intranet hostname never goes in a tracked file (AGENTS.md).
+
+Start with these rules and tune from use: `ask` on push and `WebFetch` can
+interrupt a daily flow; move a rule to `allow` in `.claude/settings.local.json`
+rather than editing the fragment.
+
 ## Install record — 2026-09-24 (`TASK-0090`)
 
 `scripts/install.sh link`, exit **0**. The lines for this client, verbatim

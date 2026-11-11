@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: planned
+- Status: in review
 - Owner: agent
 - Branch: agent/TASK-0276
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Applies to: `configs/claude-code/`, `scripts/install.sh`, `tests/test-install.sh`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.6 (N6), decisions Q13=C (permission rules everywhere, sandbox for unattended runs only); related: #11, R-05
 
@@ -46,15 +46,16 @@ Add harness-side least privilege. Permission rules ship in the settings fragment
 
 ## Acceptance criteria
 
-- [ ] Merged interactive settings contain the deny and ask rules and no sandbox block
-- [ ] The unattended settings contain `sandbox.enabled` and the four domains
-- [ ] A second install run is idempotent
-- [ ] Removing the fragment fails the test
+- [x] Merged interactive settings contain the deny and ask rules and no sandbox block
+- [ ] The unattended settings contain `sandbox.enabled` and the four domains, and apply to unattended runs
+  - Half met: `install.sh --unattended` writes `.claude/settings.unattended.json` with `sandbox.enabled` and the domains (tested, Q4), but no launcher passes it with `--settings`: the Claude Code binding runs as a Workflow inside a session and the CI unattended run is the OpenCode driver. It is applied to no run until TASK-0284 (Agent SDK runner) wires it; managed settings are the interim route.
+- [x] A second install run is idempotent
+- [x] Removing the fragment fails the test
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] `bash tests/test-install.sh`
+- [x] tests/validate.sh (OK, 2026-11-11)
+- [x] `bash tests/test-install.sh`
 
 ## Risks and rollback
 
@@ -66,12 +67,18 @@ Add harness-side least privilege. Permission rules ship in the settings fragment
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `configs/claude-code/settings.permissions.json` | merged into project settings by `install.sh` |
+| `configs/claude-code/settings.sandbox.json` | written to `.claude/settings.unattended.json` by `install.sh --unattended`; applied by nothing yet |
 
-Next:
+Next: wire `claude --settings .claude/settings.unattended.json` in the Agent SDK runner (TASK-0284); have TASK-0272's plugin build read `settings.permissions.json` and test that the plugin carries the rules.
 
 ## Execution log
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-11 · agent/Sonnet 5.5 · built; in review
+  - Done: tests P0-P7 added to `tests/test-install.sh` first (5 FAIL: no fragments, `--unattended` unknown); then `configs/claude-code/settings.permissions.json`, `settings.sandbox.json`, `settings_fragments` and `claude_permissions` in `scripts/install.sh` (`--unattended` writes `.claude/settings.unattended.json`: sandbox plus the permission rules; settings.json never gets sandbox); README section with the managed-settings recommendation and `allowedDomains` tuning.
+  - Evidence: `bash tests/test-install.sh` OK (62 cases); with the permissions fragment moved away it fails P0, P1, P4, P6 (4 of 62).
+  - Review fixes (same day): HIGH-1 README and brief no longer claim the unattended file is applied (TASK-0284 wires it); push denies widened (-f, --force anywhere, +refspec, --mirror, --delete, :branch; `--force-with-lease` stays ask; `git -C/-c * push` ask); `.env` deny by named files at any depth so `.env.example` stays readable, README notes `cat .env` via Bash is not stopped; `--unattended` fails on a missing fragment, refuses another `--client`, and writes the file with a loud non-zero exit when `~/.claude` is absent; sandbox scalars are overwritten on re-run and `--status` prints MISSING or WEAKENED; `allowUnsandboxedCommands: false` added (key name not verifiable in this repo); `files.pythonhosted.org` added; tests renamed Q0-Q13, exact domain list, P6 message.
+  - Deviation: the plugin carrying the rules (scope: TASK-0272's build reads this fragment) is not done or tested, because `scripts/build-plugin.py` does not exist yet; that check belongs to TASK-0272 and the README says so. Q10 (ask, then deny) is not applied: this brief fixes ask on push and WebFetch and names no switch to deny. The five domains are gitlab.com, github.com, pypi.org, files.pythonhosted.org, registry.npmjs.org; the intranet host is added locally, never tracked.

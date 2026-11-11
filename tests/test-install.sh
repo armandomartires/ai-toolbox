@@ -283,6 +283,93 @@ inst --client claude-code
 check "H4 an unparsable file is left untouched and the run exits 1" "$([ "$rc" -eq 1 ] && [ "$(cat "$PS")" = '{bad' ] && has "$out" 'does not parse'; echo $?)" "$out"
 rm -rf "$R/.claude" "$R/configs"
 
+# --- Permissions and sandbox (TASK-0276, Q13=C): permission rules go into the
+# project settings of every install; the sandbox block only into the
+# unattended file, written by `--unattended` ---
+mkdir -p "$R/configs/claude-code"
+PF="$here/configs/claude-code/settings.permissions.json"
+SF="$here/configs/claude-code/settings.sandbox.json"
+RPF="$R/configs/claude-code/settings.permissions.json"
+RSF="$R/configs/claude-code/settings.sandbox.json"
+check "Q0 both fragments exist in the repo" "$([ -f "$PF" ] && [ -f "$SF" ]; echo $?)" "$PF $SF"
+[ -f "$PF" ] && cp "$PF" "$RPF"
+[ -f "$SF" ] && cp "$SF" "$RSF"
+rm -rf "$R/.claude"; mkdir -p "$R/.claude"
+printf '{"model": "m", "permissions": {"allow": ["Bash(ls*)"], "deny": ["Read(./secret.txt)"]}}\n' > "$PS"
+inst --client claude-code
+perm_ok="$(python3 -c '
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+p = d.get("permissions", {})
+dn, ask = p.get("deny", []), p.get("ask", [])
+ok = d["model"] == "m" and "sandbox" not in d \
+  and p.get("allow") == ["Bash(ls*)"] and "Read(./secret.txt)" in dn \
+  and all(dn.count(x) == 1 for x in ("Read(**/.env)", "Read(**/.env.local)",
+      "Bash(git push --force *)", "Bash(git push -f *)", "Bash(git push * -f *)",
+      "Bash(git push * --force)", "Bash(git push * +*)", "Bash(git push * --mirror*)",
+      "Bash(git push * --delete*)", "Bash(git push * :*)")) \
+  and not any("example" in x or x == "Read(**/.env*)" for x in dn) \
+  and not any(x.startswith("Bash(git push") and "lease" in x for x in dn) \
+  and all(ask.count(x) == 1 for x in ("Bash(git push*)", "Bash(git -C * push*)",
+      "Bash(git -c * push*)", "WebFetch"))
+sys.stdout.write("yes" if ok else "no")' "$PS" 2>&1)"
+check "Q1 interactive install merges the deny and ask rules (-f, +refspec, :branch, -C) beside existing ones, no .env.example deny, no sandbox block" "$([ "$rc" -eq 0 ] && [ "$perm_ok" = yes ] && has "$out" 'permissions added'; echo $?)" "$out $perm_ok"
+before="$(cat "$PS")"
+inst --client claude-code
+check "Q2 a second interactive run changes nothing" "$([ "$rc" -eq 0 ] && [ "$(cat "$PS")" = "$before" ] && lacks "$out" 'permissions added'; echo $?)" "$out"
+[ ! -e "$R/.claude/settings.unattended.json" ]
+check "Q3 an interactive install writes no unattended file" "$?"
+inst --client claude-code --unattended
+US="$R/.claude/settings.unattended.json"
+sb_ok="$(python3 -c '
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+s = d.get("sandbox", {})
+doms = s.get("network", {}).get("allowedDomains", [])
+ok = s.get("enabled") is True and s.get("allowUnsandboxedCommands") is False \
+  and doms == ["gitlab.com", "github.com", "pypi.org", "files.pythonhosted.org", "registry.npmjs.org"] \
+  and "Bash(git push --force *)" in d.get("permissions", {}).get("deny", [])
+sys.stdout.write("yes" if ok else "no")' "$US" 2>&1)"
+check "Q4 --unattended writes sandbox.enabled, allowUnsandboxedCommands false and the exact domain list (plus the permission rules) to the unattended file" "$([ "$rc" -eq 0 ] && [ "$sb_ok" = yes ] && has "$out" 'sandbox added'; echo $?)" "$out $sb_ok"
+ubefore="$(cat "$US")"; pbefore="$(cat "$PS")"
+inst --client claude-code --unattended
+check "Q5 a second unattended run changes nothing, and settings.json still has no sandbox" "$([ "$rc" -eq 0 ] && [ "$(cat "$US")" = "$ubefore" ] && [ "$(cat "$PS")" = "$pbefore" ] && lacks "$(cat "$PS")" sandbox; echo $?)" "$out"
+printf '{bad' > "$PS"
+inst --client claude-code
+check "Q6 an unparsable settings.json is left untouched and the run exits 1 naming its permissions" "$([ "$rc" -eq 1 ] && [ "$(cat "$PS")" = '{bad' ] && has "$out" 'its permissions were not written'; echo $?)" "$out"
+printf '{}\n' > "$PS"
+# A real red proof: the removed fragment makes the run succeed WITHOUT rules,
+# which is what Q1 catches; here the installer must still not fail silently
+# when the unattended run lacks a fragment.
+rm -f "$RPF"
+inst --client claude-code
+check "Q7 with the permissions fragment removed no rule is merged (Q1 would fail)" "$([ "$rc" -eq 0 ] && lacks "$(cat "$PS")" 'git push'; echo $?)" "$out"
+inst --client claude-code --unattended
+check "Q8 --unattended with a fragment missing exits non-zero and says so" "$([ "$rc" -ne 0 ] && has "$out" 'settings.permissions.json, which is missing'; echo $?)" "$out"
+cp "$PF" "$RPF"; rm -f "$RSF"
+inst --client claude-code --unattended
+check "Q9 --unattended without the sandbox fragment exits non-zero" "$([ "$rc" -ne 0 ] && has "$out" 'settings.sandbox.json, which is missing'; echo $?)" "$out"
+cp "$SF" "$RSF"
+printf '{"sandbox": {"enabled": false, "allowUnsandboxedCommands": true, "network": {"allowedDomains": ["local.example"]}}}\n' > "$US"
+inst --status
+has "$out" 'MISSING or WEAKENED'
+check "Q10 --status reports a weakened unattended file" "$?" "$out"
+inst --client claude-code --unattended
+wk="$(python3 -c '
+import json, sys
+s = json.load(open(sys.argv[1], encoding="utf-8"))["sandbox"]
+d = s["network"]["allowedDomains"]
+sys.stdout.write("yes" if s["enabled"] is True and s["allowUnsandboxedCommands"] is False and d[0] == "local.example" and "gitlab.com" in d else "no")' "$US" 2>&1)"
+check "Q11 a re-run forces sandbox.enabled true over a weakened value and keeps a local domain" "$([ "$rc" -eq 0 ] && [ "$wk" = yes ]; echo $?)" "$out $wk"
+mv "$HOME/.claude" "$HOME/.claude.off"
+rm -f "$US"
+inst --client claude-code --unattended
+check "Q12 --unattended without ~/.claude still writes the project file, says the client was skipped, and exits non-zero (no client deployed)" "$([ "$rc" -ne 0 ] && [ -f "$US" ] && has "$out" 'client skipped: claude-code'; echo $?)" "$out"
+inst --client opencode --unattended
+check "Q13 --unattended with another --client is refused" "$([ "$rc" -eq 2 ]; echo $?)" "$out"
+mv "$HOME/.claude.off" "$HOME/.claude"
+rm -rf "$R/.claude" "$R/configs"
+
 if [ "$fails" -ne 0 ]; then
   echo "test-install.sh: $fails of $cases case(s) FAILED"; exit 1
 fi
