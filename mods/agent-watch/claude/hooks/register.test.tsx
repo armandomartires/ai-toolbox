@@ -930,6 +930,29 @@ test('a background command is a running row with no agent, and its notification 
   await ui.unmount()
 })
 
+test('a finished task list with a background command still running is not ALL DONE; the band names what it waits on', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000 })
+  engine(on, { value: [] })
+  backgroundTools(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: [{ content: 'Run the gate', status: 'in_progress' }, { content: 'Commit', status: 'pending' }] } as AppTool)
+  await $.tool.call({ tool: 'Bash', command: './gates.sh', description: 'Run the driver', run_in_background: true })
+  await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'done' } as AppTool)
+  await clock.advance(1_000)
+  let ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.find({ text: /^2\/2$/ })).toBeDefined()
+  expect(await ui.find({ text: /ALL DONE/ })).toBeUndefined()
+  expect(await ui.find({ text: /1 BACKGROUND RUNNING/ })).toBeDefined()
+  await ui.unmount()
+
+  await $.prompt.submit({ text: notice('b1', 'completed', 'Background command "Run the driver" completed (exit code 0)'), origin: { kind: 'task-notification' } } as never)
+  await clock.advance(1_000)
+  ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.find({ text: /ALL DONE/ })).toBeDefined()
+  expect(await ui.find({ text: /BACKGROUND RUNNING/ })).toBeUndefined()
+  await ui.unmount()
+})
+
 test('a PowerShell command moved to the background at its timeout is a running shell until its notification', async ($, on) => {
   const clock = mock.clock(on, { now: 700_000 })
   engine(on, { value: [] })
@@ -1102,8 +1125,8 @@ test("a session.start that finds the atoms empty restores this session's rows fr
   expect((await ui.find({ text: /Explore · Old search/ }))?.text).toBeDefined()
   expect((await ui.find({ text: /shell · Tail the log/ }))?.text).toBeDefined()
   expect((await ui.find({ text: /^1 RUNNING$/ }))?.text).toBeDefined()
-  // The task list came back too: 1 of 2 done.
-  expect((await ui.find({ text: /^1\/2$/ }))?.text).toBeDefined()
+  // The task list came back too: its 1 of 2 beside the ended agent (1/1) and the running shell (0/1).
+  expect((await ui.find({ text: /^2\/4$/ }))?.text).toBeDefined()
   await ui.unmount()
   // A new agent takes the next number after the restored one, as before the reload.
   await $.agent.spawn({ prompt: 'look', description: 'Find hooks', subagentType: 'Explore' } as AgentSpawnInput)

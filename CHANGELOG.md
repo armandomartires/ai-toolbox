@@ -1,5 +1,8 @@
 # Changelog
 
+## agent-watch 0.13.5
+- The band and the Sessions pane agree on steps (`TASK-0288`). On 2026-11-10 the band read `6/6 STEPS · ALL DONE` while the pane read `19/36 STEPS · RUNNING`. The pane's centre and PROGRESS now add this session's own task list to everything below it, which they had left out whenever anything was below it. A member that ended done counts all its steps, so an orchestrator task whose worker left its own list unticked no longer reads unfinished. The band no longer says `ALL DONE` while a background command runs: it says `N BACKGROUND RUNNING`. Tested in the mod test kit; not yet seen live.
+
 ## task-orchestrator 0.7.1
 - A worker that stopped itself is reopened when it is resumed (`TASK-0289`). The assignment tells a worker to stop before its cap with a `partial` report and asks the coordinator to resume it, and a worker that reports `blocked` asks the same. Until now only a worker the engine cut off at its cap was reopened on resume. On 2026-11-11 a self-stopped writer, resumed while three workers ran, ran as a fourth outside the write fence, and `collect` kept its first report. Its `turn.start` now goes through the same admission check: it reopens to `running` under the fence, or stays as it was with a note when the cap or the writer rule refuses; its next report closes the task. A hand-off is not resumed this way. 151 tests in the mod test kit (4 new; the three resume tests in `register.test.tsx` failed first).
 

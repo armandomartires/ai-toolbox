@@ -724,3 +724,26 @@ test('Daylight: a label on a fill is on-ink at 4.5:1 or more; else it sits off t
     if (one.fill !== light['on-ink']) expect(ratio(one.fill, light.surface), one.body).toBeGreaterThanOrEqual(4.5)
   }
 })
+
+test("the centre counts this session's own steps beside its background tasks, as the band does", () => {
+  const steps = [1, 2, 3, 4, 5, 6].map(i => ({ id: String(i), text: `step ${i}`, status: 'completed' as const }))
+  const background = [
+    { id: 'b1', kind: 'shell' as const, description: 'gates', status: 'completed' as const, startedAt: 1 },
+    { id: 'b2', kind: 'shell' as const, description: 'driver', status: 'running' as const, startedAt: 2 },
+  ]
+  const tree = sessionTree({ rows: [], runs: [], tones: {}, tasks: steps, ledger: [], background })
+  expect(by(arcs(tree), 'main').progress).toEqual({ done: 7, total: 8 })
+  // With nothing below it the centre is the list alone.
+  expect(by(arcs(sessionTree({ rows: [], runs: [], tones: {}, tasks: steps, ledger: [] })), 'main').progress).toEqual({ done: 6, total: 6 })
+})
+
+test("an ended task counts every step done, whatever its worker's list was left at; a failed one keeps the count it reached", () => {
+  const list = (done: number) => [1, 2, 3, 4].map(i => ({ id: String(i), text: `s${i}`, status: (i <= done ? 'completed' : 'pending') as 'completed' | 'pending' }))
+  const { list: chart } = build(
+    [row('w1', 'completed', { tasks: list(1) }), row('w2', 'failed', { tasks: list(1) })],
+    [task('T1', 'completed', { agentId: 'w1' }), task('T2', 'failed', { agentId: 'w2' })],
+  )
+  expect(by(chart, 'task-T1').progress).toEqual({ done: 4, total: 4 })
+  expect(by(chart, 'task-T2').progress).toEqual({ done: 1, total: 4 })
+  expect(by(chart, 'orch').progress).toEqual({ done: 5, total: 8 })
+})

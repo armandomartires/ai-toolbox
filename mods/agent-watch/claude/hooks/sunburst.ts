@@ -139,15 +139,22 @@ const codesOf = (all: Struct[]): Map<string, string> => {
 const span = (start: number | undefined, end: number | undefined, now: number | undefined) =>
   start === undefined ? 0 : Math.max(0, (end ?? now ?? start) - start)
 
-/** A member's steps: its task list, a background run's reported steps, else 0/1 while it runs or waits and 1/1 once ended. */
+/**
+ * A member's steps: its task list, a background run's reported steps, else
+ * 0/1 while it runs or waits and 1/1 once ended. One that ended done counts
+ * every step done, whatever its list was left at; one that failed or stopped
+ * keeps the count it reached.
+ */
 const memberRoll = (m: Member, now: number | undefined): Roll => {
   const tasks = m.row?.tasks
   const own = tasks !== undefined && tasks.length > 0
   const reported = m.background?.steps
   const ended = stateKind(m.status, m.badge) !== 'running' && !m.isActive && !isActive(m.status)
+  const total = own ? tasks.length : reported !== undefined ? reported.total : 1
+  const isDone = ended && stateKind(m.status, m.badge) === 'done'
   return {
-    done: own ? tasks.filter(t => t.status === 'completed').length : reported !== undefined ? reported.done : ended ? 1 : 0,
-    total: own ? tasks.length : reported !== undefined ? reported.total : 1,
+    done: isDone ? total : own ? tasks.filter(t => t.status === 'completed').length : reported !== undefined ? reported.done : ended ? 1 : 0,
+    total,
     tokens: m.row?.tokens ?? 0,
     duration: span(m.startedAt ?? m.row?.startedAt, m.endedAt ?? m.row?.endedAt, now),
   }
@@ -192,6 +199,8 @@ export const arcs = (tree: readonly SessionNode[], opts: Opts = {}): Arc[] => {
     const known = rolled.get(s)
     if (known !== undefined) return known
     const parts = [...s.members, ...s.hidden].map(m => memberRoll(m, opts.now)).concat(s.kids.map(roll))
+    // This session's own task list counts beside what sits below it, so the centre holds the band's steps too.
+    if (parts.length > 0 && s.node.kind === 'main' && s.node.progress?.unit === 'STEPS') parts.push({ done: s.node.progress.done, total: s.node.progress.total, tokens: 0, duration: 0 })
     let out: Roll
     if (parts.length > 0) {
       const added = sum(parts)
