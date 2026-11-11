@@ -22,7 +22,9 @@ the bit in the index for files already tracked under plugins/; for new files,
 run `git add plugins` and then this script again.
 
 Usage:
-  build-plugin.py                 write plugins/ (replaces the three folders)
+  build-plugin.py                 write plugins/ (replaces the three folders) and the
+                                  plugins' versions in .claude-plugin/marketplace.json
+                                  (versions: scripts/plugin-versions.json, TASK-0283)
   build-plugin.py --check         fail if plugins/ differs from a fresh build
                                   (CRLF-blind; compares the executable bit in the index)
   build-plugin.py --out DIR       write the three folders under DIR instead
@@ -37,7 +39,7 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = "0.1.0"  # the version rule is TASK-0283's
+RULE = os.path.join(ROOT, "scripts", "plugin-versions.json")  # the version rule (TASK-0283)
 PREFIX = "ai-toolbox-"
 KINDS = ("skills", "agents", "gates")
 EXCLUDE_SKILLS = ("mod-dev",)  # an ai-toolbox checkout only
@@ -165,12 +167,32 @@ def write_json(path, obj):
 
 
 def manifest(kind):
-    m = {"name": PREFIX + kind, "version": VERSION,
+    with open(RULE, encoding="utf-8") as f:
+        spec = json.load(f)["plugins"][PREFIX + kind]
+    m = {"name": PREFIX + kind, "version": spec["version"],
          "description": DESCRIPTIONS[kind],
          "author": {"name": "Armando Martires"}, "license": "MIT"}
-    if kind == "agents":
-        m["dependencies"] = [PREFIX + "skills"]
+    if spec.get("dependencies"):
+        m["dependencies"] = [{"name": n, "version": r} for n, r in spec["dependencies"].items()]
     return m
+
+
+def sync_marketplace(path):
+    """Write each plugin's version and dependency ranges from the rule into its
+    marketplace entry; the other entries are left as they are."""
+    with open(RULE, encoding="utf-8") as f:
+        plugins = json.load(f)["plugins"]
+    with open(path, encoding="utf-8") as f:
+        market = json.load(f)
+    for e in market["plugins"]:
+        spec = plugins.get(e["name"])
+        if spec is None:
+            continue
+        e["version"] = spec["version"]
+        e.pop("dependencies", None)
+        if spec.get("dependencies"):
+            e["dependencies"] = [{"name": n, "version": r} for n, r in spec["dependencies"].items()]
+    write_json(path, market)
 
 
 def emit_agents(dest):
@@ -294,6 +316,9 @@ def main():
         return 2
     execs = build(out)
     if out == os.path.join(ROOT, "plugins"):
+        market = os.path.join(ROOT, ".claude-plugin", "marketplace.json")
+        if os.path.isfile(market):  # a test's fake root has none
+            sync_marketplace(market)
         tracked = index_modes()
         if tracked is None:
             tracked = {p: True for p in execs}  # no index to ask or to tell

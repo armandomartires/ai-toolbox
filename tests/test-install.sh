@@ -417,9 +417,12 @@ m = json.load(open(mk, encoding="utf-8"))
 e = {p["name"]: p for p in m["plugins"]}
 ok = all(n in e and e[n]["source"] == "./plugins/" + n
          for n in ("ai-toolbox-skills", "ai-toolbox-agents", "ai-toolbox-gates"))
-ok = ok and e["ai-toolbox-agents"].get("dependencies") == ["ai-toolbox-skills"]
+want = [{"name": "ai-toolbox-skills", "version": "~0.1.0"}]  # the range form: TASK-0283
+want = json.load(open(mk.replace(".claude-plugin/marketplace.json", "scripts/plugin-versions.json"), encoding="utf-8"))["plugins"]["ai-toolbox-agents"]["dependencies"]
+want = [{"name": n, "version": r} for n, r in want.items()]
+ok = ok and e["ai-toolbox-agents"].get("dependencies") == want and want[0]["name"] == "ai-toolbox-skills"
 pj = json.load(open(b + "/ai-toolbox-agents/.claude-plugin/plugin.json", encoding="utf-8"))
-ok = ok and pj.get("dependencies") == ["ai-toolbox-skills"]
+ok = ok and pj.get("dependencies") == want
 print("yes" if ok else "no")
 PY
 )"
@@ -437,7 +440,7 @@ ok = sorted(s["env"]) == ["GATES_ALLOWED_EXECUTABLES", "GATES_MAP", "GATES_MAP_S
 sys.exit(0 if ok else 1)' "$PB/ai-toolbox-gates/.mcp.json"; echo $?)"
 # A fake root: CRLF sources, the excluded skill, a --check that ignores line endings.
 FR="$tmp/fakeroot"; mkdir -p "$FR/scripts" "$FR/.ai/context" "$FR/skills/only" "$FR/skills/mod-dev" "$FR/agents" "$FR/mcp-servers/gates"
-cp "$BP" "$here/scripts/emit-agents.py" "$FR/scripts/"
+cp "$BP" "$here/scripts/emit-agents.py" "$here/scripts/plugin-versions.json" "$FR/scripts/"
 cp "$here/.ai/context/model-tiers.md" "$FR/.ai/context/" 2>/dev/null
 cp -r "$here/agents/critic" "$FR/agents/critic"
 cp -r "$here/mcp-servers/gates/src" "$here/mcp-servers/gates/pyproject.toml" "$FR/mcp-servers/gates/"

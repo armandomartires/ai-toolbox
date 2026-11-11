@@ -3,7 +3,7 @@
 # adds the external MCP servers that npx launches from server.json. The SBOM
 # is kept as a job artifact: 30 days on master and MRs, never expiring on a
 # tag. Not a merge gate: an SBOM is a record, so it fails only if generation
-# itself breaks. Signing and SLSA provenance are not here (see #12).
+# itself breaks. Signing and SLSA provenance are in .gitlab/ci/release.yml.
 sbom:
   stage: test
   image: python:3.11

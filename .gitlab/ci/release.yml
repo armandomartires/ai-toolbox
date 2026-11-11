@@ -1,0 +1,117 @@
+# Signed, versioned plugin releases (TASK-0283, P2.4, remediation item #12 / R-07).
+# Rule: docs/operations/releases.md. One tag per plugin, <plugin>--v<version>,
+# for example ai-toolbox-skills--v0.1.0; the version is the one in
+# scripts/plugin-versions.json (scripts/check-release.py refuses any other).
+#
+# The release job packs that plugin's reproducible tarball, signs it with
+# Sigstore (cosign sign-blob, keyless through the GitLab OIDC token, or a key),
+# verifies it with scripts/verify-release.sh against the exact identity of this
+# tag pipeline, and proves an altered copy and an unsigned copy do NOT verify.
+# release-provenance signs a provenance statement the pipeline writes (an
+# in-toto statement with a SLSA predicate). It is not GitLab's runner-generated
+# attestation. Nothing signs outside a tag pipeline and no key is stored here.
+#
+# WHAT THE HUMAN SUPPLIES (nothing is configured by this file):
+#   - protected tags: `*--v*` must be a protected tag pattern, and every
+#     COSIGN_* variable below must be masked/protected, so only people allowed
+#     to push a release tag can run a signing job. Without it any developer
+#     could push a tag and obtain a signature under the project identity.
+#   - the signing identity. Keyless (default): the GitLab instance must allow
+#     id_tokens with audience "sigstore". The verify identity is derived from
+#     the pipeline: $CI_SERVER_URL/$CI_PROJECT_PATH//.gitlab-ci.yml@refs/tags/<tag>,
+#     with the issuer $CI_SERVER_URL. Key alternative: set COSIGN_PRIVATE_KEY
+#     (the key text), COSIGN_PASSWORD and COSIGN_PUBLIC_KEY (a file variable);
+#     sign-release.sh then signs with the key and verify-release.sh checks it.
+#   - COSIGN_VERSION and COSIGN_SHA256 (the release's checksum for the linux
+#     amd64 binary, copied from its cosign_checksums.txt): the job fails if
+#     either is unset rather than run an unpinned download.
+#   - RELEASE_CLI_IMAGE: registry.gitlab.com/gitlab-org/release-cli@sha256:<digest>
+#     for release-publish (a pinned digest; a bare tag is refused).
+#   - the approval of the first release: release-publish is a manual job.
+.release-tag-rule:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^ai-toolbox-(skills|agents|gates)--v[0-9]+\.[0-9]+\.[0-9]+$/
+
+release:
+  stage: deploy
+  image: python:3.11
+  extends: .release-tag-rule
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  variables:
+    COSIGN_OIDC_ISSUER: $CI_SERVER_URL
+  script:
+    - python3 scripts/check-release.py --tag "$CI_COMMIT_TAG"
+    - python3 scripts/build-plugin.py --check
+    - bash scripts/install-cosign.sh
+    - bash scripts/pack-release.sh "$CI_COMMIT_TAG" release
+    - artifact="release/${CI_COMMIT_TAG}.tar.gz"
+    - (cd release && sha256sum -c "${CI_COMMIT_TAG}.tar.gz.sha256")
+    - bash scripts/sign-release.sh "$artifact"
+    - bash scripts/verify-release.sh "$artifact"
+    - |
+      # Negative cases: an altered copy and an unsigned copy must not verify.
+      cp "$artifact" release/tampered.tar.gz
+      cp "$artifact.bundle" release/tampered.tar.gz.bundle
+      echo altered >> release/tampered.tar.gz
+      if bash scripts/verify-release.sh release/tampered.tar.gz; then
+        echo "an altered artifact verified: the signature check is not working"; exit 1
+      fi
+      cp "$artifact" release/unsigned.tar.gz
+      if bash scripts/verify-release.sh release/unsigned.tar.gz; then
+        echo "an unsigned artifact verified: the signature check is not working"; exit 1
+      fi
+      rm release/tampered.tar.gz release/tampered.tar.gz.bundle release/unsigned.tar.gz
+  artifacts:
+    name: "${CI_COMMIT_TAG}"
+    paths:
+      - release/
+    expire_in: never
+
+release-provenance:
+  stage: deploy
+  image: python:3.11
+  extends: .release-tag-rule
+  needs: [release]
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  variables:
+    COSIGN_OIDC_ISSUER: $CI_SERVER_URL
+  script:
+    - bash scripts/install-cosign.sh
+    - bash scripts/verify-release.sh "release/${CI_COMMIT_TAG}.tar.gz"
+    - python3 scripts/make-provenance.py "release/${CI_COMMIT_TAG}.tar.gz" > release/provenance.json
+    - bash scripts/sign-release.sh release/provenance.json
+    - bash scripts/verify-release.sh release/provenance.json
+  artifacts:
+    name: "${CI_COMMIT_TAG}-provenance"
+    paths:
+      - release/provenance.json
+      - release/provenance.json.bundle
+    expire_in: never
+
+# Creating the GitLab release is the human's approval of the release.
+release-publish:
+  stage: deploy
+  image: $RELEASE_CLI_IMAGE
+  needs: [release, release-provenance]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^ai-toolbox-(skills|agents|gates)--v[0-9]+\.[0-9]+\.[0-9]+$/
+      when: manual
+  script:
+    - |
+      case "$RELEASE_CLI_IMAGE" in *@sha256:*) ;; *) echo "RELEASE_CLI_IMAGE must be pinned by @sha256 digest"; exit 1 ;; esac
+    - echo "releasing $CI_COMMIT_TAG"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    description: "Signed release of $CI_COMMIT_TAG. Verify with scripts/verify-release.sh (docs/operations/releases.md)."
+    assets:
+      links:
+        - name: "${CI_COMMIT_TAG}.tar.gz"
+          url: "${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/release/${CI_COMMIT_TAG}.tar.gz?job=release"
+        - name: "${CI_COMMIT_TAG}.tar.gz.bundle"
+          url: "${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/release/${CI_COMMIT_TAG}.tar.gz.bundle?job=release"
+        - name: "provenance.json"
+          url: "${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/release/provenance.json?job=release-provenance"

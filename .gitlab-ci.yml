@@ -13,6 +13,8 @@ include:
   - local: .gitlab/ci/gitleaks.yml
   # CycloneDX SBOM (issue #12).
   - local: .gitlab/ci/sbom.yml
+  # Signed, versioned per-plugin releases (issue #12, TASK-0283).
+  - local: .gitlab/ci/release.yml
   # Agent eval suite (issue #10).
   - local: .gitlab/ci/evals.yml
   # External MCP server lockfiles and tool-definition hashes (issue #7).

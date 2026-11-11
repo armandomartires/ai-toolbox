@@ -11,20 +11,28 @@
       "name": "ai-toolbox-skills",
       "source": "./plugins/ai-toolbox-skills",
       "description": "The ai-toolbox skills: project workflow, design flow, vault secrets, repo inventory, migration, ansible and unattended operations.",
-      "category": "workflow"
+      "category": "workflow",
+      "version": "0.1.0"
     },
     {
       "name": "ai-toolbox-agents",
       "source": "./plugins/ai-toolbox-agents",
       "description": "The ai-toolbox role agents emitted for Claude Code, with the worktree hooks. Depends on ai-toolbox-skills.",
       "category": "orchestration",
-      "dependencies": ["ai-toolbox-skills"]
+      "version": "0.1.0",
+      "dependencies": [
+        {
+          "name": "ai-toolbox-skills",
+          "version": "~0.1.0"
+        }
+      ]
     },
     {
       "name": "ai-toolbox-gates",
       "source": "./plugins/ai-toolbox-gates",
       "description": "The gates MCP server: named verification gates run detached behind a watchdog.",
-      "category": "quality"
+      "category": "quality",
+      "version": "0.1.0"
     },
     {
       "name": "agent-watch",

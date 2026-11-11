@@ -323,7 +323,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [ ] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
 - [ ] TASK-0281 — Codex port completion (P2.2)
 - [ ] TASK-0282 — Long-running harness alignment (P2.3)
-- [ ] TASK-0283 — Signed, versioned releases (P2.4)
+- [?] TASK-0283 — Signed, versioned releases (P2.4)
 - [ ] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
 - [ ] TASK-0285 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
 

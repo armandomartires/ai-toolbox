@@ -1655,6 +1655,20 @@ if ! COTEL_OUT="$(bash tests/test-claude-otel.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# Per-plugin version and tag rule, and the signature wiring (TASK-0283, P2.4):
+# versions agree across the rule, plugin.json and the marketplace; an unsigned
+# or altered artifact fails verification. cosign is stubbed offline; the live
+# proof is .gitlab/ci/release.yml on a tag. Unconditional (ADR-0009).
+if ! RELEASE_OUT="$(python3 scripts/check-release.py 2>&1)"; then
+  printf '%s\n' "$RELEASE_OUT"
+  fail=1
+fi
+if ! RELEASE_TEST_OUT="$(bash tests/test-release.sh 2>&1)"; then
+  printf '%s\n' "$RELEASE_TEST_OUT" | grep -v '^PASS' | sed 's/^/RELEASE: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # No tracked file names a private host (TASK-0162).
 #
 # WHY: the mirror is public (ADR-0028), and AGENTS.md's "the intranet hostname
