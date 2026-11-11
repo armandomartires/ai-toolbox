@@ -85,11 +85,11 @@ def call_provider(provider, task, timeout=120):
         raise ProviderError(f"{key_var} is not set")
     model = os.environ.get(model_var, default_model)
     if provider == "anthropic":
-        # Messages API: x-api-key auth, system is a top-level field.
+        # Messages API: x-api-key auth, system is a top-level field. No sampling parameter: Claude Sonnet 5.5
+        # refuses a non-default temperature with HTTP 400 (TASK-0290).
         body = json.dumps({
             "model": model,
             "max_tokens": 4096,
-            "temperature": 0,
             "system": system_prompt(task["agent"]),
             "messages": [{"role": "user", "content": task["input"]}],
         }).encode()
@@ -260,6 +260,9 @@ def self_test():
         expect(b.get("model") == "test-model" and b.get("max_tokens") and b.get("system")
                and b.get("messages") == [{"role": "user", "content": tasks[0]["input"]}],
                "anthropic body shape wrong")
+        # Claude Sonnet 5.5 answers a non-default sampling value with HTTP 400 (seen live in pipeline 922,
+        # TASK-0290), and API version 2026-10-21 refuses temperature/top_p/top_k on every model.
+        expect(not {"temperature", "top_p", "top_k"} & set(b), "anthropic body sends a sampling parameter")
         # A malformed body must end as a clean ProviderError, never escape run().
         real_sleep, time.sleep = time.sleep, (lambda *a: None)
         try:

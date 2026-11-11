@@ -17,6 +17,8 @@ mcp-tool-lock:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     - python3 --version && node --version
+    # The Debian image ships python3 without ensurepip, so venv needs python3-venv (TASK-0290).
+    - apt-get update -qq && apt-get install -y -qq python3-venv >/dev/null
     - python3 -m venv /tmp/uv-venv && /tmp/uv-venv/bin/pip install -q uv==0.13.6
     - export PATH="/tmp/uv-venv/bin:$PATH" && uv --version
     - |
