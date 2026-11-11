@@ -1646,6 +1646,15 @@ if ! STOP_OUT="$(bash tests/test-stop-hook.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# Claude Code telemetry settings (TASK-0279, P1.9, R-10): the shipped env turns
+# telemetry on, exports metrics over OTLP to a local placeholder, logs no prompt
+# and carries no credential. The live collector proof is tests/otel (CI).
+if ! COTEL_OUT="$(bash tests/test-claude-otel.sh 2>&1)"; then
+  printf '%s\n' "$COTEL_OUT" | grep -v '^PASS' | sed 's/^/CLAUDE-OTEL: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # No tracked file names a private host (TASK-0162).
 #
 # WHY: the mirror is public (ADR-0028), and AGENTS.md's "the intranet hostname

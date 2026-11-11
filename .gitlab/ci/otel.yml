@@ -12,3 +12,5 @@ otel-collector:
     - pip install -q uv==0.13.6
     - (cd mcp-servers/gates && uv run --frozen pytest -q tests/test_telemetry.py)
     - bash tests/otel/collector-check.sh
+    # TASK-0279 (R-10): claude_code metrics from the shipped settings, no prompt text.
+    - bash tests/otel/claude-code-check.sh

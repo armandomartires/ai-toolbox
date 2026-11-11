@@ -472,6 +472,50 @@ Start with these rules and tune from use: `ask` on push and `WebFetch` can
 interrupt a daily flow; move a rule to `allow` in `.claude/settings.local.json`
 rather than editing the fragment.
 
+## Telemetry (`TASK-0279`, R-10)
+
+`settings.otel.json` is the `env` block that turns on Claude Code's own
+OpenTelemetry export, aimed at the OTLP/HTTP collector the gates job uses
+(`tests/otel/`). **Nothing merges it: `install.sh` does not touch it.** Copy
+its four variables into the `env` of the settings file you want (user
+`~/.claude/settings.json` or a project `.claude/settings.json`), or export
+them in the shell.
+
+| Variable | Value | Why |
+|---|---|---|
+| `CLAUDE_CODE_ENABLE_TELEMETRY` | `1` | The master switch; without it nothing is exported |
+| `OTEL_METRICS_EXPORTER` | `otlp` | Sends the `claude_code.*` metrics (sessions, tokens, cost, ...) |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/json` | Matches the collector's HTTP receiver on 4318 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | **A placeholder.** The real collector address is an intranet host: set it in your own untracked settings or shell, never in this file |
+
+**Prompts are not exported.** The file sets no `OTEL_LOG_USER_PROMPTS` and no
+`OTEL_LOGS_EXPORTER`; per the vendor docs, prompt text is redacted from events
+unless `OTEL_LOG_USER_PROMPTS=1`. Do not set it. Any credential for an
+authenticated collector (`OTEL_EXPORTER_OTLP_HEADERS`) belongs in the Vault
+(ADR-0030), never in a tracked file.
+
+**Identity attributes.** *Vendor docs, not observed here:* real metrics can
+carry identity attributes such as `user.email` and `user.account_uuid`;
+`OTEL_METRICS_INCLUDE_SESSION_ID`, `OTEL_METRICS_INCLUDE_VERSION` and
+`OTEL_METRICS_INCLUDE_ACCOUNT_UUID` control some of them. This file sets none,
+so the client's defaults apply; check what a live session sends before pointing
+it at a shared collector. The replay does not model these attributes.
+
+**What is proved, and what is not.** *Offline* (`tests/validate.sh`,
+`tests/test-claude-otel.sh`): the file turns telemetry on, exports metrics,
+points only at a local placeholder, enables no prompt logging and holds no
+credential. *CI* (`otel-collector` job, `tests/otel/claude-code-check.sh`):
+a real, pinned OpenTelemetry Collector receives `claude_code.session.count`
+and `claude_code.token.usage` when the shipped settings are applied, receives
+nothing when `CLAUDE_CODE_ENABLE_TELEMETRY` is removed (the job fails), and
+the collector's output holds no prompt text even with the logs exporter added
+(a canary prompt is visible there only when `OTEL_LOG_USER_PROMPTS=1` is
+forced, which proves the detector). **The CI job drives the collector with a
+replay, `tests/otel/claude_code_replay.py`, not a live Claude Code**: a job has
+no binary or login. So the replay's reading of the env (flag, exporter, prompt
+redaction) follows the vendor docs and has not been observed against a live
+client; the first run on a real session is still owed.
+
 ## Install record — 2026-09-24 (`TASK-0090`)
 
 `scripts/install.sh link`, exit **0**. The lines for this client, verbatim

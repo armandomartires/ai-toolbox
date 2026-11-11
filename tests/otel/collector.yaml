@@ -12,3 +12,11 @@ service:
     traces:
       receivers: [otlp]
       exporters: [debug]
+    # Claude Code telemetry (TASK-0279): metrics and logs too, so the
+    # harness-side export can be asserted.
+    metrics:
+      receivers: [otlp]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      exporters: [debug]
