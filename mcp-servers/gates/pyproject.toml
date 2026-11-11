@@ -81,3 +81,13 @@ description = "Watchdog default for a gate with no timeout_seconds of its own. D
 [tool.ai-toolbox.smoke_test]
 # GATES_SANDBOX=none only because the handshake runs no gate.
 env = { GATES_MAP = "tests/fixtures/gates.json", GATES_MAP_SHA256 = "d64b1fba2691cfcbdd53232e349e967366e9c3b25ab7ff40df8c275c347a020a", GATES_ALLOWED_EXECUTABLES = "sh,false,sleep,printf", GATES_SANDBOX = "none" }
+
+# scripts/mcp-tool-lock.py: how to launch this server to hash its live tools/list
+# into tools.lock.json (TASK-0269; the authored shape has no server.json to hold
+# this). Paths are relative to this directory. Same fixture map as the smoke test;
+# the lock run starts the server and lists tools, it never starts a gate.
+# GATES_ALLOWED_LAUNCHERS names `sh` because the fixture's allowlist does.
+[tool.ai-toolbox.tool_lock]
+cwd = "."
+command = ["uv", "run", "--frozen", "--no-dev", "gates"]
+env = { GATES_MAP = "tests/fixtures/gates.json", GATES_MAP_SHA256 = "d64b1fba2691cfcbdd53232e349e967366e9c3b25ab7ff40df8c275c347a020a", GATES_ALLOWED_EXECUTABLES = "sh,false,sleep,printf", GATES_ALLOWED_LAUNCHERS = "sh", GATES_RUN_ROOT = "tests/fixtures/run", GATES_SANDBOX = "none" }

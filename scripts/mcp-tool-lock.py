@@ -7,7 +7,8 @@
 
 The server is launched from <server-dir>/server.json's `tool_lock.command`,
 else `pinned_launch.command` (the lockfile install), else `launch.command`,
-in `tool_lock.cwd` with `tool_lock.env`. It speaks MCP over stdio: initialize,
+in `tool_lock.cwd` with `tool_lock.env`. An authored server with no server.json reads
+the same table from pyproject.toml `[tool.ai-toolbox.tool_lock]`. It speaks MCP over stdio: initialize,
 notifications/initialized, tools/list (all pages). Each tool's FULL definition
 (name, title, description, inputSchema, outputSchema, annotations) is
 canonicalised (sorted keys, no whitespace) and SHA-256 hashed, so a changed
@@ -37,7 +38,8 @@ def tool_hash(tool: dict) -> str:
 
 def list_tools(argv: list[str], cwd: str, env: dict, timeout: int = 120) -> list[dict]:
     proc = subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                            encoding="utf-8")
     def send(msg):
         proc.stdin.write(json.dumps(msg) + "\n"); proc.stdin.flush()
     def recv(want):
@@ -72,8 +74,24 @@ def list_tools(argv: list[str], cwd: str, env: dict, timeout: int = 120) -> list
         proc.wait(timeout=10)
 
 
+def load_manifest(server_dir: Path) -> dict:
+    """server.json for an external server; for an authored (Python) server with
+    no server.json, the same keys read from pyproject.toml: name and version from
+    [project], the launch from [tool.ai-toolbox.tool_lock]."""
+    sj = server_dir / "server.json"
+    if sj.is_file():
+        return json.loads(sj.read_text())
+    import tomllib
+    py = tomllib.loads((server_dir / "pyproject.toml").read_text())
+    tl = py.get("tool", {}).get("ai-toolbox", {}).get("tool_lock")
+    if not tl or not tl.get("command"):
+        raise SystemExit("%s: no server.json and no [tool.ai-toolbox.tool_lock].command in pyproject.toml" % server_dir)
+    return {"name": py["project"]["name"], "upstream": {"version": py["project"]["version"]},
+            "tool_lock": tl, "launch": {"command": tl["command"]}}
+
+
 def snapshot(server_dir: Path) -> dict:
-    m = json.loads((server_dir / "server.json").read_text())
+    m = load_manifest(server_dir)
     pl = m.get("pinned_launch") or {}
     tl = m.get("tool_lock") or {}
     argv = tl.get("command") or pl.get("command") or m["launch"]["command"]
@@ -81,7 +99,8 @@ def snapshot(server_dir: Path) -> dict:
     # Minimal environment (review note_1348 item 4): third-party server code
     # must not inherit CI or host secrets. Only PATH, HOME, LANG and the
     # manifest's own tool_lock.env entries reach it.
-    env = {k: os.environ[k] for k in ("PATH", "LANG") if k in os.environ}
+    # SYSTEMROOT is not a secret; Windows node aborts at startup without it.
+    env = {k: os.environ[k] for k in ("PATH", "LANG", "SYSTEMROOT") if k in os.environ}
     env["HOME"] = tempfile.gettempdir()
     env.update({k: os.path.expandvars(v) for k, v in tl.get("env", {}).items()})
     tools = list_tools(argv, cwd, env)

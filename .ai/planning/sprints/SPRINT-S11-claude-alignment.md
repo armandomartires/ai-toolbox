@@ -23,7 +23,7 @@ Raise the alignment score from **54.5 / 100** toward a Claude-centric toolbox wi
 | Q9 | C | k=5 trials, nightly, all three providers (Anthropic, xAI, OpenAI). |
 | Q10 | A | The role guard answers `ask` for out-of-allowlist calls for two weeks, then `deny`. |
 | Q11 | B | Plugins per component kind: skills, agents plus role guard, gates MCP, with dependencies. Counts of 8 skills, the agents the emitter emits for Claude Code and the gates server are taken across the three. |
-| Q12 | A | Lock all 17 graphify tools. |
+| Q12 | B (re-decided 2026-11-10, was A) | Lock the 12 tools `graphify serve` lists and correct the manifest's prose; 17 was not reachable (four tools belong to the unwired ontology server, one name is the server). |
 | Q13 | C | Permission rules everywhere; sandbox for unattended runs only. |
 | Q14 | B | The Stop hook runs a fast subset (frontmatter, registry, hidden-Unicode) only when tracked files changed. |
 | Q15 | B | Packaging first with the 4 current roles; the role guard after. |
@@ -82,7 +82,7 @@ From the plan's "Order of execution", with Q15 = B applied.
 
 ## Answers that are not the assessment's recommendation
 
-Five answers differ from what the assessment recommended. Each one carries a cost the tasks name.
+Four answers differ from what the assessment recommended (Q12 was re-decided to the recommendation on 2026-11-10). Each one carries a cost the tasks name.
 
 | Decision | Chosen | Recommended | Consequence |
 |----------|--------|-------------|-------------|
@@ -90,7 +90,6 @@ Five answers differ from what the assessment recommended. Each one carries a cos
 | D7 | HTTP behind OAuth 2.1 (B) | stdio only (A) | An execution server becomes network-reachable. `TASK-0285` needs its own ADR, default-off transport, mandatory authentication, a sandbox and no live exposure without the human. P2.6 stays HIGH risk. |
 | Q9 | k=5, nightly, three providers (C) | k=3, weekly Claude (B) | The highest API spend of the four options. `TASK-0267` and `TASK-0278` set a job timeout and a spend cap, and estimate cost before the first run. |
 | Q11 | Three plugins by component kind (B) | One core plugin (A) | Dependencies and versions between three plugins to keep in sync. `TASK-0272` tests the counts across the three; `TASK-0283` owns the version rule; plugin subagents ignore hooks and `mcpServers`, so the guard sits in plugin-level hooks keyed on `agent_type`. |
-| Q12 | Lock all 17 graphify tools (A) | Narrow to the 12 locked (B) | A larger attack surface for a server nothing uses. `TASK-0269` locks all 17 and CODEOWNERS reviews the hashes. |
 
 ## Task numbering
 

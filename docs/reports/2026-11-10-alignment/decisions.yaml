@@ -306,8 +306,8 @@ questions:
         consequence: "No drift, no maintenance; re-add when a consumer appears."
       - key: other
         text: "Other (explain in notes)"
-    answer: A
-    notes: ""
+    answer: B
+    notes: "Re-decided 2026-11-10 (was A): graphify serve 0.18.0 lists 12 tools; four ontology tools come only from the unwired 'graphify ontology serve', and the 17th name is the server itself (TASK-0269)."
   - id: Q13
     title: "Scope of shipped permissions and sandbox"
     question: "Where should the shipped permissions and sandbox apply?"

@@ -2,7 +2,12 @@
 # On the docker runner (tag `docker`, runner 3). `npm ci` fails on any
 # integrity mismatch; mcp-tool-lock.py verify fails on any added, removed or
 # changed tool definition against the reviewed tools.lock.json. Network is
-# needed here only for the npm registry download.
+# needed here only for the npm registry and, for gates, the PyPI download.
+# gates is an authored Python server: uv installs it from uv.lock (--frozen),
+# and its launch comes from pyproject.toml [tool.ai-toolbox.tool_lock]
+# (TASK-0269). tests/test-mcp-tools.py then asserts, for every server in the
+# loop below, that the live tools/list equals the lock, and that gates'
+# tools/list carries its readOnlyHint / destructiveHint annotations.
 mcp-tool-lock:
   stage: test
   image: node:24-bookworm@sha256:e7add2a490bb17d97b485b8641bd88455fff7839ade0f5eba493c3508124d413
@@ -12,9 +17,16 @@ mcp-tool-lock:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     - python3 --version && node --version
+    - python3 -m venv /tmp/uv-venv && /tmp/uv-venv/bin/pip install -q uv==0.13.6
+    - export PATH="/tmp/uv-venv/bin:$PATH" && uv --version
     - |
       set -e
-      for d in mcp-servers/ansible mcp-servers/graphify; do
-        (cd "$d/lock" && npm ci --ignore-scripts --no-audit --no-fund)
+      for d in mcp-servers/ansible mcp-servers/graphify mcp-servers/gates; do
+        if [ -d "$d/lock" ]; then
+          (cd "$d/lock" && npm ci --ignore-scripts --no-audit --no-fund)
+        else
+          (cd "$d" && uv sync --frozen --no-dev)
+        fi
         python3 scripts/mcp-tool-lock.py verify "$d"
       done
+    - python3 tests/test-mcp-tools.py

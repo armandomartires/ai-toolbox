@@ -28,10 +28,13 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from gates import telemetry
 
+READ_ONLY = ToolAnnotations(readOnlyHint=True)
+DESTRUCTIVE = ToolAnnotations(readOnlyHint=False, destructiveHint=True)
 HANDLE = r"^[A-Za-z0-9._-]{1,128}$"
 NAME = r"^[A-Za-z0-9._-]{1,64}$"
 TERMINAL = {"PASSED", "FAILED", "SKIPPED", "TIMEOUT", "KILLED", "MISSING", "REFUSED"}
@@ -257,7 +260,7 @@ def _terminal(d: Path) -> bool:
     return _read(d, "state", "MISSING") in TERMINAL
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 def list_gates() -> list[dict[str, Any]]:
     """List the gates the consuming repository's map declares, by name.
 
@@ -270,7 +273,7 @@ def list_gates() -> list[dict[str, Any]]:
             for n, e in sorted(cfg["gates"].items())]
 
 
-@mcp.tool()
+@mcp.tool(annotations=DESTRUCTIVE)
 def start_gate(
     name: Annotated[str, Field(pattern=NAME, description="A gate name from list_gates")],
 ) -> dict[str, Any]:
@@ -340,7 +343,7 @@ def _start_gate(name: str) -> dict[str, Any]:
     return summary(d)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 async def wait_gate(
     handle: Annotated[str, Field(pattern=HANDLE, description="A handle from start_gate")],
     max_wait_seconds: Annotated[int, Field(ge=0, le=MAX_WAIT_SECONDS,
@@ -366,7 +369,7 @@ async def wait_gate(
         return out
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 def gate_status(
     handle: Annotated[str, Field(pattern=HANDLE, description="A handle from start_gate")],
 ) -> dict[str, Any]:
@@ -378,7 +381,7 @@ def gate_status(
     return summary(_dir(config(), handle))
 
 
-@mcp.tool()
+@mcp.tool(annotations=DESTRUCTIVE)
 async def kill_gate(
     handle: Annotated[str, Field(pattern=HANDLE, description="A handle from start_gate")],
 ) -> dict[str, Any]:

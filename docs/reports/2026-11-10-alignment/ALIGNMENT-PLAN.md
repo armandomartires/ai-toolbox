@@ -315,11 +315,11 @@ Unblocks: [P1.2 (N2)](#item-P1-2)
 
 *Single-select.* Recommended: **B**.
 
-- [x] **A.** Lock all 17 tools - Keeps the full surface; larger attack surface for an unused server.
-- [ ] **B.** Narrow cli_scope to the 12 locked tools **(Recommended)** - Closes the drift with no new exposure.
+- [ ] **A.** Lock all 17 tools - Keeps the full surface; larger attack surface for an unused server.
+- [x] **B.** Narrow cli_scope to the 12 locked tools **(Recommended)** - Closes the drift with no new exposure.
 - [ ] **C.** Remove graphify from the repo - No drift, no maintenance; re-add when a consumer appears.
 
-Other / notes: ______________________________
+Other / notes: re-decided 2026-11-10 from A to B. `graphify serve` 0.18.0 lists 12 tools; four ontology tools come only from the unwired `graphify ontology serve`, and the 17th listed name is the server itself (TASK-0269).
 
 Unblocks: [P0.4 (Q4)](#item-P0-4)
 

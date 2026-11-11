@@ -64,11 +64,10 @@
   "cli_scope": {
     "note": "capabilities.destructive above describes the WIRED command - `graphify serve` - and nothing else. The graphify CLI as a whole is not read-only, and reading this manifest as if it were would repeat B-012, where this repo's other manifest overstated a bound and the wrong claim then propagated into three wiring snippets. The distinction is mechanical, not a matter of trust: `graphify serve --help` declares no options at all beyond -h (observed 2026-09-23), so the flags that unlock mutation cannot be reached through it.",
     "wired_command_tools": {
-      "note": "Enumerated by reading the published bundle's serve() tool list at v0.18.0, not from upstream prose. Every one is a read or a rendering over an existing graph; none writes.",
+      "note": "The 12 tools `graphify serve` lists at v0.18.0, checked against the live tools/list (tools.lock.json hashes exactly these; tests/test-mcp-tools.py fails if the live list and the lock differ). Every one is a read or a rendering over an existing graph; none writes. There is no tool named graphify: that is the server name. The four ontology inspection tools (list_reconciliation_candidates, get_reconciliation_candidate, preview_ontology_decision_log, ontology_rebuild_status) come only from `graphify ontology serve --config`, which is NOT wired and NOT locked (Q12 re-decided to B, 2026-11-10).",
       "tools": [
-        "graphify, first_hop_summary, review_delta, review_analysis, recommend_commits",
-        "query_graph, answer_graph, get_node, get_neighbors, get_community, god_nodes, graph_stats, shortest_path",
-        "list_reconciliation_candidates, get_reconciliation_candidate, preview_ontology_decision_log, ontology_rebuild_status - ontology inspection, all documented by upstream as non-mutating"
+        "first_hop_summary, review_delta, review_analysis, recommend_commits",
+        "query_graph, answer_graph, get_node, get_neighbors, get_community, god_nodes, graph_stats, shortest_path"
       ]
     },
     "not_wired_mutating_commands": [
