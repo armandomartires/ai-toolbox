@@ -20,7 +20,7 @@
 #
 # Principles applied from the spec:
 #   - Only create files that provide immediate value; the rest are templates.
-#   - AGENTS.md is the single source of agent instructions; CLAUDE.md symlinks to it.
+#   - AGENTS.md is the single source of agent instructions; CLAUDE.md imports it with @AGENTS.md.
 #   - No secrets, no .env, no invented requirements — placeholders are marked FILL.
 #
 # THIS SCRIPT OWNS THE LAYOUT, NOT THE SHAPE (ADR-0027, B-040, TASK-0119).
@@ -317,16 +317,11 @@ File templates: `.ai/templates/`.
 EOF
 fi # AGENTS_MD_EXISTED
 
-# ---- CLAUDE.md (symlink with fallback, per ADR-0002) -------------------------------
-CLAUDE_MD_FALLBACK="no"
+# ---- CLAUDE.md (regular file importing AGENTS.md, ADR-0061) -----------------------
+# A symlink breaks on checkouts without core.symlinks; the import line does not.
 if [ ! -e "CLAUDE.md" ]; then
-  if ! ln -s AGENTS.md CLAUDE.md 2>/dev/null; then
-    # Symlinks unreliable on this checkout (e.g. Windows without
-    # core.symlinks=true). ADR-0002 fallback: copy, not a stub, and
-    # re-sync at the start of any session that touches agent instructions.
-    cp AGENTS.md CLAUDE.md
-    CLAUDE_MD_FALLBACK="yes"
-  fi
+  printf '%s
+' '@AGENTS.md' '' '# Claude Code notes' ''     'Claude-only facts go here. Everything shared lives in AGENTS.md; do not copy it.' > CLAUDE.md
 fi
 
 # ---- .ai governance layer -----------------------------------------------------------
@@ -420,7 +415,7 @@ and progress resumable in a new conversation.
 ## Decision
 Adopt the .ai framework (context / decisions / planning / tasks /
 sessions / reviews / templates) with AGENTS.md as the single source of
-agent instructions and CLAUDE.md as a symlink to it. Stack preset:
+agent instructions and CLAUDE.md importing it (@AGENTS.md). Stack preset:
 ${TYPE}. Work tracker: ${TRACKER}${TRACKER_PATH:+ (${TRACKER_PATH})}, declared in
 tracker.conf.
 
@@ -640,11 +635,4 @@ echo "     prove it with ${SKILL_DIR}/scripts/check-artifact.sh, then paste it."
 echo "     Labels and milestones: project-workflow's templates/reference/tracker.md."
 fi
 echo "  3. Delete directories that do not apply (e.g. docs/deployment/)."
-echo "  4. Windows checkouts: verify CLAUDE.md symlink with"
-echo "     git ls-files -s CLAUDE.md (mode 120000 = OK)."
-if [ "$CLAUDE_MD_FALLBACK" = "yes" ]; then
-  echo "  5. Symlink failed — CLAUDE.md was written as a plain copy of"
-  echo "     AGENTS.md (ADR-0002 fallback). Record an ADR documenting"
-  echo "     this environment's symlink limitation, and re-sync the copy"
-  echo "     at the start of any session that touches agent instructions."
-fi
+echo "  4. Keep CLAUDE.md to Claude-only notes under its @AGENTS.md first line."

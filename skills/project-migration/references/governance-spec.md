@@ -5,7 +5,7 @@ What each scaffolded file must contain. Read this when writing or reviewing one.
 ## Target structure
 
 ```text
-AGENTS.md  CLAUDE.md(symlink)  README.md  CHANGELOG.md  .gitignore  tracker.conf
+AGENTS.md  CLAUDE.md(@AGENTS.md import)  README.md  CHANGELOG.md  .gitignore  tracker.conf
 .ai/
   README.md
   context/    CURRENT_STATE.md  PROJECT_MAP.md  GLOSSARY.md

@@ -226,7 +226,7 @@ A project scaffolded by `project-workflow` chooses where its secrets live
   skipped, not created).
 - Deploy to one client: `bash scripts/install.sh link --client opencode`
   (or `claude-code`). `copy` instead of `link` for checkouts without
-  symlink support (ADR-0002).
+  symlink support.
 - Check what is installed: `bash scripts/install.sh --status`. One line per
   client and skill: `linked` to this checkout, or `COPY` with its version
   against the repo's, and `STALE` when they differ. A report, not a gate.

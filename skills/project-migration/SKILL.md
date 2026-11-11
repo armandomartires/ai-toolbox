@@ -4,7 +4,7 @@ description: "Harmonize an existing repository with the .ai agent-governance fra
 license: MIT
 metadata:
   author: armando.martires
-  version: 5.0.0
+  version: 5.1.0
 ---
 
 # Project migration to the .ai governance framework
@@ -59,7 +59,7 @@ Answer in these sections: **Understanding**, **Project inventory**, **Diagnosis*
 1. `git checkout -b chore/ai-governance-migration` — the merge commit is the single rollback point.
 2. Run the scaffold against the repo root, using the skill's own script path (never the target repo's `scripts/`): `bash "<skill dir>/scripts/ai-project-scaffold.sh" . --force --type python|node|generic`, plus `--tracker gitlab --gitlab-project group/name` or `--tracker github --github-repo owner/name` for a forge. The scaffold writes `tracker.conf`; on a forge it skips `.ai/planning/`, `.ai/tasks/`, `.ai/sessions/` and `.ai/reviews/`. Add `--no-git` when the repo already has history you do not want touched.
 3. Fill `AGENTS.md` from reality: the project's actual install/run/test/lint/build commands and real conventions. Keep it lean — invented or generic requirements make agent tasks measurably worse. Read `references/governance-spec.md` for its required contents.
-4. Create `CLAUDE.md` as a symlink (`ln -s AGENTS.md CLAUDE.md`), confirm git recorded mode `120000`, and on Windows/WSL where symlinks are unreliable use a documented alternative plus an ADR. Two divergent sources of truth are the failure to avoid.
+4. Create `CLAUDE.md` as a regular file whose first line is `@AGENTS.md`, followed only by Claude-only notes (ADR-0061); a symlink breaks on checkouts without `core.symlinks`. Never copy `AGENTS.md` into it: two divergent sources of truth are the failure to avoid.
 5. Backfill only `CURRENT_STATE.md`, `PROJECT_MAP.md`, and `ROADMAP.md`, as a snapshot of today. Do not reconstruct history.
 6. Commit the scaffold as one commit; each later migration step gets its own.
 7. Confirm the tracker with `skills/project-workflow/scripts/tracker.sh check`. An existing repo the scaffold did not touch gets it with `tracker.sh init`, in its own commit.

@@ -1,7 +1,7 @@
 # ADR-0002 — CLAUDE.md strategy
 
 ## Status
-Accepted
+Superseded by ADR-0061 (2026-11-11, `TASK-0275`). `CLAUDE.md` is now a regular file importing `@AGENTS.md`.
 
 ## Context
 CLAUDE.md must point at AGENTS.md without two divergent sources of

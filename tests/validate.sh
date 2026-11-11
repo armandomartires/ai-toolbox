@@ -1692,6 +1692,15 @@ if ! CONTROLS_OUT="$(bash tests/test-skill-controls.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# CLAUDE.md is a regular file importing @AGENTS.md and the .claude/rules/ files
+# carry a paths filter and are tracked (TASK-0275, ADR-0061). Reads only.
+# Unconditional (ADR-0009).
+if ! CLAUDE_MD_OUT="$(bash tests/test-claude-md.sh 2>&1)"; then
+  printf '%s\n' "$CLAUDE_MD_OUT" | grep -v '^PASS' | sed 's/^/CLAUDE-MD: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # Claude Code agents carry the alias from .ai/context/model-tiers.md, and an
 # unlisted role gets `inherit` (TASK-0268, ADR-0059). Reads the repo, writes
 # only under mktemp. Unconditional (ADR-0009).

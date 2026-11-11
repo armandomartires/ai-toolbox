@@ -47,7 +47,7 @@ Known limitation, not work: **`git add -- .`** cannot be denied at OpenCode's gl
 ## Standing decisions
 
 These are not to be re-litigated without a new ADR:
-- `ADR-0002`: `CLAUDE.md` is a symlink to `AGENTS.md`.
+- `ADR-0002`: superseded by `ADR-0061`; `CLAUDE.md` is a regular file whose first line is `@AGENTS.md`.
 - `ADR-0004`: this repo is canonical for `project-workflow`.
 - `ADR-0007`: trunk-based work, hook-first gating.
 - `ADR-0008`: no `SKILL.md` line budget.

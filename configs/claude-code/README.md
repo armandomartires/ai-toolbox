@@ -17,8 +17,8 @@ for skills, `mcp-servers/*/server.json` for MCP servers.
 bash scripts/install.sh link --client claude-code
 ```
 
-`link` (default) symlinks each skill into `~/.claude/skills/`, per
-ADR-0002's symlink-first preference; `copy` is the fallback for checkouts
+`link` (default) symlinks each skill into `~/.claude/skills/`.
+`copy` is the fallback for checkouts
 where symlinks are unavailable. Re-running is idempotent.
 
 Currently deployed: `project-migration`, `project-workflow`. Templates

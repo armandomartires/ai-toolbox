@@ -30,7 +30,8 @@ node_modules/
 # and .claude/workflows/ is where the unattended-run binding is *emitted*,
 # its source being skills/unattended-ops/templates/bindings/claude-code/
 # (ADR-0018's one-source-per-client-emission shape, applied here too).
-.claude/
+**/.claude/*
+!/.claude/rules/
 
 # Generated delivery dashboard (skills/project-workflow/scripts/build-dashboard.sh).
 # Deliberately NOT committed: it reads the git log, so it is stale the moment

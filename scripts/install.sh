@@ -19,8 +19,8 @@
 # are never removed; a left copy is reported. MCP commands are printed only
 # for selected servers.
 #
-# link (default) symlinks skills into each client's skills dir, per
-# ADR-0002's symlink-first preference; copy is the fallback for checkouts
+# link (default) symlinks skills into each client's skills dir.
+# copy is the fallback for checkouts
 # where symlinks are unavailable. The mode applies to SKILLS ONLY: agents
 # are generated per client (ADR-0018), so they have no link or copy mode.
 #

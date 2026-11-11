@@ -9,6 +9,7 @@
 # Agent instructions
 /AGENTS.md            @armando.martires
 /CLAUDE.md            @armando.martires
+/.claude/rules/       @armando.martires
 /agents/              @armando.martires
 /loops/               @armando.martires
 /prompts/             @armando.martires
