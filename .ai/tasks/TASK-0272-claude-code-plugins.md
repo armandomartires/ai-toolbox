@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0272
 - Created: 2026-11-10
-- Updated: 2026-11-11
+- Updated: 2026-11-12
 - Applies to: `scripts/build-plugin.py`, `plugins/`, `.claude-plugin/marketplace.json`, `scripts/install.sh`, `tests/test-install.sh`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.2 (N2), decisions D2=B (marketplace primary), Q8=D (GitLab marketplace plus the claude.ai org library), Q11=B (plugins per component kind), Q15=B (packaging first with 4 roles); related: ADR-0001, ADR-0021
 
