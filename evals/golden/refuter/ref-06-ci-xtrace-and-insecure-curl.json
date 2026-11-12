@@ -7,7 +7,9 @@
       {
         "id": "xtrace",
         "keywords": [
-          "set -x",
+          "traces",
+          "printing the token",
+          "token into the job log",
           "xtrace"
         ]
       },

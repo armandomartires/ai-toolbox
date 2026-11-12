@@ -4,6 +4,6 @@
   "expected": {
     "skill": "project-migration"
   },
-  "input": "This repo has grown without any shared conventions for agents. Bring it in line so a person and a weaker model can both pick work up from files alone.",
+  "input": "Our repo has no agent instructions or planning files. Set it up so Claude or a teammate can pick up work from the repo alone.",
   "mock_response": "{\"skill\": \"project-migration\"}"
 }

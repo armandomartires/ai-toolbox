@@ -7,17 +7,17 @@
       {
         "id": "sampling-param",
         "keywords": [
-          "temperature",
-          "top_p",
-          "sampling"
+          "reject",
+          "400",
+          "not accepted",
+          "refuse"
         ]
       },
       {
         "id": "swallowed-error",
         "keywords": [
           "bare except",
-          "swallow",
-          "except:"
+          "swallow"
         ]
       }
     ]

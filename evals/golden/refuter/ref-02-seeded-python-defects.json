@@ -8,7 +8,6 @@
         "id": "bare-except",
         "keywords": [
           "bare except",
-          "except:",
           "swallow"
         ]
       },
@@ -19,7 +18,7 @@
           "off by one",
           "skips the last",
           "last element",
-          "range(len"
+          "last file"
         ]
       }
     ]

@@ -4,6 +4,6 @@
   "expected": {
     "skill": "mod-dev"
   },
-  "input": "I changed one of the panes in our task-compass mod. Walk me through getting it from the template state to something loaded in a session, and what to run before I call it done.",
+  "input": "I changed the sidebar view in our task-compass plugin. What is the process to get it running here and to know I'm done?",
   "mock_response": "{\"skill\": \"mod-dev\"}"
 }

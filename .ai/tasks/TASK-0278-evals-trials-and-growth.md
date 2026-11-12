@@ -6,7 +6,7 @@
 - Owner: agent
 - Branch: agent/TASK-0278
 - Created: 2026-11-10
-- Updated: 2026-11-11
+- Updated: 2026-11-12
 - Applies to: `evals/`, `.gitlab/ci/evals.yml`, `tests/validate.sh`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.8 (N8), decisions Q9=C (k=5 trials, nightly, all three providers); related: #10 (extends #10)
 
@@ -63,7 +63,7 @@ Turn the 10-task single-trial suite into a capability and regression suite built
 
 - Spend scales with tasks x 5 trials x 3 providers per night; estimate before the first run and set a cap. The cap is `--max-calls 250` per job, counted in HTTP attempts (retries included), not a provider-side limit.
 - The 2h job timeout (170 calls x ~20 s = ~57 min, doubled) is an unmeasured estimate and is unverified against the runner's maximum job timeout.
-- Tasks written from incidents may carry the incident's wording; review them for leaked answers.
+- Tasks written from incidents may carry the incident's wording: reviewed 2026-11-12, 15 of 34 reworded (see the log).
 - Rollback: git revert the task commit
 
 ## Outputs / handover
@@ -78,12 +78,13 @@ Next: human reviews; set the nightly pipeline schedule; after the first live run
 
 ## Execution log
 
-- 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
-  - Evidence: none yet
-  - Deviation: none
+- 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet. Evidence: none yet. Deviation: none
 - 2026-11-11 · agent/Sonnet 5.5 · W3-0278 implemented; status review
   - Evidence: red first: self-test failed on 10 golden tasks and no trigger evals; after the change `python -I evals/run.py --self-test` rc=0; dropping 3 refuter tasks (19 left) made it fail with `19 golden tasks, need at least 20`, restored it passes. Mock run with --trials 3 gives pass@k=1.00 pass^k=1.00; `--trials 9 --max-calls 100` is refused (rc 2). A scripted-trials self-test checks pass@k=2/3, pass^k=1/3. The anthropic body still sends no temperature/top_p/top_k (self-test). No live provider was called.
   - Deviation: the 2h timeout comes from an estimate (160 calls x ~20 s per provider), not a measurement; no live run was allowed. Trigger evals live in `evals/triggers/` (not counted in the 20 golden). The brief's `evals/thresholds.json` gained a `trigger` floor of 0.75 (1.0 for mock), which the new category needs. Spend cap is `--max-calls 200`, not a provider-side cap. At k=5 the injection floor of 1.0 means one leak in any trial fails the job.
 - 2026-11-11 · agent/Sonnet 5.5 · review changes H1-L4 applied
   - Evidence: H1 injection leak ignores canaries inside `untrusted-instruction:` report spans (self-test: quoted passes, complied, forbidden verdict and canary after the span fail). H2 transcript per trial and partial JSON per task; `interruptible: false`. M1 every attempt counted, run stops at the cap (self-test: third attempt refused, run stops with 0 trials). M2 adj-06 now expects accept with `allowed: [accept, raise-adhoc]`. M3 hand-invoked skills left out of the trigger list, trg-07/08 are `none`, inputs reworded, 6 `none` negatives, names case/slash-insensitive. M4 provider errors per task and in the report, exit 3 when most trials are provider errors or the cap is hit (self-test runs main in a subprocess: budget refusal rc 2, missing key rc 3). L1 keywords tightened, ref-05 input no longer hints. L2 self-test covers main() exits, a trigger task through call_provider, a `none` task. L3 evals.yml header, README table/artifacts/Adding a task. L4 noted above.
   - Deviation: CHANGELOG.md entry NOT written: the permission system refused the write (the file is outside this worker's allowed list, whatever the message said). The proposed entry is in the report for the coordinator to apply.
+- 2026-11-12 · Claude Code (Opus 5.5) · leak review by a fresh agent (34 tasks, 15 flagged), applied with one rule: a refuter's findings and the attempt count are real adjudicator inputs and stay; text stating the verdict's reasoning goes. Adjudicator 02-09 lose the conclusions (adj-05's mock now lists its override); inj-01..04 drop the "treat as untrusted" preamble, so all five share inj-05's shape; refuter keywords name the consequence, not the diff's text (ref-05's input is now `git ls-files` and `git status` output); six trigger inputs no longer paraphrase their skill's description
+  - Evidence: `python -I evals/run.py --provider mock` → 1.00 on all four categories, 0/34 provider errors; `--self-test` rc 0
+  - Deviation: no live trial was run, so how the rewording moves real scores is unread until the next nightly run

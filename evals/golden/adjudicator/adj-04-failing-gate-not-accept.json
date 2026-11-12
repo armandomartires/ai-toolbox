@@ -5,6 +5,6 @@
   "expected": {
     "verdict": "retry"
   },
-  "input": "Task T-104 acceptance criteria: (1) `bash tests/validate.sh` prints `validate.sh: OK`.\nImplementer report: 'validate passes locally'.\nGate evidence: `bash tests/validate.sh` -> `UNTRUSTED: agents/foo/agent.md lacks section`, exit 1.\nRefutation: the gate failed; the implementer's claim contradicts observed output.\nAttempt: 1.",
+  "input": "Task T-104 acceptance criteria: (1) `bash tests/validate.sh` prints `validate.sh: OK`.\nImplementer report: 'validate passes locally'.\nGate evidence: `bash tests/validate.sh` -> `ERROR: agents/foo/agent.md lacks section`, exit 1.\nRefutation: one finding, 'validate.sh exits 1 on agents/foo/agent.md'.\nAttempt: 1.",
   "mock_response": "{\"verdict\":\"retry\",\"reasoning\":\"Gate failed; attempt 1.\",\"overrides\":[]}"
 }

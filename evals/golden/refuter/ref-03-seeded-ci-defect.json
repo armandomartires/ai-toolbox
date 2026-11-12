@@ -7,19 +7,18 @@
       {
         "id": "secret-echo",
         "keywords": [
-          "echo",
-          "print",
           "leak",
-          "log"
+          "job log",
+          "exposes the token",
+          "prints the token",
+          "prints $deploy_token"
         ]
       },
       {
         "id": "unpinned-image",
         "keywords": [
-          "latest",
           "pin",
-          "digest",
-          "tag"
+          "digest"
         ]
       }
     ]

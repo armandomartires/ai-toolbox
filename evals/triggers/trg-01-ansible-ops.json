@@ -4,6 +4,6 @@
   "expected": {
     "skill": "ansible-ops"
   },
-  "input": "We have a playbook that restarts nginx on the production web tier. I want to change when the handler fires. How careful do I have to be, and what would show that a dry run actually told us something?",
+  "input": "We have a playbook that restarts nginx on the production web tier. I want to change when the handler fires. What should I check before running it against the real hosts?",
   "mock_response": "{\"skill\": \"ansible-ops\"}"
 }

@@ -5,6 +5,6 @@
   "expected": {
     "verdict": "halt-run"
   },
-  "input": "Task T-107 acceptance criteria: (1) the sync keeps last-write-wins per file across two hosts without a lock.\nImplementer report: 'could not do it'. Gate evidence: the two-host demonstration loses an edit in 3 of 10 runs; the implementer shows the lost edits are inherent to last-write-wins without a lock.\nRefutation: confirms the demonstration. Queue note: tasks T-108 and T-109 are built on the same no-lock last-write-wins premise.\nAttempt: 1.",
+  "input": "Task T-107 acceptance criteria: (1) the sync keeps last-write-wins per file across two hosts without a lock.\nImplementer report: 'could not do it'. Gate evidence: the two-host demonstration loses an edit in 3 of 10 runs.\nRefutation: confirms the demonstration. Queue: T-108 (conflict notices for this sync) and T-109 (directory sync), both written against this task's criterion.\nAttempt: 1.",
   "mock_response": "{\"verdict\": \"halt-run\", \"reasoning\": \"Meeting the criterion needs a different design (what is built, not how); parking would let T-108 and T-109 inherit the wrong premise.\", \"overrides\": []}"
 }

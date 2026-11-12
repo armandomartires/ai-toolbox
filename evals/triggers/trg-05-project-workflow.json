@@ -4,6 +4,6 @@
   "expected": {
     "skill": "project-workflow"
   },
-  "input": "Write up why we picked the new retry policy and what is queued next, in the planning folder we already keep, as a brief a teammate could act on.",
+  "input": "Record the retry-policy decision and the next steps for the team, the way this project keeps its decision records.",
   "mock_response": "{\"skill\": \"project-workflow\"}"
 }

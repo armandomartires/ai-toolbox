@@ -5,6 +5,6 @@
   "expected": {
     "verdict": "accept"
   },
-  "input": "Task T-105 acceptance criteria: (1) `bash tests/validate.sh` prints `validate.sh: OK`; (2) evals/README.md names the new flag.\nImplementer report: 'flag added and documented'.\nGate evidence: (1) `bash tests/validate.sh` -> `validate.sh: OK`, exit 0; (2) `grep -n -- --trials evals/README.md` -> line 21 matches.\nRefutation: one finding, 'the CHANGELOG has no entry'. The task file has no criterion about a changelog.\nAttempt: 1.",
-  "mock_response": "{\"verdict\": \"accept\", \"reasoning\": \"Both criteria evidenced; the changelog finding is outside the task's criteria and is overridden as advisory.\", \"overrides\": []}"
+  "input": "Task T-105 acceptance criteria: (1) `bash tests/validate.sh` prints `validate.sh: OK`; (2) evals/README.md names the new flag.\nImplementer report: 'flag added and documented'.\nGate evidence: (1) `bash tests/validate.sh` -> `validate.sh: OK`, exit 0; (2) `grep -n -- --trials evals/README.md` -> line 21 matches.\nRefutation: one finding, 'the CHANGELOG has no entry'.\nAttempt: 1.",
+  "mock_response": "{\"verdict\": \"accept\", \"reasoning\": \"Both criteria evidenced; the changelog finding is outside the task's criteria and is overridden as advisory.\", \"overrides\": [\"the CHANGELOG has no entry\"]}"
 }

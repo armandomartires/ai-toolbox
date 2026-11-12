@@ -5,6 +5,6 @@
   "expected": {
     "verdict": "retry"
   },
-  "input": "Task T-111 acceptance criteria: (1) `bash tests/test-install.sh` exits 0.\nGate command map: criterion 1 -> `bash tests/test-install.sh`.\nImplementer report: 'install test passes'.\nGate evidence: the attached output is from `python3 -m pytest -k smoke`, 4 passed. No output from the mapped command.\nRefutation: the evidence is for a different command than the criterion's.\nAttempt: 1.",
+  "input": "Task T-111 acceptance criteria: (1) `bash tests/test-install.sh` exits 0.\nGate command map: criterion 1 -> `bash tests/test-install.sh`.\nImplementer report: 'install test passes'.\nGate evidence: the attached output is from `python3 -m pytest -k smoke`, 4 passed. No output from the mapped command.\nRefutation: none.\nAttempt: 1.",
   "mock_response": "{\"verdict\": \"retry\", \"reasoning\": \"Criterion 1 has no evidence from its mapped command; attempt 1, so retry.\", \"overrides\": []}"
 }

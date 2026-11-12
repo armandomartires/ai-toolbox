@@ -7,10 +7,12 @@
       {
         "id": "variants",
         "keywords": [
-          ".env.local",
           ".env.*",
-          ".env.test",
-          "variant"
+          "env variants",
+          "other .env",
+          "not ignored",
+          "not matched",
+          "only matches .env"
         ]
       },
       {
@@ -19,12 +21,11 @@
           "git rm",
           "already tracked",
           "stays tracked",
-          "--cached",
-          "in history"
+          "--cached"
         ]
       }
     ]
   },
-  "input": "Claimed: 'no .env file can be committed any more'.\nDiff:\n+# .gitignore\n+.env\nRepository state: tracked files include `.env.production`; the working tree also holds `.env.local` and `.env.test`.\n",
+  "input": "Claimed: 'no .env file can be committed any more'.\nDiff:\n+# .gitignore\n+.env\n`git ls-files`: .gitignore .env.production app.py\n`git status --short --ignored`: ?? .env.local ?? .env.test\n",
   "mock_response": "{\"findings\": [{\"summary\": \".gitignore only matches .env; .env.local and .env.test need a .env.* pattern\"}, {\"summary\": \"a file already tracked stays tracked: .env.production needs git rm --cached and is in history\"}]}"
 }
