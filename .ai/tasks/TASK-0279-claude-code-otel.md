@@ -6,7 +6,7 @@
 - Owner: agent
 - Branch: agent/TASK-0279
 - Created: 2026-11-10
-- Updated: 2026-11-11
+- Updated: 2026-11-12
 - Applies to: `configs/claude-code/`, `.gitlab/ci/otel.yml`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.9 (N9), no decision applies; related: R-10
 
@@ -51,8 +51,8 @@ Close R-10 on the harness side by enabling Claude Code's own telemetry and point
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [x] the otel CI job (`tests/otel/`): run locally in WSL Ubuntu, not on the GitLab runner
+- [x] tests/validate.sh: passed in the pre-commit hook at the task commit
+- [x] the otel CI job (`tests/otel/`): run locally in WSL Ubuntu, then green on the GitLab runner (`otel-collector`, pipelines 997, 998 and 1002; job 2658 printed `claude_code.session.count` and `claude_code.token.usage`)
 
 ## Risks and rollback
 
@@ -84,3 +84,6 @@ Next:
   - Deviation 3: R-10 not updated (file outside the allowed set). Proposed edit: Status `Open` -> `Open (harness side: Claude Code metrics export wired and asserted in CI by replay, TASK-0279; run history editability and live-session proof remain)`.
   - Deviation 4: `install.sh` does not merge `settings.otel.json`; the README says to copy it.
 - 2026-11-11 · agent/Sonnet 5.5 · review fixes: collector cleanup (guarded kill, wait, readiness failure) in both scripts, no pipe under pipefail in the prompt check, hostname compare in the offline test, README identity-attribute note (vendor docs), R-10 row updated (Open, replay-asserted), Scope names collector.yaml. Deviation 3 above is superseded: R-10 edited.
+- 2026-11-12 · Claude Code (Opus 5.5) · the job read on the runner through the GitLab API: `otel-collector` green on pipelines 997, 998 and 1002; `tests/otel/claude-code-check.sh` printed the two `claude_code` metric names. What stays open is R-10's live client, which no job can show
+  - Evidence: job 2658 log, "OTEL: claude_code metrics visible in the collector"
+  - Deviation: none
