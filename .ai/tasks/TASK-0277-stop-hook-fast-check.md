@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0277
 - Created: 2026-11-10
-- Updated: 2026-11-11
+- Updated: 2026-11-12
 - Applies to: `configs/claude-code/settings.hooks.json`, a new fast-check script, ports
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.7 (N7), decisions Q14=B (fast subset of frontmatter, registry and hidden-Unicode checks, only when tracked files changed); the plan lists no related remediation or ADR
 
