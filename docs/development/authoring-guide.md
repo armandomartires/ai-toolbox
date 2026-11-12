@@ -308,8 +308,11 @@ A loop may also carry a thin `SKILL.md` wrapper (`TASK-0273`): `name: run-<loop>
 sibling `loop.md`, with no rule of its own. Its gate is
 `tests/test-loop-skills.sh`, not the skill linter run over `skills/`. The
 wrappers reach Claude Code only through the `ai-toolbox-skills` plugin
-(`scripts/build-plugin.py` copies the wrapper and its `loop.md`);
-`scripts/install.sh` deploys `skills/` only, so it installs no loop skill.
+(`scripts/build-plugin.py` copies the wrapper and its `loop.md`, and
+`docs/security/untrusted-content.md` where the loop cites it), so a person
+invokes one as `/ai-toolbox-skills:run-<loop>`: Claude Code names a plugin's
+skills after the plugin. `scripts/install.sh` deploys `skills/` only, so it
+installs no loop skill.
 
 The Gated column exists because this sentence previously read *"enforces
 every element below"*, which was false: the gate checks that the three

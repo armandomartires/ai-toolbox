@@ -64,6 +64,17 @@ for n in $LOOPS; do
   { [ -f "$d/SKILL.md" ] && [ -f "$d/loop.md" ]; } || miss="$miss run-$n"
 done
 check "W5 the skills plugin holds each wrapper beside its loop.md" "$([ -z "$miss" ]; echo $?)" "missing:$miss"
+# A loop.md that cites the untrusted-content rules carries a copy, and each
+# wrapper names the command a plugin skill answers to (TASK-0273 review).
+miss=""
+for n in $LOOPS; do
+  d="$pb/ai-toolbox-skills/skills/run-$n"
+  if grep -q 'docs/security/untrusted-content.md' "$here/loops/$n/loop.md"; then
+    cmp -s <(tr -d '\r' < "$d/untrusted-content.md" 2>/dev/null) <(tr -d '\r' < "$here/docs/security/untrusted-content.md") || miss="$miss run-$n"
+  fi
+  grep -q "Invoke with /ai-toolbox-skills:run-$n\." "$here/loops/$n/SKILL.md" || miss="$miss $n(command)"
+done
+check "W5b each wrapper names /ai-toolbox-skills:run-<loop> and carries untrusted-content.md where cited" "$([ -z "$miss" ]; echo $?)" "missing:$miss"
 
 # Red proofs on a fixture copy.
 fx="$tmp/fx"; mkdir -p "$fx"; cp -r "$here/loops" "$fx/loops"

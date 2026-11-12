@@ -68,8 +68,10 @@ GAPS = ("Known gaps from the plugin cache: skills and agents were written for an
               "defaults to ../../../loops/unattended-run/loop.md and needs the loop "
               "file passed as its second argument. mod-dev is left out (checkout only). "
               "The five run-<loop> skills (invoked by hand, never by the model) carry "
-              "their loop.md beside them, so they work without loops/; the other "
-              "loops/ pointers in the skills still do not resolve here. ")
+              "their loop.md beside them (and untrusted-content.md where loop.md cites "
+              "it), so they work without loops/; they are invoked as "
+              "/ai-toolbox-skills:run-<loop>. The other loops/ pointers in the skills "
+              "still do not resolve here. ")
 
 READMES = {
     "skills": "Skills from the ai-toolbox repository, one folder per skill under "
@@ -264,6 +266,9 @@ def skill_names():
                   and os.path.isfile(os.path.join(d, n, "SKILL.md")))
 
 
+UNTRUSTED = "docs/security/untrusted-content.md"
+
+
 def loop_skill_names():
     """Loops that carry a SKILL.md wrapper and a loop.md (none in a fake root)."""
     d = os.path.join(ROOT, "loops")
@@ -293,12 +298,23 @@ def build(out):
     # The loop skills (TASK-0273): loops/<n>/SKILL.md becomes skills/run-<n>/
     # with loop.md copied beside it, so the wrapper's relative link resolves
     # in a plugin that ships no loops/ folder.
+    # A loop.md that cites docs/security/untrusted-content.md gets that file
+    # beside it too: the plugin ships no docs/ folder, and the wrapper names
+    # the copy.
     for n in loop_skill_names():
         for f in ("SKILL.md", "loop.md"):
             copy_file(os.path.join(ROOT, "loops", n, f),
                       os.path.join(out, PREFIX + "skills", "skills", "run-" + n, f),
                       execs, "loops/%s/%s" % (n, f),
                       "%sskills/skills/run-%s/%s" % (PREFIX, n, f))
+        with open(os.path.join(ROOT, "loops", n, "loop.md"), encoding="utf-8") as fh:
+            cites = UNTRUSTED in fh.read()
+        if cites and os.path.isfile(os.path.join(ROOT, UNTRUSTED)):
+            copy_file(os.path.join(ROOT, UNTRUSTED),
+                      os.path.join(out, PREFIX + "skills", "skills", "run-" + n,
+                                   "untrusted-content.md"),
+                      execs, UNTRUSTED,
+                      "%sskills/skills/run-%s/untrusted-content.md" % (PREFIX, n))
 
     emit_agents(os.path.join(out, PREFIX + "agents", "agents"))
     guard(os.path.join(out, PREFIX + "agents"))

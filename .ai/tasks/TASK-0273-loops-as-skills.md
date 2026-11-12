@@ -6,7 +6,7 @@
 - Owner: agent
 - Branch: agent/TASK-0273
 - Created: 2026-11-10
-- Updated: 2026-11-11
+- Updated: 2026-11-12
 - Applies to: `loops/`, `scripts/sync-registry.sh`, `docs/registry.md`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.3 (N3), no decision applies directly; the wrappers ship inside the skills plugin from TASK-0272; related: ADR-0004
 
@@ -66,11 +66,11 @@ Make the five loop procedures one command away with thin wrappers that set `disa
 | Artifact | End state |
 |----------|-----------|
 | `loops/<n>/SKILL.md` x5 | thin `run-<n>` wrappers: disable-model-invocation, argument-hint, link to sibling loop.md |
-| `tests/test-loop-skills.sh` | 9-case audit, wired into `tests/validate.sh` |
+| `tests/test-loop-skills.sh` | 10-case audit, wired into `tests/validate.sh`; W5b checks the namespaced command and the shipped `untrusted-content.md` |
 | `scripts/sync-registry.sh`, `docs/registry.md` | new "Loop skills" section; Skills section still lists 8 |
-| `scripts/build-plugin.py`, `plugins/` | skills plugin ships `skills/run-<n>/{SKILL.md,loop.md}`; 13 skills there |
+| `scripts/build-plugin.py`, `plugins/` | skills plugin ships `skills/run-<n>/{SKILL.md,loop.md}`, plus `untrusted-content.md` where loop.md cites it; 13 skills there |
 
-Next: review, then commit (the worktree holds the change uncommitted).
+Next: the human's read. Unverified: the namespaced command in a live session.
 
 ## Execution log
 
@@ -81,3 +81,6 @@ Next: review, then commit (the worktree holds the change uncommitted).
   - Evidence: tests/test-loop-skills.sh red before the wrappers (4 of 9 failed), then OK (9 cases); deleting a wrapper, adding a rule word and dropping disable-model-invocation each fail the audit on a fixture copy; `build-plugin.py --check`: plugins/ matches a fresh build; tests/test-install.sh OK (86 cases); tests/validate.sh result in the run report
   - Deviation: layout is `loops/<n>/SKILL.md` (name `run-<n>`), not `skills/run-<n>/`, so the 8-skill counts (test-skill-controls P0/P1, install ports) stay 8; install.sh does not deploy them, only the plugin does. In the plugin each wrapper gets loop.md copied beside it (the cache has no loops/), so the relative link works; test-install P2 now counts skills plus loop skills. The skills plugin README gap text notes the other loops/ pointers still do not resolve.
 - 2026-11-11 · Claude Code (Opus 5.5, coordinator) · independent review: approve; the plugin-only deployment and `run-<n>` naming added to the authoring guide's Loops section. Open: whether a plugin skill is invoked as `/run-<n>` or namespaced (`/ai-toolbox-skills:run-<n>`) is unverified, so the wrappers' "Invoke with" text may need the namespace; each shipped `loop.md` links repo files absent from the plugin cache (AGENTS.md, docs/security/untrusted-content.md and loop-specific paths).
+- 2026-11-12 · Claude Code (Opus 5.5) · the review's two open points: each wrapper now says `Invoke with /ai-toolbox-skills:run-<n>` (Claude Code lists a plugin's skills under the plugin's name, as this session's own plugin skills show, e.g. `pdf-viewer:annotate`), and a path note maps loop.md's checkout paths to the plugin (`skills/<x>/` is `../<x>/`; `AGENTS.md` is the project's). The build copies `docs/security/untrusted-content.md` beside each loop.md that cites it (all five)
+  - Evidence: `tests/test-loop-skills.sh` OK (10 cases); with the old design-brief wrapper restored, W5b fails ("design-brief(command)"); `build-plugin.py --check` matches
+  - Deviation: the bare `/run-<n>` form was not tried live; the namespaced form is the documented one

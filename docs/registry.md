@@ -44,11 +44,11 @@ The repo root is a Claude Code marketplace (`.claude-plugin/marketplace.json`) l
 ## Loop skills
 | Name | Description | Path |
 |------|-------------|------|
-| run-ansible-change | Run the ansible-change loop by hand: loop.md in this folder is the procedure. Invoke with /run-ansible-change. | loops/ansible-change |
-| run-design-brief | Run the design-brief loop by hand: loop.md in this folder is the procedure. Invoke with /run-design-brief. | loops/design-brief |
-| run-project-build | Run the project-build loop by hand: loop.md in this folder is the procedure. Invoke with /run-project-build. | loops/project-build |
-| run-release-check | Run the release-check loop by hand: loop.md in this folder is the procedure. Invoke with /run-release-check. | loops/release-check |
-| run-unattended-run | Run the unattended-run loop by hand: loop.md in this folder is the procedure. Invoke with /run-unattended-run. | loops/unattended-run |
+| run-ansible-change | Run the ansible-change loop by hand: loop.md in this folder is the procedure. Invoke with /ai-toolbox-skills:run-ansible-change. | loops/ansible-change |
+| run-design-brief | Run the design-brief loop by hand: loop.md in this folder is the procedure. Invoke with /ai-toolbox-skills:run-design-brief. | loops/design-brief |
+| run-project-build | Run the project-build loop by hand: loop.md in this folder is the procedure. Invoke with /ai-toolbox-skills:run-project-build. | loops/project-build |
+| run-release-check | Run the release-check loop by hand: loop.md in this folder is the procedure. Invoke with /ai-toolbox-skills:run-release-check. | loops/release-check |
+| run-unattended-run | Run the unattended-run loop by hand: loop.md in this folder is the procedure. Invoke with /ai-toolbox-skills:run-unattended-run. | loops/unattended-run |
 
 ## Mods
 | Name | Status | Description | Path |
