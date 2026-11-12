@@ -70,7 +70,7 @@ Add harness-side least privilege. Permission rules ship in the settings fragment
 | `configs/claude-code/settings.permissions.json` | merged into project settings by `install.sh` |
 | `configs/claude-code/settings.sandbox.json` | written to `.claude/settings.unattended.json` by `install.sh --unattended`; applied by nothing yet |
 
-Next: wire `claude --settings .claude/settings.unattended.json` in the Agent SDK runner (TASK-0284); have TASK-0272's plugin build read `settings.permissions.json` and test that the plugin carries the rules.
+Next: wire `claude --settings .claude/settings.unattended.json` in the Agent SDK runner (TASK-0284). The plugin does not carry the rules: TASK-0272 found no known way for a plugin to ship them, so `install.sh` stays the writer.
 
 ## Execution log
 
@@ -82,3 +82,6 @@ Next: wire `claude --settings .claude/settings.unattended.json` in the Agent SDK
   - Evidence: `bash tests/test-install.sh` OK (62 cases); with the permissions fragment moved away it fails P0, P1, P4, P6 (4 of 62).
   - Review fixes (same day): HIGH-1 README and brief no longer claim the unattended file is applied (TASK-0284 wires it); push denies widened (-f, --force anywhere, +refspec, --mirror, --delete, :branch; `--force-with-lease` stays ask; `git -C/-c * push` ask); `.env` deny by named files at any depth so `.env.example` stays readable, README notes `cat .env` via Bash is not stopped; `--unattended` fails on a missing fragment, refuses another `--client`, and writes the file with a loud non-zero exit when `~/.claude` is absent; sandbox scalars are overwritten on re-run and `--status` prints MISSING or WEAKENED; `allowUnsandboxedCommands: false` added (key name not verifiable in this repo); `files.pythonhosted.org` added; tests renamed Q0-Q13, exact domain list, P6 message.
   - Deviation: the plugin carrying the rules (scope: TASK-0272's build reads this fragment) is not done or tested, because `scripts/build-plugin.py` does not exist yet; that check belongs to TASK-0272 and the README says so. Q10 (ask, then deny) is not applied: this brief fixes ask on push and WebFetch and names no switch to deny. The five domains are gitlab.com, github.com, pypi.org, files.pythonhosted.org, registry.npmjs.org; the intranet host is added locally, never tracked.
+- 2026-11-12 · Claude Code (Opus 5.5) · handover corrected: the plugin half of Next was settled by TASK-0272 (a plugin settings.json is not a known way to ship permission rules; both plugin READMEs say so). What is left is TASK-0284's wiring
+  - Evidence: `scripts/build-plugin.py` line 22 and the TASK-0272 brief's unmet TASK-0276 criterion
+  - Deviation: none
