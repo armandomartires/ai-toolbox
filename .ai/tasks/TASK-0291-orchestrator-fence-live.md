@@ -6,7 +6,7 @@
 - Owner: agent (Claude Code)
 - Branch: agent/agent-a1a8a310218f9b6e9
 - Created: 2026-11-11
-- Updated: 2026-11-11
+- Updated: 2026-11-13
 - Applies to: `mods/task-orchestrator/`
 - Source: the live probes L5-self and L7-fence of 2026-11-11 (desktop 2.1.318, 0.7.1 from the main checkout)
 
@@ -82,3 +82,6 @@ Next: reload 0.7.2 and rerun the L7 probe as a hand-off: the root Write must be 
 - 2026-11-11 · agent/claude-opus-5-5 · risk-review findings 1-7 and `-uall` fixed
   - Evidence: fixes 1, 3, 6 and `-uall` reverted → 153 pass, 3 fail (the two review tests, the backstop test); restored → 156 pass, 0 fail
   - Deviation: finding 2 has no red test: a writer becomes runnable at an earlier tick (an end, `on`), so the kit cannot reach the person-turn tick handing one off
+- 2026-11-13 · Claude Code (Opus 5.5, coordinator) · live run 2026-11-12/13, desktop, task-orchestrator 0.7.2 loaded from the main checkout (`claude plugin list`), after `/reload-plugins --force` and `/orchestrate on`: L7, an isolated documentation writer allowed `live-check/`, was NOT handed off. `dispatch` answered `running` with its own agent id, and its Write of `L7-outside.md` at the worktree root succeeded. The loaded `register.tsx` hands every writer off (line 589), so the code that ran is not the code on disk, or another path started it; the live check fails and the fix is TASK-0292
+  - Evidence: dispatch → `L7 → documentation [a4f5fb00e68002192] → … → running`; collect → Write `L7-outside.md` → `File created successfully at: …agent-a4f5fb00e68002192\L7-outside.md`; L1 and L5, also writers, got agent ids the same way
+  - Deviation: none
