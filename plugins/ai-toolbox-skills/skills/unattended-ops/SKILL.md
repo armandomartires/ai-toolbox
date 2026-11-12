@@ -5,7 +5,7 @@ license: MIT
 disable-model-invocation: true
 metadata:
   author: armando.martires
-  version: "1.6.0"
+  version: "1.7.0"
 ---
 
 # unattended-ops

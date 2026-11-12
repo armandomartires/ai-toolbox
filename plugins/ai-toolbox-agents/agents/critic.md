@@ -4,6 +4,7 @@ description: Adversarially reviews design candidates against eight enumerated ob
 disallowedTools: Write, Edit, NotebookEdit, Agent, WebFetch, WebSearch
 isolation: worktree
 model: opus
+maxTurns: 80
 ---
 
 # critic

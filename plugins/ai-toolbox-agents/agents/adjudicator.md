@@ -4,6 +4,7 @@ description: Returns exactly one of the unattended-run loop's five verdicts on a
 disallowedTools: Write, Edit, NotebookEdit, Bash, Agent, WebFetch, WebSearch
 isolation: worktree
 model: opus
+maxTurns: 60
 ---
 
 # adjudicator

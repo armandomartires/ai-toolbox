@@ -4,6 +4,7 @@ description: Turns a settled, committed task file into an ordered file-level pla
 disallowedTools: Write, Edit, NotebookEdit, Bash, Agent, WebFetch, WebSearch
 isolation: worktree
 model: opus
+maxTurns: 120
 ---
 
 # task-planner

@@ -4,6 +4,7 @@ description: Generates genuinely distinct design alternatives for a stated probl
 disallowedTools: Agent
 isolation: worktree
 model: sonnet
+maxTurns: 80
 ---
 
 # ideator

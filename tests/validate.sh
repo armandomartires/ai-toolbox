@@ -1743,6 +1743,16 @@ if ! TIERS_OUT="$(bash tests/test-emit-tiers.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
+# Claude Code agents carry maxTurns (and autoCompactWindow where set) from
+# .ai/context/turn-limits.md, every role is in the table, and without the
+# table no agent carries maxTurns (TASK-0282). Reads the repo, writes only
+# under mktemp. Unconditional (ADR-0009).
+if ! TURNS_OUT="$(bash tests/test-emit-turns.sh 2>&1)"; then
+  printf '%s\n' "$TURNS_OUT" | grep -v '^ok' | sed 's/^/EMIT-TURNS: /'
+  fail=1
+fi
+
+# --------------------------------------------------------------------------
 # repo-inventory reports every risk it claims to, and reads without writing
 # (TASK-0167). Fixture repositories under mktemp, local git only; the check
 # compares every file under its roots before and after a run. Unconditional

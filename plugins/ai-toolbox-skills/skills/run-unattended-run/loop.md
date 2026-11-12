@@ -133,6 +133,42 @@ Only one role — `closer` — ever holds git or tracker rights, and it runs
 only after an `accept`. That ordering is the whole reason an interrupted run
 leaves an honest tracker rather than a half-ticked one.
 
+**Planner, generator, evaluator.** Anthropic's long-running harness pattern
+splits the work into a planner, a generator and an evaluator. Here the
+mapping is fixed (`TASK-0282`): the **planner** is `task-planner` (step 5);
+the **generator** is `implementer` (step 6); the **evaluator** is three roles
+in sequence, `gate-runner` (step 7, evidence), `refuter` (step 8, objections)
+and `adjudicator` (step 9, the one verdict). The evaluator never shares a
+context with the generator, and only the adjudicator's verdict decides.
+Every other role is bookkeeping. No role is added for the pattern.
+
+**One commit per task.** Step 10 is the only place a commit is made, and it
+makes exactly one per closed task, with the task id in its message. A parked
+task makes none. That is the harness's "commit per feature", unchanged.
+
+**The progress file.** Beside the journal, in the same gitignored
+directory, the driver keeps `progress.md`: one row per queued task with its
+state (`queued`, `closed <hash>`, `parked <reason>`), the last verdict, and
+the next task to take. Unlike the journal it is **rewritten** after step 3
+and after every task outcome, because it is a view, not a record: it is
+always derivable from the journal, and where they disagree the journal wins.
+It exists for the reset points below — a fresh context reads one short file
+instead of replaying the journal.
+
+**Context-reset points.** A role's context is never carried between steps:
+each step's role starts fresh with its inputs, which is what makes each step
+re-runnable. The driver's own context may be reset (compacted, restarted,
+resumed in a new session) at exactly two points: **between tasks** — after
+step 10 or 11 has journalled and the progress file is rewritten — and
+**before step 13**. A reset anywhere else re-enters a task mid-cycle with no
+record of its attempt, and is a mechanical failure of that task. On resume
+the driver reads the progress file, checks it against the journal and
+`git log --grep <task id>` (step 12's guard), and takes the next `queued`
+task. Per-role turn limits (`maxTurns`, and `autoCompactWindow` where set)
+come from `.ai/context/turn-limits.md`, emitted into each Claude Code agent;
+a role stopped at its limit returns partial output, which the driver treats
+as that step's mechanical failure.
+
 1. **Preflight: can this run start at all?** (`preflight`, read-only.)
    Establish one writer: `git rev-parse --abbrev-ref HEAD`,
    `git rev-parse --short HEAD`, `git status --porcelain`. Confirm the
@@ -284,6 +320,10 @@ leaves an honest tracker rather than a half-ticked one.
     the current branch and **never uses `--all`**: a parked task's stash
     commit carries its task id (step 11), so `--all` would read a parked task
     as closed.
+    After step 3 and after each task's close or park line, rewrite the
+    progress file from what the journal now holds (see **Steps**, *The
+    progress file*). Expected: the progress file names every queued task
+    with a state matching its last journal line.
 
 13. **Run the batched long gates.** (Once, after the cycle; the same
     actors as step 7, `ADR-0025`.)

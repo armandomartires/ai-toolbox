@@ -106,6 +106,8 @@ const sub = p => String(p).replace(/<run-id>/g, RUN_ID)
 const EVIDENCE = sub(B.evidence_file)
 const JOURNAL = sub(B.journal_file)
 const HANDOVER = sub(B.handover_path)
+// loop.md, Steps, "The progress file" (TASK-0282): beside the journal, so no slot.
+const PROGRESS = JOURNAL.replace(/[^/\\]*$/, '') + 'progress.md'
 const WATCHDOG = seconds(B.watchdog_timeout)
 const TRACKER = B.tracker_path
 const QUEUE = A.queue.slice(0, Number(B.task_cap))
@@ -172,6 +174,7 @@ const adhoc = []
 // reads the file and reports it. Files until preflight says otherwise.
 let TRACK = { mode: 'files', path: null }
 const overrides = []
+const verdicts = {}
 let halted = null
 let startHead = null
 
@@ -364,6 +367,7 @@ async function step9Adjudicate(task, attempt, impl, gates, refutation) {
   for (const o of got.overrides || []) overrides.push(Object.assign({ task: task.id }, o))
   for (const t of got.adhocTitles || []) adhoc.push(t)
   await journal({ event: 'adjudication', task: task.id, attempt, verdict: got.verdict, overrides: got.overrides || [] })
+  verdicts[task.id] = got.verdict
   // references/verdicts.md: accept needs every objection answered or overridden.
   if (got.verdict === 'accept' && refutation.refuted && !(got.overrides || []).length) {
     return { verdict: 'park', reasoning: 'accept over a refutation with no overrides listed' }
@@ -471,6 +475,37 @@ async function cycle(task) {
   }
 }
 
+// Step 12 — the progress file, a view of the journal rewritten at each
+// context-reset point (loop.md, Steps). The journal wins where they disagree,
+// so a failed rewrite is logged, never a halt.
+function progressText() {
+  let next = null
+  const rows = QUEUE.map(t => {
+    const c = closed.find(x => x.id === t.id)
+    const p = parked.find(x => x.id === t.id)
+    let state = 'queued'
+    if (c) state = 'closed ' + c.commit
+    else if (p) state = 'parked: ' + String(p.reason).replace(/\|/g, '/').replace(/[\r\n]+/g, ' ')
+    else next = next || t.id
+    return `| ${t.id} | ${state} | ${verdicts[t.id] || '-'} |`
+  })
+  return [`# Progress — run ${RUN_ID}`, '',
+    'A view of the journal, rewritten after each task; the journal wins (loop.md, Steps, "The progress file").', '',
+    `- Journal: ${JOURNAL}`, `- Start: ${startHead}`, `- Next: ${next || 'none'}`, `- Halted: ${halted || 'no'}`, '',
+    '| Task | State | Last verdict |', '|---|---|---|'].concat(rows).join('\n') + '\n'
+}
+
+async function progress() {
+  try {
+    await ask('run-scribe', 12, 'Handover',
+      `Overwrite ${PROGRESS} with exactly the text between the markers (create its directory if needed). This file alone is rewritten; never touch ${JOURNAL} here. Return its first line.\n\n--- BEGIN ---\n${progressText()}--- END ---`,
+      JOURNAL_SCHEMA, 'progress')
+  } catch (e) {
+    if (e instanceof Mechanical) { log('progress file not written: ' + e.message); return }
+    throw e
+  }
+}
+
 // --- Steps 13-14 ------------------------------------------------------------------
 
 async function step13LongGates() {
@@ -514,9 +549,11 @@ try {
   phase('Preflight')
   await preflight()
   await journal({ event: 'run-start', startHead, dryRun: DRY_RUN, tracker: TRACK.mode, queue: QUEUE.map(t => t.id) })   // step 3
+  await progress()
   for (const task of QUEUE) {
     log(`--- ${task.id} ---`)
     await cycle(task)
+    await progress()   // a context-reset point: the task's last line is journalled
   }
   if (!DRY_RUN && closed.length) { phase('Long gates'); await step13LongGates() }
 } catch (e) {
@@ -530,6 +567,7 @@ phase('Handover')
 try {
   await journal({ event: 'run-end', closed: closed.map(c => c.id), parked: parked.map(p => p.id), halted, adhocTitles: adhoc, overrides, pushed: false, forgeUpdates: forgeUpdates() })
 } catch (e) { log('journal failed at run end: ' + e.message) }
+if (startHead) await progress()
 await step14Handover()
 log(`Run ${RUN_ID}: ${closed.length} closed, ${parked.length} parked${halted ? ', HALTED' : ''}. Nothing pushed.`)
 

@@ -93,7 +93,7 @@ decoration.
 | `long_gate_groups` | What is batched after the cycle | `references/long-gates.md` |
 | `watchdog_timeout` | When a wedged gate becomes a stated timeout | A run that does not know this discovers it by hanging |
 | `evidence_file` | The only admissible source for a figure, together with the logs its lines name | `references/evidence.md` |
-| `journal_file` | The append-only record the handover is re-derived from | Nothing is reconstructable from an agent's recollection |
+| `journal_file` | The append-only record the handover is re-derived from | Nothing is reconstructable from an agent's recollection. Its directory also holds `progress.md`, the view the driver rewrites at each context-reset point (`loops/unattended-run/loop.md`, Steps); it has no slot of its own, so that directory must be gitignored as a whole |
 | `run_id_source` | Where the run identifier comes from | It is **passed in**. `Date.now()` and `Math.random()` throw inside a Claude Code Workflow script, and rule 4 forbids inventing one anyway |
 | `commit_shape` | What the closer's commit message looks like | Project-specific; `AGENTS.md`'s one-task-one-commit rule is not |
 | `stash_namespace` | The prefix a park's stash message carries | The recovery instruction. `references/park-and-recover.md` |

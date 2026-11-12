@@ -582,6 +582,16 @@ Admitting `all` then requires, in this order — a run establishing whether an
 with `delegation-allowlist` on it; this section rewritten to say so; and only
 then the gate widened.
 
+#### `maxTurns`, `autoCompactWindow` and the turn table
+
+For Claude Code, `scripts/emit-agents.py` also writes `maxTurns`, and
+`autoCompactWindow` where a row sets one, from `.ai/context/turn-limits.md`
+(`TASK-0282`). Every role has a row, and `tests/test-emit-turns.sh` fails
+when one is missing. As with the tier table, edit the row, not the role's
+`agent.md`. `autoCompactWindow` is a plain integer from 100000 to 1000000,
+and the emitter refuses anything else, because Claude Code silently ignores a
+bad value. OpenCode's cap is `steps`, which the emitter does not yet write.
+
 #### `model` and the tier table
 
 For Claude Code, `scripts/emit-agents.py` writes `model: <alias>` from one

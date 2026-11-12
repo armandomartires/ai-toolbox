@@ -168,6 +168,42 @@ test('closes a task, and only the closer is asked to stage or commit', async () 
   assert.equal(r.result.pushed, false)
 })
 
+// --- Long run (TASK-0282) -------------------------------------------------------
+
+const progressWrites = r => r.calls('run-scribe').filter(c => c.opts.label === 'run-scribe:progress')
+  .map(c => /--- BEGIN ---\n([\s\S]*)--- END ---/.exec(c.prompt)[1])
+
+test('three tasks close with one commit, one verdict and one progress row each', async () => {
+  const ids = ['TASK-0001', 'TASK-0002', 'TASK-0003']
+  const r = await run(baseArgs({ queue: ids.map(id => ({ id })) }))
+  assert.deepEqual(r.result.closed.map(c => c.id), ids)
+  // One closer call per task, each verified as one new commit on its parent.
+  assert.equal(r.calls('closer').length, 3)
+  assert.deepEqual(r.events('adjudication').map(e => [e.task, e.verdict]), ids.map(i => [i, 'accept']))
+  const writes = progressWrites(r)
+  // run start, after each task, at run end
+  assert.equal(writes.length, 5)
+  const last = writes[writes.length - 1]
+  for (const c of r.result.closed) assert.ok(last.includes(`| ${c.id} | closed ${c.commit} | accept |`), last)
+  assert.ok(last.includes('- Next: none'))
+  assert.ok(writes[1].includes('| TASK-0002 | queued | - |') && writes[1].includes('- Next: TASK-0002'), writes[1])
+  assert.ok(r.calls('run-scribe').some(c => c.prompt.includes('Overwrite .run/r1/progress.md')))
+})
+
+test('a parked task shows its reason in the progress file, and a halt is named', async () => {
+  const ids = ['TASK-0001', 'TASK-0002', 'TASK-0003']
+  let n = 0
+  const r = await run(baseArgs({ queue: ids.map(id => ({ id })) }), {
+    adjudicator: () => (++n === 2
+      ? { verdict: 'halt-run', reasoning: 'scope changed', overrides: [], adhocTitles: [], guidance: '' }
+      : { verdict: 'accept', reasoning: 'evidenced', overrides: [], adhocTitles: [], guidance: '' }),
+  })
+  const last = progressWrites(r).slice(-1)[0]
+  assert.ok(last.includes('| TASK-0002 | parked: halt-run | halt-run |'), last)
+  assert.ok(last.includes('| TASK-0003 | queued | - |'), last)
+  assert.ok(last.includes('- Halted: adjudicator halt-run on TASK-0002'), last)
+})
+
 test('the closer is handed the gate-runner\'s figures, the only path to the one it must copy (B-043)', async () => {
   const r = await run(baseArgs(), {
     'gate-runner': (prompt, opts, state, d) => {

@@ -331,6 +331,9 @@ class Binding:
         self.evidence = os.path.abspath(sub(fm["evidence_file"]))
         self.journal_path = os.path.abspath(sub(fm["journal_file"]))
         self.handover = os.path.abspath(sub(fm["handover_path"]))
+        # loop.md, Steps, "The progress file" (TASK-0282): beside the journal,
+        # in the same ignored directory, so it needs no slot of its own.
+        self.progress = os.path.join(os.path.dirname(self.journal_path), "progress.md")
         self.commit_shape = fm["commit_shape"]
         self.stash_namespace = fm["stash_namespace"]
         self.task_cap = int(fm["task_cap"])
@@ -368,6 +371,7 @@ class Driver:
         self.repo = os.getcwd()
         self.opencode = shutil.which("opencode")
         self.closed, self.parked, self.adhoc, self.overrides = [], [], [], []
+        self.queue, self.verdicts, self.current = [], {}, None
         self.halted = None
         self.agent_lines = {}
         self.start_head = None
@@ -501,7 +505,7 @@ class Driver:
         self.check_journal_anchor()
         if not self.opencode:
             raise Halt("opencode is not on PATH")
-        for p in (self.b.evidence, self.b.journal_path, self.b.handover):
+        for p in (self.b.evidence, self.b.journal_path, self.b.handover, self.b.progress):
             rel = os.path.relpath(p, self.repo)
             if not rel.startswith("..") and self.sh(["git", "check-ignore", "-q", rel]).returncode != 0:
                 # Otherwise the run's own record dirties the tree the closer
@@ -597,6 +601,45 @@ class Driver:
         """Step 3 — one journal line before any task is touched."""
         self.journal("run-start", start_head=self.start_head, dry_run=self.dry_run,
                      tracker=self.track[0], queue=[t["id"] for t in queue])
+        self.queue = queue
+        self.write_progress()
+
+    def write_progress(self):
+        """Step 12 — rewrite the progress file, a view of the journal (TASK-0282).
+
+        Rewritten, never appended: it is derivable from the journal, which
+        wins where they disagree. It is what a reset driver reads first at a
+        context-reset point (loop.md, Steps, "Context-reset points").
+        """
+        closed = {c["id"]: c for c in self.closed}
+        parked = {p["id"]: p for p in self.parked}
+        rows, nxt = [], None
+        for t in self.queue:
+            tid = t["id"]
+            if tid in closed:
+                state = "closed %s" % closed[tid]["commit"]
+            elif tid in parked:
+                state = "parked: %s" % parked[tid]["reason"].replace("|", "/").replace("\n", " ")
+            elif tid == self.current:
+                state = "in cycle"
+            else:
+                state = "queued"
+                nxt = nxt or tid
+            rows.append("| %s | %s | %s |" % (tid, state, self.verdicts.get(tid, "-")))
+        text = "\n".join([
+            "# Progress — run %s" % self.b.run_id, "",
+            "A view of the journal, rewritten after each task; the journal wins "
+            "(loop.md, Steps, \"The progress file\").", "",
+            "- Journal: %s" % self.b.journal_path,
+            "- Start: %s" % self.start_head,
+            "- Next: %s" % (nxt or "none"),
+            "- Halted: %s" % (self.halted or "no"), "",
+            "| Task | State | Last verdict |", "|---|---|---|"] + rows) + "\n"
+        os.makedirs(os.path.dirname(self.b.progress), exist_ok=True)
+        tmp = self.b.progress + ".tmp"
+        with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+        os.replace(tmp, self.b.progress)
 
     # -- the per-task cycle, steps 4-11 --------------------------------------
 
@@ -782,6 +825,7 @@ class Driver:
         self.adhoc += [t for t in got.get("adhoc_titles") or [] if isinstance(t, str)]
         self.journal("adjudication", task=task["id"], attempt=attempt,
                      verdict=got["verdict"], overrides=overrides)
+        self.verdicts[task["id"]] = got["verdict"]
         if got["verdict"] == "accept" and refutation.get("refuted") and not overrides:
             # references/verdicts.md: accept requires every objection answered
             # or explicitly overridden; an unnamed override is no override.
@@ -1073,7 +1117,14 @@ class Driver:
             self.step2_locks(queue)
             self.step3_open(queue)
             for task in queue:
-                self.cycle(task)
+                self.current = task["id"]
+                try:
+                    self.cycle(task)
+                finally:
+                    # A context-reset point: the task's last line is journalled.
+                    self.current = None if task["id"] in {
+                        c["id"] for c in self.closed + self.parked} else task["id"]
+                    self.write_progress()
             if not self.dry_run:
                 self.step13_long_gates()
         except Halt as exc:
@@ -1089,6 +1140,8 @@ class Driver:
                          parked=[p["id"] for p in self.parked], halted=self.halted,
                          adhoc_titles=self.adhoc, overrides=self.overrides, pushed=False,
                          forge_updates=self.forge_updates())
+            if self.queue:
+                self.write_progress()
             self.step14_handover()
         return 1 if self.halted else 0
 

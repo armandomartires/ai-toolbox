@@ -63,6 +63,13 @@ implying the record is gapless. The guard searches the current branch, never
 `--all`: a parked task's stash commit carries its task id, so `--all` reads a
 parked task as closed.
 
+**The progress file is the one file you rewrite** (`TASK-0282`). Where the
+driver has no filesystem, it hands you the whole text of `progress.md`, beside
+the journal, after step 3 and after each task: overwrite that file with
+exactly that text. It is a view of the journal, never a record, so it is the
+only exception to append-only, and it never touches the journal itself. Where
+the driver has a filesystem, it writes the file and you are not asked.
+
 ## Step 14 — re-derive the handover, then stop
 
 **Re-derive it from the journal and the evidence file** — not from the

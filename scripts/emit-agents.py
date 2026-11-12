@@ -35,6 +35,13 @@ resolved by agent-tiers' models.jsonc, which stays in opencode-customization
 (ADR-0017, rejected 2026-09-15; clause 7 still applies there). See
 docs/development/authoring-guide.md "`model` and the tier table".
 
+`maxTurns` AND `autoCompactWindow` FOR CLAUDE CODE: .ai/context/turn-limits.md
+------------------------------------------------------------------------------
+TASK-0282. emit_claude_code writes both keys from that table's row for the
+role; a `-` cell, or a role the table does not list, emits no key. Like the
+tier table, it is the only copy: a role's own frontmatter does not override
+it. OpenCode emission is unchanged (its cap is `steps`; TASK-0280).
+
 REFUSE, NEVER DEGRADE
 ---------------------
 ADR-0018 clause 8. **Seven of the thirteen** capability terms cannot be enforced
@@ -431,6 +438,43 @@ def model_alias(role):
     return "inherit"
 
 
+TURN_TABLE = os.path.join(".ai", "context", "turn-limits.md")
+COMPACT_RANGE = (100000, 1000000)
+
+
+def turn_limits(role):
+    """[(key, value)] for `role` from .ai/context/turn-limits.md (TASK-0282).
+
+    Rows read `| role | maxTurns | autoCompactWindow |`; `-` omits a key. A
+    malformed value fails loudly rather than emitting a key Claude Code would
+    ignore (an out-of-range autoCompactWindow is dropped silently by it).
+    """
+    try:
+        with open(TURN_TABLE, encoding="utf-8") as fh:
+            lines = fh.read().split("\n")
+    except OSError:
+        return []
+    for line in lines:
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) != 3 or cells[0] != role:
+            continue
+        out = []
+        turns, window = cells[1], cells[2]
+        if turns != "-":
+            if not re.fullmatch(r"[1-9][0-9]*", turns):
+                raise ValueError("%s: maxTurns %r for %s is not a positive integer"
+                                 % (TURN_TABLE, turns, role))
+            out.append(("maxTurns", turns))
+        if window != "-":
+            if (not re.fullmatch(r"[1-9][0-9]*", window)
+                    or not COMPACT_RANGE[0] <= int(window) <= COMPACT_RANGE[1]):
+                raise ValueError("%s: autoCompactWindow %r for %s is not an integer "
+                                 "from %d to %d" % ((TURN_TABLE, window, role) + COMPACT_RANGE))
+            out.append(("autoCompactWindow", window))
+        return out
+    return []
+
+
 def emit_claude_code(role, fm, body):
     deny, extra, allow_tools = [], {}, []
     for term in fm["capabilities"]:
@@ -472,6 +516,7 @@ def emit_claude_code(role, fm, body):
     for k in sorted(extra):
         out.append("%s: %s" % (k, extra[k]))
     out.append("model: %s" % model_alias(role))
+    out += ["%s: %s" % kv for kv in turn_limits(role)]
     out += ["---", "", body, ""]
     return "\n".join(out)
 

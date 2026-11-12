@@ -797,6 +797,79 @@ class TestTimeoutsAndStopping(Harness):
         self.assertTrue(os.path.exists(os.path.join(self.repo, ".run/r1/handover.md")))
 
 
+class TestLongRun(Harness):
+    """TASK-0282: a 3-task run leaves a progress file, one commit per task and
+    one evaluator verdict per task (loop.md, Steps, "The progress file")."""
+    IDS = ("TASK-0001", "TASK-0002", "TASK-0003")
+
+    def progress(self):
+        path = os.path.join(self.repo, ".run", "r1", "progress.md")
+        self.assertTrue(os.path.exists(path), "no progress file beside the journal")
+        with open(path, encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_three_tasks_close_with_a_commit_a_verdict_and_a_progress_row_each(self):
+        self.make_repo(ids=self.IDS)
+        self.assertEqual(self.run_driver(happy(self.IDS)), 0, self.proc.stderr)
+        log = subprocess.run([REAL_GIT, "log", "--format=%H %s", "HEAD~3..HEAD"], cwd=self.repo,
+                             capture_output=True, text=True, check=True).stdout.split("\n")
+        commits = {i: [l.split()[0] for l in log if i in l] for i in self.IDS}
+        for i in self.IDS:
+            self.assertEqual(len(commits[i]), 1, "task %s: commits %r" % (i, commits[i]))
+        verdicts = [(e["task"], e["verdict"]) for e in self.events("adjudication")]
+        self.assertEqual(verdicts, [(i, "accept") for i in self.IDS])
+        text = self.progress()
+        for i in self.IDS:
+            row = next((l for l in text.split("\n") if l.startswith("| %s |" % i)), None)
+            self.assertIsNotNone(row, "no progress row for %s" % i)
+            self.assertIn("closed %s" % commits[i][0][:12], row)
+            self.assertIn("| accept |", row)
+        self.assertIn("- Next: none", text)
+        self.assertEqual(self.porcelain(), "")
+
+    def test_the_progress_file_is_rewritten_after_each_task(self):
+        # Seen from the second task's planner: the file was last written at
+        # the reset point after the first task, so the first is closed and
+        # the second is still named next — where a reset driver resumes.
+        self.make_repo(ids=self.IDS)
+        agents = happy(self.IDS)
+        agents["task-planner"] = [agents["task-planner"][0], {
+            "sh": ["cp .run/r1/progress.md \"%s\"" % os.path.join(self.tmp, "seen.md")],
+            "text": agents["task-planner"][0]["text"]}, agents["task-planner"][0]]
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        with open(os.path.join(self.tmp, "seen.md"), encoding="utf-8") as fh:
+            seen = fh.read()
+        self.assertRegex(seen, r"\| TASK-0001 \| closed [0-9a-f]{12} \| accept \|")
+        self.assertIn("| TASK-0002 | queued | - |", seen)
+        self.assertIn("| TASK-0003 | queued | - |", seen)
+        self.assertIn("- Next: TASK-0002", seen)
+
+    def test_a_halt_mid_task_leaves_it_in_cycle_and_names_the_halt(self):
+        self.make_repo(ids=self.IDS)
+        agents = happy(self.IDS)
+        agents["adjudicator"] = [agents["adjudicator"][0], {"text": fence({
+            "verdict": "halt-run", "reasoning": "scope changed", "overrides": [],
+            "adhoc_titles": []})}]
+        self.run_driver(agents)
+        text = self.progress()
+        self.assertIn("| TASK-0002 | parked: halt-run | halt-run |", text)
+        self.assertIn("| TASK-0003 | queued | - |", text)
+        self.assertIn("- Halted: adjudicator halt-run on TASK-0002", text)
+
+    def test_a_parked_task_has_no_commit_and_says_why(self):
+        self.make_repo(ids=self.IDS)
+        agents = happy(self.IDS)
+        agents["adjudicator"] = [agents["adjudicator"][0], {"text": fence({
+            "verdict": "park", "reasoning": "criterion unevidenced", "overrides": [],
+            "adhoc_titles": []})}, agents["adjudicator"][0]]
+        self.run_driver(agents)
+        text = self.progress()
+        self.assertIn("| TASK-0002 | parked: criterion unevidenced | park |", text)
+        log = subprocess.run([REAL_GIT, "log", "--format=%s"], cwd=self.repo,
+                             capture_output=True, text=True, check=True).stdout
+        self.assertNotIn("TASK-0002", log)
+
+
 class TestQueue(Harness):
     def test_unsatisfied_dependency_parks_and_skips_forward(self):
         ids = ("TASK-0001", "TASK-0002")
