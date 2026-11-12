@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0274
 - Created: 2026-11-10
-- Updated: 2026-11-11
+- Updated: 2026-11-12
 - Applies to: `skills/*/SKILL.md`, the ADR-0003 schema, the frontmatter linter (ADR-0008), ports
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.4 (N4), no decision applies; related: ADR-0003, ADR-0008
 

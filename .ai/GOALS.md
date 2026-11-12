@@ -595,7 +595,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0272-claude-code-plugins.md
 - [?] TASK-0273 — Loops as invocable skills (P1.3)
   .ai/tasks/TASK-0273-loops-as-skills.md
-- [?] TASK-0274 — Claude skill controls in the schema (P1.4)
+- [x] TASK-0274 — Claude skill controls in the schema (P1.4)
   .ai/tasks/TASK-0274-claude-skill-controls.md
 - [?] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
   .ai/tasks/TASK-0275-claude-md-layer.md

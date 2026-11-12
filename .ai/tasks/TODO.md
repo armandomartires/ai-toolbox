@@ -314,7 +314,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
 - [x] TASK-0272 — Claude Code plugins per component kind (P1.2)
 - [?] TASK-0273 — Loops as invocable skills (P1.3)
-- [?] TASK-0274 — Claude skill controls in the schema (P1.4)
+- [x] TASK-0274 — Claude skill controls in the schema (P1.4)
 - [?] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
 - [?] TASK-0276 — Ship permissions and sandbox settings (P1.6)
 - [?] TASK-0277 — Stop hook runs a fast check (P1.7)
