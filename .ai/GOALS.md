@@ -607,7 +607,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0278-evals-trials-and-growth.md
 - [?] TASK-0279 — Claude Code OpenTelemetry (P1.9)
   .ai/tasks/TASK-0279-claude-code-otel.md
-- [ ] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
+- [?] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
   .ai/tasks/TASK-0280-claude-reference-profile.md
 - [!] TASK-0281 — Codex port completion (P2.2)
   .ai/tasks/TASK-0281-codex-port-completion.md

@@ -232,5 +232,14 @@ emit_section() {
   # the test that case implies. A self-declared field earns a column when
   # the toolchain acts on it, and `mode` still does not.
   emit_section "Agents"      agent agents Clients
+  # Which port expresses each capability term and which roles reach each
+  # client (ADR-0065, TASK-0280): the emitter's own answer, not a claim. A
+  # tree without agents/ or the emitter (a test fixture) has no such section.
+  if [ -d agents ] && [ -f scripts/emit-agents.py ]; then
+    echo
+    echo "## Port parity"
+    echo
+    python3 scripts/emit-agents.py --parity
+  fi
 } > "$REG"
 echo "Registry written to $REG"

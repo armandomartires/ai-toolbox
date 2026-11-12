@@ -1,5 +1,9 @@
 # Bionic (LM Studio) wiring
 
+**Support tier: best-effort, untested** (decision D6=C of the 2026-11-10
+alignment plan; ADR-0065). Nothing in `tests/` exercises this wiring, so it
+may break silently. It takes skills and MCP servers, never agents.
+
 Snapshot of how this repo's components are wired into **Bionic**, LM
 Studio's agent-oriented workspace. Sources of truth live elsewhere and win
 any disagreement: `mcp-servers/*/server.json` for MCP servers.

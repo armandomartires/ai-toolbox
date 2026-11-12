@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: todo
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0280
 - Created: 2026-11-10
@@ -49,15 +49,15 @@ Make Claude Code the reference profile and generate the other ports from it. A n
 
 ## Acceptance criteria
 
-- [ ] One source emits all three client formats
-- [ ] The matrix in `docs/registry.md` equals the emitted files and fails when a mapping is dropped
-- [ ] Existing OpenCode and Codex outputs stay valid or change only as the ADR states
-- [ ] Bionic and LM Studio are labelled best-effort and untested
+- [x] One source emits all three client formats (a fixture role Codex can express gets a valid TOML; no real role does, see Outputs)
+- [x] The matrix in `docs/registry.md` equals the emitted files and fails when a mapping is dropped
+- [x] Existing OpenCode and Codex outputs stay valid or change only as the ADR states: Claude Code (plain and `--with-guard`), OpenCode and `role-guard.json` emit byte-identical before and after
+- [x] Bionic and LM Studio are labelled best-effort and untested
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] the new parity test, `tests/test-emit-prune.sh`, `tests/test-emit-allowlist-note.sh` and `tests/test-install.sh`
+- [x] tests/validate.sh: in the pre-commit hook
+- [x] the new parity test (`tests/test-emit-parity.sh`, 11 cases), `tests/test-emit-prune.sh`, `tests/test-emit-allowlist-note.sh` and `tests/test-install.sh`, all in the gate
 
 ## Risks and rollback
 
@@ -70,18 +70,18 @@ Make Claude Code the reference profile and generate the other ports from it. A n
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `scripts/emit-agents.py` | `CODEX` table and `emit_codex` (`<role>.toml`); `--parity`; OpenCode refuses an unmapped term instead of crashing |
+| `.ai/decisions/0065-claude-code-reference-profile.md` | proposed: Claude Code is the reference; ports map or refuse; the instruction-only Codex alternative left to the human |
+| `docs/registry.md`, `tests/test-emit-parity.sh`, `tests/validate.sh` | *Port parity* section, generated and gated; `codex` in the clients set |
 
-Next:
+Finding: a Codex agent file switches features off and nothing more (sandbox, approval, rules and MCP are the parent's; its PreToolUse input names no agent). Only `no-bash` maps, so every real role is refused for Codex.
+
+Next: the human accepts ADR-0065 or picks its instruction-only alternative; then TASK-0281.
 
 ## Execution log
 
-- 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
-  - Evidence: none yet
-  - Deviation: none
-- 2026-11-12 · Claude Code (Opus 5.5) · blocked on TASK-0271, which the human parked on 2026-11-12. The reference profile rests on which of the seven refused terms pass measurement there; with none measured, the ADR would supersede ADR-0018 on a guard that does not exist, and this HIGH-risk task is left for the human to re-scope or resume after TASK-0271
-  - Evidence: `.ai/tasks/TASK-0271-role-guard.md` (Status: blocked, parked by the human)
-  - Deviation: none
-- 2026-11-12 · Claude Code (Opus 5.5) · unblocked: TASK-0271 landed with all seven terms passing (ADR-0062), so the reference profile can include the guard
-  - Evidence: TASK-0271 in review on master
-  - Deviation: none
+- 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet. Evidence: none yet. Deviation: none
+- 2026-11-12 · Claude Code (Opus 5.5) · blocked on TASK-0271 (parked by the human), then unblocked when it landed with all seven terms passing (ADR-0062). Evidence: TASK-0271 in review on master. Deviation: none
+- 2026-11-12 · Claude Code (Opus 5.5) · Codex's agent format researched (subagents, rules and hooks docs), then the parity test written against a fixture, then `CODEX`, `emit_codex`, `--parity` and the registry section; ADR-0065 proposed; ADR-0018 points at it; Bionic labelled best-effort
+  - Evidence: `tests/test-emit-parity.sh` OK (11 cases: P10 and P11 drop a Codex and an OpenCode mapping and the matrix changes); emission before and after diffed with `diff -r`: identical for claude-code, claude-code `--with-guard`, opencode and `--guard-json`
+  - Deviation: the Codex mapping is from documentation, not a loaded file (no Codex here); no role declares `codex`, since each would be refused

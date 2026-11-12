@@ -755,7 +755,7 @@ REJECTED_MODES = {
            "docs/development/authoring-guide.md, \"`mode: all` is rejected "
            "on purpose, not overlooked\", which states what would reopen it",
 }
-CLIENTS = {"claude-code", "opencode"}
+CLIENTS = {"claude-code", "opencode", "codex"}
 
 if not lines or lines[0].strip() != "---":
     bad.append("frontmatter must open with '---' on line 1")
@@ -1765,6 +1765,17 @@ for t in test-role-guard test-emit-prune test-emit-allowlist-note; do
     fail=1
   fi
 done
+
+# Port parity (TASK-0280, ADR-0065): Claude Code is the reference profile;
+# the matrix in docs/registry.md equals `emit-agents.py --parity`, each role
+# row matches what an emission writes, a Codex TOML parses, and dropping a
+# mapping changes the matrix. Writes only under mktemp. Unconditional
+# (ADR-0009).
+if ! PARITY_OUT="$(bash tests/test-emit-parity.sh 2>&1)"; then
+  printf '%s
+' "$PARITY_OUT" | grep -v '^PASS' | sed 's/^/EMIT-PARITY: /'
+  fail=1
+fi
 
 # --------------------------------------------------------------------------
 # repo-inventory reports every risk it claims to, and reads without writing
