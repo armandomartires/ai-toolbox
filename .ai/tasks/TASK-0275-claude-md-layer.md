@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: in review
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0275
 - Created: 2026-11-10
-- Updated: 2026-11-11
+- Updated: 2026-11-12
 - Applies to: `CLAUDE.md`, `.claude/rules/`, `.gitignore`, ADR-0002
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.5 (N5), decisions D4=B (short CLAUDE.md importing @AGENTS.md, track .claude/rules/); related: ADR-0002
 

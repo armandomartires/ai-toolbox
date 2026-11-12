@@ -597,7 +597,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0273-loops-as-skills.md
 - [x] TASK-0274 — Claude skill controls in the schema (P1.4)
   .ai/tasks/TASK-0274-claude-skill-controls.md
-- [?] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
+- [x] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
   .ai/tasks/TASK-0275-claude-md-layer.md
 - [?] TASK-0276 — Ship permissions and sandbox settings (P1.6)
   .ai/tasks/TASK-0276-permissions-and-sandbox.md
