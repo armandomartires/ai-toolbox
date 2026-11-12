@@ -71,12 +71,12 @@ Make Claude Code the reference profile and generate the other ports from it. A n
 | Artifact | End state |
 |----------|-----------|
 | `scripts/emit-agents.py` | `CODEX` table and `emit_codex` (`<role>.toml`); `--parity`; OpenCode refuses an unmapped term instead of crashing |
-| `.ai/decisions/0065-claude-code-reference-profile.md` | proposed: Claude Code is the reference; ports map or refuse; the instruction-only Codex alternative left to the human |
+| `.ai/decisions/0065-claude-code-reference-profile.md` | accepted 2026-11-12 as written: Claude Code is the reference; ports map or refuse; instruction-only Codex roles declined |
 | `docs/registry.md`, `tests/test-emit-parity.sh`, `tests/validate.sh` | *Port parity* section, generated and gated; `codex` in the clients set |
 
 Finding: a Codex agent file switches features off and nothing more (sandbox, approval, rules and MCP are the parent's; its PreToolUse input names no agent). Only `no-bash` maps, so every real role is refused for Codex.
 
-Next: the human accepts ADR-0065 or picks its instruction-only alternative; then TASK-0281.
+Next: the human's read of the diff. ADR-0065 accepted 2026-11-12; TASK-0281 landed on it.
 
 ## Execution log
 

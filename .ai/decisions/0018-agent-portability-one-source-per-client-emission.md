@@ -4,7 +4,7 @@
 **Accepted — 2026-09-15.** Opened by `PLAN-0004` (sprint S7). Extends
 ADR-0006 to a third capability class.
 
-> **ADR-0065 (proposed 2026-11-12, `TASK-0280`)** would make Claude Code the
+> **ADR-0065 (accepted 2026-11-12, `TASK-0280`)** makes Claude Code the
 > reference profile: a term means what Claude Code enforces, and each port
 > maps it or refuses the role, instead of the profile sitting at what both
 > clients enforce. Clauses 1-5 and 8 stand either way.

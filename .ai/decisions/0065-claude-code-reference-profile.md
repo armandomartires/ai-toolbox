@@ -1,6 +1,6 @@
 # ADR-0065 — Claude Code is the reference profile; each port maps a term or refuses the role
 
-**Status**: proposed
+**Status**: accepted 2026-11-12 by the human, as written: Codex roles are refused, not instruction-only
 **Date**: 2026-11-12
 **Task**: `TASK-0280`
 
@@ -22,7 +22,7 @@ A Codex custom agent (`.codex/agents/<role>.toml`, read 2026-11-12 from Codex's 
 
 ## Alternatives considered
 
-- **Instruction-only roles on Codex (best-effort).** Emit every role to Codex with its boundary written into `developer_instructions` and a note that nothing enforces it. Gives Codex users the roles, but ships files that claim boundaries nothing holds: the false-boundary class ADR-0018 clause 8 exists to refuse. **Open for the human:** accepting this would amend clause 2 for Codex only, with the matrix marking each such term "instructed, not enforced".
+- **Instruction-only roles on Codex (best-effort).** Emit every role to Codex with its boundary written into `developer_instructions` and a note that nothing enforces it. Gives Codex users the roles, but ships files that claim boundaries nothing holds: the false-boundary class ADR-0018 clause 8 exists to refuse. Put to the human and declined on 2026-11-12.
 - **Global Codex rules per project.** `.codex/rules/*.rules` with `prefix_rule` could hold the bash allowlists, but for the whole session, not per agent; one role's allowlist would bind every other.
 - **Derive the OpenCode maps from the guard rules.** Would change emitted OpenCode permissions that tests and live runs have verified (TASK-0045, TASK-0082, TASK-0083), for no gain in enforcement.
 
