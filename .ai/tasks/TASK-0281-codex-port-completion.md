@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: planned
+- Status: blocked
 - Owner: agent
 - Branch: agent/TASK-0281
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-12
 - Applies to: `scripts/install.sh` codex step (`mod_ports codex`, `~/.codex/plugins`), `tests/test-install.sh`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P2.2 (S2), decisions D6=B (Codex supported, generated port with tests; S2 is done); the plan lists no related remediation or ADR
 
@@ -73,4 +73,7 @@ Next:
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
+  - Deviation: none
+- 2026-11-12 · Claude Code (Opus 5.5) · blocked behind TASK-0280: its TOML shape must come from that emitter, not be written twice (this brief's own risk note)
+  - Evidence: `.ai/tasks/TASK-0271-role-guard.md` (Status: blocked, parked by the human)
   - Deviation: none

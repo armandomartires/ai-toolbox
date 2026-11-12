@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: planned
+- Status: blocked
 - Owner: agent
 - Branch: agent/TASK-0280
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-12
 - Applies to: `scripts/emit-agents.py`, `.ai/decisions/`, `docs/registry.md`, `configs/opencode/`, `configs/lm-studio-bionic/`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P2.1 (S1), decisions D1=B (only terms that passed measurement), D6=A,B,C (OpenCode and Codex supported with tests; Bionic and LM Studio best-effort, untested); related: ADR-0018, ADR-0054
 
@@ -78,4 +78,7 @@ Next:
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
+  - Deviation: none
+- 2026-11-12 · Claude Code (Opus 5.5) · blocked on TASK-0271, which the human parked on 2026-11-12. The reference profile rests on which of the seven refused terms pass measurement there; with none measured, the ADR would supersede ADR-0018 on a guard that does not exist, and this HIGH-risk task is left for the human to re-scope or resume after TASK-0271
+  - Evidence: `.ai/tasks/TASK-0271-role-guard.md` (Status: blocked, parked by the human)
   - Deviation: none

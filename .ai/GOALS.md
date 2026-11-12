@@ -535,8 +535,6 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   .ai/planning/BACKLOG.md
 - B-058 Unexercised: an `ansible-ops` guest-level change behind a real PVE snapshot (`TASK-0116`)
   .ai/planning/BACKLOG.md
-- B-061 `worktree-only` is not enforced on Claude Code, and its emission is undecided (`TASK-0111`)
-  .ai/planning/BACKLOG.md
 - B-062 asset-management's vendored `project-workflow` predates `vendor-skill.sh` and is behind 7.1.2
   .ai/planning/BACKLOG.md
 - B-063 Estate repository work waiting on the human: LDAP config drift, estate `#96` (both pushes landed)
@@ -591,7 +589,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0270-stale-loop-text.md
 - [?] TASK-0290 — Fix the first live CI runs of the eval and tool-lock jobs
   .ai/tasks/TASK-0290-first-live-ci-fixes.md
-- [>] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
+- [!] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
   .ai/tasks/TASK-0271-role-guard.md
 - [?] TASK-0272 — Claude Code plugins per component kind (P1.2)
   .ai/tasks/TASK-0272-claude-code-plugins.md
@@ -609,15 +607,15 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0278-evals-trials-and-growth.md
 - [?] TASK-0279 — Claude Code OpenTelemetry (P1.9)
   .ai/tasks/TASK-0279-claude-code-otel.md
-- [ ] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
+- [!] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
   .ai/tasks/TASK-0280-claude-reference-profile.md
-- [ ] TASK-0281 — Codex port completion (P2.2)
+- [!] TASK-0281 — Codex port completion (P2.2)
   .ai/tasks/TASK-0281-codex-port-completion.md
 - [?] TASK-0282 — Long-running harness alignment (P2.3)
   .ai/tasks/TASK-0282-long-run-harness.md
 - [?] TASK-0283 — Signed, versioned releases (P2.4)
   .ai/tasks/TASK-0283-signed-versioned-releases.md
-- [ ] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
+- [!] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
   .ai/tasks/TASK-0284-agent-sdk-runner.md
 - [?] TASK-0285 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
   .ai/tasks/TASK-0285-gates-http-transport.md

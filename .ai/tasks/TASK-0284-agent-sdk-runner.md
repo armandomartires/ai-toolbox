@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: planned
+- Status: blocked
 - Owner: agent
 - Branch: agent/TASK-0284
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-12
 - Applies to: `skills/unattended-ops/` bindings, the golden unattended run
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P2.5 (S5), decisions D5=B (add an SDK runner next to the current binding, compare on the golden run, then pick); related: R-05, ADR-0022, ADR-0038
 
@@ -74,4 +74,7 @@ Next:
 
 - 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
   - Evidence: none yet
+  - Deviation: none
+- 2026-11-12 · Claude Code (Opus 5.5) · blocked on TASK-0271, parked by the human on 2026-11-12: the runner's guard is TASK-0271's guard as hook callbacks, and its acceptance fixture fails only when those callbacks are removed. TASK-0282, its other dependency, is in review. A live golden run also needs the human's authorization
+  - Evidence: `.ai/tasks/TASK-0271-role-guard.md` (Status: blocked, parked by the human)
   - Deviation: none
