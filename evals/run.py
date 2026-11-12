@@ -143,6 +143,28 @@ class BudgetExhausted(Exception):
 CALLS = {"n": 0, "max": 0}
 
 
+def error_reason(provider, err, key):
+    """Anthropic's error type and message, for a refused call ('' for other providers or an unreadable body).
+
+    A 400 kept the same status from both an invalid request and a low credit balance (TASK-0290), so the
+    status alone could not say whose fix it was. Only Anthropic's own `error.type` and `error.message` are
+    kept, never the raw body or headers; the key, if echoed, is masked, and the text is cut to 200 characters.
+    """
+    if provider != "anthropic":
+        return ""
+    try:
+        err_obj = json.loads(err.read(4096) or b"{}").get("error") or {}
+        kind, msg = str(err_obj.get("type", "")), str(err_obj.get("message", ""))
+    except (ValueError, AttributeError, OSError, TypeError):
+        return ""
+    if not kind and not msg:
+        return ""
+    text = " ".join(("%s: %s" % (kind, msg)).split())
+    if key:
+        text = text.replace(key, "***")
+    return " (" + text[:200] + ")"
+
+
 def call_provider(provider, task, timeout=120):
     if provider == "mock":
         return task["mock_response"]
@@ -184,11 +206,10 @@ def call_provider(provider, task, timeout=120):
                     return "".join(b.get("text", "") for b in data["content"] if b.get("type") == "text")
                 return data["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
-            # Status code only: the body or headers could echo the request.
             if e.code in (429, 500, 502, 503, 529) and attempt < 2:
                 time.sleep(5 * (attempt + 1))
                 continue
-            raise ProviderError(f"HTTP {e.code}") from None
+            raise ProviderError(f"HTTP {e.code}{error_reason(provider, e, key)}") from None
         except (urllib.error.URLError, TimeoutError, KeyError, ValueError,
                 TypeError, AttributeError, IndexError) as e:
             if attempt < 2:
@@ -502,6 +523,24 @@ def self_test():
                     pass
         finally:
             time.sleep = real_sleep
+        # A refused call names Anthropic's error type and message, with the key masked (TASK-0290: pipelines
+        # 997 and 998 showed only "HTTP 400" on all 170 trials after the sampling fix).
+        import io
+
+        def refuse(body):
+            def f(req, timeout=None):
+                raise urllib.error.HTTPError(req.full_url, 400, "Bad Request", {}, io.BytesIO(body))
+            return f
+        for body, want in ((json.dumps({"type": "error", "error": {"type": "invalid_request_error",
+                                        "message": "Your credit balance is too low (test-key-not-real)"}}).encode(),
+                            "HTTP 400 (invalid_request_error: Your credit balance is too low (***))"),
+                           (b"<html>proxy</html>", "HTTP 400")):
+            urllib.request.urlopen = refuse(body)
+            try:
+                call_provider("anthropic", tasks[0])
+                expect(False, "a refused call was accepted")
+            except ProviderError as e:
+                expect(str(e) == want, f"anthropic refusal detail {str(e)!r}, want {want!r}")
     finally:
         urllib.request.urlopen = real_urlopen
         for v, val in env_saved.items():

@@ -6,7 +6,7 @@
 - Owner: agent (Claude Code)
 - Branch: agent/ai-toolbox-alignment-66b894
 - Created: 2026-11-11
-- Updated: 2026-11-11
+- Updated: 2026-11-12
 - Applies to: `evals/run.py`, `.gitlab/ci/mcp-tool-lock.yml`
 - Source: the human's playbook step 3 (2026-11-11). Reading the master pipelines 910–922 through the GitLab API found both S11 P0 CI jobs failing on their first real runs.
 
@@ -50,7 +50,7 @@ Make the two jobs that `TASK-0267` and `TASK-0269` added pass on the runner. Eac
 - [x] `python -I evals/run.py --self-test` failed with "anthropic body sends a sampling parameter", then passes
 - [x] The mock run scores 1.00 on all three suites
 - [x] `mcp-tool-lock` passes on the master pipeline of this commit (pipeline 929, job 2371)
-- [ ] `evals-live: [anthropic]` makes real calls (no HTTP 400) on the next scheduled run
+- [ ] `evals-live: [anthropic]` makes real calls (no HTTP 400) on the next scheduled run: NOT MET. Scheduled pipelines 997 and 998 (2026-11-12) still answered HTTP 400 on all 170 trials with no sampling parameter sent, and the runner kept only the status. It now records Anthropic's `error.type` and `error.message` (key masked, 200 characters), so the next nightly run names the cause
 
 ## Mandatory validations
 
@@ -65,9 +65,12 @@ Make the two jobs that `TASK-0267` and `TASK-0269` added pass on the runner. Eac
 
 ## Outputs / handover
 
-Next: the two open live criteria. Then `TASK-0269` closes on a green `mcp-tool-lock`. OpenAI's quota is the human's.
+Next: read the reason the next nightly `evals-live: [anthropic]` prints. A credit balance or key scope is the human's; a request shape is fixed here. `TASK-0269` closed on a green `mcp-tool-lock` (929, and every pipeline since). OpenAI's quota is the human's.
 
 ## Execution log
 
 - 2026-11-11 · Claude Code (Opus 5.5, coordinator) · pipelines read, red self-test, both fixes
   - Evidence: self-test red ("anthropic body sends a sampling parameter"), then exit 0; mock 1.00/1.00/1.00.
+- 2026-11-12 · Claude Code (Opus 5.5) · scheduled pipelines 997 and 998 read: `mcp-tool-lock` green; `evals-live: [anthropic]` 170 of 170 trials `HTTP 400` with no sampling parameter, so the first fix was not the whole cause. A 400 also comes from a low credit balance, which the status cannot tell apart. `error_reason` keeps Anthropic's error type and message, key masked, cut to 200 characters; a self-test fakes a refused call with and without a JSON body
+  - Evidence: `python -I evals/run.py --self-test` → rc 0; mock run 1.00 on all suites, 0/34 provider errors
+  - Deviation: the cause itself is unread until the next scheduled run; no live call was made from here
