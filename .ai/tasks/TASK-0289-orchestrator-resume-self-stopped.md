@@ -6,7 +6,7 @@
 - Owner: agent (Claude Code)
 - Branch: agent/ai-toolbox-alignment-66b894
 - Created: 2026-11-11
-- Updated: 2026-11-11
+- Updated: 2026-11-13
 - Applies to: `mods/task-orchestrator/`
 - Source: the live check of `TASK-0260` and `TASK-0265`, run 2026-11-11 for the human's request to complete the Backlog sprint's tasks autonomously
 
@@ -47,7 +47,7 @@ The assignment tells a worker to stop before its turn cap with a `partial` repor
 - [x] Resumed while the cap is full, it stays `partial` and the coordinator is told once, with the cap named
 - [x] A worker that reported `blocked` and is resumed is reopened and closed by its report; a hand-off is never admitted by a resume
 - [x] Red first: the three `register.test.tsx` tests failed against 0.7.0 (147 pass, 3 fail)
-- [ ] Live: after a reload of the mod holding 0.7.1, a self-stopped worker resumed is shown `running`, and resumed with the cap full is refused with a note
+- [ ] Live: after a reload of the mod holding 0.7.1, a self-stopped worker resumed is shown `running` (seen 2026-11-13), and resumed with the cap full is refused with a note (not run)
 
 ## Mandatory validations
 
@@ -75,3 +75,6 @@ Next: the live check above, once the main checkout holds 0.7.1 and the mod is re
 
 - 2026-11-11 · Claude Code (Opus 5.5, coordinator) · live run on 0.7.0, red tests, fix, docs, version step; independent review (approve, no blocker) acted on: the spent report dropped on reopen, `TaskStop` named in the refused-resume note, the label read from the last reason, README wording
   - Evidence: L1-cap (documentation, haiku, cap 30, isolated): 26 files written in `agent-a45247a76d409915c`, then `partial` at turn 27 naming its worktree; resumed with L2–L4 running: `status` kept it `partial`, no note, its 19 later writes landed, `collect` kept the first report. Kit: 147 pass, 3 fail → 151 pass, 0 fail.
+- 2026-11-13 · Claude Code (Opus 5.5, coordinator) · live run 2026-11-12/13, desktop, task-orchestrator 0.7.2 loaded from the main checkout (`claude plugin list`), after `/reload-plugins --force` and `/orchestrate on`: L5 wrote `live-check/L5-a.md`, stopped itself with `partial` as told, and on a `SendMessage` resume `status` showed it `running` again; it wrote `L5-b.md` and `collect` closed it `completed`. The cap-full refusal was not run
+  - Evidence: status after the resume → `L5 → … → running · 28.6k tok`; collect → `L5 → … → completed · 63.0k tok`
+  - Deviation: half of the live criterion seen; the refusal with the cap full is not
