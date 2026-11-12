@@ -61,3 +61,7 @@ node_modules/
 # Written by a Mermaid diagram tool for GitHub Copilot (mermaid-ai-skills); not part of this repo.
 .github/copilot-instructions.md
 .github/instructions/
+
+# Codex project layer: install.sh writes .codex/hooks.json with this checkout's
+# absolute path (TASK-0281), so it is per-host, like .claude/settings.json.
+/.codex/

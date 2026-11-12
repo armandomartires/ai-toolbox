@@ -40,6 +40,15 @@
 # codex/ folder into ~/.codex/plugins/ by the codex step, when ~/.codex
 # exists; see mod_ports below.
 #
+# Codex (TASK-0281, ADR-0065). A client row like the others: skills go to
+# ~/.agents/skills/, the user folder Codex scans, as copies with the
+# Claude-only keys stripped, a hand-invoked skill carrying agents/openai.yaml
+# with allow_implicit_invocation: false instead of disable-model-invocation;
+# agents are emitted to ~/.codex/agents/ (none today: every role is refused
+# for Codex, see docs/registry.md "Port parity"); and configs/codex/hooks.json
+# (the Stop fast check) is merged into THIS checkout's .codex/hooks.json,
+# which Codex runs only once the person trusts it.
+#
 # Worktree hooks (TASK-0261, ADR-0023). The claude-code step also merges
 # configs/claude-code/settings.hooks.json (WorktreeCreate and WorktreeRemove,
 # which put Claude Code's worktrees beside the repo, not inside it) into
@@ -467,21 +476,37 @@ PYMERGE
 # present is not added twice; a file that does not parse is never written
 # (the run fails).
 worktree_hooks() {
-  local action="$1" frag="configs/claude-code/settings.hooks.json"
+  hooks_merge "$1" claude-code configs/claude-code/settings.hooks.json .claude/settings.json \
+    "worktree hooks" hooks:worktree
+}
+
+# Codex's Stop hook (TASK-0281): the same stop-fast-check.sh, merged into this
+# checkout's .codex/hooks.json. Codex sends `cwd` and `stop_hook_active` and
+# continues the turn on exit 2 with stderr, as Claude Code does (its hooks
+# docs, read 2026-11-12); it runs a project hook only once the person trusts it.
+codex_hooks() {
+  hooks_merge "$1" codex configs/codex/hooks.json .codex/hooks.json "stop fast check" hooks:stop
+}
+
+# Merge a hooks fragment into a project hooks file. $1 write or status, $2 the
+# client, $3 the fragment, $4 the file under this checkout, $5 and $6 labels.
+hooks_merge() {
+  local action="$1" client="$2" frag="$3" file="$4" what="$5" tag="$6"
   [ -f "$frag" ] || return 0
   # --status must not create anything; only the write path makes the directory.
-  if [ "$action" = write ]; then mkdir -p .claude || return 1; fi
+  if [ "$action" = write ]; then mkdir -p "$(dirname "$file")" || return 1; fi
   # The script path in the form git prints on this host (C:/... on Git Bash,
   # which bash.exe reads; /... elsewhere); the bash.exe path in cmd's own.
   local root gitwin=; root=$(pwd -W 2>/dev/null || pwd -P)
   if command -v cygpath >/dev/null 2>&1; then
     gitwin="$(cygpath -w / | sed 's#\\$##')\\bin\\bash.exe"   # C:\Program Files\Git\bin\bash.exe, as cmd.exe wants it
   fi
-  python3 - "$(pwd)/.claude/settings.json" "$frag" "$action" "$root" "$gitwin" <<'PYHOOKS'
+  python3 - "$(pwd)/$file" "$frag" "$action" "$root" "$gitwin" "$client" "$what" "$tag" <<'PYHOOKS'
 import json, os, re, sys
-settings, frag, action, root, gitwin = sys.argv[1:6]
+settings, frag, action, root, gitwin, client, what, tag = sys.argv[1:9]
 with open(frag, encoding="utf-8") as f:
-    want = json.loads(f.read().replace("$CLAUDE_PROJECT_DIR", root))["hooks"]
+    want = json.loads(f.read().replace("$CLAUDE_PROJECT_DIR", root)
+                      .replace("$PROJECT_ROOT", root))["hooks"]
 if gitwin:
     # `bash "<script>"` -> `"C:\...\Git\bin\bash.exe" "<script>"`, a cmd.exe line.
     def via_gitbash(cmd):
@@ -522,7 +547,7 @@ for event, groups in want.items():
     if todo:
         missing.append((event, todo))
 if action == "status":
-    print("%-12s %-18s %s" % ("claude-code", "hooks:worktree",
+    print("%-12s %-18s %s" % (client, tag,
           "present in " + settings if not missing else "MISSING from " + settings
           + " (" + ", ".join(e for e, _ in missing) + ")"))
     sys.exit(0)
@@ -538,8 +563,8 @@ with open(tmp, "w", encoding="utf-8", newline="\n") as f:
     json.dump(new, f, indent=2, ensure_ascii=False)
     f.write("\n")
 os.replace(tmp, settings)
-print("hooks added: %s -> claude-code (%s in %s; from the next session)"
-      % (", ".join(e for e, _ in missing), "worktree hooks", settings))
+print("hooks added: %s -> %s (%s in %s; from the next session)"
+      % (", ".join(e for e, _ in missing), client, what, settings))
 PYHOOKS
 }
 
@@ -692,6 +717,23 @@ mod_ports() {
   done
 }
 
+# Codex has no disable-model-invocation; its per-skill switch is
+# agents/openai.yaml `policy: allow_implicit_invocation: false` (its skills
+# docs, read 2026-11-12). Each copy whose source sets the key gets that file,
+# so a hand-invoked skill stays hand-invoked once the key is stripped.
+codex_skill_policy() { # $1 the Codex skills target
+  local d name
+  for d in skills/*; do
+    name=$(basename "$d")
+    [ -f "$d/SKILL.md" ] && [ -d "$1/$name" ] && [ ! -L "$1/$name" ] || continue
+    grep -q '^disable-model-invocation:[[:space:]]*true' "$d/SKILL.md" || continue
+    mkdir -p "$1/$name/agents"
+    printf '# Written by ai-toolbox scripts/install.sh from disable-model-invocation: true.\npolicy:\n  allow_implicit_invocation: false\n' \
+      > "$1/$name/agents/openai.yaml"
+    echo "  skill policy: $name -> codex (agents/openai.yaml, hand-invoked only)"
+  done
+}
+
 skill_version() { # the frontmatter version of a SKILL.md, quotes stripped
   awk '/^[[:space:]]*version:/ { v = $2; gsub(/["\047\r]/, "", v); print v; exit }' "$1"
 }
@@ -715,6 +757,7 @@ skill_version() { # the frontmatter version of a SKILL.md, quotes stripped
 CLIENTS="
 claude-code|${HOME}/.claude/skills|${HOME}/.claude|${HOME}/.claude/agents
 opencode|${HOME}/.config/opencode/skills|${HOME}/.config/opencode|${HOME}/.config/opencode/agents
+codex|${HOME}/.agents/skills|${HOME}/.codex|${HOME}/.codex/agents
 "
 # Bionic (LM Studio's agent-oriented workspace) is intentionally absent,
 # but NOT for the reason previously recorded here. It does have an Agent
@@ -766,14 +809,10 @@ if [ "$STATUS" -eq 1 ]; then
     fi
     if [ "$client" = "claude-code" ]; then worktree_hooks status; claude_permissions status; fi
     if [ "$client" = opencode ]; then mod_ports opencode "$parent" status; fi
+    if [ "$client" = codex ]; then mod_ports codex "$parent" status; codex_hooks status; fi
   done <<EOF
 $CLIENTS
 EOF
-  if [ -d "$HOME/.codex" ]; then
-    mod_ports codex "$HOME/.codex" status
-  else
-    echo "codex: not installed ($HOME/.codex absent)"
-  fi
   exit 0
 fi
 
@@ -829,13 +868,18 @@ while IFS='|' read -r client target parent agents_target; do
     continue
   fi
   deployed_any=1
-  strip=""; [ "$client" = opencode ] && strip=1
+  strip=""; case "$client" in opencode|codex) strip=1 ;; esac
   deploy_skills "$target" "$MODE" "$client" "$strip"
   if [ "$client" = "claude-code" ] && [ "$MOD_NAMES" != " " ]; then
     plugin_dirs "$parent/settings.json" write || exit 1
   fi
   if [ "$client" = "claude-code" ]; then worktree_hooks write || exit 1; claude_permissions write || exit 1; fi
   if [ "$client" = opencode ]; then mod_ports opencode "$parent" write; fi
+  if [ "$client" = codex ]; then
+    codex_skill_policy "$target"
+    mod_ports codex "$parent" write
+    codex_hooks write || exit 1
+  fi
 
   # Agents are EMITTED, never linked (ADR-0018 clause 3): a per-client file's
   # content differs by definition, so it cannot be a symlink to one source.
@@ -874,19 +918,6 @@ done <<EOF
 $CLIENTS
 EOF
 
-# Codex takes mods only, as plugin bundles (TASK-0255). Outside the CLIENTS
-# table on purpose: the gate pairs every row there with configs/<name>/,
-# and Codex gets no skills or agents from this script.
-case "$WANT_CLIENT" in
-  all|codex)
-    if [ -d "$HOME/.codex" ]; then
-      deployed_any=1
-      mod_ports codex "$HOME/.codex" write
-    else
-      echo "client skipped: codex (not installed: $HOME/.codex absent)"
-    fi
-    ;;
-esac
 
 # --- Bionic: PROJECT skills only -------------------------------------------
 # Deliberately outside the CLIENTS table. Every row there is a GLOBAL target

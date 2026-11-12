@@ -114,7 +114,20 @@ out="$(cd "$R" && bash scripts/install.sh --client claude-code 2>&1)"; rc=$?
 CSK="$HOME/.claude/skills/vault-secrets/SKILL.md"
 check "P5 Claude Code keeps the keys (a link to the source)" "$([ "$rc" -eq 0 ] && grep -q '^disable-model-invocation: true' "$CSK"; echo $?)" "$out"
 out="$(cd "$R" && bash scripts/install.sh --client codex 2>&1)"; rc=$?
-check "P6 Codex gets no skill from install.sh, so loads 0 of them from it" "$([ ! -e "$HOME/.codex/skills" ] && [ ! -e "$HOME/.codex/prompts" ]; echo $?)" "$out"
+# Codex (TASK-0281): the 8 skills under ~/.agents/skills, the folder Codex
+# scans, stripped like OpenCode's; a hand-invoked skill keeps that state
+# through agents/openai.yaml, Codex's own switch.
+AS="$HOME/.agents/skills"
+loaded=0
+for d in "$AS"/*/; do
+  f="$d/SKILL.md"
+  [ -f "$f" ] && [ "$(key_of "$f" name)" = "$(basename "$d")" ] && loaded=$((loaded + 1))
+done
+check "P6 Codex loads 8 skills from ~/.agents/skills" "$([ "$rc" -eq 0 ] && [ "$loaded" -eq 8 ] && [ ! -e "$HOME/.codex/skills" ]; echo $?)" "rc=$rc loaded=$loaded $out"
+check "P7 Codex's copies carry none of the Claude-only keys" "$(grep -lE '^(allowed-tools|disable-model-invocation|context):' "$AS"/*/SKILL.md >/dev/null 2>&1; [ $? -eq 1 ]; echo $?)"
+hand="$(grep -l '^disable-model-invocation:[[:space:]]*true' "$here"/skills/*/SKILL.md | xargs -n1 dirname | xargs -n1 basename | sort | tr '\n' ' ')"
+pol="$(for f in "$AS"/*/agents/openai.yaml; do [ -f "$f" ] && grep -q 'allow_implicit_invocation: false' "$f" && basename "$(dirname "$(dirname "$f")")"; done | sort | tr '\n' ' ')"
+check "P8 exactly the hand-invoked skills ($hand) carry allow_implicit_invocation: false" "$([ -n "$hand" ] && [ "$pol" = "$hand" ]; echo $?)" "policy on: $pol"
 
 if [ "$fails" -ne 0 ]; then
   echo "test-skill-controls.sh: $fails of $cases case(s) FAILED"; exit 1

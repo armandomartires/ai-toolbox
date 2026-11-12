@@ -246,6 +246,18 @@ check "X4 a deselected mod's bundle is removed" "$([ ! -e "$CX" ] && has "$out" 
 mkdir -p "$CX"; echo '{}' > "$CX/plugin.json"
 inst --client codex
 check "X5 a bundle this repo did not write is left in place" "$([ "$(cat "$CX/plugin.json")" = '{}' ] && has "$out" 'was not written by this repo'; echo $?)" "$out"
+# TASK-0281: the Stop hook into the project's .codex/hooks.json, agents into
+# ~/.codex/agents/ (no fixture role declares codex, so none), skills into
+# ~/.agents/skills/.
+mkdir -p "$R/configs/codex"; cp "$here/configs/codex/hooks.json" "$R/configs/codex/hooks.json"
+inst --client codex
+CH="$R/.codex/hooks.json"
+check "X6 the Stop fast check is merged into the project's .codex/hooks.json" "$([ "$rc" -eq 0 ] && python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); c=[h["command"] for g in d["hooks"]["Stop"] for h in g["hooks"]]; assert any("stop-fast-check.sh" in x and "$PROJECT_ROOT" not in x for x in c), c' "$CH" && has "$out" 'hooks added: Stop -> codex'; echo $?)" "$out"
+inst --client codex
+check "X7 a second run adds nothing (idempotent)" "$(! has "$out" 'hooks added' && [ "$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["hooks"]["Stop"]))' "$CH")" = 1 ]; echo $?)" "$out"
+inst --status
+check "X8 --status reports the Codex Stop hook" "$(has "$out" 'codex        hooks:stop         present in'; echo $?)" "$out"
+check "X9 skills go to ~/.agents/skills, and no agent is written for Codex" "$([ -f "$HOME/.agents/skills/alpha/SKILL.md" ] && [ -z "$(ls "$HOME/.codex/agents" 2>/dev/null | grep '\.toml$')" ]; echo $?)" "$(ls "$HOME/.agents/skills" "$HOME/.codex/agents" 2>&1)"
 
 # --- Worktree hooks (TASK-0261): the fragment is merged into the PROJECT's
 # .claude/settings.json, never clobbering, never writing an unparsable file ---

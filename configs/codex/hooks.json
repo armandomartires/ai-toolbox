@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "timeout": 60, "command": "bash \"$PROJECT_ROOT/configs/claude-code/hooks/stop-fast-check.sh\"" }
+        ]
+      }
+    ]
+  }
+}
