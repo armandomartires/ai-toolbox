@@ -589,7 +589,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0270-stale-loop-text.md
 - [?] TASK-0290 — Fix the first live CI runs of the eval and tool-lock jobs
   .ai/tasks/TASK-0290-first-live-ci-fixes.md
-- [?] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
+- [x] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
   .ai/tasks/TASK-0271-role-guard.md
 - [?] TASK-0272 — Claude Code plugins per component kind (P1.2)
   .ai/tasks/TASK-0272-claude-code-plugins.md
