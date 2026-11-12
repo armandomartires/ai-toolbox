@@ -305,12 +305,23 @@ Clause 8 is new and is the substantive addition from `TASK-0036`.
       expression. Their disposition is settled here rather than left to
       `TASK-0045`, because a task that meets this for the first time will
       reach for a workaround.
+
+      *Superseded for Claude Code, for the seven terms
+      `test-files-only`, `bash-allowlist`, `test-allowlist`, `no-force-push`,
+      `no-bypass`, `push-requires-confirmation` and
+      `webfetch-requires-confirmation`, by ADR-0062 (accepted 2026-11-12,
+      `TASK-0271`: a generated `PreToolUse` role guard, the worked example
+      clause 8.4 asks for). It stands for OpenCode and for every other term.*
    4. **The two workarounds are rejected for now, with reasons.** A
       session-wide `permissions.deny` rule leaks one role's boundary into
       every agent in the session; a `PreToolUse` hook puts enforcement in a
       second artifact that `agents/<role>/agent.md` does not own. Either may
       be revisited by a later ADR **with a worked example**, but neither is
       to be introduced inside an implementation task.
+
+      *ADR-0062 (accepted 2026-11-12, `TASK-0271`) lifts this clause for
+      its generated `PreToolUse` role guard only; the rejection of
+      session-wide per-role permission rules stands.*
    5. The registry must show a role's client coverage, so an OpenCode-only
       role is visible as such rather than appearing universal.
 

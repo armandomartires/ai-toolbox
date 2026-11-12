@@ -19,7 +19,7 @@
       "source": "./plugins/ai-toolbox-agents",
       "description": "The ai-toolbox role agents emitted for Claude Code, with the worktree hooks. Depends on ai-toolbox-skills.",
       "category": "orchestration",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": [
         {
           "name": "ai-toolbox-skills",

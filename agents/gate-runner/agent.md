@@ -9,6 +9,7 @@ capabilities:
   - worktree-only
   - bash-allowlist
 clients:
+  - claude-code
   - opencode
 bash_allow:
   - '*run-gate.sh*'

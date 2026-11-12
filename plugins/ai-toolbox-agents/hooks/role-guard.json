@@ -1,0 +1,700 @@
+{
+  "deny_from": "2026-11-26",
+  "generated_by": "scripts/emit-agents.py (ADR-0062)",
+  "plugin": "ai-toolbox-agents",
+  "roles": {
+    "closer": {
+      "bash": {
+        "allow": [
+          "git status*",
+          "git diff*",
+          "git log*",
+          "git rev-parse*",
+          "git add -- *",
+          "git commit -m *"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git push --force*",
+          "git push --force-with-lease*",
+          "git push -f*",
+          "git reset --hard*",
+          "git rebase*",
+          "git filter-branch*",
+          "git clean -f*",
+          "git commit*--amend*",
+          "git commit*--no-verify*",
+          "git push*--force*",
+          "git push* -f",
+          "git push* -f *",
+          "git push* +*",
+          "git push* -*f",
+          "git push* -*f *",
+          "git push* -d",
+          "git push* -d *",
+          "git push* :*",
+          "git checkout* -f*",
+          "git restore*",
+          "git branch* -D*",
+          "git push*--mirror*",
+          "git push*--delete*",
+          "git reset*--hard*",
+          "git reset*--merge*",
+          "git reset*--keep*",
+          "git checkout*--force*",
+          "git branch*--force*",
+          "git commit* -n",
+          "git commit* -n *",
+          "git commit*--no-v*",
+          "git commit*--am*",
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "branch": [
+              "--force",
+              "-f",
+              "-D",
+              "-M",
+              "-C"
+            ],
+            "checkout": [
+              "--force",
+              "-f"
+            ],
+            "commit": [
+              "--amend",
+              "--no-verify",
+              "-n"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ],
+            "push": [
+              "--force",
+              "-f",
+              "--force-with-lease",
+              "--force-if-includes",
+              "--mirror",
+              "--delete",
+              "-d",
+              "--prune",
+              "+",
+              ":",
+              "--no-verify"
+            ],
+            "reset": [
+              "--hard",
+              "--merge",
+              "--keep"
+            ],
+            "switch": [
+              "--force",
+              "-f",
+              "--discard-changes"
+            ]
+          },
+          "subcommands": [
+            "config",
+            "rebase",
+            "filter-branch",
+            "restore",
+            "clean",
+            "update-ref"
+          ]
+        }
+      }
+    },
+    "gate-runner": {
+      "bash": {
+        "allow": [
+          "*run-gate.sh*"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ]
+          },
+          "subcommands": [
+            "config"
+          ]
+        }
+      }
+    },
+    "git-ops": {
+      "bash": {
+        "allow": [
+          "git status*",
+          "git diff*",
+          "git log*",
+          "git show*",
+          "git rev-parse*",
+          "git remote -v",
+          "git branch --show-current*",
+          "git add -- *",
+          "git commit -m *"
+        ],
+        "allowlist": true,
+        "ask": [
+          "git push*"
+        ],
+        "deny": [
+          "git push --force*",
+          "git push --force-with-lease*",
+          "git push -f*",
+          "git reset --hard*",
+          "git rebase*",
+          "git filter-branch*",
+          "git clean -f*",
+          "git commit*--amend*",
+          "git commit*--no-verify*",
+          "git push*--force*",
+          "git push* -f",
+          "git push* -f *",
+          "git push* +*",
+          "git push* -*f",
+          "git push* -*f *",
+          "git push* -d",
+          "git push* -d *",
+          "git push* :*",
+          "git checkout* -f*",
+          "git restore*",
+          "git branch* -D*",
+          "git push*--mirror*",
+          "git push*--delete*",
+          "git reset*--hard*",
+          "git reset*--merge*",
+          "git reset*--keep*",
+          "git checkout*--force*",
+          "git branch*--force*",
+          "git commit* -n",
+          "git commit* -n *",
+          "git commit*--no-v*",
+          "git commit*--am*",
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "branch": [
+              "--force",
+              "-f",
+              "-D",
+              "-M",
+              "-C"
+            ],
+            "checkout": [
+              "--force",
+              "-f"
+            ],
+            "commit": [
+              "--amend",
+              "--no-verify",
+              "-n"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ],
+            "push": [
+              "--force",
+              "-f",
+              "--force-with-lease",
+              "--force-if-includes",
+              "--mirror",
+              "--delete",
+              "-d",
+              "--prune",
+              "+",
+              ":",
+              "--no-verify"
+            ],
+            "reset": [
+              "--hard",
+              "--merge",
+              "--keep"
+            ],
+            "switch": [
+              "--force",
+              "-f",
+              "--discard-changes"
+            ]
+          },
+          "subcommands": [
+            "config",
+            "rebase",
+            "filter-branch",
+            "restore",
+            "clean",
+            "update-ref"
+          ]
+        }
+      }
+    },
+    "implementer": {
+      "bash": {
+        "allow": [
+          "git status*",
+          "git diff*",
+          "git log*",
+          "git show*"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git push --force*",
+          "git push --force-with-lease*",
+          "git push -f*",
+          "git reset --hard*",
+          "git rebase*",
+          "git filter-branch*",
+          "git clean -f*",
+          "git commit*--amend*",
+          "git push*--force*",
+          "git push* -f",
+          "git push* -f *",
+          "git push* +*",
+          "git push* -*f",
+          "git push* -*f *",
+          "git push* -d",
+          "git push* -d *",
+          "git push* :*",
+          "git checkout* -f*",
+          "git restore*",
+          "git branch* -D*",
+          "git push*--mirror*",
+          "git push*--delete*",
+          "git reset*--hard*",
+          "git reset*--merge*",
+          "git reset*--keep*",
+          "git checkout*--force*",
+          "git branch*--force*",
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "branch": [
+              "--force",
+              "-f",
+              "-D",
+              "-M",
+              "-C"
+            ],
+            "checkout": [
+              "--force",
+              "-f"
+            ],
+            "commit": [
+              "--amend"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ],
+            "push": [
+              "--force",
+              "-f",
+              "--force-with-lease",
+              "--force-if-includes",
+              "--mirror",
+              "--delete",
+              "-d",
+              "--prune",
+              "+",
+              ":"
+            ],
+            "reset": [
+              "--hard",
+              "--merge",
+              "--keep"
+            ],
+            "switch": [
+              "--force",
+              "-f",
+              "--discard-changes"
+            ]
+          },
+          "subcommands": [
+            "config",
+            "rebase",
+            "filter-branch",
+            "restore",
+            "clean",
+            "update-ref"
+          ]
+        }
+      }
+    },
+    "park-steward": {
+      "bash": {
+        "allow": [
+          "git status*",
+          "git diff*",
+          "git stash push*",
+          "git stash list*"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git push --force*",
+          "git push --force-with-lease*",
+          "git push -f*",
+          "git reset --hard*",
+          "git rebase*",
+          "git filter-branch*",
+          "git clean -f*",
+          "git commit*--amend*",
+          "git push*--force*",
+          "git push* -f",
+          "git push* -f *",
+          "git push* +*",
+          "git push* -*f",
+          "git push* -*f *",
+          "git push* -d",
+          "git push* -d *",
+          "git push* :*",
+          "git checkout* -f*",
+          "git restore*",
+          "git branch* -D*",
+          "git push*--mirror*",
+          "git push*--delete*",
+          "git reset*--hard*",
+          "git reset*--merge*",
+          "git reset*--keep*",
+          "git checkout*--force*",
+          "git branch*--force*",
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "branch": [
+              "--force",
+              "-f",
+              "-D",
+              "-M",
+              "-C"
+            ],
+            "checkout": [
+              "--force",
+              "-f"
+            ],
+            "commit": [
+              "--amend"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ],
+            "push": [
+              "--force",
+              "-f",
+              "--force-with-lease",
+              "--force-if-includes",
+              "--mirror",
+              "--delete",
+              "-d",
+              "--prune",
+              "+",
+              ":"
+            ],
+            "reset": [
+              "--hard",
+              "--merge",
+              "--keep"
+            ],
+            "switch": [
+              "--force",
+              "-f",
+              "--discard-changes"
+            ]
+          },
+          "subcommands": [
+            "config",
+            "rebase",
+            "filter-branch",
+            "restore",
+            "clean",
+            "update-ref"
+          ]
+        }
+      }
+    },
+    "preflight": {
+      "bash": {
+        "allow": [
+          "git status*",
+          "git rev-parse*",
+          "git log*",
+          "git diff*"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ]
+          },
+          "subcommands": [
+            "config"
+          ]
+        }
+      }
+    },
+    "qa-test": {
+      "bash": {
+        "allow": [
+          "git status*",
+          "git diff*",
+          "git log*",
+          "pytest*",
+          "python -m pytest*",
+          "npm test*",
+          "npm run test*",
+          "yarn test*",
+          "go test*",
+          "cargo test*",
+          "make test*",
+          "tests/validate.sh*",
+          "bash tests/*.sh*"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ]
+          },
+          "subcommands": [
+            "config"
+          ]
+        }
+      },
+      "edit": [
+        "**/*.spec.*",
+        "**/*.test.*",
+        "**/*_test.*",
+        "**/__tests__/**",
+        "**/spec/**",
+        "**/test/**",
+        "**/tests/**"
+      ],
+      "webfetch": "ask"
+    },
+    "refuter": {
+      "bash": {
+        "allow": [
+          "git status*",
+          "git rev-parse*",
+          "git log*",
+          "git diff*",
+          "git show*"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ]
+          },
+          "subcommands": [
+            "config"
+          ]
+        }
+      }
+    },
+    "review": {
+      "bash": {
+        "allow": [
+          "git diff*",
+          "git status*",
+          "git log*",
+          "git show*"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ]
+          },
+          "subcommands": [
+            "config"
+          ]
+        }
+      }
+    },
+    "run-scribe": {
+      "bash": {
+        "allow": [
+          "git status*",
+          "git log*",
+          "git rev-parse*"
+        ],
+        "allowlist": true,
+        "ask": [],
+        "deny": [
+          "git -*",
+          "git config*",
+          "git *core.*"
+        ],
+        "git": {
+          "options": {
+            "*": [
+              "--output",
+              "--output-directory",
+              "--ext-diff",
+              "--exec-path",
+              "--upload-pack",
+              "--receive-pack",
+              "--exec",
+              "-o"
+            ],
+            "grep": [
+              "--open-files-in-pager",
+              "-O"
+            ]
+          },
+          "subcommands": [
+            "config"
+          ]
+        }
+      }
+    }
+  }
+}

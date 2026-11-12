@@ -1,7 +1,7 @@
 ---
 name: adjudicator
 description: Returns exactly one of the unattended-run loop's five verdicts on a task, with reasoning and an overrides list naming every finding downgraded to advisory. Use at step 9 of the unattended-run loop; never for implementing, closing, or allocating an identifier.
-disallowedTools: Write, Edit, NotebookEdit, Bash, Agent, WebFetch, WebSearch
+disallowedTools: Write, Edit, NotebookEdit, Bash, PowerShell, Monitor, Agent, WebFetch, WebSearch
 isolation: worktree
 model: opus
 maxTurns: 60

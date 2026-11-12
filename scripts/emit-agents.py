@@ -50,8 +50,16 @@ tools and have no third `ask` state. Asked to emit such a role for Claude
 Code, this script FAILS LOUDLY rather than emitting a file with the term
 dropped.
 
+THE ROLE GUARD (TASK-0271, ADR-0062) now enforces those seven out of
+the agent file: their `claude_code` is `GUARD`/`GUARD_SHELL`, not None. A role
+carrying one is emitted for Claude Code only with `--with-guard` (the plugin
+build, which ships configs/claude-code/hooks/role-guard.py and the
+`--guard-json=` rules beside it); a plain emission skips it and says so. So
+the REFUSAL set below is empty today; the refusal path stays for any term
+added without a mapping.
+
 TWO DIFFERENT COUNTS, AND THEY ARE BOTH RIGHT. This docstring counts the
-REFUSAL set — terms whose `claude_code` is None (seven). The authoring guide
+REFUSAL set — terms whose `claude_code` was None (seven until TASK-0271). The authoring guide
 counts terms NOT enforceable in both clients (eight). The difference is
 `worktree-only`, which is PARTIAL: it emits `isolation: worktree` rather
 than refusing. Read either as the other and you will be wrong; TASK-0063
@@ -86,6 +94,81 @@ import sys
 #
 # opencode: a list of (permission_key, value) or (key, {glob: action}) pairs.
 # claude_code: a set of tool names to withhold, or None if unexpressible.
+#
+# Tools besides Bash that run a shell command in Claude Code 2.1.321 (its
+# claude-code-tools declarations: `PowerShell.command`, `Monitor.command`).
+# A role whose shell is shaped or denied has these withheld outright: the
+# guard's allowlists name Bash commands only.
+OTHER_SHELLS = ["PowerShell", "Monitor"]
+
+# The seven terms ADR-0018 clause 8.3 refused for Claude Code, admitted by
+# ADR-0062 through the role guard: configs/claude-code/hooks/
+# role-guard.py, a PreToolUse hook keyed on `agent_type` that only the
+# ai-toolbox-agents plugin carries. `"guard": True` means "enforced by the
+# guard": emit_claude_code writes such a role only when told the guard ships
+# beside it (`--with-guard`, which scripts/build-plugin.py passes); a plain
+# emission (scripts/install.sh into ~/.claude/agents, where no guard runs)
+# skips the role instead of shipping it unguarded.
+GUARD = {"guard": True}
+GUARD_SHELL = {"guard": True, "deny_tools": OTHER_SHELLS}
+
+# The trial (Q10=A): out-of-allowlist calls are asked until this date and
+# denied from it, two weeks from 2026-11-12, the day it landed. Recorded in ADR-0062; move it
+# there and here together.
+GUARD_DENY_FROM = "2026-11-26"
+
+# Force-push forms the OpenCode map misses because the flag TRAILS
+# (`git push origin x --force` matches only `git push*`). TASK-0276's
+# session-wide permission rules deny them, but the plugin does not ship those
+# rules, so the guard denies them itself for a `no-force-push` role. Guard
+# only: OpenCode's emitted map is unchanged (the same hole there is a finding
+# for a later task, not silently changed here).
+GUARD_PUSH_DENY = ["git push*--force*", "git push* -f", "git push* -f *",
+                   "git push* +*",
+                   # M5: clustered short flags, -d, :branch (a delete), and a
+                   # hard reset with its flag after the commit.
+                   "git push* -*f", "git push* -*f *", "git push* -d", "git push* -d *",
+                   "git push* :*", "git checkout* -f*", "git restore*", "git branch* -D*",
+                   "git push*--mirror*", "git push*--delete*", "git reset*--hard*",
+                   "git reset*--merge*", "git reset*--keep*", "git checkout*--force*",
+                   "git branch*--force*"]
+# The same terms as PARSED git options (second risk review, H-A/H-B/M-B). The
+# guard tokenizes the command, unwraps `env`, `command`, `exec`, `nice`,
+# `timeout`, `xargs`, `sh -c` and kin, expands short-flag clusters (`-an` is
+# `-a -n`, `-uf` is `-u -f`) and denies a long option when it is the named
+# option or ANY abbreviation of it (git takes a unique prefix, gitcli(7)), so
+# `--amen`, `--no-verif`, `--mirr` and `--ha` are caught without one glob per
+# prefix. "*" applies to every subcommand; `+`/`:` are push refspec arguments.
+GUARD_GIT_OPTS_ALL = {"*": ["--output", "--output-directory", "--ext-diff", "--exec-path",
+                            "--upload-pack", "--receive-pack", "--exec", "-o"],
+                      "grep": ["--open-files-in-pager", "-O"]}
+GUARD_GIT_OPTS_FORCE = {"push": ["--force", "-f", "--force-with-lease", "--force-if-includes",
+                                 "--mirror", "--delete", "-d", "--prune", "+", ":"],
+                        "reset": ["--hard", "--merge", "--keep"],
+                        "checkout": ["--force", "-f"],
+                        "switch": ["--force", "-f", "--discard-changes"],
+                        "branch": ["--force", "-f", "-D", "-M", "-C"],
+                        "commit": ["--amend"]}
+GUARD_GIT_SUBS_FORCE = ["rebase", "filter-branch", "restore", "clean", "update-ref"]
+GUARD_GIT_OPTS_BYPASS = {"commit": ["--no-verify", "-n", "--amend"],
+                         "push": ["--no-verify"]}
+GUARD_GIT_SUBS_ALL = ["config"]
+# Tools every guarded role is denied in its agent file (review H4); the guard
+# denies them too, and every MCP tool.
+GUARD_WITHHELD = ["Workflow", "CronCreate", "CronDelete", "SendMessage", "EnterWorktree",
+                  "ExitWorktree", "TaskStop", "RemoteTrigger", "SendFile", "ScheduleWakeup",
+                  "Skill", "SendToProject", "PublishPlugin", "Artifact", "AppifactRepl",
+                  "request_computer"]
+
+# Risk review of TASK-0271 (H1, H3), guard only, as text globs: `git -*` is
+# any option BEFORE the subcommand (`-c`, `-C <dir>`, `--git-dir`,
+# `--exec-path`; `git -C . push --force` slipped past every `git push*` rule,
+# M5). The option rules (`-o`, `--output`, `--ext-diff`, `-n`, `--amend`, ...)
+# are parsed, not globbed: GUARD_GIT_OPTS_* above.
+GUARD_GIT_DENY = ["git -*", "git config*", "git *core.*"]
+GUARD_BYPASS_DENY = ["git commit* -n", "git commit* -n *", "git commit*--no-v*",
+                     "git commit*--am*"]
+
 VOCAB = {
     # `edit` is the key that actually gates writes: OpenCode documents it as
     # gating `write`, `edit` AND `apply_patch`. `write` is NOT a documented
@@ -136,9 +219,13 @@ VOCAB = {
     # (bash-allowlist, test-allowlist, no-force-push,
     # push-requires-confirmation) — denying everything and then shaping what
     # is denied is a contradiction, and emitted order would decide it.
+    #
+    # `PowerShell` and `Monitor` beside `Bash` (TASK-0271): the Claude Code
+    # 2.1.321 tool declarations list both, each taking a shell `command`, so
+    # withholding Bash alone left a Windows host a shell.
     "no-bash": {
         "opencode": [("bash", "deny")],
-        "claude_code": {"deny_tools": ["Bash"]},
+        "claude_code": {"deny_tools": ["Bash"] + OTHER_SHELLS},
     },
     # Semantically PARTIAL, not equivalent. OpenCode refuses tool calls
     # touching paths outside the worktree; Claude Code's `isolation:
@@ -161,7 +248,7 @@ VOCAB = {
             "**/*.spec.*": "allow",
             "**/spec/**": "allow",
         })],
-        "claude_code": None,
+        "claude_code": GUARD,
     },
     # The SECOND parameterised term: its permitted set comes from the role's
     # `bash_allow` list, so the emit path special-cases it like
@@ -175,7 +262,7 @@ VOCAB = {
     # to a prompt is not the boundary that was declared.
     "bash-allowlist": {
         "opencode": "PARAMETERISED",
-        "claude_code": None,
+        "claude_code": GUARD_SHELL,
     },
     # The THIRD parameterised term (TASK-0071, closing B-021). Its permitted
     # set comes from `test_allow`, and it merges into the SAME `bash` map as
@@ -189,7 +276,7 @@ VOCAB = {
     # refusing is the only honest outcome (clause 8).
     "test-allowlist": {
         "opencode": "PARAMETERISED",
-        "claude_code": None,
+        "claude_code": GUARD_SHELL,
     },
     # "no-force-push" is shorthand: it denies the whole family of git
     # operations that destroy work rather than adding to it. `git clean -f`
@@ -214,7 +301,7 @@ VOCAB = {
             # deny -- the ordering property TASK-0045 lost a boundary to.
             "git commit*--amend*": "deny",
         })],
-        "claude_code": None,
+        "claude_code": GUARD_SHELL,
     },
     # THIRTEENTH term. Denies defeating a repo control while using a
     # PERMITTED command form -- which is a different failure from destroying
@@ -255,15 +342,15 @@ VOCAB = {
         "opencode": [("bash", {
             "git commit*--no-verify*": "deny",
         })],
-        "claude_code": None,
+        "claude_code": GUARD_SHELL,
     },
     "push-requires-confirmation": {
         "opencode": [("bash", {"git push*": "ask"})],
-        "claude_code": None,
+        "claude_code": GUARD_SHELL,
     },
     "webfetch-requires-confirmation": {
         "opencode": [("webfetch", "ask")],
-        "claude_code": None,
+        "claude_code": GUARD,
     },
 }
 
@@ -272,6 +359,10 @@ CLIENT_KEYS = {"claude-code": "claude_code", "opencode": "opencode"}
 
 class Refused(Exception):
     """Emission refused: a declared term the target cannot enforce."""
+
+
+class NeedsGuard(Refused):
+    """A role whose terms only the role guard enforces, emitted without it."""
 
 
 def parse(path):
@@ -475,7 +566,7 @@ def turn_limits(role):
     return []
 
 
-def emit_claude_code(role, fm, body):
+def emit_claude_code(role, fm, body, guarded=False):
     deny, extra, allow_tools = [], {}, []
     for term in fm["capabilities"]:
         if term == "delegation-allowlist":
@@ -493,9 +584,16 @@ def emit_claude_code(role, fm, body):
                 "no 'ask' state). Narrow its 'clients' list to opencode, or "
                 "see ADR-0018 clause 8.4 before adding a workaround."
                 % (role, term))
+        if spec.get("guard") and not guarded:
+            raise NeedsGuard(
+                "role '%s' declares '%s', which only the role guard enforces "
+                "in Claude Code (ADR-0062); it ships in the ai-toolbox-agents "
+                "plugin, not in a plain emission" % (role, term))
         deny += spec.get("deny_tools", [])
+        if spec.get("guard"):
+            deny += GUARD_WITHHELD
         for k, v in spec.items():
-            if k not in ("deny_tools", "partial"):
+            if k not in ("deny_tools", "partial", "guard"):
                 extra[k] = v
     out = ["---", "name: %s" % role,
            "description: %s" % fm["description"]]
@@ -519,6 +617,74 @@ def emit_claude_code(role, fm, body):
     out += ["%s: %s" % kv for kv in turn_limits(role)]
     out += ["---", "", body, ""]
     return "\n".join(out)
+
+
+def guard_spec(fm):
+    """The role guard's rules for one role, or None when it declares no term
+    only the guard enforces. Read from the same VOCAB rows and frontmatter
+    lists emit_opencode reads, so the two clients cannot drift apart.
+
+    bash:     allow (bash_allow + test_allow), deny and ask patterns, and
+              `allowlist`: whether an unmatched command is out of the
+              allowlist (asked during the trial, denied after) or passed on.
+    edit:     the path globs Edit, Write and NotebookEdit may touch.
+    webfetch: "ask" when every fetch needs a person's confirmation.
+    """
+    caps = fm.get("capabilities", [])
+    if not any((VOCAB[t]["claude_code"] or {}).get("guard") for t in caps
+               if isinstance(VOCAB[t]["claude_code"], dict)):
+        return None
+    spec = {}
+    if any(t in caps for t in ("bash-allowlist", "test-allowlist", "no-force-push",
+                               "no-bypass", "push-requires-confirmation")):
+        bash = {"allowlist": False, "allow": [], "deny": [], "ask": []}
+        for term, key in (("bash-allowlist", "bash_allow"), ("test-allowlist", "test_allow")):
+            if term in caps:
+                bash["allowlist"] = True
+                bash["allow"] += [p for p in fm.get(key, []) if p not in bash["allow"]]
+        for term in ("no-force-push", "no-bypass", "push-requires-confirmation"):
+            if term in caps:
+                for key, value in VOCAB[term]["opencode"]:
+                    for glob, action in value.items():
+                        bash[action].append(glob)
+        if "no-force-push" in caps:
+            bash["deny"] += GUARD_PUSH_DENY
+        if "no-bypass" in caps:
+            bash["deny"] += GUARD_BYPASS_DENY
+        bash["deny"] += GUARD_GIT_DENY
+        opts = {k: list(v) for k, v in GUARD_GIT_OPTS_ALL.items()}
+        subs = list(GUARD_GIT_SUBS_ALL)
+        for term, table, whole in (("no-force-push", GUARD_GIT_OPTS_FORCE, GUARD_GIT_SUBS_FORCE),
+                                   ("no-bypass", GUARD_GIT_OPTS_BYPASS, [])):
+            if term in caps:
+                for sub, names in table.items():
+                    opts.setdefault(sub, [])
+                    opts[sub] += [n for n in names if n not in opts[sub]]
+                subs += [w for w in whole if w not in subs]
+        bash["git"] = {"options": opts, "subcommands": subs}
+        spec["bash"] = bash
+    if "test-files-only" in caps:
+        (_, globs), = VOCAB["test-files-only"]["opencode"]
+        spec["edit"] = sorted(g for g, a in globs.items() if a == "allow")
+    if "webfetch-requires-confirmation" in caps:
+        spec["webfetch"] = "ask"
+    return spec
+
+
+def guard_config():
+    """role-guard.json: the rules for every role emitted for claude-code."""
+    roles = {}
+    for role in known_roles():
+        fm, _ = parse(os.path.join("agents", role, "agent.md"))
+        if "claude-code" not in fm.get("clients", []):
+            continue
+        spec = guard_spec(fm)
+        if spec is not None:
+            roles[role] = spec
+    return {"generated_by": "scripts/emit-agents.py (ADR-0062)",
+            "deny_from": GUARD_DENY_FROM,
+            "plugin": "ai-toolbox-agents",
+            "roles": roles}
 
 
 EMITTERS = {"opencode": emit_opencode, "claude-code": emit_claude_code}
@@ -577,13 +743,33 @@ def known_roles():
 def main():
     # --only ROLE,... (TASK-0164): emit only these roles. An empty list means
     # none. Absent means every role, as before.
-    args, only = sys.argv[1:], None
+    #
+    # --with-guard (TASK-0271): the role guard ships beside these files, so a
+    # role whose terms only the guard enforces is emitted. scripts/
+    # build-plugin.py passes it for the ai-toolbox-agents plugin, which
+    # carries the guard; scripts/install.sh does not, so such a role is
+    # skipped there (and a stale copy of it pruned) rather than run unguarded.
+    #
+    # --guard-json=PATH: write role-guard.json, the guard's rules, and stop.
+    args, only, guarded = sys.argv[1:], None, False
+    for a in list(args):
+        if a.startswith("--guard-json="):
+            path = a[len("--guard-json="):]
+            import json
+            with open(path, "w", encoding="utf-8", newline="\n") as fh:
+                json.dump(guard_config(), fh, indent=2, sort_keys=True)
+                fh.write("\n")
+            return 0
+        if a == "--with-guard":
+            guarded = True
+            args.remove(a)
     if len(args) == 3 and args[2].startswith("--only="):
         only = {r for r in args[2][len("--only="):].split(",") if r}
         args = args[:2]
     if len(args) != 2:
         print("usage: emit-agents.py <client> <agents-target-dir> "
-              "[--only=ROLE,...]", file=sys.stderr)
+              "[--only=ROLE,...] [--with-guard] | --guard-json=PATH",
+              file=sys.stderr)
         return 2
     client, target = args
     if client not in CLIENT_KEYS:
@@ -621,7 +807,17 @@ def main():
                       % (role, client))
             continue
         try:
-            text = EMITTERS[client](role, fm, body)
+            if client == "claude-code":
+                text = emit_claude_code(role, fm, body, guarded=guarded)
+            else:
+                text = EMITTERS[client](role, fm, body)
+        except NeedsGuard as e:
+            if emitted_by_us(stale, role):
+                os.remove(stale)
+                print("  agent pruned: %s -> %s (%s; it needs the role guard)"
+                      % (role, client, stale))
+            print("  agent skipped: %s -> %s (%s)" % (role, client, e))
+            continue
         except Refused as e:
             print("  EMISSION REFUSED: %s" % e, file=sys.stderr)
             rc = 1

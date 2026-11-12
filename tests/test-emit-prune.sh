@@ -23,6 +23,7 @@ printf -- '---\nname: my-own-agent\n---\n' > "$T/my-own-agent.md"
 # A symlink named after an undeclared role: never followed or removed.
 printf -- '---\nname: closer\n---\n' > "$T/elsewhere.md"
 ln -s "$T/elsewhere.md" "$T/closer.md"
+have_links=0; [ -L "$T/closer.md" ] && have_links=1
 # Role-named, but its frontmatter names something else: not ours to judge.
 printf -- '---\nname: somebody-elses-refuter\n---\n' > "$T/refuter.md"
 
@@ -31,7 +32,14 @@ out=$(python3 scripts/emit-agents.py claude-code "$T" 2>&1) || true
 check "stale emitted file for an undeclared role is pruned"   '[ ! -e "$T/designer-manager.md" ]'
 check "the pruning is announced"                               'printf "%s" "$out" | grep -q "agent pruned: designer-manager -> claude-code"'
 check "an unrelated file is left alone"                        '[ -f "$T/my-own-agent.md" ]'
-check "a symlink named after a role is left alone"             '[ -L "$T/closer.md" ] && [ -f "$T/elsewhere.md" ]'
+# Git Bash on Windows makes `ln -s` a copy unless MSYS asks for real links, and
+# a regular file naming the role IS ours to prune: there the case cannot be
+# built, so it is skipped aloud rather than passed (TASK-0271).
+if [ "$have_links" = 1 ]; then
+  check "a symlink named after a role is left alone"           '[ -L "$T/closer.md" ] && [ -f "$T/elsewhere.md" ]'
+else
+  echo "SKIP a symlink named after a role is left alone (this host's ln -s made a copy)"
+fi
 check "a role-named file with a different name: is left alone" '[ -f "$T/refuter.md" ]'
 check "a declared role is still emitted"                       '[ -f "$T/task-planner.md" ]'
 

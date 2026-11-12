@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Monitor|Edit|Write|MultiEdit|NotebookEdit|WebFetch|WebSearch|Workflow|CronCreate|CronDelete|SendMessage|EnterWorktree|ExitWorktree|TaskStop|RemoteTrigger|SendFile|ScheduleWakeup|Skill|SendToProject|PublishPlugin|Artifact|AppifactRepl|request_computer|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 30,
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/role-guard.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

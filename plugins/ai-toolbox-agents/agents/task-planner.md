@@ -1,7 +1,7 @@
 ---
 name: task-planner
 description: Turns a settled, committed task file into an ordered file-level plan stating what is reused, in what order, and how each step will be verified. Use at step 5 of the unattended-run loop; never for implementing the plan or widening the task.
-disallowedTools: Write, Edit, NotebookEdit, Bash, Agent, WebFetch, WebSearch
+disallowedTools: Write, Edit, NotebookEdit, Bash, PowerShell, Monitor, Agent, WebFetch, WebSearch
 isolation: worktree
 model: opus
 maxTurns: 120

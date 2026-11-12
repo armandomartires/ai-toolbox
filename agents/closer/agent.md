@@ -10,6 +10,7 @@ capabilities:
   - no-force-push
   - no-bypass
 clients:
+  - claude-code
   - opencode
 bash_allow:
   - 'git status*'

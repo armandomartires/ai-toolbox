@@ -624,17 +624,33 @@ weaker of two clients, not by either client's native expressiveness.
 | `no-webfetch` | May not fetch network resources. | `webfetch: deny` | omit `WebFetch`, `WebSearch` from `tools` |
 | `no-bash` | May not run **any** shell command. The complement of `bash-allowlist`: that term names what is permitted, this one permits nothing. | `bash: deny` | `disallowedTools: Bash` |
 | `worktree-only` | Confined to the project worktree. | `external_directory: deny` | **partial** — `isolation: worktree` gives an isolated *copy*, which is a different guarantee. See below. |
-| `test-files-only` | May edit test paths only. | `edit` glob map | **not per-agent** |
-| `bash-allowlist` | May run **only** the commands named in `bash_allow`; everything else is denied. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **not per-agent** |
-| `test-allowlist` | May run **only** the test commands named in `test_allow`; everything else is denied. Merges into the same `bash` map as `bash-allowlist`, so a role may carry both. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **not per-agent** |
-| `no-force-push` | May not force-push, hard-reset or rewrite history — including `--amend` reached by a **trailing** flag. | `bash` deny globs | **not per-agent** |
-| `no-bypass` | May not defeat a repo control while using a permitted command form — today that is `--no-verify`, skipping the commit gate. **Not** about destroying work; that is `no-force-push`. **Does not cover `git add -- .`** — see below. | `bash` deny globs | **not per-agent** |
-| `push-requires-confirmation` | Push prompts rather than proceeding. | `bash: {"git push*": ask}` | **no `ask` state exists** |
-| `webfetch-requires-confirmation` | Network fetches prompt rather than proceeding. | `webfetch: ask` | **no `ask` state exists** |
+| `test-files-only` | May edit test paths only. | `edit` glob map | **role guard** (ADR-0062) — not per-agent |
+| `bash-allowlist` | May run **only** the commands named in `bash_allow`; everything else is denied. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **role guard**; `PowerShell`, `Monitor` withheld |
+| `test-allowlist` | May run **only** the test commands named in `test_allow`; everything else is denied. Merges into the same `bash` map as `bash-allowlist`, so a role may carry both. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **role guard**; `PowerShell`, `Monitor` withheld |
+| `no-force-push` | May not force-push, hard-reset or rewrite history — including `--amend` reached by a **trailing** flag. | `bash` deny globs | **role guard** (plus trailing `--force` forms) |
+| `no-bypass` | May not defeat a repo control while using a permitted command form — today that is `--no-verify`, skipping the commit gate. **Not** about destroying work; that is `no-force-push`. **Does not cover `git add -- .`** — see below. | `bash` deny globs | **role guard** |
+| `push-requires-confirmation` | Push prompts rather than proceeding. | `bash: {"git push*": ask}` | **role guard** `ask` |
+| `webfetch-requires-confirmation` | Network fetches prompt rather than proceeding. | `webfetch: ask` | **role guard** `ask` |
 
-**Five of the thirteen are enforceable in both clients** — the first three plus
-`delegation-allowlist` and `no-bash`. The other eight are enforceable in
-OpenCode only, and
+**The role guard (`TASK-0271`, ADR-0062).** The last seven rows have
+no per-agent Claude Code expression; they are enforced by
+`configs/claude-code/hooks/role-guard.py`, a `PreToolUse` hook keyed on
+`agent_type` whose rules `scripts/emit-agents.py --guard-json=` generates from
+these files. Only the `ai-toolbox-agents` plugin carries it, so a role
+declaring one of them is emitted for Claude Code **only into that plugin**
+(`--with-guard`); `scripts/install.sh` skips it. Out-of-allowlist calls are
+asked until `deny_from` in `role-guard.json` (2026-11-26) and denied from
+then (UTC). A guarded role runs one simple command per call: every shell
+operator (separator, pipe, redirection, group) is denied. `no-bash` withholds `Bash`, `PowerShell` and `Monitor`. The hook
+is started by `bash hooks/role-guard.sh`, which needs `python3` (or `python`)
+3.8+ and, without one, denies only the guarded agents' calls. Remaining gaps
+(teammates, the `run-gate.sh` name, hook timeouts) are listed in ADR-0062.
+The fixtures are `tests/test-role-guard.sh`.
+
+The rest of this section is the history the guard answers: **five of the
+thirteen are enforceable in both clients per agent** — the first three plus
+`delegation-allowlist` and `no-bash`. The other eight have no per-agent
+Claude Code expression, and
 the reason is structural: Claude Code's `tools`/`disallowedTools` gate
 **whole tools**, so anything needing *intra-tool* granularity — which paths,
 which commands, or a third `ask` state between allow and deny — has no
@@ -642,8 +658,8 @@ per-agent expression. A `disallowedTools` entry with a specifier such as
 `Bash(git push *)` removes the entire `Bash` tool, not the matching
 commands.
 
-`test-allowlist` is in the OpenCode-only seven for exactly that reason, and
-it is why `qa-test` is an OpenCode-only role. Naming test commands is
+`test-allowlist` was in the OpenCode-only seven for exactly that reason, and
+it is why `qa-test` was an OpenCode-only role until the role guard. Naming test commands is
 intra-`Bash` granularity; Claude Code can give a role `Bash` or withhold it,
 and nothing between. A Claude Code `qa-test` would ship with unrestricted
 `Bash` — a **weaker** boundary than the one its description implies — so the
@@ -875,10 +891,12 @@ pool** — the block is parsed as an unknown key and discarded without a
 warning. Verified by fixture in TASK-0036. A file that says `deny` over an
 agent that can write is worse than a file that refused to emit.
 
-Consequently **`git-ops`, `review` and `qa-test` are OpenCode-only roles**:
+Consequently **`git-ops`, `review` and `qa-test` were OpenCode-only roles**:
 each exists to enforce a command allowlist — `bash-allowlist` for the first
 two, both `bash-allowlist` and `test-allowlist` for `qa-test` — and neither
-term has a per-agent Claude Code expression.
+term has a per-agent Claude Code expression. Since `TASK-0271` (ADR-0062)
+they reach Claude Code through the `ai-toolbox-agents` plugin, whose
+role guard enforces those terms; a plain emission still skips them.
 
 > This sentence named **`shell-runner`** until `TASK-0071`, and
 > `agents/shell-runner/` **has never existed**. It is a planned role

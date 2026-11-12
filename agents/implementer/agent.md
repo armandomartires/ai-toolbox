@@ -9,6 +9,7 @@ capabilities:
   - bash-allowlist
   - no-force-push
 clients:
+  - claude-code
   - opencode
 bash_allow:
   - 'git status*'

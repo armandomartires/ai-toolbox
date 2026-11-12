@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: blocked
+- Status: todo
 - Owner: agent
 - Branch: agent/TASK-0280
 - Created: 2026-11-10
@@ -81,4 +81,7 @@ Next:
   - Deviation: none
 - 2026-11-12 · Claude Code (Opus 5.5) · blocked on TASK-0271, which the human parked on 2026-11-12. The reference profile rests on which of the seven refused terms pass measurement there; with none measured, the ADR would supersede ADR-0018 on a guard that does not exist, and this HIGH-risk task is left for the human to re-scope or resume after TASK-0271
   - Evidence: `.ai/tasks/TASK-0271-role-guard.md` (Status: blocked, parked by the human)
+  - Deviation: none
+- 2026-11-12 · Claude Code (Opus 5.5) · unblocked: TASK-0271 landed with all seven terms passing (ADR-0062), so the reference profile can include the guard
+  - Evidence: TASK-0271 in review on master
   - Deviation: none

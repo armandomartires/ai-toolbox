@@ -10,6 +10,7 @@ capabilities:
   - bash-allowlist
   - test-allowlist
 clients:
+  - claude-code
   - opencode
 bash_allow:
   - 'git status*'

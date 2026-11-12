@@ -389,7 +389,9 @@ src_skills="$(cd "$here/skills" && for d in */; do d="${d%/}"; case "$d" in _tem
 loop_skills="$(cd "$here/loops" && for d in */; do d="${d%/}"; case "$d" in _template*) continue ;; esac; [ -f "$d/SKILL.md" ] && echo "$d"; done | wc -l | tr -d ' ')"
 src_skills=$((src_skills + loop_skills))
 mkdir -p "$tmp/em"
-(cd "$here" && python3 scripts/emit-agents.py claude-code "$tmp/em" >/dev/null 2>&1)
+# --with-guard: the plugin carries the role guard, so it holds the guarded roles
+# a plain emission skips (TASK-0271, ADR-0062).
+(cd "$here" && python3 scripts/emit-agents.py claude-code "$tmp/em" --with-guard >/dev/null 2>&1)
 src_agents="$(ls "$tmp/em" | wc -l | tr -d ' ')"
 # counts_ok <built-dir>: skills, agents and the gates server, against the sources.
 counts_ok() {
@@ -428,11 +430,14 @@ PY
 )"
 check "P6 marketplace lists the three plugins and agents depends on skills" "$([ "$dep" = yes ]; echo $?)" "$dep"
 
-# Not shipped: permission rules, hooks and the checkout-only skill. A plugin
-# settings.json is not a known way to ship permission rules (install.sh writes
-# them), the worktree hooks are this repo's rule, and mod-dev needs a checkout.
-nopl="$(cd "$PB" && find . \( -name settings.json -o -name hooks.json -o -name hooks -o -name mod-dev \) | wc -l | tr -d ' ')"
-check "P7 no plugin carries a settings.json, hooks or the mod-dev skill" "$([ "$nopl" = 0 ]; echo $?)" "found $nopl"
+# Not shipped: permission rules, the worktree hooks and the checkout-only skill.
+# A plugin settings.json is not a known way to ship permission rules (install.sh
+# writes them), the worktree hooks are this repo's rule, and mod-dev needs a
+# checkout. The one hook shipped is the agents plugin's role guard (TASK-0271).
+nopl="$(cd "$PB" && find . \( -name settings.json -o -name hooks.json -o -name hooks -o -name mod-dev -o -name 'worktree-*' \) | grep -v '^\./ai-toolbox-agents/hooks\(/hooks\.json\)\?$' | wc -l | tr -d ' ')"
+check "P7 no plugin carries a settings.json, worktree hooks or the mod-dev skill; only the agents plugin has hooks" "$([ "$nopl" = 0 ]; echo $?)" "found $nopl"
+gh="$(ls "$PB/ai-toolbox-agents/hooks" 2>/dev/null | tr '\n' ' ')"
+check "P7b the agents plugin's hooks are the role guard and its launcher alone" "$([ "$gh" = "hooks.json role-guard.json role-guard.py role-guard.sh " ]; echo $?)" "$gh"
 check "P8 the gates .mcp.json passes only the required variables plus GATES_TRANSPORT=stdio, run frozen without dev" "$(python3 -c '
 import json, sys
 s = json.load(open(sys.argv[1]))["mcpServers"]["gates"]
@@ -441,6 +446,7 @@ sys.exit(0 if ok else 1)' "$PB/ai-toolbox-gates/.mcp.json"; echo $?)"
 # A fake root: CRLF sources, the excluded skill, a --check that ignores line endings.
 FR="$tmp/fakeroot"; mkdir -p "$FR/scripts" "$FR/.ai/context" "$FR/skills/only" "$FR/skills/mod-dev" "$FR/agents" "$FR/mcp-servers/gates"
 cp "$BP" "$here/scripts/emit-agents.py" "$here/scripts/plugin-versions.json" "$FR/scripts/"
+mkdir -p "$FR/configs/claude-code/hooks"; cp "$here/configs/claude-code/hooks/role-guard.py" "$here/configs/claude-code/hooks/role-guard.sh" "$FR/configs/claude-code/hooks/"
 cp "$here/.ai/context/model-tiers.md" "$FR/.ai/context/" 2>/dev/null
 cp -r "$here/agents/critic" "$FR/agents/critic"
 cp -r "$here/mcp-servers/gates/src" "$here/mcp-servers/gates/pyproject.toml" "$FR/mcp-servers/gates/"

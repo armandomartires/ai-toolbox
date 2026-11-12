@@ -589,7 +589,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0270-stale-loop-text.md
 - [?] TASK-0290 — Fix the first live CI runs of the eval and tool-lock jobs
   .ai/tasks/TASK-0290-first-live-ci-fixes.md
-- [!] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
+- [>] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
   .ai/tasks/TASK-0271-role-guard.md
 - [?] TASK-0272 — Claude Code plugins per component kind (P1.2)
   .ai/tasks/TASK-0272-claude-code-plugins.md
@@ -607,7 +607,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0278-evals-trials-and-growth.md
 - [?] TASK-0279 — Claude Code OpenTelemetry (P1.9)
   .ai/tasks/TASK-0279-claude-code-otel.md
-- [!] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
+- [ ] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
   .ai/tasks/TASK-0280-claude-reference-profile.md
 - [!] TASK-0281 — Codex port completion (P2.2)
   .ai/tasks/TASK-0281-codex-port-completion.md
@@ -615,7 +615,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/p
   .ai/tasks/TASK-0282-long-run-harness.md
 - [?] TASK-0283 — Signed, versioned releases (P2.4)
   .ai/tasks/TASK-0283-signed-versioned-releases.md
-- [!] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
+- [ ] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
   .ai/tasks/TASK-0284-agent-sdk-runner.md
 - [?] TASK-0285 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
   .ai/tasks/TASK-0285-gates-http-transport.md

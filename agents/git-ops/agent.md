@@ -12,6 +12,7 @@ capabilities:
   - no-bypass
   - push-requires-confirmation
 clients:
+  - claude-code
   - opencode
 bash_allow:
   - 'git status*'
@@ -19,7 +20,7 @@ bash_allow:
   - 'git log*'
   - 'git show*'
   - 'git rev-parse*'
-  - 'git remote -v*'
+  - 'git remote -v'
   - 'git branch --show-current*'
   - 'git add -- *'
   - 'git commit -m *'

@@ -2,11 +2,11 @@
 
 ## Status
 
-- Status: blocked (parked by the human, 2026-11-12)
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0271
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-12
 - Applies to: `configs/claude-code/hooks/`, `scripts/emit-agents.py`, `.ai/decisions/`
 - Source: docs/reports/2026-11-10-alignment/ALIGNMENT-PLAN.md item P1.1 (N1), decisions D1=B (measure first, supersede 8.3 only for terms that pass), Q10=A (ask for two weeks, then deny), Q15=B (packaging ships first with 4 roles); related: R-11 (approvals enforced by tooling), ADR-0018, ADR-0039
 
@@ -53,15 +53,15 @@ Let the roles that need the seven refused capability terms reach Claude Code wit
 
 ## Acceptance criteria
 
-- [ ] One fixture per refused term exists and its result is recorded (passes, or the term stays refused)
-- [ ] For each passing term the forbidden call is denied or asked, the allowed call passes, and removing the hook or rule fails the fixture
-- [ ] Every role whose terms all passed is emitted for `claude-code` and carried by the agents plugin; the ADR names the terms that did not
-- [ ] During the trial an out-of-allowlist call returns `ask`; after the switch date it returns `deny`
+- [x] One fixture per refused term exists and its result is recorded (passes, or the term stays refused)
+- [x] For each passing term the forbidden call is denied or asked, the allowed call passes, and removing the hook or rule fails the fixture
+- [x] Every role whose terms all passed is emitted for `claude-code` and carried by the agents plugin; the ADR names the terms that did not
+- [x] During the trial an out-of-allowlist call returns `ask`; after the switch date it returns `deny`
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] the new role-guard fixture test, `tests/test-emit-prune.sh` and `tests/test-emit-allowlist-note.sh`
+- [x] tests/validate.sh
+- [x] the new role-guard fixture test, `tests/test-emit-prune.sh` and `tests/test-emit-allowlist-note.sh`
 
 ## Risks and rollback
 
@@ -74,13 +74,16 @@ Let the roles that need the seven refused capability terms reach Claude Code wit
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `configs/claude-code/hooks/role-guard.{py,sh}`, `plugins/ai-toolbox-agents/hooks/` | the guard, its launcher, `hooks.json` and the generated `role-guard.json`; plugin 0.2.0; fails closed for guarded agents only |
+| `scripts/emit-agents.py`, `agents/*/agent.md` | `--guard-json=`, `--with-guard`, `GUARD_DENY_FROM = "2026-11-26"`; `claude-code` on the ten roles whose terms all passed, so 14 of 15 reach Claude Code |
+| `tests/test-role-guard.sh`, ADR-0062 | 448 checks, wired into `tests/validate.sh`; ADR-0062 accepted 2026-11-12, superseding ADR-0018 clause 8.3 for the seven terms on Claude Code |
 
-Next:
+Next: during the trial (to 2026-11-25), record every false `ask` here and fix the allowlists before the switch; one live session confirming a plugin hook receives `agent_type` for a plugin subagent is still owed (ADR-0062, Not measured).
 
 ## Execution log
 
-- 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet
-  - Evidence: none yet
-  - Deviation: none
+- 2026-11-10 · agent/Sonnet 5.5 · brief written from the alignment plan; no work done yet. Evidence: none yet. Deviation: none
 - 2026-11-12 · Claude Code (Opus 5.5, coordinator) · parked by the human after four Opus risk reviews. The work (guard, launcher, emitter tables, 366 fixtures, ADR-0062 proposed) is unlanded in worktree `agent-a30ca3af10fe59891`, saved as `../ai-toolbox-worktrees/TASK-0271-parked.patch` (untracked, outside the repo); its gate passed. Open: R-0271d HIGH-1 (mixed operator tokens such as `;(`, `>|` read as words) and HIGH-2 (`-S` optional value skips `-nq`), MEDIUM `~/.claude.json`. Proposed next round: deny every shell operator for guarded roles, `-S` consumes its cluster, protect `~/.claude.json`.
+- 2026-11-12 · Claude Code (Opus 5.5) · resumed on the human's "Complete 0271". The parked patch was applied onto master (3918e49): three conflicts were resolved by keeping both sides (the turn table and the guard in `emit-agents.py`, the gates P8 text and the hook files in `test-install.sh`, both blocks in `validate.sh`). Then the fourth review's findings were closed. HIGH-1: every token made only of shell operator characters is a deny, so separators and redirection go from `ask` to `deny`. HIGH-2: `-S`, `-u` and `-t` take the rest of their cluster; `commit -U` and `checkout -U` are listed as required. MEDIUM: `~/.claude.json` and `.claude/{rules,output-styles,workflows}/` are protected. `deny_from` moved to 2026-11-26 to keep two weeks from landing. ADR-0062 marked accepted; plugin 0.2.0. Then a fifth risk review (a fresh agent, adversarial, run against real git 2.53): two HIGH bypasses through `--` taken as a long option's value (`git commit -m x --template -- -an` skipped the hook; `git log --decorate-refs -- --output=.git/hooks/pre-commit` wrote a hook the next commit ran), MEDIUM editable guard and plugin files, LOW `!`/`eval`. All four fixed: words after any `--` are still options, `--` after a long option without `=` is its value, `!` and `eval` are unwrapped, the guard's files, `.claude-plugin/`, `hooks/hooks.json` and `.gitleaks*` are protected. Its MEDIUM on executed repository scripts (`stop-fast-check.sh`, `tests/validate.sh`) is recorded in ADR-0062 as not closable by a path list.
+  - Evidence: `bash tests/test-role-guard.sh` → 448 PASS, OK; against the parked guard (`ROLE_GUARD_PY=`) 38 of the review-4d checks fail, and against the guard before the fifth review's fixes 24 of the review-5e checks fail; `test-install.sh` OK (87 cases, `claude plugin validate` and install of 14 agents); `build-plugin.py --check` matches
+  - Deviation: the date moved one day (ADR-0062 Decision 3 allowed it); ADR-0062's acceptance is read from the human's instruction to complete the task, which it says nothing lands before

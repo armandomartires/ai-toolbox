@@ -1751,6 +1751,20 @@ if ! TURNS_OUT="$(bash tests/test-emit-turns.sh 2>&1)"; then
   printf '%s\n' "$TURNS_OUT" | grep -v '^ok' | sed 's/^/EMIT-TURNS: /'
   fail=1
 fi
+# The role guard (TASK-0271, ADR-0062): one fixture per term ADR-0018
+# clause 8.3 refused for Claude Code. Each forbidden call is denied or asked,
+# each allowed call passes, and removing the hook or the term's rule fails the
+# fixture; the trial asks until role-guard.json's deny_from and denies from it;
+# the plugin carries the guard and the guarded roles. Feeds the guard the hook
+# input Claude Code 2.1.321 declares; writes only under mktemp. The emitter's
+# prune and allowlist-note suites run beside it, since the guard changed what a
+# plain emission writes. Unconditional (ADR-0009).
+for t in test-role-guard test-emit-prune test-emit-allowlist-note; do
+  if ! RG_OUT="$(bash "tests/$t.sh" 2>&1)"; then
+    printf '%s\n' "$RG_OUT" | grep -v '^PASS\|^ok\|^MEASURE' | sed "s/^/ROLE-GUARD($t): /"
+    fail=1
+  fi
+done
 
 # --------------------------------------------------------------------------
 # repo-inventory reports every risk it claims to, and reads without writing
