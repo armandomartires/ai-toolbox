@@ -31,8 +31,8 @@
 # PASS; a CI job that treated SKIP as success would report green while
 # verifying nothing. If it is ever added, it needs explicit SKIP handling.
 #
-# The `bindings` job runs the two unattended-run bindings' stub suites
-# (ADR-0032, TASK-0141). They are not in tests/validate.sh: the OpenCode suite
+# The `bindings` job runs the unattended-run bindings' stub suites (ADR-0032,
+# TASK-0141; the Agent SDK runner's since TASK-0284). They are not in tests/validate.sh: the OpenCode suite
 # takes about three minutes, and the Claude Code one needs node, which the
 # gate may not assume. A red job fails this workflow, so ci-alert reports it.
 name: validate
@@ -106,3 +106,8 @@ jobs:
 
       - name: OpenCode binding, against a stub opencode
         run: python3 -m unittest discover -s skills/unattended-ops/templates/bindings/opencode/tests -v
+
+      # TASK-0284: no SDK is installed here on purpose; the runner must import
+      # and its suite must run without it.
+      - name: Agent SDK runner, against a stub claude_agent_sdk
+        run: python3 -m unittest discover -s skills/unattended-ops/templates/bindings/agent-sdk/tests -v

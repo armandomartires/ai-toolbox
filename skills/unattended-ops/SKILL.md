@@ -5,7 +5,7 @@ license: MIT
 disable-model-invocation: true
 metadata:
   author: armando.martires
-  version: "1.7.0"
+  version: "1.8.0"
 ---
 
 # unattended-ops
@@ -182,11 +182,13 @@ The snapshot procedure is `skills/project-workflow/templates/reference/tracker.m
   here has yet driven a run from this repo's own artifacts; treat the first
   binding's pilot as the first test (`PLAN-0006`, S10). The OpenCode
   binding's tests run against a **stub** `opencode`, and the Claude Code
-  binding's against a **stub** Workflow runtime — models of the clients, not
-  the clients.
-- **Not a governance framework.** It ships the binding contract, two
-  client bindings (`templates/bindings/opencode/` and
-  `templates/bindings/claude-code/`) and a checker. No index, no task IDs, no sprint shape, no status vocabulary
+  binding's against a **stub** Workflow runtime, and the Agent SDK runner's
+  against a **stub** `claude_agent_sdk` — models of the clients, not the
+  clients.
+- **Not a governance framework.** It ships the binding contract, three
+  client bindings (`templates/bindings/opencode/`,
+  `templates/bindings/claude-code/` and, on trial, `templates/bindings/agent-sdk/`)
+  and a checker. No index, no task IDs, no sprint shape, no status vocabulary
   beyond the five verdicts and a binding's slot values. That layer is
   `project-workflow` and `project-migration`, which are two deliberately
   divergent frameworks — `ADR-0013`; do not add a third.
@@ -205,6 +207,7 @@ The snapshot procedure is `skills/project-workflow/templates/reference/tracker.m
 | `templates/binding.md` | The binding contract: one slot per thing a run cannot derive, and `unknown` is a stop |
 | `templates/bindings/opencode/` | The OpenCode binding: `driver.py`, the `run-gate.sh` entry point, `binding.md`, and hermetic tests against a stub `opencode`. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
 | `templates/bindings/claude-code/` | The Claude Code binding: the `unattended-run.js` Workflow template, `binding.md`, and tests against a stub Workflow runtime. **Weaker by construction** than the OpenCode one — its binding says where. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
+| `templates/bindings/agent-sdk/` | On trial (`TASK-0284`): `runner.py`, the OpenCode driver's steps with each role run through the Claude Agent SDK, the role guard as a PreToolUse hook callback, and `binding.md`. The SDK is optional; its tests run against a stub `claude_agent_sdk`. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
 | `scripts/check-binding.sh` | Read-only checker: a binding declares every numbered step of the loop and states no uncited rule. Nothing in this repository runs it |
 | `fixtures/` | The checker observed failing for the right reason, then observed passing |
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: todo
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0284
 - Created: 2026-11-10
@@ -46,14 +46,14 @@ Add a Claude Agent SDK runner (Python), with hooks as callbacks, OTel and the sa
 
 ## Acceptance criteria
 
-- [ ] The golden run passes on the SDK runner and the current binding in CI
-- [ ] Removing the hook callbacks fails the guard fixture
-- [ ] The comparison note holds result, cost, duration and interventions for both runners
+- [ ] The golden run passes on the SDK runner and the current binding in CI: on stubs only. The 3-task fixture passes on both (the SDK runner's journal matches the OpenCode driver's, plus one `role-result` line per role call); a live golden run needs the human's authorization and an API key
+- [x] Removing the hook callbacks fails the guard fixture: `DROP_GUARD_HOOKS=1` → 4 failures (a stubbed `git push --force` from git-ops reached the remote)
+- [ ] The comparison note holds result, cost, duration and interventions for both runners: NOT RUN, it needs the live runs
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
-- [ ] the golden-run CI job and `skills/unattended-ops/scripts/check-binding.sh`
+- [x] tests/validate.sh: in the pre-commit hook
+- [x] `check-binding.sh` on the filled fixture binding → `BINDING OK`; the suite added to the `bindings` job (`.github/workflows/validate.yml`), not a live golden-run job
 
 ## Risks and rollback
 
@@ -66,9 +66,13 @@ Add a Claude Agent SDK runner (Python), with hooks as callbacks, OTel and the sa
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `skills/unattended-ops/templates/bindings/agent-sdk/` | `runner.py` (imports the OpenCode driver, replaces how a role runs: one `query()` per role with its emitted definition, `max_turns`, sandbox and permission settings, OTel env, the role guard as a PreToolUse hook callback; a guard `ask` is answered deny), `binding.md`, 13 tests on a stub SDK |
+| `bindings/opencode/driver.py` | step 1 split into `check_client_ready()` and `check_roles()`, the seam the runner overrides; its 57 tests pass |
+| `.github/workflows/validate.yml` | the runner's suite in the `bindings` job, with no SDK installed |
 
-Next:
+Unverified: every SDK name runs only against the stub. Checked against the SDK's Python docs on 2026-11-12, which corrected one: a single-shot `query()` raises `ResultError` on an error result, so the runner catches it. The emitted `isolation: worktree` is not applied, since each role is its own top-level query.
+
+Next: the human authorizes a live golden run on both runners (an API key and a disposable repository); then the comparison note and the pick.
 
 ## Execution log
 
@@ -81,3 +85,6 @@ Next:
 - 2026-11-12 · Claude Code (Opus 5.5) · unblocked: TASK-0271 landed, so the guard fixture can be ported; the live golden run still needs the human's authorization
   - Evidence: TASK-0271 in review on master
   - Deviation: none
+- 2026-11-12 · Claude Code (Opus 5.5) · runner built by a builder agent in an isolated worktree, merged here (one conflict in `driver.py` with TASK-0282's progress file, kept both); the SDK API checked against its docs and the `ResultError` path fixed in the runner and the stub
+  - Evidence: agent-sdk suite → 13 OK (the real-guard test runs here); `DROP_GUARD_HOOKS=1` → FAILED (failures=4); OpenCode suite → 57 OK; `build-plugin.py --check` matches
+  - Deviation: no live run and no comparison note: both need the human's authorization (AGENTS.md); the SDK was not installed (a stub stands in)

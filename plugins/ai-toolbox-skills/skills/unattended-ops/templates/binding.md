@@ -57,7 +57,9 @@ Copy this file to `templates/bindings/<client>/binding.md` when authoring one
 for a client in this repository, or into the consuming repository beside the
 driver it describes. **The OpenCode binding ships under
 `templates/bindings/opencode/` (`TASK-0086`) and the Claude Code one under
-`templates/bindings/claude-code/` (`TASK-0087`); Bionic's is S10.4.**
+`templates/bindings/claude-code/` (`TASK-0087`); Bionic's is S10.4. A Claude
+Agent SDK runner is on trial under `templates/bindings/agent-sdk/`
+(`TASK-0284`).**
 
 ## The one rule that makes the rest of it mean something
 

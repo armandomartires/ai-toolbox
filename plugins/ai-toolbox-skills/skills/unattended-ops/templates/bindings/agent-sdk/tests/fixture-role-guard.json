@@ -1,0 +1,21 @@
+{
+  "deny_from": "2026-11-26",
+  "generated_by": "a test fixture in the shape of scripts/emit-agents.py --guard-json=",
+  "plugin": "ai-toolbox-agents",
+  "roles": {
+    "closer": {
+      "bash": {
+        "allow": ["git status*", "git diff*", "git log*", "git rev-parse*", "git add -- *", "git commit -m *"],
+        "ask": [],
+        "deny": ["git push --force*", "git push -f*", "git push*--force*", "git reset --hard*", "git rebase*"]
+      }
+    },
+    "git-ops": {
+      "bash": {
+        "allow": ["git status*", "git diff*", "git log*", "git show*", "git rev-parse*", "git add -- *", "git commit -m *"],
+        "ask": ["git push*"],
+        "deny": ["git push --force*", "git push -f*", "git push*--force*", "git reset --hard*", "git rebase*"]
+      }
+    }
+  }
+}

@@ -288,11 +288,24 @@ def duration(text):
 
 
 class Binding:
+    # Seams for a runner that reuses this control flow on another client
+    # (bindings/agent-sdk/, TASK-0284): the slots it requires, and the two
+    # client checks below. This driver's own values are unchanged.
+    SLOTS = REQUIRED_SLOTS
+
+    def check_client(self, fm):
+        if fm["client"] != "opencode":
+            raise Halt("binding client is %r; this driver is the OpenCode one"
+                       % fm["client"])
+        if not re.fullmatch(r"[^/\s]+/\S+", fm["model"]):
+            # ADR-0022 clause 5.3: no explicit model -> opencode run hangs.
+            raise Halt("model %r is not provider/model" % fm["model"])
+
     def __init__(self, path, run_id):
         self.path = os.path.abspath(path)
         fm = parse_frontmatter(path)
-        missing = [s for s in REQUIRED_SLOTS if s not in fm]
-        bad = [s for s in REQUIRED_SLOTS if s in fm and bad_value(fm[s])]
+        missing = [s for s in self.SLOTS if s not in fm]
+        bad = [s for s in self.SLOTS if s in fm and bad_value(fm[s])]
         for sub in ("roles", "steps_declared"):
             if isinstance(fm.get(sub), dict):
                 bad += ["%s.%s" % (sub, k) for k, v in fm[sub].items() if bad_value(v)]
@@ -301,12 +314,7 @@ class Binding:
             # unknown is a stop.
             raise Halt("binding not usable — missing: %s; unanswered: %s"
                        % (", ".join(missing) or "none", ", ".join(bad) or "none"))
-        if fm["client"] != "opencode":
-            raise Halt("binding client is %r; this driver is the OpenCode one"
-                       % fm["client"])
-        if not re.fullmatch(r"[^/\s]+/\S+", fm["model"]):
-            # ADR-0022 clause 5.3: no explicit model -> opencode run hangs.
-            raise Halt("model %r is not provider/model" % fm["model"])
+        self.check_client(fm)
         self.fm = fm
         self.run_id = run_id
         sub = lambda v: v.replace("<run-id>", run_id)
@@ -503,14 +511,24 @@ class Driver:
             # Rule 5; loop.md step 1: any dirty path is a halt naming it.
             raise Halt("working tree is dirty:\n" + dirty)
         self.check_journal_anchor()
-        if not self.opencode:
-            raise Halt("opencode is not on PATH")
+        self.check_client_ready()
         for p in (self.b.evidence, self.b.journal_path, self.b.handover, self.b.progress):
             rel = os.path.relpath(p, self.repo)
             if not rel.startswith("..") and self.sh(["git", "check-ignore", "-q", rel]).returncode != 0:
                 # Otherwise the run's own record dirties the tree the closer
                 # re-checks (loop.md step 10) and every close refuses.
                 raise Halt("run file %s is inside the repository and not ignored" % rel)
+        self.check_roles()
+        self.start_head = self.git("rev-parse", "--short", "HEAD")
+        up = self.sh(["git", "rev-parse", "--verify", "-q", "@{upstream}"])
+        self.upstream = up.stdout.strip() if up.returncode == 0 else None
+
+    # Step 1's client-specific half, a seam for bindings/agent-sdk/ (TASK-0284).
+    def check_client_ready(self):
+        if not self.opencode:
+            raise Halt("opencode is not on PATH")
+
+    def check_roles(self):
         listing = self.sh([self.opencode, "agent", "list"]).stdout
         modes = dict(re.findall(r"^(\S+) \((\w+)\)\s*$", listing, re.M))
         for role, name in self.b.roles.items():
@@ -520,9 +538,6 @@ class Driver:
             # Kept verbatim for preflight: an absent check is not a passed
             # check, so the role is handed the evidence (TASK-0096).
             self.agent_lines[role] = "%s (%s)" % (name, modes[name])
-        self.start_head = self.git("rev-parse", "--short", "HEAD")
-        up = self.sh(["git", "rev-parse", "--verify", "-q", "@{upstream}"])
-        self.upstream = up.stdout.strip() if up.returncode == 0 else None
 
     def read_queue(self):
         queue = []
@@ -577,11 +592,7 @@ class Driver:
              "tracker": self.b.tracker,
              # Step 1's structural checks, run by the driver before this call
              # (ADR-0022 clauses 5.1, 5.3), handed over as evidence (TASK-0096).
-             "driver_checks": {
-                 "model": self.b.model,
-                 "model_passed_as": "-m on every opencode run call this run makes",
-                 "agent_list": self.agent_lines,
-                 "agent_list_source": "`opencode agent list`, read by the driver at step 1"}},
+             "driver_checks": self.driver_checks()},
             '{"verdict": "proceed" | "halt", "branch": "...", "head": "...", '
             '"porcelain": "<verbatim>", "tasks": [{"id": "...", "criteria_present": true, '
             '"status_task_file": "<verbatim>", "status_tracker": "<verbatim>", '
@@ -596,6 +607,14 @@ class Driver:
                 raise Halt("preflight: task %s lock not verified: %r" % (t.get("id"), t))
         if {t.get("id") for t in verdict.get("tasks") or []} != {t["id"] for t in queue}:
             raise Halt("preflight did not report every queued task")
+
+    def driver_checks(self):
+        """Step 1's structural checks, as handed to preflight (TASK-0096)."""
+        return {
+            "model": self.b.model,
+            "model_passed_as": "-m on every opencode run call this run makes",
+            "agent_list": self.agent_lines,
+            "agent_list_source": "`opencode agent list`, read by the driver at step 1"}
 
     def step3_open(self, queue):
         """Step 3 — one journal line before any task is touched."""
