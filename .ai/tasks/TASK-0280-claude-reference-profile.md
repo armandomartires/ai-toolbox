@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: review
+- Status: done
 - Owner: agent
 - Branch: agent/TASK-0280
 - Created: 2026-11-10

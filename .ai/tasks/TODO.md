@@ -320,7 +320,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [x] TASK-0277 — Stop hook runs a fast check (P1.7)
 - [?] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
 - [?] TASK-0279 — Claude Code OpenTelemetry (P1.9)
-- [?] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
+- [x] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
 - [?] TASK-0281 — Codex port completion (P2.2)
 - [?] TASK-0282 — Long-running harness alignment (P2.3)
 - [?] TASK-0283 — Signed, versioned releases (P2.4)
