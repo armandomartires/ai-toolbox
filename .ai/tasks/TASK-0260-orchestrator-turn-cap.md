@@ -5,7 +5,7 @@
 - Status: in review
 - Owner: agent (Claude Code)
 - Created: 2026-11-08
-- Updated: 2026-11-11
+- Updated: 2026-11-13
 - Applies to: `mods/task-orchestrator/`
 - Source: the 2026-11-08 sprint run. Two workers on switchboard changes in a row, a debugger and a builder, both at `maxTurns` 60, were stopped by the engine mid-step. To the person this looked like a communication failure in the orchestration. The coordinator rescued the work by reading transcripts and resuming the agents by hand.
 
@@ -78,3 +78,6 @@ When a worker runs out of turns, the coordinator should learn that it did, where
 - 2026-11-08 · Claude Code (Opus 5.5, coordinator) · renumbered from TASK-0259 before the push: origin/master took TASK-0259 for the Vault keychain-session tokens (`a846710`) while this commit was local.
 
 - 2026-11-11 · Claude Code (Opus 5.5, coordinator) · live check on 0.7.0 (desktop 2.1.318): L1, an isolated documentation worker at cap 30, wrote 26 files in its own worktree and stopped itself at turn 27 with a `partial` report naming the worktree; the engine's cut-off was not reached, so `collect`'s turn-cap report is still unseen live. Its resume by `SendMessage` with three workers running was not reopened (it was not turn-capped) and ran unfenced: fixed by `TASK-0289`.
+- 2026-11-13 · Claude Code (Opus 5.5, coordinator) · live run 2026-11-12/13, desktop, task-orchestrator 0.7.2 loaded from the main checkout (`claude plugin list`), after `/reload-plugins --force` and `/orchestrate on`: L1, an isolated documentation writer told to write 200 files one per turn and not stop early, wrote 26 and stopped itself at the turn-27 reserve with `partial`, as on 2026-11-11. The engine's cut-off was again not reached, so `collect`'s turn-cap report is still unseen live
+  - Evidence: collect → `L1 → … → partial · 515.3k tok`, "I stopped at the turn-27 reserve line rather than risk the engine cutting me off mid-step"
+  - Deviation: the assignment's own reserve rule outranks a task text that says not to stop; seeing the cut-off live needs a probe that disables the reserve
