@@ -1519,6 +1519,17 @@ if [ -e skills/project-workflow/scripts/check-vendor.sh ]; then
     fail=1
   fi
 fi
+# check-migrate-layout.sh proves migrate-layout.py on a throwaway repository
+# on the old layout (TASK-0297, ADR-0066): a dry run changes nothing, --write
+# moves every file by the rules, writes the id map, rewrites paths but not ids,
+# and keeps `git log --follow`. Same reason. WHAT IT DOES NOT PROVE: a --write
+# on a real repository (TASK-0299).
+if [ -e skills/project-workflow/scripts/check-migrate-layout.sh ]; then
+  if ! MIGRATE_OUT="$(bash skills/project-workflow/scripts/check-migrate-layout.sh 2>&1)"; then
+    printf '%s\n' "$MIGRATE_OUT" | grep -v '^  ok' | sed 's/^/MIGRATE-LAYOUT: /'
+    fail=1
+  fi
+fi
 
 # --------------------------------------------------------------------------
 # ci-alert's issue rule, proven offline (TASK-0130).

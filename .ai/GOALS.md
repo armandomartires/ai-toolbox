@@ -632,7 +632,7 @@ Goal: Both planning skills use one convention, project-workflow's numbered layou
   .ai/tasks/TASK-0295-dashboard-adr-prefix-upstream.md
 - [>] TASK-0296 — project-workflow 8.0.0: ADR-NNNN file names, the hybrid brief, and current-state and session schemas
   .ai/tasks/TASK-0296-workflow-adr-prefix-and-schemas.md
-- [ ] TASK-0297 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
+- [?] TASK-0297 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
   .ai/tasks/TASK-0297-migrate-layout-tool.md
 - [ ] TASK-0298 — The gate and scripts accept both layouts during the switch
   .ai/tasks/TASK-0298-gate-accepts-both-layouts.md

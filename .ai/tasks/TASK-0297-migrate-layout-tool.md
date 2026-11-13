@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: todo
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0297
 - Created: 2026-11-13
@@ -38,13 +38,13 @@ The tool, its hermetic fixture tests (a throwaway repository on the old layout),
 
 ## Acceptance criteria
 
-- [ ] On a fixture repository, the dry run prints the map and changes nothing; `--write` leaves a tree whose every brief resolves through the map
-- [ ] `git log --follow` finds a moved brief's history
-- [ ] Ids inside historical files are untouched; path references are rewritten
+- [x] On a fixture repository, the dry run prints the map and changes nothing; `--write` leaves a tree whose every brief resolves through the map
+- [x] `git log --follow` finds a moved brief's history
+- [x] Ids inside historical files are untouched; path references are rewritten
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh: in the pre-commit hook, which now runs `check-migrate-layout.sh`
 
 ## Risks and rollback
 
@@ -55,7 +55,10 @@ The tool, its hermetic fixture tests (a throwaway repository on the old layout),
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `skills/project-workflow/scripts/migrate-layout.py` | dry run by default; `--write` moves with `git mv`, retires TODO.md and templates, writes `.ai/id-map.tsv`, rewrites paths only; refuses a dirty tree, a conflict or an unassigned brief |
+| `check-migrate-layout.sh` + `fixtures/migrate-layout/` | 104 checks, wired into `tests/validate.sh` |
+
+Dry run on this repository: 281 briefs, 64 ADRs, 13 reviews, 386 moves, 6 retired, 1111 path references in 255 files, 0 conflicts. Sprints S001–S011 as before; open Post-bucket tasks join S011 (34 briefs); Post buckets S012–S016 (S016 137); the planned convention sprint S12 becomes S017 (9). Not placed: TASK-0076, 0162, 0164, 0167, 0199 (in no TODO.md sprint). Left for TASK-0299: place those five; convert the live files' content (roadmap table, ad-hoc entries, GOALS.md ids); directory and glob references the tool lists.
 
 Next: TASK-0298 follows
 
@@ -63,4 +66,7 @@ Next: TASK-0298 follows
 
 - 2026-11-13 · Claude Code (Opus 5.5, coordinator) · brief written from ADR-0066 and the design; no work done yet
   - Evidence: none yet
+  - Deviation: none
+- 2026-11-13 · Claude Code (Opus 5.5, coordinator; builder worker S297, Sonnet 5.5) · tool and test written red first; two rulings from ADR-0066 applied (open Post-bucket tasks join S011; a planned sprint above the open one takes the next number after the Post buckets)
+  - Evidence: test red with the tool absent (`0 passed, 1 FAILED`), red on the rulings (`98 passed, 6 FAILED`), then `104 passed, 0 FAILED` here; a read-only dry run on this checkout gave the counts above
   - Deviation: none
