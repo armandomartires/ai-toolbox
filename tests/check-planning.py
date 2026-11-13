@@ -33,7 +33,9 @@ REPO = os.path.normpath(os.path.join(HERE, ".."))   # skills/, schemas: always t
 FIRST_CONTRACT_TASK = 20      # ADR-0012 Decision 4
 FIRST_GENERATED_TASK = 24     # briefs below predate any schema (TASK-0110)
 FIRST_V2_TASK = 153           # at or above: the current task schema
-FIRST_V2_ADR = 34             # at or above: the current adr schema
+FIRST_V2_ADR = 34             # at or above: the v2 adr shape (tests/legacy-schemas/adr-v2.md)
+FIRST_PW_ADR = 66             # at or above: project-workflow's adr schema (ADR-0066 onward)
+FIRST_PW_SESSION = "SESSION-20261114"   # a session file from this name on: project-workflow's schema
 REQUIRED = ["## Inputs", "## Outputs / handover"]
 NEW_TASK = re.compile(r"^S(\d{3})\.T(\d{3})_")
 
@@ -204,9 +206,13 @@ def check_retired(lay):
             % rel for rel in RETIRED if os.path.exists(lay.p(rel))]
 
 
+def is_new_session(path):
+    """A session written after the convention switch meets project-workflow's schema."""
+    return os.path.basename(path) >= FIRST_PW_SESSION
+
+
 def groups(lay):
     """[(schema, artifact)] for every artifact the skill's checker validates."""
-    pm = os.path.join(REPO, "skills/project-migration/schemas")
     pw = os.path.join(REPO, "skills/project-workflow/schemas")
     legacy = os.path.join(REPO, "tests/legacy-schemas")
     out = []
@@ -233,15 +239,19 @@ def groups(lay):
             elif n < FIRST_V2_TASK:
                 add(os.path.join(legacy, "task-v1.md"), f)
             else:
-                add(os.path.join(pm, "task.md"), f)
+                add(os.path.join(legacy, "task-v2.md"), f)
 
     for f in sorted(glob.glob(lay.p(".ai/decisions/*.md"))):
         name = os.path.basename(f)
         if name == "INDEX.md":
             continue
         n = num_of(name)
-        add(os.path.join(legacy, "adr-v1.md") if n is not None and n < FIRST_V2_ADR
-            else os.path.join(pm, "adr.md"), f)
+        if n is not None and n < FIRST_V2_ADR:
+            add(os.path.join(legacy, "adr-v1.md"), f)
+        elif n is not None and n < FIRST_PW_ADR:
+            add(os.path.join(legacy, "adr-v2.md"), f)
+        else:
+            add(os.path.join(pw, "adr.md"), f)
 
     # REVIEW-0012 is exempt by name, and by its old id once renamed: it alone
     # orders its sections differently, and a review is never rewritten.
@@ -249,17 +259,18 @@ def groups(lay):
         name = os.path.basename(f)
         if name == "INDEX.md" or lay.is_review_0012(name):
             continue
-        add(os.path.join(pm, "review.md") if name in lay.by_new_name
+        add(os.path.join(legacy, "review-v1.md") if name in lay.by_new_name
             else os.path.join(pw, "review.md"), f)
     for f in sorted(glob.glob(lay.p(".ai/sessions/*.md"))):
         if os.path.basename(f) != "INDEX.md":
-            add(os.path.join(pm, "session.md"), f)
+            add(os.path.join(pw, "session.md") if is_new_session(f)
+                else os.path.join(legacy, "session-v1.md"), f)
     return out
 
 
 def check_groups(lay):
     lib = os.path.join(REPO, "skills/project-workflow/scripts/artifact_lib.py")
-    if not (os.path.isdir(os.path.join(REPO, "skills/project-migration/schemas"))
+    if not (os.path.isdir(os.path.join(REPO, "skills/project-workflow/schemas"))
             and os.path.isfile(lib)):
         return []
     gs = groups(lay)

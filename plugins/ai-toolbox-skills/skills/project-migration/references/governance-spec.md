@@ -1,27 +1,27 @@
 # Governance file conventions
 
-What each scaffolded file must contain. Read this when writing or reviewing one. The principle (ADR-0033 in ai-toolbox): each file is one small module with its identification first; procedures are kept separate from records, and git is the record.
+What each scaffolded file must contain. Read this when writing or reviewing one. This skill is the retrofit path into `project-workflow`'s one planning convention (ADR-0066 in ai-toolbox): the convention, its ids and the shape of every artifact are project-workflow's (`templates/00.CONVENTIONS.md`, `schemas/`), and this file adds only what a retrofit needs on top. The principle (ADR-0033): each file is one small module with its identification first; procedures are kept separate from records, and history is kept by the version control tool.
 
 ## Target structure
 
 ```text
 AGENTS.md  CLAUDE.md(@AGENTS.md import)  README.md  CHANGELOG.md  .gitignore  tracker.conf
 .ai/
-  README.md
-  context/    CURRENT_STATE.md  PROJECT_MAP.md  GLOSSARY.md
+  00.CONVENTIONS.md  10.CURRENT_STATE.md  20.PLAN.md  40.RISK_REGISTER.md
+  30.ROADMAP.md  35.AD_HOC_TASKS.md                                     [files]
   decisions/  ADR-0001-*.md
-  planning/   ROADMAP.md  BACKLOG.md  SPRINT-CURRENT.md  plans/PLAN-*.md   [files]
-  tasks/      TODO.md  TASK-*.md  completed/                               [files]
-  sessions/   INDEX.md  SESSION-*.md                                       [files]
-  reviews/    REVIEW-*.md                                                  [files]
-  templates/  PLAN.md  TASK.md  SESSION.md  ADR.md  REVIEW.md
-docs/  architecture/ development/ operations/ deployment/
+  tasks/      S###.T###_Name.md                                         [files]
+  reviews/    S###-checkpoint.md  YYYY-MM-DD-slug.md                    [files]
+  sessions/   SESSION-*.md                                              [files]
+  reference/  on-demand detail, copied from project-workflow
+  id-map.tsv  archive/          only after migrate-layout.py moved an older layout
+docs/  project-map.md  glossary.md  architecture/ development/ operations/ deployment/
 src/  tests/  scripts/
 ```
 
-`tracker.conf` names the work tracker: `files`, `gitlab` or `github` (absent means `files`). The `[files]` directories exist only for a files tracker. On a forge they are milestones, issues and the board, the wiki holds end-user docs, and `TASK.md` is the body of an issue. The full mapping is project-workflow's `templates/reference/tracker.md`.
+`tracker.conf` names the work tracker: `files`, `gitlab` or `github` (absent means `files`). The `[files]` entries exist only for a files tracker. On a forge they are milestones, issues and the board; `20.PLAN.md` stays as its forge variant (state, no task list), the wiki holds end-user docs, and the task schema is the body of an issue. The full mapping is project-workflow's `templates/reference/tracker.md`.
 
-Keep `plans/`, `reviews/` and `BACKLOG.md` as stubs until real work produces content.
+There are no `.ai/templates/`, `tasks/TODO.md`, `planning/` or `context/`: artifacts are generated from project-workflow's schemas, and the briefs and the board are the task list.
 
 ## AGENTS.md
 
@@ -44,42 +44,41 @@ Keep it under ~500 lines and link to `docs/` for depth. When it grows, the fix i
 
 ## Live files: state, not history
 
-These files are read every session, so they hold the current state only. History lives in git (`git log -p <file>`).
+These files are read every session, so they hold the current state only. History lives in the version control tool (`git log -p <file>`). Budgets are project-workflow's `reference/size-budgets.md`.
 
 | File | Holds | Budget |
 |---|---|---|
-| `context/CURRENT_STATE.md` | Objective, status, components and versions, open gaps, standing decisions (as ADR links), environment notes, last few changes as one line each, next action | ≤ 200 lines |
-| `context/PROJECT_MAP.md` | Modules, entry points, data flows, integrations, fragile areas: relationships, not file lists | — |
-| `planning/ROADMAP.md` | One `## Phase N — Title` per phase, with exit criteria; a finished phase collapses to 2–3 lines | — |
-| `planning/BACKLOG.md` | One table row per item (`schemas/backlog.md` owns the columns); "Ready when" is one sentence | — |
-| `planning/SPRINT-CURRENT.md` | The active sprint only: objective, tasks in order, success criteria, next task | ≤ 80 lines |
-| `tasks/TODO.md` | `## Sprint S#` headings; one `- [ ] TASK-NNNN — title` line per task | ≤ 400 lines |
+| `10.CURRENT_STATE.md` | Where the project is, components and their state, open items, standing decisions (as ADR links), environment and how to run the gate | ≤ 200 lines |
+| `20.PLAN.md` | The open sprint only: tasks in flight, blocked, recently completed, next up | ≤ 80 lines |
+| `30.ROADMAP.md` | The `S###_Name` sprint table, next up, and decisions explicitly deferred | — |
+| `35.AD_HOC_TASKS.md` | One `### N. Title` entry per finding that is real and out of scope now | — |
+| `40.RISK_REGISTER.md` | Rated risks and a `Last reviewed` date, walked at every sprint checkpoint | — |
+| `docs/project-map.md` | Modules, entry points, data flows, integrations, fragile areas: relationships, not file lists | — |
 
 To update a live file, edit the state it describes. Never prepend a dated narrative.
 
-On a forge tracker, only the two `context/` files exist. `ROADMAP.md` is the milestones by due date, `BACKLOG.md` is the `type::backlog` issues, `SPRINT-CURRENT.md` is the open milestone, and `TODO.md` is that milestone's issue list. The forge holds no budget, so keep issue bodies within the brief's 90 lines anyway.
+On a forge tracker, `10.CURRENT_STATE.md`, `20.PLAN.md` (forge variant) and `40.RISK_REGISTER.md` exist. The roadmap is the milestones by due date, the ad-hoc list is the `type::backlog` issues, and the plan's task list is the open milestone's board. The forge holds no budget, so keep issue bodies within the brief's budget anyway.
 
-Moving to a forge removes the old planning, task, review and session files, so before that `git rm` commit tag the last commit that holds them: an annotated `pre-forge-migration`, pushed with the branch. `context/CURRENT_STATE.md` keeps one line naming the tag and how to read it (`git show pre-forge-migration:.ai/tasks/`). The person may also choose, in Phase 1, to file completed tasks as closed issues (schema body, `migrated` label); the tag is required either way.
+Moving to a forge removes the old planning, task, review and session files with `git rm`, so before that commit tag the last commit that holds them: an annotated `pre-forge-migration`, pushed with the branch. `20.PLAN.md` keeps one line (*History*) naming the tag and how to read it (`git show pre-forge-migration:.ai/tasks/`). The person may also choose, in Phase 1, to file completed tasks as closed issues (schema body, `migrated` label); the tag is required either way.
 
-## Tasks, ADRs, reviews, sessions, plans
+## Moving an older layout
 
-Do not write these from an outline. Generate each one from its schema with `scripts/new-artifact.sh --kind task|adr|review|session|plan`, and check it with `scripts/check-artifact.sh`.
+A repository on the layout this skill used to scaffold (`.ai/context/`, `.ai/planning/`, `.ai/templates/`, `tasks/TODO.md`, `TASK-####-*.md` briefs) moves with project-workflow's `scripts/migrate-layout.py`: a dry run prints the old-to-new map, `--write` performs it with `git mv`, writes `.ai/id-map.tsv`, and rewrites path references but never an id in prose. Old ids stay in history and resolve through the map (ADR-0066, clause 5). The tool leaves the live files' content (roadmap table, ad-hoc entries, `GOALS.md` ids) to a follow-up commit. `SKILL.md`, Phase 3, is the procedure.
 
-**A task brief** (`schemas/task.md`, at most 90 lines):
-- It opens with `## Status`: status, owner, dates, `Applies to:`, `Source:`.
-- Then the procedure: Objective, Inputs, Scope (In / Out), Likely files, Execution plan, Acceptance criteria, Mandatory validations, Risks and rollback.
-- Then the record: Outputs / handover, and an Execution log of one line per attempt plus its evidence.
-- Allowed statuses: `planned`, `ready`, `in_progress`, `blocked`, `review`, `done`, `cancelled`. On a forge: `planned` is an open issue with no `status::` label; `ready`, `in_progress`, `blocked` and `review` are open with that `status::` label; `done` is closed; `cancelled` is closed with a `cancelled` label (GitHub: closed as *not planned*).
-- A task is not `done` while a validation is missing, a criterion is unmet, or the change is not committed and pushed.
+## Tasks, ADRs, reviews, sessions
 
-**An ADR** (`schemas/adr.md`, at most 80 lines) records a lasting decision: a framework, data model, auth, deployment, an environment, an integration, a compatibility trade-off. It does not record small changes. It opens with `**Status**:` and `**Date**:`.
+Do not write these from an outline. Generate each one from project-workflow's schema with `skills/project-workflow/scripts/new-artifact.sh --kind task|adr|review|session`, and check it with `check-artifact.sh`. This skill holds no schema of them.
+
+**A task brief**: sprint-prefixed id `S###.T###_Name`, the bold header fields, then Goal, Inputs, Plan, Verification and Outputs, plus a required `## Acceptance criteria` where the repository's gate asks for one (ADR-0066, clause 4). The statuses and their meaning on a forge are project-workflow's `reference/task-lifecycle.md` and `tracker.md`. A task is not `done` while a validation is missing, a criterion is unmet, or the change is not committed and pushed. Briefs written before a migration keep their old shape: they are history.
+
+**An ADR** records a lasting decision: a framework, data model, auth, deployment, an environment, an integration, a compatibility trade-off. It does not record small changes. It is `decisions/ADR-NNNN-short-title.md`, opens with `**Status**:` and `**Date**:`, and the next number is the next free one.
 
 **A session record** is a short field list, not a transcript.
 
 ## Work cycle
 
 Every task goes through seven steps:
-1. **Gather context:** `AGENTS.md`, current state, sprint, task, git status.
+1. **Gather context:** `AGENTS.md`, `10.CURRENT_STATE.md`, `20.PLAN.md`, the task, git status.
 2. **Perceive:** separate knowns from gaps and assumptions. Invent nothing.
 3. **Plan:** scope, files, criteria, validation commands, stop conditions. Ask the human when an ambiguity is material.
 4. **Act:** make small, reversible changes in scope.
@@ -93,7 +92,7 @@ Every task goes through seven steps:
 
 **On completion:**
 1. Validate and review `git diff`.
-2. Commit only this task's changes, with a subject `<Imperative summary> (TASK-NNNN)`. On a forge the id is the issue: `(#123)`, with no closing keyword.
+2. Commit only this task's changes, with a subject `<Imperative summary> (S###.T###)`. On a forge the id is the issue: `(#123)`, with no closing keyword.
 3. Push, and confirm the remote holds the same hash.
 
 Git is the record: the brief does not carry its own hash, and no follow-up commit adds one. Leave unrelated pre-existing changes alone: separate them from the commit, or stop and ask.
@@ -128,12 +127,12 @@ A task is done when all of these hold:
 ## Planning vs implementation sessions
 
 **Planning sessions:**
-- They produce the roadmap, the backlog, the sprint and executable tasks.
+- They produce the roadmap, the ad-hoc list, the plan and executable tasks.
 - They write no code unless asked.
 - They mark which tasks a weaker executor can take.
 
 **Implementation sessions:**
-1. Read `AGENTS.md`, then `CURRENT_STATE.md`, then the sprint, then the task. On a forge, the sprint is the open milestone and the task is its issue.
+1. Read `AGENTS.md`, then `10.CURRENT_STATE.md`, then `20.PLAN.md`, then the task. On a forge, the sprint is the open milestone and the task is its issue.
 2. Present a short plan.
 3. Implement the smallest change that suffices, and validate as you go.
 4. Close out per the definition of done.

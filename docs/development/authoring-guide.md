@@ -41,16 +41,17 @@ The length and character limits come from the Agent Skills specification
 
 ### Artifact schemas (`schemas/`)
 
-`skills/project-workflow/` and `skills/project-migration/` each ship a
-`schemas/` directory. A schema is the **single owner of one planning
+`skills/project-workflow/` ships a `schemas/` directory (`project-migration`
+keeps only the plan schema; ADR-0066 made project-workflow's schemas the one
+set, and the frozen shapes of older artifacts live in `tests/legacy-schemas/`). A schema is the **single owner of one planning
 artifact's shape** — which headings exist, in what order, which are
 required, and whether each is written before or after the work
 (**ADR-0027**). Format: `skills/project-workflow/schemas/README.md`.
 
 | Rule | Detail | Gated |
 |------|--------|-------|
-| Templates are derived | `skills/project-workflow/templates/{tasks,decisions,reviews}/*` and `skills/project-migration/templates/{TASK,ADR,REVIEW,SESSION,PLAN}.md` are rendered by `scripts/sync-templates.sh` and carry a do-not-edit banner. Edit the schema, re-run, commit both. The last four are the set `scripts/ai-project-scaffold.sh` emits into a migrated repository, shipped beside it because that script is copied out of the skill and run elsewhere (`B-040`, `TASK-0119`). | **yes** — `scripts/sync-templates.sh --check` runs from `tests/validate.sh` |
-| The scaffold reads those templates | `scripts/ai-project-scaffold.sh` must emit `TASK`/`ADR`/`REVIEW`/`SESSION` by reading `$TEMPLATE_DIR/*.md`, never from an inline heredoc, and must not tell the author to `cp` one. `PLAN.md` is exempt — no schema owns it (`B-042`). | **yes** — a separate check in `tests/validate.sh`; the staleness gate above cannot see this |
+| Templates are derived | `skills/project-workflow/templates/{tasks,decisions,reviews,sessions}/*`, `10.CURRENT_STATE.md`, `40.RISK_REGISTER.md` and `skills/project-migration/templates/PLAN.md` are rendered by `scripts/sync-templates.sh` and carry a do-not-edit banner. Edit the schema, re-run, commit both. | **yes** — `scripts/sync-templates.sh --check` runs from `tests/validate.sh` |
+| The scaffold reads project-workflow's templates | `skills/project-migration/scripts/ai-project-scaffold.sh` writes the numbered `.ai/` files, `reference/` and the forge `20.PLAN.md` by reading the sibling skill's `templates/` at run time (`ADR-0066`, `S017.T008`); it carries no copy and no heredoc of them. `check-scaffold.sh` proves each is byte-identical to its owner, that a second `--force` run changes nothing, and that no retired path is written. | **yes** — `skills/project-migration/scripts/check-scaffold.sh`, run from `tests/validate.sh` |
 | Task briefs match their schema | Briefs at or above `FIRST_GENERATED_TASK` in `tests/validate.sh` must carry the schema's required headings, in its order, with no superseded heading and no generator marker left behind. | **yes** |
 | Briefs below the boundary | Exempt, deliberately. They are records of what happened, not instances of a schema invented afterwards — the same argument `FIRST_CONTRACT_TASK` already carries. Now **24** (`TASK-0110`), lowered only after every brief it newly covered was repaired. **Raising it absorbs a convention change; lowering it without repairing first falsifies history.** | not applicable |
 | Repairing a brief that predates a section | Add the heading and a dated line saying it was not recorded. **Never reconstruct it** — a forecast written after the work is an outcome wearing a forecast's label, which reads as evidence and is worse than the missing heading. | **no** — judgment; the gate sees only the heading |

@@ -3,7 +3,7 @@
 # shape (ADR-0027).
 #
 # Why generated copies exist at all. A template must sit where the framework
-# that uses it can reach it: project-workflow's and project-migration's under skills/. A schema is the one owner of shape, so the templates
+# that uses it can reach it: project-workflow's under skills/ (and project-migration's plan). A schema is the one owner of shape, so the templates
 # have to be derived from it or they become second owners -- which is exactly
 # what they were. project-workflow's own template contradicted its SKILL.md
 # about the task ID format, and nothing caught it, because both were prose.
@@ -44,28 +44,14 @@ skills/project-workflow/schemas/current-state.md:skills/project-workflow/templat
 skills/project-workflow/schemas/risk-register.md:skills/project-workflow/templates/40.RISK_REGISTER.md
 skills/project-workflow/schemas/session.md:skills/project-workflow/templates/sessions/0000_TEMPLATE.md
 skills/project-workflow/schemas/review.md:skills/project-workflow/templates/reviews/0000_TEMPLATE.md
-skills/project-migration/schemas/task.md:skills/project-migration/templates/TASK.md
-skills/project-migration/schemas/adr.md:skills/project-migration/templates/ADR.md
-skills/project-migration/schemas/review.md:skills/project-migration/templates/REVIEW.md
-skills/project-migration/schemas/session.md:skills/project-migration/templates/SESSION.md
 skills/project-migration/schemas/plan.md:skills/project-migration/templates/PLAN.md
 "
 
-# The project-migration targets render schemas that skill owns, beside its
-# scaffold script (B-040, TASK-0119). The script is copied out of this skill and
-# run against other repositories, where this repo's paths mean nothing; it
-# needs the rendered templates beside it. Same reason
-# scripts/sync-decision-standard.sh ships a generated sibling of driver.py.
-#
-# Before this, the scaffold carried five inline heredocs -- a second owner of
-# shape, and two of them had already drifted into failing their own schemas:
-# its TASK.md was missing ## Inputs and ## Outputs / handover and still
-# carried the three headings ADR-0012 retired, and its REVIEW.md was missing
-# four required sections. Every repository it migrated inherited that on day
-# one, where no gate of ours reaches.
-#
-# PLAN.md joined them with TASK-0146 (B-042): its schema was transcribed from
-# a count of the six plans, so it, too, is rendered rather than hand-written.
+# The one project-migration target renders the plan schema that skill keeps,
+# beside its scaffold script. Its task, ADR, review and session schemas and
+# templates are gone: project-workflow owns them (ADR-0066, S017.T008), and
+# the scaffold reads project-workflow's templates at run time. The frozen
+# shapes of the legacy artifacts are tests/legacy-schemas/, rendered by nothing.
 
 for pair in $TARGETS; do
   schema="${pair%%:*}"

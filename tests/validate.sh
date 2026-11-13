@@ -1797,109 +1797,20 @@ if [ -x scripts/sync-templates.sh ]; then
 fi
 
 # --------------------------------------------------------------------------
-# project-migration carries a byte-identical copy of the artifact engine and
-# its two wrappers, so it can generate and check its own artifacts when
-# installed without project-workflow (B-036, TASK-0117).
-#
-# WHY: the copies are only safe while they ARE copies. One edited in place
-# becomes a second owner of how a schema is read -- the defect ADR-0027
-# exists to prevent -- and would go unnoticed, because inside this repo every
-# caller reaches the owner, never the copy.
-#
-# HOW: `cmp` of each copy against its owner, in memory. Never `git diff`,
-# which passes vacuously on an untracked copy. Deliberately unconditional:
-# no `[ -x ]` guard, so a deleted regenerator fails here rather than
-# skipping quietly (ADR-0009).
-#
-# WHAT THIS PROVES: that the three copies are byte-identical to their owners.
-# WHAT IT DOES NOT PROVE: that the copies work installed alone. That was
-# shown once, by hand, with project-workflow removed (TASK-0117 step 7), and
-# nothing here re-runs it.
-if ! bash scripts/sync-artifact-engine.sh --check; then
+# The migration scaffold writes project-workflow's one convention (ADR-0066,
+# S017.T008). check-scaffold.sh scaffolds an empty directory under mktemp and
+# proves: the numbered files, decisions/, tasks/, reviews/, sessions/ and
+# reference/ exist and no retired path does; each numbered file is
+# byte-identical to project-workflow's template it is read from (one owner,
+# ADR-0027); the first ADR passes project-workflow's schema; AGENTS.md names no
+# retired path; a second --force run changes nothing; a forge scaffold writes
+# a tracker.conf that tracker.sh reads and no files-owned path (ADR-0037).
+# Hermetic, a few seconds, so it runs here.
+# WHAT IT DOES NOT PROVE: that the generated text reads well, or a scaffold
+# into a repository that already holds a different layout.
+if ! SCAFFOLD_OUT="$(bash skills/project-migration/scripts/check-scaffold.sh 2>&1)"; then
+  printf '%s\n' "$SCAFFOLD_OUT" | grep -v '^  ok' | sed 's/^/SCAFFOLD: /'
   fail=1
-fi
-
-# --------------------------------------------------------------------------
-# The migration scaffold emits its four schema-backed templates by READING
-# skills/project-migration/templates/, not by carrying its own copy (B-040,
-# TASK-0119). The check above proves those files match their schemas; this
-# one proves the scaffold still uses them.
-#
-# Both halves are required and neither implies the other. Re-inlining a
-# heredoc would leave the check above passing -- the templates would still be
-# correct, they would simply no longer be what a migrated repository gets.
-# That is precisely how the original defect survived: the shipped copies here
-# were gated and right, while the scaffold's inline TASK.md was missing
-# ## Inputs and ## Outputs / handover and still carried the three headings
-# ADR-0012 retired, and its REVIEW.md was missing four required sections.
-#
-# A grep, not a byte comparison, because there is no second artifact to
-# compare: the question is which mechanism the script uses. PLAN.md is
-# included since TASK-0146 gave it a schema (B-042).
-#
-# WHAT THIS PROVES: the scaffold reads all four templates from TEMPLATE_DIR
-# and carries no heredoc for any of them.
-# WHAT IT DOES NOT PROVE: that the scaffold runs, or that what it writes
-# lands where a migrated repository expects it. Only running it shows that.
-SCAFFOLD=skills/project-migration/scripts/ai-project-scaffold.sh
-if [ -r "$SCAFFOLD" ]; then
-  for kind in TASK ADR REVIEW SESSION PLAN; do
-    if ! grep -q "^mkfile \.ai/templates/$kind\.md < \"\$TEMPLATE_DIR/$kind\.md\"" "$SCAFFOLD"; then
-      echo "SCAFFOLD: $SCAFFOLD does not emit .ai/templates/$kind.md by reading"
-      echo "SCAFFOLD: \$TEMPLATE_DIR/$kind.md — shape is owned by"
-      echo "SCAFFOLD: skills/project-migration/schemas/, not by this script (ADR-0027)"
-      fail=1
-    fi
-    if grep -q "^mkfile \.ai/templates/$kind\.md <<" "$SCAFFOLD"; then
-      echo "SCAFFOLD: $SCAFFOLD carries an inline heredoc for $kind.md — that is"
-      echo "SCAFFOLD: a second owner of artifact shape (ADR-0027, B-040)"
-      fail=1
-    fi
-  done
-  for kind in TASK ADR REVIEW SESSION PLAN; do
-    if [ ! -r "skills/project-migration/templates/$kind.md" ]; then
-      echo "SCAFFOLD: skills/project-migration/templates/$kind.md is missing —"
-      echo "SCAFFOLD: run scripts/sync-templates.sh and commit the result"
-      fail=1
-    fi
-  done
-  # The closing report must not send the author back to `cp`, which
-  # SKILL.md's hard rules forbid: "Generate planning artifacts; do not copy a
-  # template and imitate it."
-  # The BACKLOG.md the scaffold writes is an index, so it stays a heredoc, but
-  # its header row is the backlog schema's `columns:` line, the one owner of
-  # the table's shape (B-042, TASK-0147).
-  BACKLOG_COLS="$(sed -n 's/^columns: //p' skills/project-migration/schemas/backlog.md)"
-  if [ -z "$BACKLOG_COLS" ] || ! grep -qxF "| $BACKLOG_COLS |" "$SCAFFOLD"; then
-    echo "SCAFFOLD: $SCAFFOLD's BACKLOG.md header is not the columns of"
-    echo "SCAFFOLD: skills/project-migration/schemas/backlog.md: | $BACKLOG_COLS |"
-    fail=1
-  fi
-  if grep -q 'cp \.ai/templates/' "$SCAFFOLD"; then
-    echo "SCAFFOLD: $SCAFFOLD tells the author to cp a template; SKILL.md's"
-    echo "SCAFFOLD: hard rules require generating the artifact instead"
-    fail=1
-  fi
-  # Two writers of tracker.conf, one reader (TASK-0171, ADR-0037): the scaffold
-  # writes it in bash, project-workflow's tracker.sh parses it. Scaffold both
-  # modes and have the reader accept each, so the grammar cannot drift apart;
-  # and a forge scaffold must not write the files-owned directories.
-  # WHAT IT DOES NOT PROVE: anything about a real forge project.
-  SCAF_TMP="$(mktemp -d)"
-  if ! bash "$SCAFFOLD" "$SCAF_TMP/files" --no-git >/dev/null 2>&1 \
-     || [ "$(bash skills/project-workflow/scripts/tracker.sh check --repo "$SCAF_TMP/files" 2>&1)" != files ] \
-     || [ ! -f "$SCAF_TMP/files/.ai/tasks/TODO.md" ]; then
-    echo "SCAFFOLD: a files scaffold must write tracker.conf = files and .ai/tasks/"
-    fail=1
-  fi
-  if ! bash "$SCAFFOLD" "$SCAF_TMP/forge" --no-git --tracker gitlab --gitlab-project grp/sub/app >/dev/null 2>&1 \
-     || [ "$(bash skills/project-workflow/scripts/tracker.sh check --repo "$SCAF_TMP/forge" 2>&1)" != "gitlab grp/sub/app" ] \
-     || [ -e "$SCAF_TMP/forge/.ai/tasks" ] || [ -e "$SCAF_TMP/forge/.ai/planning" ]; then
-    echo "SCAFFOLD: a gitlab scaffold must write a tracker.conf tracker.sh reads"
-    echo "SCAFFOLD: as 'gitlab grp/sub/app', and no .ai/tasks/ or .ai/planning/"
-    fail=1
-  fi
-  rm -rf "$SCAF_TMP"
 fi
 
 # --------------------------------------------------------------------------
@@ -1957,15 +1868,18 @@ fi
 # Boundaries: briefs below FIRST_GENERATED_TASK predate any schema and are
 # exempt; rewriting them would fabricate compliance (TASK-0110). Briefs and
 # ADRs below FIRST_V2_TASK / FIRST_V2_ADR are checked against the frozen v1
-# shapes in tests/legacy-schemas/ (ADR-0033); newer ones against the current
-# schema. Raise a boundary to absorb a change; never lower one.
+# shapes in tests/legacy-schemas/ (ADR-0033); older v2 briefs, ADRs below
+# FIRST_PW_ADR, and the reviews and sessions written before the one
+# convention, against the frozen shapes project-migration used to own, now
+# in the same directory (ADR-0066); newer ones against project-workflow's
+# schemas. Raise a boundary to absorb a change; never lower one.
 # Proves structure only, never that a word is true.
 # The three boundaries (FIRST_GENERATED_TASK=24, FIRST_V2_TASK=153,
 # FIRST_V2_ADR=34) are constants of tests/check-planning.py, the one owner.
-SCHEMA_DIR=skills/project-migration/schemas
+SCHEMA_DIR=skills/project-workflow/schemas
 LEGACY_DIR=tests/legacy-schemas
 ARTIFACT_LIB=skills/project-workflow/scripts/artifact_lib.py
-if [ -d "$SCHEMA_DIR" ] && [ -r "$ARTIFACT_LIB" ]; then
+if [ -d "$SCHEMA_DIR" ] && [ -d "$LEGACY_DIR" ] && [ -r "$ARTIFACT_LIB" ]; then
   # Which artifact meets which schema, by the OLD number of a brief or ADR (a
   # renamed one resolves through .ai/id-map.tsv), is tests/check-planning.py's
   # (ADR-0066); it hands the list to the same interpreter, never a copy here.

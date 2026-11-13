@@ -635,7 +635,7 @@ Goal: Both planning skills use one convention, project-workflow's numbered layou
   .ai/tasks/S017.T006_RenameAiToolbox.md
 - [x] S017.T007 — Drop the old layout's support from the gate, and update AGENTS.md and the docs
   .ai/tasks/S017.T007_DropOldLayoutSupport.md
-- [ ] S017.T008 — project-migration 6.0.0 retrofits repositories into the one convention
+- [x] S017.T008 — project-migration 6.0.0 retrofits repositories into the one convention
   .ai/tasks/S017.T008_MigrationRetarget.md
 - [ ] S017.T009 — Check the dashboard and Compass against the id map after the switch
   .ai/tasks/S017.T009_VerifyDashboardAndCompass.md

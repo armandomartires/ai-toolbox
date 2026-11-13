@@ -46,19 +46,19 @@ has() { [[ "$OUT" == *"$1"* ]]; }
 # --- the generated artifacts the fixture is built from -----------------------
 P="$T/pool"; mkdir -p "$P"
 PM=skills/project-migration; PW=skills/project-workflow
-gen() {  # gen <skill> <out> <args...>
-  local skill="$1" out="$2"; shift 2
-  bash "$here/skills/$skill/scripts/new-artifact.sh" --date 2026-11-13 --out "$P/$out" "$@" >/dev/null 2>&1 \
+gen() {  # gen <out> <args...>: always project-workflow's generator (ADR-0066)
+  local out="$1"; shift
+  bash "$here/skills/project-workflow/scripts/new-artifact.sh" --date 2026-11-13 --out "$P/$out" "$@" >/dev/null 2>&1 \
     || { echo "FAIL could not generate $out"; exit 1; }
 }
-gen project-migration task-v1.md --schema "$here/tests/legacy-schemas/task-v1.md" --id TASK-0100 --title Legacy
-gen project-migration task-v2.md --kind task --framework project-migration --id TASK-0200 --title Current
-gen project-migration adr-v1.md --schema "$here/tests/legacy-schemas/adr-v1.md" --id ADR-0013 --title Old
-gen project-migration adr-v2.md --kind adr --framework project-migration --id ADR-0050 --title New
-gen project-migration review.md --kind review --framework project-migration --id REVIEW-0001 --title Rev
-gen project-migration session.md --kind session --framework project-migration --id 2026-11-13 --title Sess
-gen project-workflow wtask.md --kind task --framework project-workflow --id S012.T002_Fresh --sprint S012_Fresh
-gen project-workflow wreview.md --kind review --framework project-workflow --id S012-checkpoint
+gen task-v1.md --schema "$here/tests/legacy-schemas/task-v1.md" --id TASK-0100 --title Legacy
+gen task-v2.md --schema "$here/tests/legacy-schemas/task-v2.md" --id TASK-0200 --title Current
+gen adr-v1.md --schema "$here/tests/legacy-schemas/adr-v1.md" --id ADR-0013 --title Old
+gen adr-v2.md --schema "$here/tests/legacy-schemas/adr-v2.md" --id ADR-0050 --title New
+gen review.md --schema "$here/tests/legacy-schemas/review-v1.md" --id REVIEW-0001 --title Rev
+gen session.md --schema "$here/tests/legacy-schemas/session-v1.md" --id 2026-11-13 --title Sess
+gen wtask.md --kind task --framework project-workflow --id S012.T002_Fresh --sprint S012_Fresh
+gen wreview.md --kind review --framework project-workflow --id S012-checkpoint
 # A generated skeleton carries FILL markers, which the schema check rejects;
 # these stand-ins are "filled" by dropping the markers (shape, not content).
 python3 - "$P" <<'PY'
