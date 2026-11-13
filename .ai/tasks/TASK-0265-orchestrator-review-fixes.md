@@ -5,7 +5,7 @@
 - Status: in review
 - Owner: agent (Claude Code, coordinator with orchestrated workers)
 - Created: 2026-11-10
-- Updated: 2026-11-11
+- Updated: 2026-11-13
 - Applies to: `mods/task-orchestrator/`
 - Source: `.ai/reviews/REVIEW-0013-task-orchestrator-mod.md` (2026-11-09), eleven defects read from the code and five ranked recommendations, which the human asked to apply in full, tested and validated.
 
@@ -83,3 +83,6 @@ Make the limits the README calls "enforced in code" true on every path, and remo
 - 2026-11-10 · coordinator · wave 2 (R2 admission gate, R3 stall text, D6): 126 pass. ADR-0058 written. Wave 3 (R5 status line and panel, mirror cap and `forget`, `Task.branch`, D11, config fixes, `maxNesting` and telemetry removed): 140 pass. Docs wave: README, ARCHITECTURE, DEVELOPING, CHANGELOG, CURRENT_STATE, TASK-0196/0234/0238. Independent review of the whole diff: all defects closed, two blocking items; fixed with 7 tests: 147 pass. Docs corrected for the review's stale-line list. A first `tests/validate.sh` run failed only on REVIEW-0013's section names (the review schema wants Findings, Validation results, Verdict, Follow-up tasks); renamed. Second gate run: see Mandatory validations.
 
 - 2026-11-11 · Claude Code (Opus 5.5, coordinator) · live check on 0.7.0 (desktop 2.1.318): L1, an isolated documentation worker at cap 30, wrote 26 files in its own worktree and stopped itself at turn 27 with a `partial` report naming the worktree; the engine's cut-off was not reached, so `collect`'s turn-cap report is still unseen live. Its resume by `SendMessage` with three workers running was not reopened (it was not turn-capped) and ran unfenced: fixed by `TASK-0289`.
+- 2026-11-13 · Claude Code (Opus 5.5, coordinator) · live run 2026-11-12/13, desktop, task-orchestrator 0.7.2 loaded from the main checkout (`claude plugin list`), after `/reload-plugins --force` and `/orchestrate on`: the resolved fence was not exercised, because the writer was spawned rather than handed off (TASK-0291's entry of the same day); a resume refused by the cap was not run (it needs three long workers at once)
+  - Evidence: L7 wrote outside its allowed files with a success result; see TASK-0291 and TASK-0292
+  - Deviation: the cap refusal left unrun to save tokens: L1 alone used 515k
