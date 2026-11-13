@@ -60,6 +60,7 @@ A validated, indexed, versioned library of AI customization tools that any agent
 - Raise the 2026-11-10 alignment score (54.5 / 100) by making Claude Code the reference harness, with OpenCode and Codex as generated ports.
 - Marketplace and three plugins as the primary install, the roles reaching Claude Code once their boundaries are measured, harness-side permissions and hooks, a Claude eval provider with a multi-trial suite.
 - Sprint S11 (`TASK-0266` to `TASK-0285`); plan and answers in `docs/reports/2026-11-10-alignment/`; opened by `TASK-0286`.
+- Sprint S12, planned: one planning convention for both skills (ADR-0066, `TASK-0294` to `TASK-0302`); `TASK-0295`, `TASK-0299`, `TASK-0300` and `TASK-0301` wait on the human's authorization.
 
 ## Risks
 - **Client formats and capabilities drift.** Re-verify a claim about external state when you act on it, not from a plan written days earlier (`ADR-0006`).

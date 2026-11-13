@@ -1,7 +1,7 @@
 # ADR-0013 — `project-migration` and `project-workflow` scaffold two different frameworks, deliberately
 
 ## Status
-Accepted (2026-09-13)
+Accepted (2026-09-13). Superseded by ADR-0066 (2026-11-13): the human chose one convention for both skills; this record stands for why they diverged until then.
 
 ## Context
 TASK-0024 renamed this repo's ADR files from `ADR-NNNN-*.md` to

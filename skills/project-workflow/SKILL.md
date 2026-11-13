@@ -16,7 +16,7 @@ Scaffolds `.ai/` and maintains its plan/develop/test/validate convention. The fu
 - `S###.T###` task ids
 - `NNNN-title.md` ADRs
 
-The divergence is deliberate (ADR-0013 in ai-toolbox). The two skills share only the generator.
+The divergence was deliberate (ADR-0013 in ai-toolbox), and ADR-0066 now replaces it with one convention: this skill's numbered layout, with `ADR-NNNN-title.md` decision files, for both skills; the work lands as TASK-0295 to TASK-0302. Until it does, the two still share only the generator.
 
 > **`.ai/` = why and what's next. `AGENTS.md` + `docs/` = what is. Git = what changed.** Each fact has one owner: link to it, never copy it.
 
