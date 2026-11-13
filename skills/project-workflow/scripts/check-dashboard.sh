@@ -250,10 +250,20 @@ def build(tmp, with_map):
     shutil.copytree(src, os.path.join(repo, ".ai"))
     if not with_map:
         os.remove(os.path.join(repo, ".ai", "id-map.tsv"))
+    # 0002 loses its **Date** header, so only git can date it; the layout
+    # switch then renames it (S017.T009: renamed ADRs lost their dates).
+    legacy = os.path.join(repo, ".ai", "decisions", "0002-legacy-name.md")
+    with open(legacy, encoding="utf-8") as fh:
+        body = [l for l in fh if not l.startswith("**Date**:")]
+    with open(legacy, "w", encoding="utf-8") as fh:
+        fh.writelines(body)
     git(repo, "2026-02-01", "init", "-q")
     commit(repo, "2026-02-01", "Add the converted briefs")
     commit(repo, "2026-03-10", "Do alpha before the rename (TASK-0101)")
     commit(repo, "2026-03-12", "Do beta after the rename (S011.T002)")
+    git(repo, "2026-03-15", "mv", ".ai/decisions/0002-legacy-name.md",
+        ".ai/decisions/ADR-0002-legacy-name.md")
+    commit(repo, "2026-03-15", "Rename the decision onto the one convention")
     return repo
 
 
@@ -274,6 +284,10 @@ for label, payload in (("with a map", with_map), ("without a map", no_map)):
 third = {d["number"]: d for d in with_map["decisions"]}.get(3, {})
 eq("a decision keeps its title", third.get("title"), "Prefixed file name")
 eq("an ADR- name still reads supersession", third.get("superseded_by"), 4)
+second = {d["number"]: d for d in with_map["decisions"]}.get(2, {})
+eq("a renamed decision keeps the date it was first added",
+   (second.get("path"), second.get("date"), second.get("date_source")),
+   (".ai/decisions/ADR-0002-legacy-name.md", "2026-02-01", "git_added"))
 
 tasks = {t["id"]: t for t in with_map["tasks"]}
 eq("an old-id commit dates the renamed brief's close",

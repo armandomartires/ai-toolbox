@@ -266,12 +266,9 @@ class Git:
     `git log -- <file>` is 118 process spawns and several seconds on Windows.
     One whole-history pass builds the same two maps.
 
-    Rename caveat, recorded rather than hidden: `--name-only` reports the path
-    as it was at that commit and rename detection is off, so a brief that was
-    renamed has its `git_added` date at the rename, not at its original
-    creation. For this corpus that never happens (the task-id filename is
-    chosen once), but a project where it does will see a later arrival date,
-    and the recorded source lets a reader see it came from git.
+    Renames: the add pass follows them (`-M`), so a file moved by a layout
+    switch keeps the date its content first arrived. The touch pass does not:
+    a rename is a touch, so `git_last` for a moved file can be the move.
     """
 
     def __init__(self, root, enabled=True):
@@ -415,23 +412,44 @@ class Git:
         # `--root` so a file first added in the initial commit is recorded.
         # Without it, a repo whose history starts with a bulk import reports no
         # add date at all for most of its corpus.
+        # Renames are followed (`-M`, status R): a file moved by a layout
+        # switch (ADR-0066, S017.T009) keeps the date its content first
+        # arrived, not none at all, which is what `--diff-filter=A` alone gave
+        # once git's default rename detection reported the move as R.
         out = self._run([
-            "log", "--root", "--diff-filter=A", "--name-only", "--date=short",
-            "--format=\x01%ad",
+            "log", "--root", "-M", "--diff-filter=AR", "--name-status",
+            "--date=short", "--format=\x01%ad",
         ])
         if out is None:
             return
         date = None
+        renamed = {}                  # new path -> (old path, date of the move)
         for line in out.splitlines():
             if line.startswith("\x01"):
                 date = line[1:].strip()
                 continue
-            path = line.strip()
-            if not path or date is None:
+            cols = line.rstrip("\n").split("\t")
+            if len(cols) < 2 or date is None:
+                continue
+            if cols[0].startswith("R") and len(cols) >= 3:
+                renamed.setdefault(cols[2].strip(), (cols[1].strip(), date))
                 continue
             # Newest-first, so keep overwriting: the LAST add recorded for a
             # path is its earliest one.
-            self.added[path] = date
+            self.added[cols[1].strip()] = date
+
+        def origin(path, seen):
+            if path in self.added or path not in renamed or path in seen:
+                return self.added.get(path)
+            seen.add(path)
+            old, moved = renamed[path]
+            return origin(old, seen) or moved
+
+        for new in renamed:
+            if new not in self.added:
+                found = origin(new, set())
+                if found:
+                    self.added[new] = found
 
     def added_date(self, path):
         return self.added.get(_rel(path))
