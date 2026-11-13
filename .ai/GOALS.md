@@ -571,6 +571,8 @@ Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
   .ai/tasks/TASK-0291-orchestrator-fence-live.md
 - [ ] TASK-0292 — task-orchestrator: a writer is spawned, not handed off, so the fence never sees it
   .ai/tasks/TASK-0292-orchestrator-writer-spawned.md
+- [?] TASK-0293 — Planning skills on a forge: a state file stays, and a tag marks the removed history
+  .ai/tasks/TASK-0293-forge-state-and-history-marker.md
 - [?] TASK-0288 — agent-watch 0.13.5: the band and the Sessions pane agree on steps
   .ai/tasks/TASK-0288-agent-watch-steps-agree.md
   branch: agent/steps-mismatch-20eb29

@@ -59,6 +59,8 @@ To update a live file, edit the state it describes. Never prepend a dated narrat
 
 On a forge tracker, only the two `context/` files exist. `ROADMAP.md` is the milestones by due date, `BACKLOG.md` is the `type::backlog` issues, `SPRINT-CURRENT.md` is the open milestone, and `TODO.md` is that milestone's issue list. The forge holds no budget, so keep issue bodies within the brief's 90 lines anyway.
 
+Moving to a forge removes the old planning, task, review and session files, so before that `git rm` commit tag the last commit that holds them: an annotated `pre-forge-migration`, pushed with the branch. `context/CURRENT_STATE.md` keeps one line naming the tag and how to read it (`git show pre-forge-migration:.ai/tasks/`). The person may also choose, in Phase 1, to file completed tasks as closed issues (schema body, `migrated` label); the tag is required either way.
+
 ## Tasks, ADRs, reviews, sessions, plans
 
 Do not write these from an outline. Generate each one from its schema with `scripts/new-artifact.sh --kind task|adr|review|session|plan`, and check it with `scripts/check-artifact.sh`.

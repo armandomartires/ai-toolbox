@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ planning layer - a plan/d
 license: MIT
 metadata:
   author: armando.martires
-  version: "7.1.3"
+  version: "7.2.0"
 ---
 
 # project-workflow
@@ -41,8 +41,8 @@ The divergence is deliberate (ADR-0013 in ai-toolbox). The two skills share only
 1. Resolve `root` and `entrypoint` through `.ai-layout.json` (`templates/reference/layout-declaration.md`). The default is `.ai/` + `00.CONVENTIONS.md`.
 2. Never overwrite an existing layer. Ask if the names do not match.
 3. Ask which **work tracker** the project uses: **files** (this layer), **GitLab** (issues, milestones, boards, labels, wiki) or **GitHub** (issues, milestones, Projects, wiki). Never choose for the human. Run `scripts/tracker.sh init --tracker files|gitlab|github [--gitlab-project group/name | --github-repo owner/name]`. On a forge, set the project up by hand per `templates/reference/tracker.md`.
-4. Copy `templates/` into `root` as-is. Copy; never symlink. On a forge tracker, copy only `00.CONVENTIONS.md`, `decisions/` and `reference/`.
-5. Files tracker: fill `20.PLAN.md` and `30.ROADMAP.md` with real state. Offer a `git log` back-fill, but do not assume one is wanted.
+4. Copy `templates/` into `root` as-is. Copy; never symlink. Skip `templates/forge/` (the forge variant). On a forge tracker, copy only `00.CONVENTIONS.md`, `decisions/` and `reference/`, plus `templates/forge/20.PLAN.md` as `<root>/20.PLAN.md`.
+5. Files tracker: fill `20.PLAN.md` and `30.ROADMAP.md` with real state. Offer a `git log` back-fill, but do not assume one is wanted. Forge tracker: fill the forge `20.PLAN.md` (current state, open milestone and board by name, blocked, next action; no task list) with real state.
 6. Point to `<root>/<entrypoint>` from `AGENTS.md` or `README.md`.
 7. Ask how the project handles secrets: **local** `.env`, **HashiCorp Vault** (its own KV mount), **GitLab** CI variables, or **GitHub** Actions secrets. Never choose for the human. With the `vault-secrets` skill installed, run its `scripts/vault_secrets.py init --backend <choice> --project <name>`; without it, write `secrets.conf` by hand (`templates/reference/environments-and-secrets.md`). Creating a Vault mount is a Vault admin's step, never the agent's.
 8. Files tracker only: with a remote, run `scripts/publish-dashboard.sh decision`. On exit 1, ask whether to publish the dashboard to **GitHub Pages**, **GitLab Pages**, both or neither, and which forge each `unknown` host is. Never choose for the human. **Yes:** write `dashboard-publish.conf` (every `status.` line `UNVERIFIED - never run`), `render`, commit. **No:** write `targets = none` with a dated comment, so it is not asked again.
@@ -52,7 +52,7 @@ The divergence is deliberate (ADR-0013 in ai-toolbox). The two skills share only
 `tracker.conf` at the repository root says where work is tracked (ai-toolbox `ADR-0037`). A missing file means `files`.
 
 - **files:** everything in this skill applies as written.
-- **gitlab / github:** tasks are issues, sprints are milestones, the board is the plan, backlog and ad-hoc items are labelled issues, review checkpoints are issues, and end-user docs live in the wiki. `00.CONVENTIONS.md`, `reference/`, ADRs and developer docs stay in the repository. The mapping, labels, commit subjects (`(#123)`), access and tier limits are in `templates/reference/tracker.md`.
+- **gitlab / github:** tasks are issues, sprints are milestones, the board is the plan, backlog and ad-hoc items are labelled issues, review checkpoints are issues, and end-user docs live in the wiki. `00.CONVENTIONS.md`, `reference/`, ADRs and developer docs stay in the repository, and so does one state file, `20.PLAN.md` in its forge variant (`templates/forge/20.PLAN.md`): current state, the open milestone and board by name, what is blocked and the next action, with no task list, so a session starts without calling the forge. Same size budget as the files-tracker one. Changing tracker to a forge leaves the old files only in git: tag the last commit that holds them `pre-forge-migration` before the `git rm` (`tracker.md`, *Changing the tracker*). The mapping, labels, commit subjects (`(#123)`), access and tier limits are in `templates/reference/tracker.md`.
 - `scripts/tracker.sh check` prints the declaration for scripts; `scripts/tracker.sh decision` shows it beside the remotes. Neither calls the forge.
 - Issue bodies are still generated with `new-artifact.sh` and checked with `check-artifact.sh` before they are pasted.
 

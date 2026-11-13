@@ -17,11 +17,13 @@ github_repo = owner/name
 - **Absent means `files`.** Every project governed before the question existed tracks its work in files.
 - **The path is a name, never a host or URL.** `glab` and `gh` take the host from their own configuration.
 - `tracker.sh check` prints the declaration, and `tracker.sh decision` lists it beside the remotes.
-- Changing tracker is a decision: record an ADR, then migrate in its own task.
+- Changing tracker is a decision: record an ADR, then migrate in its own task (*Changing the tracker*, below).
 
 ## What stays in the repository, in every mode
 
 `AGENTS.md`, this convention's entry point, `reference/`, `decisions/` (ADRs) and developer and operations docs in `docs/`. These are the rules and the *why*. They are versioned with the code, and an agent can start a session from them offline.
+
+On a forge, one state file stays too: **`20.PLAN.md`, in its forge variant** (`templates/forge/20.PLAN.md`; project-migration keeps `context/CURRENT_STATE.md` for the same purpose). It holds the current state in a few lines, the open milestone and board by name, what is blocked and the next action. It holds **no task list**: the board is the list. It has the same size budget as the files-tracker `20.PLAN.md` (`reference/size-budgets.md`) and is state, not history.
 
 ## What moves to the forge
 
@@ -29,7 +31,8 @@ github_repo = owner/name
 |---|---|---|
 | Task brief `S###.T###_Name.md` / `TASK-####-*.md` | Issue; body = the task schema; `status::` label; milestone = its sprint | Issue; same; an item in the Project |
 | Sprint (`30.ROADMAP.md` row / `SPRINT-CURRENT.md`, a `TODO.md` heading) | Milestone `S###_Name` (or `S#`); due date = sprint end | Milestone; optionally a Project iteration |
-| Plan in flight (`20.PLAN.md` / `plans/PLAN-*.md`) | The issue board, one column per `status::` label | The Project's board view |
+| Task list of the plan in flight (`20.PLAN.md` table / `plans/PLAN-*.md`) | The issue board, one column per `status::` label | The Project's board view |
+| Where the project stands (`20.PLAN.md` / `context/CURRENT_STATE.md`) | **Stays in the repository**: the forge variant of `20.PLAN.md`, naming the milestone and board | Same |
 | Roadmap phases and deferred work (`30.ROADMAP.md` / `ROADMAP.md`) | Milestones ordered by due date; `phase::N` label; deferred = `status::deferred` | Same; the Project's roadmap view |
 | Backlog (`35.AD_HOC_TASKS.md` promoted / `BACKLOG.md`) | Issue `type::backlog` with `priority::`, `value::`, `risk::`; *Ready when* is its first line | Same, with `priority: x` labels |
 | Ad-hoc note (`35.AD_HOC_TASKS.md`) | Issue `type::adhoc`; promoting it = relabel `type::task` and set the milestone | Same |
@@ -39,6 +42,17 @@ github_repo = owner/name
 | Dashboard | Not applicable: boards and milestone progress | Not applicable: Project views |
 
 The forge's object is then the only owner. Do not keep a copy in `.ai/`; the one exception is an unattended run's snapshot, which lives only from the lock to the close (*Unattended runs*, below).
+
+## Changing the tracker
+
+Moving a repository from files to a forge removes the old planning, task, review and session files with `git rm`. Completed briefs, reviews and sessions then survive only in history, so leave a pointer. In order, before the `git rm` commit:
+
+1. File the open work as issues, and check them on the forge.
+2. Tag the last commit that still holds the files, annotated, and push it with the branch: `git tag -a pre-forge-migration -m "Planning files before the move to <forge>"`, then push the tag to the same remote. Never move or delete the tag.
+3. Put one line in the kept state file (`20.PLAN.md`, *History*) that names the tag and how to read it: `` Earlier planning is in tag `pre-forge-migration`: `git show pre-forge-migration:.ai/tasks/` ``.
+4. Then `git rm` the old files, in their own commit.
+
+**Optional, chosen by the person** when the tracker question is asked: also file the *completed* tasks as closed issues, bodies from the task schema, each closed with a `migrated` label, so the forge holds the full history. Never assume it. The tag is required either way.
 
 ## Identifiers and commits
 
