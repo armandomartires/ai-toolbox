@@ -249,25 +249,25 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T013_RoleGuard.md
 - [x] S011.T014 — Claude Code plugins per component kind (P1.2)
   .ai/tasks/S011.T014_ClaudeCodePlugins.md
-- [?] S011.T015 — Loops as invocable skills (P1.3)
+- [x] S011.T015 — Loops as invocable skills (P1.3)
   .ai/tasks/S011.T015_LoopsAsSkills.md
 - [x] S011.T016 — Claude skill controls in the schema (P1.4)
   .ai/tasks/S011.T016_ClaudeSkillControls.md
 - [x] S011.T017 — CLAUDE.md layer over AGENTS.md (P1.5)
   .ai/tasks/S011.T017_ClaudeMdLayer.md
-- [?] S011.T018 — Ship permissions and sandbox settings (P1.6)
+- [x] S011.T018 — Ship permissions and sandbox settings (P1.6)
   .ai/tasks/S011.T018_PermissionsAndSandbox.md
 - [x] S011.T019 — Stop hook runs a fast check (P1.7)
   .ai/tasks/S011.T019_StopHookFastCheck.md
-- [?] S011.T020 — Grow evals to 20-50 tasks with trials (P1.8)
+- [x] S011.T020 — Grow evals to 20-50 tasks with trials (P1.8)
   .ai/tasks/S011.T020_EvalsTrialsAndGrowth.md
-- [?] S011.T021 — Claude Code OpenTelemetry (P1.9)
+- [x] S011.T021 — Claude Code OpenTelemetry (P1.9)
   .ai/tasks/S011.T021_ClaudeCodeOtel.md
 - [x] S011.T022 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
   .ai/tasks/S011.T022_ClaudeReferenceProfile.md
-- [?] S011.T023 — Codex port completion (P2.2)
+- [x] S011.T023 — Codex port completion (P2.2)
   .ai/tasks/S011.T023_CodexPortCompletion.md
-- [?] S011.T024 — Long-running harness alignment (P2.3)
+- [x] S011.T024 — Long-running harness alignment (P2.3)
   .ai/tasks/S011.T024_LongRunHarness.md
 - [?] S011.T025 — Signed, versioned releases (P2.4)
   .ai/tasks/S011.T025_SignedVersionedReleases.md
@@ -294,11 +294,11 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   branch: agent/steps-mismatch-20eb29
 - [?] S011.T030 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
   .ai/tasks/S011.T030_OrchestratorResumeSelfStopped.md
-- [?] S011.T032 — task-orchestrator 0.7.2: writers run through the hand-off, so the write fence sees them
+- [x] S011.T032 — task-orchestrator 0.7.2: writers run through the hand-off, so the write fence sees them
   .ai/tasks/S011.T032_OrchestratorFenceLive.md
 - [ ] S011.T033 — task-orchestrator: a writer is spawned, not handed off, so the fence never sees it
   .ai/tasks/S011.T033_OrchestratorWriterSpawned.md
-- [?] S011.T034 — Planning skills on a forge: a state file stays, and a tag marks the removed history
+- [x] S011.T034 — Planning skills on a forge: a state file stays, and a tag marks the removed history
   .ai/tasks/S011.T034_ForgeStateAndHistoryMarker.md
 
 ## S012 — Post-S4, no sprint open
@@ -621,17 +621,17 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
 
 ## S017 — One planning convention
 Goal: Both planning skills use one convention, project-workflow's numbered layout; see .ai/decisions/ADR-0066-one-planning-convention.md
-- [?] S017.T001 — Record one planning convention in ADR-0066, superseding ADR-0013
+- [x] S017.T001 — Record one planning convention in ADR-0066, superseding ADR-0013
   .ai/tasks/S017.T001_OnePlanningConventionAdr.md
-- [?] S017.T002 — The dashboard is owned here and reads ADR-NNNN file names and the id map
+- [x] S017.T002 — The dashboard is owned here and reads ADR-NNNN file names and the id map
   .ai/tasks/S017.T002_DashboardAdrPrefixUpstream.md
 - [!] S017.T003 — project-workflow 8.0.0: ADR-NNNN file names, the hybrid brief, and current-state and session schemas
   .ai/tasks/S017.T003_WorkflowAdrPrefixAndSchemas.md
-- [?] S017.T004 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
+- [x] S017.T004 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
   .ai/tasks/S017.T004_MigrateLayoutTool.md
-- [?] S017.T005 — The gate and scripts accept both layouts during the switch
+- [x] S017.T005 — The gate and scripts accept both layouts during the switch
   .ai/tasks/S017.T005_GateAcceptsBothLayouts.md
-- [?] S017.T006 — Move ai-toolbox onto the one convention in one commit
+- [x] S017.T006 — Move ai-toolbox onto the one convention in one commit
   .ai/tasks/S017.T006_RenameAiToolbox.md
 - [ ] S017.T007 — Drop the old layout's support from the gate, and update AGENTS.md and the docs
   .ai/tasks/S017.T007_DropOldLayoutSupport.md
