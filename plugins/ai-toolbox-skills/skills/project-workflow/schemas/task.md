@@ -11,15 +11,18 @@ title_pattern: {id}
 max_lines: 80
 ---
 
-# One task, one module (ADR-0033 in ai-toolbox): identification first, then
-# the procedure, then the record. Git is the record of commits: the commit
+# The hybrid brief (ADR-0066 clause 4): project-workflow's identification
+# fields and sections, plus a required Acceptance criteria that an unattended
+# run checks for. One task, one module (ADR-0033 in ai-toolbox):
+# identification first, then the procedure, then the record. Git is the record of commits: the commit
 # subject carries the task id, so no hash is written here. The bold fields
 # are the ones the dashboard reads (references/dashboard.md).
 
 !preamble
 !standard
-Status is one of: not started, in progress, blocked, completed. Applies to:
-components and environment. Points is optional. Depends on: task ids, or none.
+Status is one of: not started, in progress, review, blocked, completed,
+cancelled. Applies to: components and environment. Points is optional (an
+extra `**Points**:` line after Depends on). Depends on: task ids, or none.
 !body
 **Status**: not started
 **Sprint**: `{sprint}`
@@ -69,6 +72,20 @@ Number the steps, one action each, before you start. If the plan changes,
 leave it and record the difference under Verification.
 !body
 1.
+
+## Acceptance criteria
+!phase before
+!required true
+!terse
+checkable conditions that make the task done
+!standard
+A checklist of conditions a reader can verify, written before starting. The
+unattended run refuses a brief without them (ADR-0066).
+!literal
+Write one checkbox line per condition that must be true when you finish.
+Each one must be checkable by running a command or reading a file.
+!body
+- [ ]
 
 ## Verification
 !phase after

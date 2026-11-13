@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: todo
+- Status: in_progress
 - Owner: agent
 - Branch: agent/TASK-0296
 - Created: 2026-11-13
@@ -38,13 +38,14 @@ Make project-workflow the one convention: ADR files `ADR-NNNN-title.md`; the hyb
 
 ## Acceptance criteria
 
-- [ ] `new-artifact.sh --kind adr` renders `ADR-NNNN-…`; `check-artifact.sh` accepts the hybrid brief and refuses one without Acceptance criteria
-- [ ] Legacy briefs still check against their legacy schema
-- [ ] Version 8.0.0; `sync-templates.sh --check` and `sync-artifact-engine.sh --check` pass
+- [ ] `new-artifact.sh --kind adr` renders `ADR-NNNN-…` (part 2, after TASK-0295)
+- [x] `check-artifact.sh` accepts the hybrid brief and refuses one without Acceptance criteria
+- [x] Legacy briefs still check against their legacy schema (`tests/legacy-schemas/workflow-task-v1.md`)
+- [x] Version 8.0.0; `sync-templates.sh --check` and `sync-artifact-engine.sh --check` pass
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh: in the pre-commit hook (part 1)
 
 ## Risks and rollback
 
@@ -55,7 +56,11 @@ Make project-workflow the one convention: ADR files `ADR-NNNN-title.md`; the hyb
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `skills/project-workflow/schemas/` | hybrid `task.md` (required Acceptance criteria, six statuses); new `current-state.md`, `risk-register.md` (gated `Last reviewed`), `session.md` |
+| `tests/legacy-schemas/workflow-task-v1.md` | the previous workflow brief shape, for briefs written before it |
+| SKILL.md 8.0.0, conventions, size budgets | name 10.CURRENT_STATE, 40.RISK_REGISTER and sessions/ |
+
+Left for part 2: the `ADR-NNNN-title.md` name, the ADR template and dashboard fixture renames (after TASK-0295); generated templates for the three new kinds (`scripts/sync-templates.sh` targets, after TASK-0298, which owns that file); the gate boundary between legacy and hybrid briefs (at TASK-0299, when briefs are renamed).
 
 Next: TASK-0297 follows
 
@@ -64,3 +69,6 @@ Next: TASK-0297 follows
 - 2026-11-13 · Claude Code (Opus 5.5, coordinator) · brief written from ADR-0066 and the design; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-13 · Claude Code (Opus 5.5, coordinator; builder worker S296, Sonnet 5.5) · part 1 in an isolated worktree, brought here; two conflicts with TASK-0293/0294 resolved (version, and the forge rule kept in size-budgets)
+  - Evidence: red: a brief without Acceptance criteria checked OK; green: `FAIL … missing required section: ## Acceptance criteria`; `check-dashboard.sh` OK (36), `check-tracker.sh` OK (49), `sync-templates.sh --check` and `sync-artifact-engine.sh --check` exit 0, `build-plugin.py --check` matches
+  - Deviation: split in two parts; the ADR name waits for TASK-0295; the conventions template was already over its 3 KB budget and grew

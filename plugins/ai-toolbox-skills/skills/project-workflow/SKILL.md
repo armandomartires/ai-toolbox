@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ planning layer - a plan/d
 license: MIT
 metadata:
   author: armando.martires
-  version: "7.2.0"
+  version: "8.0.0"
 ---
 
 # project-workflow
@@ -12,7 +12,7 @@ metadata:
 Scaffolds `.ai/` and maintains its plan/develop/test/validate convention. The full convention is `templates/00.CONVENTIONS.md`, which is copied verbatim. Use this skill for scaffolding, a task brief, an ADR, an ad-hoc item or a checkpoint.
 
 **This is not `project-migration`.** That skill retrofits a live repository onto a different framework: `TASK-####` briefs, `ADR-NNNN-*.md`, `context/`, `planning/`. This one owns:
-- the `00.CONVENTIONS.md` + `20/30/35` + `reference/` layout
+- the `00.CONVENTIONS.md` + `10.CURRENT_STATE.md` + `20/30/35` + `40.RISK_REGISTER.md` + `sessions/` + `reference/` layout (`10` is state, at most 200 lines; `40` carries a `Last reviewed` date; `sessions/` holds one record per working session)
 - `S###.T###` task ids
 - `NNNN-title.md` ADRs
 
@@ -24,6 +24,7 @@ The divergence was deliberate (ADR-0013 in ai-toolbox), and ADR-0066 now replace
 
 - **One task, one module.** Identification comes first (Status, Sprint, dates, Applies to, Depends on), then the procedure, then the record.
 - **Git is the record.** A commit subject carries the task id, so a brief never holds its own hash.
+- **A brief is hybrid (ADR-0066).** Bold header fields, Goal, Inputs, Plan, a required `## Acceptance criteria`, Verification, Outputs / handover. Statuses: not started, in progress, review, blocked, completed, cancelled. Briefs written to the earlier shape check against `tests/legacy-schemas/workflow-task-v1.md` in ai-toolbox.
 - **Budgets are gated.** A schema's `max_lines` is enforced by `check-artifact.sh`: 80 lines for a brief, an ADR or a review.
 - **Live files hold state, not history.** `20.PLAN.md` and `30.ROADMAP.md` say where things are now; git keeps how they got there.
 - **Every task ends with a short report:**

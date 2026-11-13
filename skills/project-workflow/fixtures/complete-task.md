@@ -27,6 +27,11 @@ Static assets were served with no `Cache-Control`, so every page load refetched 
 2. Leave `/favicon.ico` alone: its URL never changes, so an immutable policy there cannot be recovered.
 3. Test both routes, with opposite expectations.
 
+## Acceptance criteria
+
+- [x] Fingerprinted routes answer with the immutable `Cache-Control`
+- [x] `/favicon.ico` is unchanged
+
 ## Verification
 
 1. Test suite: `pytest -q` → `16 passed`

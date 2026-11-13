@@ -5,8 +5,9 @@
 
 # S###.T###_Name
 
-<!-- FILL: Status is one of: not started, in progress, blocked, completed. Applies to:
-     components and environment. Points is optional. Depends on: task ids, or none. -->
+<!-- FILL: Status is one of: not started, in progress, review, blocked, completed,
+     cancelled. Applies to: components and environment. Points is optional (an
+     extra `**Points**:` line after Depends on). Depends on: task ids, or none. -->
 
 **Status**: not started
 **Sprint**: `S###_SprintName`
@@ -35,6 +36,13 @@
      deviation under Verification; do not rewrite the plan. -->
 
 1.
+
+## Acceptance criteria
+
+<!-- FILL: A checklist of conditions a reader can verify, written before starting. The
+     unattended run refuses a brief without them (ADR-0066). -->
+
+- [ ]
 
 ## Verification
 
