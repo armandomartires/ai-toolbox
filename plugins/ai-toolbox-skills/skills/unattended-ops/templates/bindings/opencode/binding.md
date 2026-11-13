@@ -9,7 +9,7 @@ client: opencode
 driver_entry: <FILL: python3 <path>/driver.py --binding <path>/binding.md --run-id RUN_ID, from the repository root>
 model: <FILL: provider/model, passed as -m on every opencode run>
 queue_source: <FILL: path of the queue file, written by a human before the run>
-task_file_glob: <FILL: glob with {id} for the task id, e.g. .ai/tasks/{id}-*.md>
+task_file_glob: <FILL: glob with {id} for the task id, e.g. .ai/tasks/{id}-*.md, or .ai/tasks/{id}_*.md for S
 tracker_path: <FILL: the tracker file the closer updates one row of, or not-applicable (always, on a forge tracker)>
 gate_map: <FILL: path of the gate map JSON, outside the repository — the driver refuses one inside>
 gate_entry_point: <FILL: path of run-gate.sh as copied into the repository>

@@ -168,6 +168,15 @@ test('closes a task, and only the closer is asked to stage or commit', async () 
   assert.equal(r.result.pushed, false)
 })
 
+// ADR-0066 (TASK-0298): a task id may be S###.T### with its file S###.T###_Name.md,
+// so the binding's glob says {id}_*.md; the run treats the id as an opaque string.
+test('a sprint task id with an underscore glob closes like a TASK id', async () => {
+  const r = await run(baseArgs({ queue: [{ id: 'S012.T001' }], binding: { task_file_glob: '.ai/tasks/{id}_*.md' } }))
+  assert.equal(r.result.halted, null)
+  assert.deepEqual(r.result.closed.map(c => c.id), ['S012.T001'])
+  assert.match(r.calls('preflight')[0].prompt, /\.ai\/tasks\/\{id\}_\*\.md/)
+})
+
 // --- Long run (TASK-0282) -------------------------------------------------------
 
 const progressWrites = r => r.calls('run-scribe').filter(c => c.opts.label === 'run-scribe:progress')

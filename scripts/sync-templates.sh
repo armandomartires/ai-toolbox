@@ -68,6 +68,14 @@ skills/project-migration/schemas/plan.md:skills/project-migration/templates/PLAN
 # PLAN.md joined them with TASK-0146 (B-042): its schema was transcribed from
 # a count of the six plans, so it, too, is rendered rather than hand-written.
 
+# The numbered layout (ADR-0066), told by `.ai/00.CONVENTIONS.md` existing,
+# retires this repo's own `.ai/templates/`: its five targets are neither written
+# nor checked there, and the skills' copies below stay. In the old layout all
+# of them are generated, as before.
+if [ -f .ai/00.CONVENTIONS.md ]; then
+  TARGETS="$(printf '%s\n' "$TARGETS" | grep -v ':\.ai/templates/' || true)"
+fi
+
 for pair in $TARGETS; do
   schema="${pair%%:*}"
   [ -r "$schema" ] || { echo "sync-templates.sh: cannot read $schema" >&2; exit 1; }

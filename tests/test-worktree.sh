@@ -97,6 +97,16 @@ out="$(scripts/worktree.sh add free1 2>&1)"
 check "W4 free name prints the ADR-0023 note" "$(grep -q 'not a task branch' <<<"$out"; echo $?)" "$out"
 git worktree remove "$wt/free1" >/dev/null 2>&1; git branch -D agent/free1 >/dev/null 2>&1
 
+# W4b: the sprint form (ADR-0066). `add S012.T001` makes agent/S012.T001 and,
+# like TASK-nnnn, prints no "not a task branch" note; a near miss still does.
+out="$(scripts/worktree.sh add S012.T001 2>&1)"; rc=$?
+check "W4b add S012.T001 creates branch and sibling worktree"   "$( [ "$rc" -eq 0 ] && git show-ref --verify --quiet refs/heads/agent/S012.T001 && [ -d "$wt/S012.T001" ]; echo $?)" "$out"
+check "W4b sprint form prints no free-name note" "$(! grep -q 'not a task branch' <<<"$out"; echo $?)" "$out"
+scripts/worktree.sh remove S012.T001 >/dev/null 2>&1
+out="$(scripts/worktree.sh add S12.T1 2>&1)"
+check "W4b S12.T1 (not three digits) is a free name" "$(grep -q 'not a task branch' <<<"$out"; echo $?)" "$out"
+scripts/worktree.sh remove S12.T1 >/dev/null 2>&1
+
 # W5: adding again reports the existing worktree; with the worktree gone but
 # the branch kept, it says it is resuming that branch.
 out="$(scripts/worktree.sh add TASK-0001 2>&1)"; rc=$?

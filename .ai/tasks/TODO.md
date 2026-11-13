@@ -335,7 +335,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [ ] TASK-0295 — sigma-llmwiki's dashboard reads ADR-NNNN file names and the id map, then is re-vendored
 - [ ] TASK-0296 — project-workflow 8.0.0: ADR-NNNN file names, the hybrid brief, and current-state and session schemas
 - [?] TASK-0297 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
-- [ ] TASK-0298 — The gate and scripts accept both layouts during the switch
+- [?] TASK-0298 — The gate and scripts accept both layouts during the switch
 - [ ] TASK-0299 — Move ai-toolbox onto the one convention in one commit
 - [ ] TASK-0300 — Drop the old layout's support from the gate, and update AGENTS.md and the docs
 - [ ] TASK-0301 — project-migration 6.0.0 retrofits repositories into the one convention

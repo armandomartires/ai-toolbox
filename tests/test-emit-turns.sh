@@ -32,7 +32,10 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
 table = {}
-for line in open(".ai/context/turn-limits.md", encoding="utf-8"):
+# The table is where the emitter reads it: .ai/context/ in the old layout,
+# docs/development/ in the numbered one (ADR-0066); the test follows it.
+TABLE = mod.TURN_TABLE
+for line in open(TABLE, encoding="utf-8"):
     cells = [c.strip() for c in line.strip().strip("|").split("|")]
     if len(cells) == 3 and re.fullmatch(r"[a-z][a-z-]*", cells[0]):
         table[cells[0]] = (cells[1], cells[2])
@@ -72,9 +75,12 @@ except ValueError:
 
 # Without the table, emission carries no maxTurns: the check above would fail.
 copy = os.path.join(tmp, "repo")
-for d in ("agents", "scripts", ".ai/context"):
-    shutil.copytree(d, os.path.join(copy, d))
-os.remove(os.path.join(copy, ".ai", "context", "turn-limits.md"))
+for d in ("agents", "scripts", os.path.dirname(TABLE)):
+    shutil.copytree(d, os.path.join(copy, d), dirs_exist_ok=True)
+if os.path.isfile(".ai/00.CONVENTIONS.md"):      # the marker that picks the layout
+    os.makedirs(os.path.join(copy, ".ai"), exist_ok=True)
+    shutil.copy(".ai/00.CONVENTIONS.md", os.path.join(copy, ".ai"))
+os.remove(os.path.join(copy, TABLE))
 subprocess.run([sys.executable, "scripts/emit-agents.py", "claude-code", os.path.join(tmp, "bare")],
                cwd=copy, check=True, capture_output=True)
 bare = [open(os.path.join(tmp, "bare", f), encoding="utf-8").read()

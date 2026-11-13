@@ -634,7 +634,7 @@ Goal: Both planning skills use one convention, project-workflow's numbered layou
   .ai/tasks/TASK-0296-workflow-adr-prefix-and-schemas.md
 - [?] TASK-0297 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
   .ai/tasks/TASK-0297-migrate-layout-tool.md
-- [ ] TASK-0298 — The gate and scripts accept both layouts during the switch
+- [?] TASK-0298 — The gate and scripts accept both layouts during the switch
   .ai/tasks/TASK-0298-gate-accepts-both-layouts.md
 - [ ] TASK-0299 — Move ai-toolbox onto the one convention in one commit
   .ai/tasks/TASK-0299-rename-ai-toolbox.md

@@ -80,9 +80,14 @@ LOG_LINES = ("- Commit: in git \u2014 the subject carries the task id (run r1)",
              "- Push: not taken \u2014 the run pushes nothing")
 
 
-def closer_sh(lines, add="git add -- src/a.txt .ai/tasks/{TASK}-demo.md"):
-    """A closer that appends `lines` to the task file, stages, commits."""
-    sh = ["printf '%%s\\n' %s >> .ai/tasks/{TASK}-demo.md" % " ".join("'%s'" % l for l in lines)]
+def closer_sh(lines, add=None, sep="-"):
+    """A closer that appends `lines` to the task file, stages, commits.
+
+    `sep` is what follows the id in the task's file name: `-` for TASK-nnnn,
+    `_` for S###.T###_Name.md (ADR-0066)."""
+    task = ".ai/tasks/{TASK}%sdemo.md" % sep
+    add = add or "git add -- src/a.txt " + task
+    sh = ["printf '%%s\\n' %s >> %s" % (" ".join("'%s'" % l for l in lines), task)]
     sh += [add, "git commit -q -m '{TASK}: change a'"]
     return {"sh": sh, "text": fence({"commit": "{HEAD}"})}
 
@@ -142,7 +147,7 @@ class Harness(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def make_repo(self, ids=("TASK-0001",), queue=None, binding=None, gates=None,
-                  binding_overrides=None, map_in_repo=False, tracker_conf=None):
+                  binding_overrides=None, map_in_repo=False, tracker_conf=None, sep="-"):
         r = lambda *a: subprocess.run([REAL_GIT, *a], cwd=self.repo, check=True,
                                       capture_output=True)
         r("init", "-q", "-b", "master")
@@ -175,7 +180,7 @@ class Harness(unittest.TestCase):
             with open(gate_map, "w") as fh:
                 fh.write(gate_map_text)
         for i in ids:
-            files[".ai/tasks/%s-demo.md" % i] = (
+            files[".ai/tasks/%s%sdemo.md" % (i, sep)] = (
                 "# %s\n\n## Acceptance criteria\n- [ ] a.txt changes\n" % i)
         if tracker_conf is not None:
             # A forge tracker (ADR-0038): the lock is a committed snapshot of
@@ -183,7 +188,7 @@ class Harness(unittest.TestCase):
             files["tracker.conf"] = tracker_conf
             del files["TODO.md"]
             for i in ids:
-                del files[".ai/tasks/%s-demo.md" % i]
+                del files[".ai/tasks/%s%sdemo.md" % (i, sep)]
                 files[".ai/run-queue/%s.md" % i] = (
                     "# Issue %s\n\n## Acceptance criteria\n- [ ] a.txt changes\n" % i)
         for rel, body in files.items():
@@ -504,6 +509,32 @@ class TestHappyPath(Harness):
         with open(os.path.join(self.repo, ".run/r1/evidence.txt")) as fh:
             evidence = fh.read()
         self.assertIn("GATE r1.long.build NAME=build STATE=PASSED", evidence)
+
+
+class TestSprintTaskIds(Harness):
+    """ADR-0066, TASK-0298: a task id may be S###.T### and its file S###.T###_Name.md;
+    the binding's task_file_glob says `{id}_*.md` instead of `{id}-*.md`."""
+
+    GLOB = {"task_file_glob": ".ai/tasks/{id}_*.md"}
+
+    def test_a_sprint_task_resolves_through_an_underscore_glob_and_closes(self):
+        ids = ("S012.T001",)
+        self.make_repo(ids=ids, binding_overrides=self.GLOB, sep="_")
+        agents = happy(ids)
+        agents["closer"] = [closer_sh(LOG_LINES, sep="_")]
+        self.assertEqual(self.run_driver(agents), 0, self.proc.stderr)
+        self.assertEqual([e["task"] for e in self.events("close")], list(ids))
+        pre = self.invocations("preflight")
+        self.assertIn(".ai/tasks/S012.T001_demo.md", pre[-1][-1])
+
+    def test_the_old_glob_does_not_find_the_new_name(self):
+        # The glob is the lock: a binding written for the old layout halts, it
+        # never guesses (ADR-0022 clause 3).
+        ids = ("S012.T001",)
+        self.make_repo(ids=ids, sep="_")
+        self.assertNotEqual(self.run_driver(happy(ids)), 0)
+        self.assertIn("task_file_glob matches 0 files", json.dumps(self.journal()))
+        self.assertEqual(self.invocations("implementer"), [])
 
 
 class TestRefuterFailsClosed(Harness):

@@ -1344,86 +1344,14 @@ fi
 # Content presence only, never table shape: the four briefs that prove
 # the contract works (TASK-0020…0023) were written before the template
 # existed, and a format check would reject them.
-if [ -f .ai/templates/TASK.md ]; then
-  python3 - <<'PY' || fail=1
-import os, re, sys
-
-# Task briefs numbered below this predate the convention (ADR-0012
-# Decision 4). They are records of what happened, not instances of the
-# current template; rewriting them to satisfy a rule invented afterwards
-# would fabricate compliance. A numeric boundary rather than an allowlist:
-# an allowlist needs an edit per new task and rots the first time someone
-# forgets.
-FIRST_CONTRACT_TASK = 20
-
-REQUIRED = ["## Inputs", "## Outputs / handover"]
-bad = []
-
-
-def body_after(text, heading):
-    """Lines under `heading` up to the next `## `, minus placeholder noise."""
-    lines = text.split("\n")
-    try:
-        start = lines.index(heading)
-    except ValueError:
-        return None                      # heading absent entirely
-    out = []
-    for line in lines[start + 1:]:
-        if line.startswith("## "):
-            break
-        s = line.strip()
-        if not s:
-            continue
-        if s.startswith("<!--") or s.startswith("-->") or s.startswith(">"):
-            continue                     # template guidance, not content
-        if set(s) <= set("|- "):
-            continue                     # empty table separator
-        out.append(s)
-    return out
-
-
-def check(path, label):
-    with open(path, encoding="utf-8") as fh:
-        text = fh.read()
-    for heading in REQUIRED:
-        body = body_after(text, heading)
-        if body is None:
-            bad.append("%s: missing '%s'" % (label, heading))
-        elif not body:
-            bad.append("%s: '%s' is present but empty" % (label, heading))
-
-
-# 1. The template itself must keep carrying both headings.
-check(".ai/templates/TASK.md", "templates/TASK.md")
-
-# 2. Task briefs at or past the boundary must have filled them in.
 #
-# Walks recursively: `.ai/README.md` documents `.ai/tasks/completed/` as a
-# destination for task files, and a flat listdir() let a brief escape the
-# check simply by being archived. Verified by fixture — a TASK-0099 with no
-# handover sections passed while one level down.
-for dirpath, _dirnames, filenames in os.walk(".ai/tasks"):
-    for name in sorted(filenames):
-        if not name.endswith(".md") or name == "TODO.md":
-            continue
-        m = re.match(r"^TASK-(\d{4})-", name)
-        rel = os.path.relpath(os.path.join(dirpath, name), ".ai/tasks")
-        if not m:
-            # Reported, never skipped: a silently skipped file is an
-            # unchecked file, and a renaming scheme could otherwise
-            # disable this check without anyone noticing.
-            bad.append("%s: filename does not match TASK-####-*.md, so it "
-                       "cannot be checked — rename it or update this check"
-                       % rel)
-            continue
-        if int(m.group(1)) >= FIRST_CONTRACT_TASK:
-            check(os.path.join(dirpath, name), rel)
-
-for msg in bad:
-    print("HANDOVER: %s" % msg)
-sys.exit(1 if bad else 0)
-PY
-fi
+# The checks live in tests/check-planning.py since TASK-0298, so one owner reads
+# both layouts (ADR-0066): the old `.ai/tasks/TASK-NNNN-*.md` with
+# `.ai/templates/TASK.md`, and the numbered `tasks/S###.T###_Name.md`, whose
+# older briefs keep their boundary through `.ai/id-map.tsv`. FIRST_CONTRACT_TASK
+# and the other boundaries are in that file; tests/test-layout-both.sh proves
+# each check on a fixture of each layout.
+python3 tests/check-planning.py handover || fail=1
 
 # --- The adjudicator's decision standard is a faithful copy ----------------
 #
@@ -1836,23 +1764,20 @@ sys.exit(1 if bad else 0)
 PY
 fi
 
-# AGENTS.md joined in TASK-0174: every session loads it whole.
-for spec in .ai/context/CURRENT_STATE.md:200 .ai/planning/SPRINT-CURRENT.md:80 \
-            .ai/tasks/TODO.md:400 AGENTS.md:120; do
-  f="${spec%:*}" max="${spec##*:}"
-  [ -f "$f" ] || continue
-  n="$(wc -l < "$f" | tr -d ' ')"
-  if [ "$n" -gt "$max" ]; then
-    echo "LIVE: $f is $n lines, over its budget of $max (ADR-0033)"
-    fail=1
-  fi
-done
-if [ -f .ai/planning/BACKLOG.md ]; then
-  long="$(awk 'length($0) > 600 { print FILENAME ":" NR ": " length($0) " chars" }' .ai/planning/BACKLOG.md)"
-  if [ -n "$long" ]; then
-    printf 'LIVE: BACKLOG.md line over 600 characters (ADR-0033): %s\n' "$long"
-    fail=1
-  fi
+# AGENTS.md joined in TASK-0174: every session loads it whole. The paths per
+# layout (CURRENT_STATE, the plan, TODO.md, the backlog) are tests/check-planning.py's.
+python3 tests/check-planning.py live || fail=1
+
+# --------------------------------------------------------------------------
+# Every check and script that reads the planning layout accepts the old one AND
+# ADR-0066's numbered one (TASK-0298): the governance checks above, the backlog
+# check, the emitter's table paths, sync-templates.sh and worktree.sh, each run
+# on a hand-converted fixture of each layout, with a seeded defect per layout so
+# none can stop firing silently. Fixtures only, under mktemp; local git only.
+# Unconditional (ADR-0009). Dropping the old half is TASK-0300's, not a quiet edit.
+if ! LAYOUT_OUT="$(bash tests/test-layout-both.sh 2>&1)"; then
+  printf '%s\n' "$LAYOUT_OUT" | grep -v '^PASS' | sed 's/^/LAYOUT-BOTH: /'
+  fail=1
 fi
 
 # --------------------------------------------------------------------------
@@ -2036,66 +1961,16 @@ fi
 # shapes in tests/legacy-schemas/ (ADR-0033); newer ones against the current
 # schema. Raise a boundary to absorb a change; never lower one.
 # Proves structure only, never that a word is true.
-FIRST_GENERATED_TASK=24
-FIRST_V2_TASK=153
-FIRST_V2_ADR=34
+# The three boundaries (FIRST_GENERATED_TASK=24, FIRST_V2_TASK=153,
+# FIRST_V2_ADR=34) are constants of tests/check-planning.py, the one owner.
 SCHEMA_DIR=skills/project-migration/schemas
 LEGACY_DIR=tests/legacy-schemas
 ARTIFACT_LIB=skills/project-workflow/scripts/artifact_lib.py
 if [ -d "$SCHEMA_DIR" ] && [ -r "$ARTIFACT_LIB" ]; then
-  groups=""
-  add_group() {  # $1 = schema path, $2 = artifact path
-    [ -r "$1" ] || return 0
-    groups="$groups$1	$2
-"
-  }
-  num_of() { basename "$1" | sed -n 's/^[A-Z-]*0*\([0-9]\{1,\}\).*/\1/p'; }
-
-  for brief in .ai/tasks/TASK-*.md; do
-    [ -e "$brief" ] || continue
-    num="$(num_of "$brief")"
-    [ -n "$num" ] || continue
-    [ "$num" -ge "$FIRST_GENERATED_TASK" ] || continue
-    if [ "$num" -lt "$FIRST_V2_TASK" ]; then
-      add_group "$LEGACY_DIR/task-v1.md" "$brief"
-    else
-      add_group "$SCHEMA_DIR/task.md" "$brief"
-    fi
-  done
-
-  for f in .ai/decisions/*.md; do
-    [ -e "$f" ] && [ "$(basename "$f")" != "INDEX.md" ] || continue
-    num="$(num_of "$f")"
-    if [ -n "$num" ] && [ "$num" -lt "$FIRST_V2_ADR" ]; then
-      add_group "$LEGACY_DIR/adr-v1.md" "$f"
-    else
-      add_group "$SCHEMA_DIR/adr.md" "$f"
-    fi
-  done
-
-  # REVIEW-0012 is exempt by name: it alone orders its sections differently,
-  # and a review is never rewritten after the fact (TASK-0110, human-authorized).
-  for f in .ai/reviews/*.md; do
-    [ -e "$f" ] || continue
-    case "$(basename "$f")" in
-      INDEX.md) continue ;;
-      REVIEW-0012-*) continue ;;
-    esac
-    add_group "$SCHEMA_DIR/review.md" "$f"
-  done
-  for f in .ai/sessions/*.md; do
-    [ -e "$f" ] && [ "$(basename "$f")" != "INDEX.md" ] && add_group "$SCHEMA_DIR/session.md" "$f"
-  done
-  # Plans since TASK-0146 (B-042). The schema requires only what all six
-  # share, so none is exempt and none was edited to pass.
-  for f in .ai/planning/plans/PLAN-*.md; do
-    [ -e "$f" ] && add_group "$SCHEMA_DIR/plan.md" "$f"
-  done
-
-  # One interpreter for every kind; each schema is parsed once.
-  if [ -n "$groups" ]; then
-    ARTIFACT_GROUPS="$groups" python3 "$ARTIFACT_LIB" check-groups || fail=1
-  fi
+  # Which artifact meets which schema, by the OLD number of a brief or ADR (a
+  # renamed one resolves through .ai/id-map.tsv), is tests/check-planning.py's
+  # (ADR-0066); it hands the list to the same interpreter, never a copy here.
+  python3 tests/check-planning.py groups || fail=1
 fi
 
 # --------------------------------------------------------------------------
@@ -2169,28 +2044,10 @@ done
 # line and every register row has the table's ten columns, an R-NN id and a
 # status. WHAT IT DOES NOT PROVE: that the review actually happened, or that
 # the ratings are right; that is the sprint checkpoint's job.
-if [ -r .ai/context/risk-register.md ]; then
-  python3 - .ai/context/risk-register.md <<'PY' || fail=1
-import re, sys
-text = open(sys.argv[1], encoding="utf-8").read()
-bad = []
-if not re.search(r"^Last reviewed: \d{4}-\d{2}-\d{2}", text, re.M):
-    bad.append("no 'Last reviewed: YYYY-MM-DD' line")
-rows = [l for l in text.splitlines() if l.startswith("| R-")]
-if not rows:
-    bad.append("no R-NN rows")
-for l in rows:
-    cells = [c.strip() for c in l.strip().strip("|").split("|")]
-    if len(cells) != 10 or not re.fullmatch(r"R-\d{2}", cells[0]) or not cells[-1]:
-        bad.append("malformed row: " + l[:60])
-for b in bad:
-    print("RISK-REGISTER: " + b)
-sys.exit(1 if bad else 0)
-PY
-else
-  echo "RISK-REGISTER: .ai/context/risk-register.md is missing"
-  fail=1
-fi
+# The path per layout (.ai/context/risk-register.md, or .ai/40.RISK_REGISTER.md
+# in the numbered layout) is tests/check-planning.py's.
+python3 tests/check-planning.py risk || fail=1
+python3 tests/check-planning.py idmap || fail=1
 
 # --------------------------------------------------------------------------
 # The SBOM helper still adds external MCP servers (issue #12): a red proof.

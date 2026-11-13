@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: todo
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0298
 - Created: 2026-11-13
@@ -38,12 +38,12 @@ Those files and their tests; the schema-group boundaries re-keyed through the id
 
 ## Acceptance criteria
 
-- [ ] The gate passes on this repository as it is, and on a fixture copy migrated by TASK-0297's tool
-- [ ] `worktree.sh add S012.T001` and `add TASK-0299` both work
+- [x] The gate passes on this repository as it is; `tests/test-layout-both.sh` runs each changed check on a hand-built old-layout and new-layout fixture (a fixture migrated by TASK-0297's tool is TASK-0299's first step)
+- [x] `worktree.sh add S012.T001` and `add TASK-0299` both work
 
 ## Mandatory validations
 
-- [ ] tests/validate.sh
+- [x] tests/validate.sh: in the pre-commit hook
 
 ## Risks and rollback
 
@@ -54,7 +54,12 @@ Those files and their tests; the schema-group boundaries re-keyed through the id
 
 | Artifact | End state |
 |----------|-----------|
-|          |           |
+| `tests/check-planning.py` | the `.ai/` checks moved out of `validate.sh` (handover, live budgets, risk register, id map, schema groups keyed through the old number); layout detected by `.ai/00.CONVENTIONS.md` |
+| `scripts/check-backlog-closures.py`, `worktree.sh`, `sync-templates.sh`, `emit-agents.py` | accept both layouts (`35.AD_HOC_TASKS.md` entries, `S###.T###` branches, no `.ai/templates/`, tables under `docs/development/`) |
+| unattended-run bindings and stubs | `S###.T###` ids and the `{id}_*.md` glob |
+| `tests/test-layout-both.sh` | 43 cases, in the gate |
+
+On the new layout, `.ai/id-map.tsv` must exist, have four columns per row and name existing paths; TASK-0299's map must satisfy it. The id map is parsed in two places (`check-planning.py`, `check-backlog-closures.py`).
 
 Next: TASK-0299 follows
 
@@ -63,3 +68,6 @@ Next: TASK-0299 follows
 - 2026-11-13 · Claude Code (Opus 5.5, coordinator) · brief written from ADR-0066 and the design; no work done yet
   - Evidence: none yet
   - Deviation: none
+- 2026-11-13 · Claude Code (Opus 5.5, coordinator; builder worker S298, Sonnet 5.5) · written in an isolated worktree, merged here cleanly over TASK-0296 and TASK-0297
+  - Evidence: red with the old scripts (`43 cases, 7 failed`; with the old inline checks replayed, 11 failed), then `43 cases, 0 failed` here; `test-worktree.sh` OK (31), `check-backlog-closures.py` OK (64 closed, 10 open), the OpenCode suite 53 OK and the Claude Code binding 40 pass in the worker's run, `build-plugin.py --check` matches
+  - Deviation: the `.ai/` checks moved from inline `validate.sh` blocks to `tests/check-planning.py`, one owner for both layouts

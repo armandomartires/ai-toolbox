@@ -155,7 +155,7 @@ async def query(*, prompt, options=None, transport=None):
         fh.write(str(n + 1))
     resp = queue[min(n, len(queue) - 1)]
     cwd = str(options.cwd or os.getcwd())
-    t = re.search(r"\btask (TASK-\d+|[1-9][0-9]*)\b", prompt)
+    t = re.search(r"\btask (TASK-\d+|S\d{3}\.T\d{3}|[1-9][0-9]*)\b", prompt)
     task = t.group(1) if t else ""
     calls = []
     for cmd in resp.get("sh", []):

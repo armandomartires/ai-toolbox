@@ -48,7 +48,7 @@ def main():
         fh.write(str(n + 1))
     resp = queue[min(n, len(queue) - 1)]
     env = dict(os.environ, GIT_CALLER="stub")
-    m = re.search(r"\btask (TASK-\d+|[1-9][0-9]*)\b", prompt)
+    m = re.search(r"\btask (TASK-\d+|S\d{3}\.T\d{3}|[1-9][0-9]*)\b", prompt)
     task = m.group(1) if m else ""
     for cmd in resp.get("sh", []):
         subprocess.run(cmd.replace("{TASK}", task), shell=True, check=True, env=env)
