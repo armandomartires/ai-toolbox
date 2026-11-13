@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: in review
+- Status: review
 - Owner: agent (Claude Code, coordinator with orchestrated workers)
 - Created: 2026-11-10
 - Updated: 2026-11-13

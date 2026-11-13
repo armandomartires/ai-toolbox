@@ -365,12 +365,13 @@ cannot commit on `master` directly. It lands instead:
 git fetch origin
 git rebase origin/master          # replay this session's commits on top
 git push origin HEAD:master       # land them; master stays linear
-git push github HEAD:master       # then the public mirror
 ```
 
 `origin` is private, so the fetch and the push each need the credential
 from *Authenticating a push* below (`vgit_origin …`); the
-commands are written bare here for readability.
+commands are written bare here for readability. The `github` mirror follows
+by itself through GitLab's push mirror and is never pushed directly (see
+*Authenticating a push*).
 
 **This preserves `AGENTS.md`'s "one task = one commit" rule.** `master` still
 receives one commit per task, still linear, still gated — the only added step

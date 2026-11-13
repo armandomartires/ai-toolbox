@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: in review
+- Status: review
 - Owner: agent (Claude Code)
 - Branch: agent/ai-toolbox-alignment-66b894
 - Created: 2026-11-11

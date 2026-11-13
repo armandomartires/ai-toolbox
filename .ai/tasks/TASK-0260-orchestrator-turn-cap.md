@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: in review
+- Status: review
 - Owner: agent (Claude Code)
 - Created: 2026-11-08
 - Updated: 2026-11-13

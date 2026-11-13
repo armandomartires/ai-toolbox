@@ -2,7 +2,7 @@
 
 ## Status
 
-- Status: in review
+- Status: review
 - Owner: agent
 - Branch: agent/TASK-0276
 - Created: 2026-11-10

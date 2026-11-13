@@ -301,6 +301,7 @@ Sprint membership, one line per item. Details live in each brief and in
 - [?] TASK-0289 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
 - [?] TASK-0291 — task-orchestrator 0.7.2: writers run through the hand-off, so the write fence sees them
 - [ ] TASK-0292 — task-orchestrator: a writer is spawned, not handed off, so the fence never sees it
+- [x] TASK-0303 — Landing docs push origin only, and briefs use the schema's review status
 - [?] TASK-0293 — Planning skills on a forge: a state file stays, and a tag marks the removed history
 - [?] TASK-0288 — agent-watch 0.13.5: the band and the Sessions pane agree on steps
 
