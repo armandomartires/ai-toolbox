@@ -9,7 +9,7 @@
 # bold-oak-a3f2, and `cwd`); the LAST stdout line is the worktree's absolute
 # path. Everything else goes to stderr. The hook has no task id, so the
 # branch is agent/<slug>; when the task is known, use
-# `worktree.sh add TASK-nnnn` instead.
+# `worktree.sh add S###.T###` instead.
 #
 # WORKTREE_SKIP_GATE=1: the gate probe in `add` takes minutes, and this hook
 # must answer inside its timeout. The \r strips matter on Windows, where the

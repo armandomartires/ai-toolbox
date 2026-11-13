@@ -73,7 +73,7 @@ complete binding does not prove").
   "runId": "20260924-0100",
   "dryRun": false,
   "binding": {
-    "task_file_glob": ".ai/tasks/{id}-*.md", "tracker_path": "TODO.md",
+    "task_file_glob": ".ai/tasks/{id}_*.md", "tracker_path": "TODO.md",
     "gate_map": "gates.json", "gate_entry_point": "path/to/run-gate.sh",
     "watchdog_timeout": "90m", "task_cap": "3",
     "evidence_file": ".run/unattended/<run-id>/evidence.txt",

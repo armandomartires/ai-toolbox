@@ -12,7 +12,7 @@ A response is {"text": str|null, "raw": str, "stderr": str, "exit": int,
 "sh": [shell commands run first, with GIT_CALLER=stub], "auto": name,
 "tool_errors": [[tool, error text], ...] emitted as errored tool_use events}.
 Responses are consumed in order; the last one repeats. `sh` and `text` may
-contain {TASK} (the first `task TASK-nnnn`, or on a forge `task <issue number>`,
+contain {TASK} (the first `task S, or on a forge `task <issue number>`,
 in the prompt); `text` may contain
 {HEAD} (resolved after `sh` runs). `auto` builds a dynamic reply:
   gate-runner  -> report every handle's line from the evidence file

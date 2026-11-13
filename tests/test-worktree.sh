@@ -88,17 +88,17 @@ check "W3 refusal keeps the branch and the worktree" \
   "$(git show-ref --verify --quiet refs/heads/agent/w3 && [ -d "$wt/w3" ]; echo $?)"
 check "W3 refusal says why" "$(grep -q 'REFUSING' <<<"$out"; echo $?)" "$out"
 
-# W4: the task form. `add TASK-0001` makes agent/TASK-0001 at <root>-worktrees/
-# TASK-0001 and is silent about "not a task branch".
-out="$(scripts/worktree.sh add TASK-0001 2>&1)"; rc=$?
-check "W4 add TASK-0001 creates branch and sibling worktree"   "$( [ "$rc" -eq 0 ] && git show-ref --verify --quiet refs/heads/agent/TASK-0001 && [ -d "$wt/TASK-0001" ]; echo $?)" "$out"
+# W4: the task form. `add S001.T001` makes agent/S001.T001 at <root>-worktrees/
+# S001.T001 and is silent about "not a task branch".
+out="$(scripts/worktree.sh add S001.T001 2>&1)"; rc=$?
+check "W4 add S001.T001 creates branch and sibling worktree"   "$( [ "$rc" -eq 0 ] && git show-ref --verify --quiet refs/heads/agent/S001.T001 && [ -d "$wt/S001.T001" ]; echo $?)" "$out"
 check "W4 task form prints no free-name note" "$(! grep -q 'not a task branch' <<<"$out"; echo $?)" "$out"
 out="$(scripts/worktree.sh add free1 2>&1)"
 check "W4 free name prints the ADR-0023 note" "$(grep -q 'not a task branch' <<<"$out"; echo $?)" "$out"
 git worktree remove "$wt/free1" >/dev/null 2>&1; git branch -D agent/free1 >/dev/null 2>&1
 
-# W4b: the sprint form (ADR-0066). `add S012.T001` makes agent/S012.T001 and,
-# like TASK-nnnn, prints no "not a task branch" note; a near miss still does.
+# W4b: the sprint form (ADR-0066): `add S012.T001` makes agent/S012.T001 and
+# prints no "not a task branch" note; a near miss still does.
 out="$(scripts/worktree.sh add S012.T001 2>&1)"; rc=$?
 check "W4b add S012.T001 creates branch and sibling worktree"   "$( [ "$rc" -eq 0 ] && git show-ref --verify --quiet refs/heads/agent/S012.T001 && [ -d "$wt/S012.T001" ]; echo $?)" "$out"
 check "W4b sprint form prints no free-name note" "$(! grep -q 'not a task branch' <<<"$out"; echo $?)" "$out"
@@ -106,15 +106,18 @@ scripts/worktree.sh remove S012.T001 >/dev/null 2>&1
 out="$(scripts/worktree.sh add S12.T1 2>&1)"
 check "W4b S12.T1 (not three digits) is a free name" "$(grep -q 'not a task branch' <<<"$out"; echo $?)" "$out"
 scripts/worktree.sh remove S12.T1 >/dev/null 2>&1
+out="$(scripts/worktree.sh add TASK-0001 2>&1)"
+check "W4b TASK-0001 (the retired form) is a free name" "$(grep -q 'not a task branch' <<<"$out"; echo $?)" "$out"
+scripts/worktree.sh remove TASK-0001 >/dev/null 2>&1
 
 # W5: adding again reports the existing worktree; with the worktree gone but
 # the branch kept, it says it is resuming that branch.
-out="$(scripts/worktree.sh add TASK-0001 2>&1)"; rc=$?
+out="$(scripts/worktree.sh add S001.T001 2>&1)"; rc=$?
 check "W5 second add reports already exists"   "$( [ "$rc" -eq 0 ] && grep -q 'already exists' <<<"$out"; echo $?)" "$out"
-git worktree remove "$wt/TASK-0001" >/dev/null 2>&1
-out="$(scripts/worktree.sh add TASK-0001 2>&1)"; rc=$?
-check "W5 add on an existing branch says resuming"   "$( [ "$rc" -eq 0 ] && grep -q 'resuming existing branch agent/TASK-0001' <<<"$out"; echo $?)" "$out"
-scripts/worktree.sh remove TASK-0001 >/dev/null 2>&1
+git worktree remove "$wt/S001.T001" >/dev/null 2>&1
+out="$(scripts/worktree.sh add S001.T001 2>&1)"; rc=$?
+check "W5 add on an existing branch says resuming"   "$( [ "$rc" -eq 0 ] && grep -q 'resuming existing branch agent/S001.T001' <<<"$out"; echo $?)" "$out"
+scripts/worktree.sh remove S001.T001 >/dev/null 2>&1
 
 # W6: a worktree made by plain git, on a foreign prefix, is removed by PATH and
 # its branch deleted; list flags the prefix.

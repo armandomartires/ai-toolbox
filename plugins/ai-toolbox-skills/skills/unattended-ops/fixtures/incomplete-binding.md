@@ -20,7 +20,7 @@ client: opencode
 driver_entry: ./bin/unattended-run.sh
 model: unknown
 queue_source: queue.txt
-task_file_glob: .ai/tasks/TASK-*.md
+task_file_glob: .ai/tasks/{id}_*.md
 tracker_path:
 gate_map: bin/gates.map
 gate_entry_point: bin/invoke-gate.sh

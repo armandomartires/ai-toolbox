@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-"""The gate's checks of `.ai/` governance files, for either layout (ADR-0066).
+"""The gate's checks of `.ai/` governance files (ADR-0066).
 
-tests/validate.sh used to hold these as inline blocks keyed to the old layout.
-They live here so tests/test-layout-both.sh can run them against an old-layout
-fixture and a new-layout fixture, and so the two layouts share one owner.
+tests/validate.sh used to hold these as inline blocks. They live here so
+tests/test-layout-both.sh can run them against a fixture, and so one file owns them.
 
-The layout is told apart by what exists, never by a flag: a repository whose
-`.ai/00.CONVENTIONS.md` exists is the numbered layout, any other is the old one.
-
-  old: .ai/tasks/TASK-NNNN-*.md  tasks/TODO.md  planning/{BACKLOG,SPRINT-CURRENT}.md
-       context/{CURRENT_STATE,risk-register}.md  decisions/NNNN-*.md  REVIEW-NNNN-*
-  new: .ai/10.CURRENT_STATE.md  20.PLAN.md  35.AD_HOC_TASKS.md  40.RISK_REGISTER.md
-       tasks/S###.T###_Name.md  decisions/ADR-NNNN-*.md  reviews/S###-checkpoint.md
-       reviews/YYYY-MM-DD-slug.md  .ai/id-map.tsv (old_id, new_id, old_path, new_path)
+The layout (ADR-0066, `.ai/00.CONVENTIONS.md`):
+  .ai/10.CURRENT_STATE.md  20.PLAN.md  35.AD_HOC_TASKS.md  40.RISK_REGISTER.md
+  tasks/S###.T###_Name.md  decisions/ADR-NNNN-*.md  reviews/S###-checkpoint.md
+  reviews/YYYY-MM-DD-slug.md  .ai/id-map.tsv (old_id, new_id, old_path, new_path)
+The old layout (`.ai/tasks/TASK-NNNN-*.md`, `planning/`, `context/`, `templates/`)
+is no longer accepted: a task file of that name is reported, never skipped.
 
 Boundaries are numbers of the OLD scheme (a brief below FIRST_CONTRACT_TASK
 predates the handover contract, below FIRST_GENERATED_TASK predates any schema,
@@ -21,7 +18,7 @@ keeps its boundary by way of the id map: its new name resolves to its old
 TASK-NNNN. A brief the map does not name was written after the rename and is
 current. Raise a boundary to absorb a change; never lower one.
 
-Usage: check-planning.py <handover|live|risk|idmap|groups|all> [--root DIR]
+Usage: check-planning.py <handover|live|risk|idmap|groups|retired|all> [--root DIR]
 Exit 0 clean, 1 on any finding. Python 3 standard library only.
 """
 import glob
@@ -38,14 +35,12 @@ FIRST_GENERATED_TASK = 24     # briefs below predate any schema (TASK-0110)
 FIRST_V2_TASK = 153           # at or above: the current task schema
 FIRST_V2_ADR = 34             # at or above: the current adr schema
 REQUIRED = ["## Inputs", "## Outputs / handover"]
-OLD_TASK = re.compile(r"^TASK-(\d{4})-")
 NEW_TASK = re.compile(r"^S(\d{3})\.T(\d{3})_")
 
 
 class Layout:
     def __init__(self, root):
         self.root = root
-        self.new = os.path.isfile(self.p(".ai/00.CONVENTIONS.md"))
         self.by_new_name = {}     # new file basename -> old id ("TASK-0153")
         self.by_old_id = {}       # old id -> new path
         self.map_rows = []
@@ -66,16 +61,12 @@ class Layout:
 
     def old_task_number(self, name):
         """The OLD number of a brief, or None when it was written after the rename."""
-        m = OLD_TASK.match(name)
-        if m:
-            return int(m.group(1))
         old = self.by_new_name.get(name, "")
         m = re.fullmatch(r"TASK-(\d{4})", old)
         return int(m.group(1)) if m else None
 
     def is_review_0012(self, name):
-        return (name.startswith("REVIEW-0012-")
-                or self.by_new_name.get(name) == "REVIEW-0012")
+        return self.by_new_name.get(name) == "REVIEW-0012"
 
 
 def body_after(text, heading):
@@ -118,15 +109,10 @@ def check_handover(lay):
             elif not body:
                 bad.append("%s: '%s' is present but empty" % (label, heading))
 
-    if lay.new:
-        # `.ai/templates/` is retired: the task template is the skill's.
-        tpl = os.path.join(REPO, "skills/project-workflow/templates/tasks/0000_TEMPLATE.md")
-        if os.path.isfile(tpl):
-            check(tpl, "templates/tasks/0000_TEMPLATE.md")
-    elif os.path.isfile(lay.p(".ai/templates/TASK.md")):
-        check(lay.p(".ai/templates/TASK.md"), "templates/TASK.md")
-    else:
-        return bad                  # old layout without the template: not policed
+    # `.ai/templates/` is retired: the task template is the skill's.
+    tpl = os.path.join(REPO, "skills/project-workflow/templates/tasks/0000_TEMPLATE.md")
+    if os.path.isfile(tpl):
+        check(tpl, "templates/tasks/0000_TEMPLATE.md")
 
     # Walks recursively: a brief must not escape by being archived under tasks/completed/.
     for dirpath, _d, filenames in os.walk(lay.p(".ai/tasks")):
@@ -134,12 +120,9 @@ def check_handover(lay):
             if not name.endswith(".md") or name == "TODO.md":
                 continue
             rel = os.path.relpath(os.path.join(dirpath, name), lay.p(".ai/tasks"))
-            ok = OLD_TASK.match(name) or (lay.new and NEW_TASK.match(name))
-            if not ok:
-                bad.append("%s: filename does not match %s, so it cannot be "
-                           "checked -- rename it or update this check"
-                           % (rel, "S###.T###_*.md or TASK-####-*.md" if lay.new
-                              else "TASK-####-*.md"))
+            if not NEW_TASK.match(name):
+                bad.append("%s: filename does not match S###.T###_*.md, so it cannot be "
+                           "checked -- rename it or update this check" % rel)
                 continue
             n = lay.old_task_number(name)
             if n is None or n >= FIRST_CONTRACT_TASK:
@@ -150,14 +133,8 @@ def check_handover(lay):
 def check_live(lay):
     """Live files hold state, not history (ADR-0033): a line budget each, and no
     backlog line over 600 characters."""
-    if lay.new:
-        specs = [(".ai/10.CURRENT_STATE.md", 200),
-                 (".ai/20.PLAN.md", 80), ("AGENTS.md", 120)]
-        backlog = ".ai/35.AD_HOC_TASKS.md"
-    else:
-        specs = [(".ai/context/CURRENT_STATE.md", 200), (".ai/planning/SPRINT-CURRENT.md", 80),
-                 (".ai/tasks/TODO.md", 400), ("AGENTS.md", 120)]
-        backlog = ".ai/planning/BACKLOG.md"
+    specs = [(".ai/10.CURRENT_STATE.md", 200), (".ai/20.PLAN.md", 80), ("AGENTS.md", 120)]
+    backlog = ".ai/35.AD_HOC_TASKS.md"
     bad = []
     for rel, mx in specs:
         f = lay.p(rel)
@@ -179,7 +156,7 @@ def check_live(lay):
 
 def check_risk(lay):
     """The AI risk register exists and is well-formed (issue #13)."""
-    rel = ".ai/40.RISK_REGISTER.md" if lay.new else ".ai/context/risk-register.md"
+    rel = ".ai/40.RISK_REGISTER.md"
     f = lay.p(rel)
     if not os.path.isfile(f):
         return ["%s is missing" % rel]
@@ -198,9 +175,7 @@ def check_risk(lay):
 
 
 def check_idmap(lay):
-    """In the numbered layout the id map exists and every row is whole (ADR-0066 5)."""
-    if not lay.new:
-        return []
+    """The id map exists and every row is whole (ADR-0066 5)."""
     f = lay.p(".ai/id-map.tsv")
     if not os.path.isfile(f):
         return [".ai/id-map.tsv is missing: old ids resolve only through it"]
@@ -215,6 +190,18 @@ def check_idmap(lay):
         if c[3] and not os.path.exists(lay.p(c[3])):
             bad.append("id-map: %s -> %s, which does not exist" % (c[0], c[3]))
     return bad
+
+
+RETIRED = [".ai/planning", ".ai/context", ".ai/templates", ".ai/tasks/TODO.md",
+           "TODO.md"]
+
+
+def check_retired(lay):
+    """The old layout's paths are gone (ADR-0066, S017.T007): nothing may be
+    kept or re-created there, so a check that no longer reads them cannot be
+    leaving live files unpoliced."""
+    return ["%s exists: the old planning layout is retired, use .ai/00.CONVENTIONS.md's names"
+            % rel for rel in RETIRED if os.path.exists(lay.p(rel))]
 
 
 def groups(lay):
@@ -235,12 +222,12 @@ def groups(lay):
     for dirpath in (lay.p(".ai/tasks"),):
         for f in sorted(glob.glob(os.path.join(dirpath, "*.md"))):
             name = os.path.basename(f)
-            if not (OLD_TASK.match(name) or (lay.new and NEW_TASK.match(name))):
+            if not NEW_TASK.match(name):
                 continue
             n = lay.old_task_number(name)
             if n is None:
                 # Written after the rename: the project-workflow task schema.
-                add(os.path.join(pw, "task.md") if lay.new else os.path.join(pm, "task.md"), f)
+                add(os.path.join(pw, "task.md"), f)
             elif n < FIRST_GENERATED_TASK:
                 continue
             elif n < FIRST_V2_TASK:
@@ -262,14 +249,11 @@ def groups(lay):
         name = os.path.basename(f)
         if name == "INDEX.md" or lay.is_review_0012(name):
             continue
-        add(os.path.join(pw, "review.md") if lay.new and name not in lay.by_new_name
-            else os.path.join(pm, "review.md"), f)
+        add(os.path.join(pm, "review.md") if name in lay.by_new_name
+            else os.path.join(pw, "review.md"), f)
     for f in sorted(glob.glob(lay.p(".ai/sessions/*.md"))):
         if os.path.basename(f) != "INDEX.md":
             add(os.path.join(pm, "session.md"), f)
-    # Plans are retired in the numbered layout (they move to .ai/archive/).
-    for f in sorted(glob.glob(lay.p(".ai/planning/plans/PLAN-*.md"))):
-        add(os.path.join(pm, "plan.md"), f)
     return out
 
 
@@ -291,7 +275,7 @@ def check_groups(lay):
 
 CHECKS = {"handover": ("HANDOVER", check_handover), "live": ("LIVE", check_live),
           "risk": ("RISK-REGISTER", check_risk), "idmap": ("ID-MAP", check_idmap),
-          "groups": ("SCHEMA", check_groups)}
+          "groups": ("SCHEMA", check_groups), "retired": ("OLD-LAYOUT", check_retired)}
 
 
 def main(argv):

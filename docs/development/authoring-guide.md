@@ -49,7 +49,7 @@ required, and whether each is written before or after the work
 
 | Rule | Detail | Gated |
 |------|--------|-------|
-| Templates are derived | `skills/project-workflow/templates/{tasks,decisions,reviews}/*`, `.ai/templates/{TASK,ADR,REVIEW,SESSION}.md` and `skills/project-migration/templates/{TASK,ADR,REVIEW,SESSION}.md` are rendered by `scripts/sync-templates.sh` and carry a do-not-edit banner. Edit the schema, re-run, commit both. The last four are the set `scripts/ai-project-scaffold.sh` emits into a migrated repository, shipped beside it because that script is copied out of the skill and run elsewhere (`B-040`, `TASK-0119`). | **yes** — `scripts/sync-templates.sh --check` runs from `tests/validate.sh` |
+| Templates are derived | `skills/project-workflow/templates/{tasks,decisions,reviews}/*` and `skills/project-migration/templates/{TASK,ADR,REVIEW,SESSION,PLAN}.md` are rendered by `scripts/sync-templates.sh` and carry a do-not-edit banner. Edit the schema, re-run, commit both. The last four are the set `scripts/ai-project-scaffold.sh` emits into a migrated repository, shipped beside it because that script is copied out of the skill and run elsewhere (`B-040`, `TASK-0119`). | **yes** — `scripts/sync-templates.sh --check` runs from `tests/validate.sh` |
 | The scaffold reads those templates | `scripts/ai-project-scaffold.sh` must emit `TASK`/`ADR`/`REVIEW`/`SESSION` by reading `$TEMPLATE_DIR/*.md`, never from an inline heredoc, and must not tell the author to `cp` one. `PLAN.md` is exempt — no schema owns it (`B-042`). | **yes** — a separate check in `tests/validate.sh`; the staleness gate above cannot see this |
 | Task briefs match their schema | Briefs at or above `FIRST_GENERATED_TASK` in `tests/validate.sh` must carry the schema's required headings, in its order, with no superseded heading and no generator marker left behind. | **yes** |
 | Briefs below the boundary | Exempt, deliberately. They are records of what happened, not instances of a schema invented afterwards — the same argument `FIRST_CONTRACT_TASK` already carries. Now **24** (`TASK-0110`), lowered only after every brief it newly covered was repaired. **Raising it absorbs a convention change; lowering it without repairing first falsifies history.** | not applicable |
@@ -903,7 +903,7 @@ role guard enforces those terms; a plain emission still skips them.
 
 > This sentence named **`shell-runner`** until `TASK-0071`, and
 > `agents/shell-runner/` **has never existed**. It is a planned role
-> (`CURRENT_STATE.md` records it as not authored, because no
+> (`10.CURRENT_STATE.md` records it as not authored, because no
 > `loops/project-build/` step needs it yet), but this guide stated it in the
 > present tense as a fact about the roles that ship — the false-present-tense
 > class `REVIEW-0008` swept across four files. The task that found it was

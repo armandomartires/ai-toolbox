@@ -32,8 +32,8 @@ mod. Run everything from inside the ai-toolbox checkout.
 | 5 | Preview | `scripts/mod-dev.sh preview <name> [--serve 8765]`, then `build/preview/index.html` | every scene drawn, no failure |
 | 6 | Test | red-proof, then `scripts/mod-dev.sh test <name>` | `PASS`; `SKIP` is not a pass |
 | 7 | Live check | the human, in a real session on each surface | they saw it; the version line matches |
-| 8 | Version | bump `plugin.json`, the pane's version line, README *Not yet verified*, `CURRENT_STATE.md` | `check` → `OK`; `status` shows the new version loaded |
-| 9 | Commit and Publish | `tests/validate.sh`, one commit `(TASK-NNNN)`, push `origin`; the human publishes with `PublishPlugin` | the gate; `<name>@synced` at the new version |
+| 8 | Version | bump `plugin.json`, the pane's version line, README *Not yet verified*, `10.CURRENT_STATE.md` | `check` → `OK`; `status` shows the new version loaded |
+| 9 | Commit and Publish | `tests/validate.sh`, one commit `(S###.T###)`, push `origin`; the human publishes with `PublishPlugin` | the gate; `<name>@synced` at the new version |
 
 `scripts/mod-dev.sh all <name>` runs 2's check, 4's validate, 3's sync, 5's
 build and 6's test in that order and ends with `status`. It stops at the

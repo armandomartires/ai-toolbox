@@ -321,7 +321,7 @@ git checkout -- .                  # the copies were clean; git rewrites them un
 git ls-files --eol -- '*.sh' '*.py' | awk '{print $2}' | sort | uniq -c   # expect w/lf only
 ```
 
-The 13 blobs that do hold CRLF (`.ai/templates/*.md` and the templates
+The 13 blobs that do hold CRLF (the templates
 `sync-templates.sh` renders) are left as they are; a `* text=auto` rule
 would rewrite them and is a decision of its own.
 
@@ -337,15 +337,15 @@ The main checkout stays on `master` and is the **integration tree**. Each
 session works in its own worktree on its own branch.
 
 ```bash
-scripts/worktree.sh add TASK-0261   # create, or resume, the task's worktree
+scripts/worktree.sh add S017.T007   # create, or resume, the task's worktree
 scripts/worktree.sh list            # every worktree; main checkout, nested
                                     # and foreign-prefix entries marked
-scripts/worktree.sh remove TASK-0261  # by name or path; refuses lost work
+scripts/worktree.sh remove S017.T007  # by name or path; refuses lost work
 ```
 
 Worktrees are created as **siblings** of the repo, in
 `../ai-toolbox-worktrees/<name>`, on branch `agent/<name>`. **The name is the
-task id** (`TASK-nnnn`, ADR-0023 clause 1a): a later session that continues
+task id** (`S###.T###`, ADR-0023 clause 1a, ADR-0066): a later session that continues
 the task runs the same `add` and resumes the branch, which the brief records
 as `Branch:` in its Status block and the Compass board as an indented
 `branch:` line. Not the sprint: a sprint branch is shared and long-lived. A
@@ -394,7 +394,7 @@ Then remove the worktree. These are for isolation, not for parallel
 development, so they should be short-lived:
 
 ```bash
-scripts/worktree.sh remove TASK-0261
+scripts/worktree.sh remove S017.T007
 ```
 
 `remove` refuses while the worktree has uncommitted changes or commits not
@@ -425,7 +425,7 @@ follow the sibling rule through a hook:
    account-wide, so this repo asks for no value there.
 
 A hook-made branch is `agent/<slug>`, since the hook has no task id. Once the
-task is known, prefer `worktree.sh add TASK-nnnn` and land or remove the slug
+task is known, prefer `worktree.sh add S###.T###` and land or remove the slug
 branch the same day. `worktree.sh list` marks what is nested or on a foreign
 prefix; a `worktree-agent-*` branch holding commits is landed like any
 session branch.

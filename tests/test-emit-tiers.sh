@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-emit-tiers.sh — prove emit_claude_code in scripts/emit-agents.py writes
-# the alias from the model-tiers table (.ai/context/ or, in the ADR-0066 layout, docs/development/) for each role, and `inherit` for a
+# the alias from the model-tiers table (docs/development/model-tiers.md) for each role, and `inherit` for a
 # role the table does not list (TASK-0268, ADR-0059).
 #
 # Hermetic: reads the repo, writes only inside a temp directory it removes.

@@ -8,7 +8,7 @@ client: opencode
 driver_entry: ./bin/unattended-run.sh --queue queue.txt
 model: anthropic/claude-sonnet-4-5
 queue_source: queue.txt, one task id per line, written by a human before the run
-task_file_glob: .ai/tasks/TASK-*.md
+task_file_glob: .ai/tasks/{id}_*.md
 tracker_path: .ai/tasks/TODO.md
 gate_map: bin/gates.map — one entry per task kind, role-blind
 gate_entry_point: bin/invoke-gate.sh

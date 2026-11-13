@@ -633,7 +633,7 @@ Goal: Both planning skills use one convention, project-workflow's numbered layou
   .ai/tasks/S017.T005_GateAcceptsBothLayouts.md
 - [x] S017.T006 — Move ai-toolbox onto the one convention in one commit
   .ai/tasks/S017.T006_RenameAiToolbox.md
-- [ ] S017.T007 — Drop the old layout's support from the gate, and update AGENTS.md and the docs
+- [x] S017.T007 — Drop the old layout's support from the gate, and update AGENTS.md and the docs
   .ai/tasks/S017.T007_DropOldLayoutSupport.md
 - [ ] S017.T008 — project-migration 6.0.0 retrofits repositories into the one convention
   .ai/tasks/S017.T008_MigrationRetarget.md

@@ -1345,13 +1345,13 @@ fi
 # the contract works (TASK-0020…0023) were written before the template
 # existed, and a format check would reject them.
 #
-# The checks live in tests/check-planning.py since TASK-0298, so one owner reads
-# both layouts (ADR-0066): the old `.ai/tasks/TASK-NNNN-*.md` with
-# `.ai/templates/TASK.md`, and the numbered `tasks/S###.T###_Name.md`, whose
-# older briefs keep their boundary through `.ai/id-map.tsv`. FIRST_CONTRACT_TASK
-# and the other boundaries are in that file; tests/test-layout-both.sh proves
-# each check on a fixture of each layout.
+# The checks live in tests/check-planning.py (ADR-0066): the numbered
+# `tasks/S###.T###_Name.md`, whose older briefs keep their boundary through
+# `.ai/id-map.tsv`. FIRST_CONTRACT_TASK and the other boundaries are in that
+# file; tests/test-planning-layout.sh proves each check on a fixture. The old
+# layout's files and directories are rejected (S017.T007).
 python3 tests/check-planning.py handover || fail=1
+python3 tests/check-planning.py retired || fail=1
 
 # --- The adjudicator's decision standard is a faithful copy ----------------
 #
@@ -1727,17 +1727,17 @@ if ! INVENTORY_OUT="$(bash skills/repo-inventory/scripts/check-repo-inventory.sh
 fi
 
 # --------------------------------------------------------------------------
-# A closed backlog row names a closer that agrees (TASK-0142, B-038), and the
-# "N items are open" sentence matches the rows (TASK-0145, B-047). The rule is
-# .ai/00.CONVENTIONS.md's *Closing a backlog row*; the script says what it cannot see
-# (a row left open after its task closed). Unconditional (ADR-0009).
+# A resolved ad-hoc entry names a closer that agrees (TASK-0142, B-038), and an
+# "N items are open" sentence, if there, matches the entries (TASK-0145, B-047). The rule is
+# .ai/00.CONVENTIONS.md's; the script says what it cannot see
+# (an entry left open after its task closed). Unconditional (ADR-0009).
 if ! BACKLOG_OUT="$(python3 scripts/check-backlog-closures.py 2>&1)"; then
   printf '%s\n' "$BACKLOG_OUT"
   fail=1
 fi
 
 # Live files hold state, not history (ADR-0033): each has a line budget, and
-# no BACKLOG.md line may exceed 600 characters. Raise a budget only by
+# no 35.AD_HOC_TASKS.md line may exceed 600 characters. Raise a budget only by
 # amending ADR-0033, never to fit what is already there.
 # .ai-layout.json is how an agent finds this repo's process at session start,
 # and the rules for a malformed one are layout-declaration.md's (TASK-0174).
@@ -1764,19 +1764,18 @@ sys.exit(1 if bad else 0)
 PY
 fi
 
-# AGENTS.md joined in TASK-0174: every session loads it whole. The paths per
-# layout (CURRENT_STATE, the plan, TODO.md, the backlog) are tests/check-planning.py's.
+# AGENTS.md joined in TASK-0174: every session loads it whole. The paths
+# (CURRENT_STATE, the plan, the ad-hoc list) are tests/check-planning.py's.
 python3 tests/check-planning.py live || fail=1
 
 # --------------------------------------------------------------------------
-# Every check and script that reads the planning layout accepts the old one AND
-# ADR-0066's numbered one (TASK-0298): the governance checks above, the backlog
-# check, the emitter's table paths, sync-templates.sh and worktree.sh, each run
-# on a hand-converted fixture of each layout, with a seeded defect per layout so
-# none can stop firing silently. Fixtures only, under mktemp; local git only.
-# Unconditional (ADR-0009). Dropping the old half is TASK-0300's, not a quiet edit.
-if ! LAYOUT_OUT="$(bash tests/test-layout-both.sh 2>&1)"; then
-  printf '%s\n' "$LAYOUT_OUT" | grep -v '^PASS' | sed 's/^/LAYOUT-BOTH: /'
+# Every check and script that reads the planning layout reads ADR-0066's
+# numbered one and rejects the old one's files (S017.T007): the governance
+# checks above, the backlog check, the emitter's table paths, sync-templates.sh
+# and worktree.sh, each run on a fixture with a seeded defect so none can stop
+# firing silently. Fixtures only, under mktemp. Unconditional (ADR-0009).
+if ! LAYOUT_OUT="$(bash tests/test-planning-layout.sh 2>&1)"; then
+  printf '%s\n' "$LAYOUT_OUT" | grep -v '^PASS' | sed 's/^/PLANNING-LAYOUT: /'
   fail=1
 fi
 
@@ -2044,8 +2043,7 @@ done
 # line and every register row has the table's ten columns, an R-NN id and a
 # status. WHAT IT DOES NOT PROVE: that the review actually happened, or that
 # the ratings are right; that is the sprint checkpoint's job.
-# The path per layout (.ai/context/risk-register.md, or .ai/40.RISK_REGISTER.md
-# in the numbered layout) is tests/check-planning.py's.
+# The path (.ai/40.RISK_REGISTER.md) is tests/check-planning.py's.
 python3 tests/check-planning.py risk || fail=1
 python3 tests/check-planning.py idmap || fail=1
 

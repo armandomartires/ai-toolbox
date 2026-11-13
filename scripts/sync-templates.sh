@@ -3,8 +3,7 @@
 # shape (ADR-0027).
 #
 # Why generated copies exist at all. A template must sit where the framework
-# that uses it can reach it: project-workflow's under skills/, this repo's
-# under .ai/templates/. A schema is the one owner of shape, so the templates
+# that uses it can reach it: project-workflow's and project-migration's under skills/. A schema is the one owner of shape, so the templates
 # have to be derived from it or they become second owners -- which is exactly
 # what they were. project-workflow's own template contradicted its SKILL.md
 # about the task ID format, and nothing caught it, because both were prose.
@@ -39,11 +38,6 @@ TARGETS="
 skills/project-workflow/schemas/task.md:skills/project-workflow/templates/tasks/0000_TEMPLATE.md
 skills/project-workflow/schemas/adr.md:skills/project-workflow/templates/decisions/0000-TEMPLATE.md
 skills/project-workflow/schemas/review.md:skills/project-workflow/templates/reviews/0000_TEMPLATE.md
-skills/project-migration/schemas/task.md:.ai/templates/TASK.md
-skills/project-migration/schemas/adr.md:.ai/templates/ADR.md
-skills/project-migration/schemas/review.md:.ai/templates/REVIEW.md
-skills/project-migration/schemas/session.md:.ai/templates/SESSION.md
-skills/project-migration/schemas/plan.md:.ai/templates/PLAN.md
 skills/project-migration/schemas/task.md:skills/project-migration/templates/TASK.md
 skills/project-migration/schemas/adr.md:skills/project-migration/templates/ADR.md
 skills/project-migration/schemas/review.md:skills/project-migration/templates/REVIEW.md
@@ -51,10 +45,9 @@ skills/project-migration/schemas/session.md:skills/project-migration/templates/S
 skills/project-migration/schemas/plan.md:skills/project-migration/templates/PLAN.md
 "
 
-# The last five render the SAME schemas to a second destination, and that is
-# deliberate rather than duplication (B-040, TASK-0119). The scaffold script
-# is copied out of this skill and run against other repositories, where
-# .ai/templates/ above does not exist and this repo's paths mean nothing; it
+# The project-migration targets render schemas that skill owns, beside its
+# scaffold script (B-040, TASK-0119). The script is copied out of this skill and
+# run against other repositories, where this repo's paths mean nothing; it
 # needs the rendered templates beside it. Same reason
 # scripts/sync-decision-standard.sh ships a generated sibling of driver.py.
 #
@@ -67,14 +60,6 @@ skills/project-migration/schemas/plan.md:skills/project-migration/templates/PLAN
 #
 # PLAN.md joined them with TASK-0146 (B-042): its schema was transcribed from
 # a count of the six plans, so it, too, is rendered rather than hand-written.
-
-# The numbered layout (ADR-0066), told by `.ai/00.CONVENTIONS.md` existing,
-# retires this repo's own `.ai/templates/`: its five targets are neither written
-# nor checked there, and the skills' copies below stay. In the old layout all
-# of them are generated, as before.
-if [ -f .ai/00.CONVENTIONS.md ]; then
-  TARGETS="$(printf '%s\n' "$TARGETS" | grep -v ':\.ai/templates/' || true)"
-fi
 
 for pair in $TARGETS; do
   schema="${pair%%:*}"

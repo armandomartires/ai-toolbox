@@ -3,12 +3,12 @@
 # working tree or an index.
 #
 # Usage:
-#   worktree.sh add <TASK-nnnn|S###.T###|name>
+#   worktree.sh add <S###.T###|name>
 #                                     create (or report) the worktree; a task id
 #                                     gets <root>-worktrees/<id> on branch
 #                                     agent/<id>, and an existing branch is
 #                                     resumed, not recreated (S###.T### is the
-#                                     ADR-0066 form, TASK-nnnn the older one)
+#                                     ADR-0066 task id)
 #   worktree.sh list                  every worktree; marks the main checkout,
 #                                     NESTED ones and foreign branch prefixes
 #   worktree.sh remove <name|path>    remove it (a name, or a path to ANY
@@ -82,11 +82,10 @@ case "$cmd" in
       exit 0
     fi
 
-    # TASK-nnnn and S###.T### (ADR-0066) are the normal forms: one branch per
+    # S###.T### (ADR-0066) is the task form: one branch per
     # task, so a later session on the same task continues it. Any other name is
     # allowed (tests, probes, hook slugs) but is not a task branch.
     case "$name" in
-      TASK-[0-9][0-9][0-9][0-9]) ;;
       S[0-9][0-9][0-9].T[0-9][0-9][0-9]) ;;
       *) echo "note: not a task branch; land or remove it the same day (ADR-0023 clause 4)" ;;
     esac

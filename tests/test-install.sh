@@ -456,16 +456,11 @@ s = json.load(open(sys.argv[1]))["mcpServers"]["gates"]
 ok = sorted(s["env"]) == ["GATES_ALLOWED_EXECUTABLES", "GATES_MAP", "GATES_MAP_SHA256", "GATES_RUN_ROOT", "GATES_TRANSPORT"] and s["env"]["GATES_TRANSPORT"] == "stdio" and "--frozen" in s["args"] and "--no-dev" in s["args"]
 sys.exit(0 if ok else 1)' "$PB/ai-toolbox-gates/.mcp.json"; echo $?)"
 # A fake root: CRLF sources, the excluded skill, a --check that ignores line endings.
-FR="$tmp/fakeroot"; mkdir -p "$FR/scripts" "$FR/.ai/context" "$FR/skills/only" "$FR/skills/mod-dev" "$FR/agents" "$FR/mcp-servers/gates"
+FR="$tmp/fakeroot"; mkdir -p "$FR/scripts" "$FR/.ai" "$FR/skills/only" "$FR/skills/mod-dev" "$FR/agents" "$FR/mcp-servers/gates"
 cp "$BP" "$here/scripts/emit-agents.py" "$here/scripts/plugin-versions.json" "$FR/scripts/"
 mkdir -p "$FR/configs/claude-code/hooks"; cp "$here/configs/claude-code/hooks/role-guard.py" "$here/configs/claude-code/hooks/role-guard.sh" "$FR/configs/claude-code/hooks/"
-if [ -f "$here/.ai/00.CONVENTIONS.md" ]; then  # the numbered layout (ADR-0066)
-  mkdir -p "$FR/docs/development"
-  cp "$here/.ai/00.CONVENTIONS.md" "$FR/.ai/"
-  cp "$here/docs/development/model-tiers.md" "$FR/docs/development/" 2>/dev/null
-else
-  cp "$here/.ai/context/model-tiers.md" "$FR/.ai/context/" 2>/dev/null
-fi
+mkdir -p "$FR/docs/development"
+cp "$here/docs/development/model-tiers.md" "$FR/docs/development/" 2>/dev/null
 cp -r "$here/agents/critic" "$FR/agents/critic"
 cp -r "$here/mcp-servers/gates/src" "$here/mcp-servers/gates/pyproject.toml" "$FR/mcp-servers/gates/"
 printf -- '---\r\nname: only\r\ndescription: x\r\n---\r\nbody\r\n' > "$FR/skills/only/SKILL.md"

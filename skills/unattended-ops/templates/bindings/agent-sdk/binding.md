@@ -9,7 +9,7 @@ client: claude-agent-sdk
 driver_entry: <FILL: python3 <path>/runner.py --binding <path>/binding.md --run-id RUN_ID, from the repository root>
 model: <FILL: per-role (each emitted definition's model) or one Claude alias or id for every role>
 queue_source: <FILL: path of the queue file, written by a human before the run>
-task_file_glob: <FILL: glob with {id} for the task id, e.g. .ai/tasks/{id}-*.md, or .ai/tasks/{id}_*.md for S
+task_file_glob: <FILL: glob with {id} for the task id, e.g. .ai/tasks/{id}_*.md (ADR-0066: S###.T###_Name.md)>
 tracker_path: <FILL: the tracker file the closer updates one row of, or not-applicable (always, on a forge tracker)>
 gate_map: <FILL: path of the gate map JSON, outside the repository — the runner refuses one inside>
 gate_entry_point: <FILL: path of run-gate.sh (the OpenCode binding's) as copied into the repository>

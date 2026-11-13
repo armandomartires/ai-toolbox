@@ -368,8 +368,8 @@ checked is the payload's `cwd` repository, else `CLAUDE_PROJECT_DIR`, else this
 checkout. `FAST_CHECK_SKIP=1` turns the hook off. Proof: `tests/test-stop-hook.sh`.
 
 The branch is `agent/<slug>` because the hook has no task id. When the task is
-known, create the worktree with `worktree.sh add TASK-nnnn` instead, which
-gives `agent/TASK-nnnn` and resumes that branch on a later session.
+known, create the worktree with `worktree.sh add S###.T###` instead, which
+gives `agent/S###.T###` and resumes that branch on a later session.
 
 `bash scripts/install.sh --client claude-code` emits the hooks block: it merges
 `settings.hooks.json` into this checkout's `.claude/settings.json` (created if

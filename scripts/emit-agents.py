@@ -540,23 +540,13 @@ def allowlist_note(patterns):
             "with a dot and allowing the quoted one (`TASK-0092` finding 12).", ""]
 
 
-def _table(old_name, new_name):
-    """Where a role table lives: ADR-0066's docs/development/ once the repo
-    has the numbered layout (`.ai/00.CONVENTIONS.md` exists), else the old
-    `.ai/context/`. Detected by what exists, never by a flag."""
-    if os.path.isfile(os.path.join(".ai", "00.CONVENTIONS.md")):
-        return os.path.join("docs", "development", new_name)
-    return os.path.join(".ai", "context", old_name)
-
-
-TIER_TABLE = _table("model-tiers.md", "model-tiers.md")
+TIER_TABLE = os.path.join("docs", "development", "model-tiers.md")
 
 
 def model_alias(role):
     """The Claude Code `model` value for `role`: its table tier, else `inherit`.
 
-    Reads the rows of TIER_TABLE, docs/development/model-tiers.md or, in the
-    ADR-0066 layout, docs/development/model-tiers.md (`| opus | a, b |`).
+    Reads the rows of TIER_TABLE, docs/development/model-tiers.md (`| opus | a, b |`).
     ADR-0059.
     """
     try:
@@ -571,7 +561,7 @@ def model_alias(role):
     return "inherit"
 
 
-TURN_TABLE = _table("turn-limits.md", "turn-limits.md")
+TURN_TABLE = os.path.join("docs", "development", "turn-limits.md")
 COMPACT_RANGE = (100000, 1000000)
 
 

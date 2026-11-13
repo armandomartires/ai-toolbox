@@ -134,9 +134,8 @@ def check_server(root: str, d: str) -> list[str]:
         if not m:
             bad.append("%s: transport %r has no ADR id (adr = \"ADR-NNNN\")" % (d, name))
         else:
-            # `NNNN-*.md`, or `ADR-NNNN-*.md` in the numbered layout (ADR-0066).
-            files = [f for pre in ("", "ADR-") for f in glob.glob(
-                os.path.join(root, ".ai", "decisions", pre + m.group(1) + "-*.md"))]
+            # `ADR-NNNN-*.md` (ADR-0066).
+            files = glob.glob(os.path.join(root, ".ai", "decisions", "ADR-" + m.group(1) + "-*.md"))
             if not files:
                 bad.append("%s: transport %r names %s, which is not in .ai/decisions/" % (d, name, adr))
             else:
@@ -193,7 +192,7 @@ def self_test() -> int:
             os.makedirs(os.path.join(d, "src", "srv"))
             os.makedirs(os.path.join(root, ".ai", "decisions"))
             if adr_exists:
-                with open(os.path.join(root, ".ai", "decisions", "0999-x.md"), "w", encoding="utf-8") as fh:
+                with open(os.path.join(root, ".ai", "decisions", "ADR-0999-x.md"), "w", encoding="utf-8") as fh:
                     fh.write(adr_exists if isinstance(adr_exists, str) else GOOD_ADR)
             if shape == "json":
                 m = {"name": "srv"}
