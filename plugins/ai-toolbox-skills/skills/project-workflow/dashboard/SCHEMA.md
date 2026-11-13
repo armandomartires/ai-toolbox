@@ -285,7 +285,7 @@ own established convention and outranks git for these items.
 
 ### 1.7 `decisions[]`
 
-From `.ai/workflow/decisions/NNNN-slug.md`, excluding `0000-TEMPLATE.md`.
+From `.ai/workflow/decisions/NNNN-slug.md` or `ADR-NNNN-slug.md`, excluding the `0000-TEMPLATE.md` / `ADR-0000-TEMPLATE.md` template.
 
 ```jsonc
 {

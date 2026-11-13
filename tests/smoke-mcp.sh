@@ -87,7 +87,11 @@ smoke = (meta.get("smoke_test") or {}).get("env") or {}
 json.dump({"launch": {"transport": "stdio",
                       "command": ["uv", "--directory", os.path.abspath(d), "run", name]},
            "environment": meta.get("environment") or {},
-           "smoke_env": {k: os.path.join(os.path.abspath(d), v) for k, v in smoke.items()}},
+           # Only a value that names a path is resolved against the server's directory: a pinned
+           # hash or an executable list is passed as written (S011.T027: GATES_MAP_SHA256 was
+           # turned into "<dir>/<hash>" and the server refused its own fixture map).
+           "smoke_env": {k: (os.path.join(os.path.abspath(d), v) if "/" in v or os.path.exists(os.path.join(d, v)) else v)
+                         for k, v in smoke.items()}},
           open(out, "w"))
 SYNTH
 )

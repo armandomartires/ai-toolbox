@@ -1918,7 +1918,7 @@ fi
 # that was reviewed in TASK-0139.
 for f in skills/project-migration/templates/*.md \
          skills/project-workflow/templates/tasks/0000_TEMPLATE.md \
-         skills/project-workflow/templates/decisions/0000-TEMPLATE.md \
+         skills/project-workflow/templates/decisions/ADR-0000-TEMPLATE.md          skills/project-workflow/templates/10.CURRENT_STATE.md          skills/project-workflow/templates/40.RISK_REGISTER.md          skills/project-workflow/templates/sessions/0000_TEMPLATE.md \
          skills/project-workflow/templates/reviews/0000_TEMPLATE.md \
          skills/unattended-ops/templates/bindings/opencode/decision-standard.md; do
   [ -r "$f" ] || { echo "BANNER: $f is missing"; fail=1; continue; }

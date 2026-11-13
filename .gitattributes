@@ -13,3 +13,7 @@
 .githooks/* text eol=lf
 configs/claude-code/hooks/* text eol=lf
 plugins/** text eol=lf
+
+# A file pinned by its SHA-256 must hash the same on every host: the gates
+# server refuses a map whose bytes differ from the approved hash (S011.T027).
+mcp-servers/gates/tests/fixtures/*.json text eol=lf

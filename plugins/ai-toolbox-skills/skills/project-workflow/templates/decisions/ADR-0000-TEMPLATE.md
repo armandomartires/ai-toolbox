@@ -3,9 +3,9 @@
      In ai-toolbox, edit the schema and re-render; tests/validate.sh fails on
      drift. A copy in another repository is not regenerated or checked there. -->
 
-# NNNN — Short, decision-shaped title
+# ADR-NNNN — Short, decision-shaped title
 
-<!-- FILL: Status: proposed, accepted, superseded by NNNN, or deprecated. -->
+<!-- FILL: Status: proposed, accepted, superseded by ADR-NNNN, or deprecated. -->
 
 **Status**: proposed
 **Date**: YYYY-MM-DD

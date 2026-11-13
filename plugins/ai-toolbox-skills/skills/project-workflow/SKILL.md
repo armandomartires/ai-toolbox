@@ -14,9 +14,9 @@ Scaffolds `.ai/` and maintains its plan/develop/test/validate convention. The fu
 **This is not `project-migration`.** That skill retrofits a live repository onto a different framework: `TASK-####` briefs, `ADR-NNNN-*.md`, `context/`, `planning/`. This one owns:
 - the `00.CONVENTIONS.md` + `10.CURRENT_STATE.md` + `20/30/35` + `40.RISK_REGISTER.md` + `sessions/` + `reference/` layout (`10` is state, at most 200 lines; `40` carries a `Last reviewed` date; `sessions/` holds one record per working session)
 - `S###.T###` task ids
-- `NNNN-title.md` ADRs
+- `ADR-NNNN-title.md` ADRs (`new-artifact.sh --kind adr` numbers the next one past both `NNNN-` and `ADR-NNNN-` files)
 
-The divergence was deliberate (ADR-0013 in ai-toolbox), and ADR-0066 now replaces it with one convention: this skill's numbered layout, with `ADR-NNNN-title.md` decision files, for both skills; the work lands as TASK-0295 to TASK-0302. Until it does, the two still share only the generator.
+The divergence was deliberate (ADR-0013 in ai-toolbox), and ADR-0066 now replaces it with one convention: this skill's numbered layout, with `ADR-NNNN-title.md` decision files, for both skills. Templates for `10.CURRENT_STATE.md`, `40.RISK_REGISTER.md` and sessions are generated from their schemas like the rest.
 
 > **`.ai/` = why and what's next. `AGENTS.md` + `docs/` = what is. Git = what changed.** Each fact has one owner: link to it, never copy it.
 
@@ -78,7 +78,7 @@ scripts/new-artifact.sh --kind task|adr|review|adhoc \
 
 **Task brief:** `tasks/S###.T###_Name.md`. Goal, Inputs and Plan are written before the work. Verification (including the fails-when-reverted check), Outputs and Status notes are written after it. Inputs and Outputs are the handover contract (`templates/reference/session-handover.md`).
 
-**ADR:** `decisions/NNNN-title.md`, for calls that are expensive to reverse. Link the affected doc; don't restate it.
+**ADR:** `decisions/ADR-NNNN-title.md`, for calls that are expensive to reverse. Link the affected doc; don't restate it.
 
 ## The dashboard
 

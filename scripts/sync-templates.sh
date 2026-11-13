@@ -13,6 +13,9 @@
 # drift. That is the same derived-artifact-plus-staleness-check shape
 # docs/registry.md and scripts/sync-decision-standard.sh already use.
 #
+# 10.CURRENT_STATE.md, 40.RISK_REGISTER.md and a session record are
+# generated too (S017.T003): each is one instance of a schema.
+#
 # NOT regenerated: 20.PLAN.md, 30.ROADMAP.md and 35.AD_HOC_TASKS.md. Those are
 # indexes holding many entries, not instances of one artifact. The ad-hoc
 # ENTRY has a schema and the generator prints one on request; the list it
@@ -36,7 +39,10 @@ OUT="${TEMPLATES_OUT:-.}"
 # schema path : destination, relative to the repo root
 TARGETS="
 skills/project-workflow/schemas/task.md:skills/project-workflow/templates/tasks/0000_TEMPLATE.md
-skills/project-workflow/schemas/adr.md:skills/project-workflow/templates/decisions/0000-TEMPLATE.md
+skills/project-workflow/schemas/adr.md:skills/project-workflow/templates/decisions/ADR-0000-TEMPLATE.md
+skills/project-workflow/schemas/current-state.md:skills/project-workflow/templates/10.CURRENT_STATE.md
+skills/project-workflow/schemas/risk-register.md:skills/project-workflow/templates/40.RISK_REGISTER.md
+skills/project-workflow/schemas/session.md:skills/project-workflow/templates/sessions/0000_TEMPLATE.md
 skills/project-workflow/schemas/review.md:skills/project-workflow/templates/reviews/0000_TEMPLATE.md
 skills/project-migration/schemas/task.md:skills/project-migration/templates/TASK.md
 skills/project-migration/schemas/adr.md:skills/project-migration/templates/ADR.md

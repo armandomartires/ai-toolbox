@@ -155,6 +155,15 @@ planning groups "$T/x"; check "P6 a brief that breaks its schema fails the schem
 fresh; sed -i '/^TASK-0100\t/d' "$T/x/.ai/id-map.tsv"
 planning groups "$T/x"; check "P7 a renamed v1 brief is keyed by the id map; without its row it is held to the current schema" \
   $([ $? -ne 0 ]; echo $?) "$OUT"
+# A brief created from now on (its name is not in the id map) must match the
+# hybrid schemas/task.md. The legacy shape, with no `## Acceptance criteria`,
+# fails; the same body under a map row stays valid (S017.T003 part 2).
+fresh; cp "$P/task-v2.md" "$T/x/.ai/tasks/S012.T003_NewLegacyShape.md"
+planning groups "$T/x"; check "P7b a new brief in the legacy shape fails the schema check" \
+  "$([ $? -ne 0 ] && has "S012.T003_NewLegacyShape.md" && has "missing required section: ## Goal"; echo $?)" "$OUT"
+fresh; cp "$P/task-v2.md" "$T/x/.ai/tasks/S012.T003_RenamedLegacy.md"
+printf 'TASK-0301\tS012.T003\t.ai/tasks/TASK-0301-x.md\t.ai/tasks/S012.T003_RenamedLegacy.md\n' >> "$T/x/.ai/id-map.tsv"
+planning groups "$T/x"; check "P7c the same body renamed through a map row (legacy by ADR-0066 5) stays valid" $? "$OUT"
 fresh; printf 'TASK-0300\tS012.T003\t.ai/tasks/TASK-0300-x.md\t.ai/tasks/S012.T003_Gone.md\n' >> "$T/x/.ai/id-map.tsv"
 planning idmap "$T/x"; check "P8 an id-map row whose new file is missing fails" \
   "$([ $? -ne 0 ] && has "does not exist"; echo $?)" "$OUT"
@@ -227,6 +236,36 @@ check "S3 no .ai/templates/ is created (retired)" "$([ ! -e "$r/.ai/templates" ]
 echo stale >> "$r/skills/project-workflow/templates/tasks/0000_TEMPLATE.md"
 passes bash -c "cd '$r' && bash scripts/sync-templates.sh --check"; check "S4 a drifted template still fails --check" $([ $? -ne 0 ]; echo $?) "$OUT"
 check "S5 the script names no .ai/templates/ target" "$(grep -q ':\.ai/templates/' "$SYNC_SH"; [ $? -ne 0 ]; echo $?)"
+
+bash -c "cd '$r' && bash scripts/sync-templates.sh" >/dev/null 2>&1   # undo S4's drift
+for f in templates/10.CURRENT_STATE.md templates/40.RISK_REGISTER.md templates/sessions/0000_TEMPLATE.md; do
+  check "S6 sync-templates renders $f from its schema" \
+    "$([ -s "$r/skills/project-workflow/$f" ] && head -1 "$r/skills/project-workflow/$f" | grep -q '^<!-- Rendered by ai-toolbox'; echo $?)"
+  echo stale >> "$r/skills/project-workflow/$f"
+  passes bash -c "cd '$r' && bash scripts/sync-templates.sh --check"
+  check "S7 a drifted $f fails --check" "$([ $? -ne 0 ] && has "$f"; echo $?)" "$OUT"
+  bash -c "cd '$r' && bash scripts/sync-templates.sh" >/dev/null 2>&1
+done
+check "S8 the ADR template is ADR-0000-TEMPLATE.md" \
+  "$([ -s "$r/skills/project-workflow/templates/decisions/ADR-0000-TEMPLATE.md" ] && [ ! -e "$r/skills/project-workflow/templates/decisions/0000-TEMPLATE.md" ]; echo $?)"
+
+# --- A: new-artifact.sh --kind adr renders ADR-NNNN-title.md -----------------
+NA="$here/$PW/scripts/new-artifact.sh"
+passes bash "$NA" --filename --kind adr --id ADR-0067 --name one-thing
+check "A1 the ADR file name is decisions/ADR-0067-one-thing.md" "$([ "$OUT" = "decisions/ADR-0067-one-thing.md" ]; echo $?)" "$OUT"
+passes bash "$NA" --kind adr --id ADR-0067 --title Pick
+check "A2 the ADR heading reads ADR-0067 -- Pick" "$(head -1 <<<"$OUT" | grep -q '^# ADR-0067 — Pick$'; echo $?)" "$(head -1 <<<"$OUT")"
+# Numbering continues past BOTH shapes of file name.
+rm -rf "$T/d"; mkdir -p "$T/d/.ai/decisions"
+: > "$T/d/.ai/decisions/0012-old.md"; : > "$T/d/.ai/decisions/ADR-0066-new.md"
+: > "$T/d/.ai/decisions/ADR-0000-TEMPLATE.md"; : > "$T/d/.ai/decisions/INDEX.md"
+passes bash -c "cd '$T/d' && bash '$NA' --filename --kind adr --name next-one"
+check "A3 with no --id the next number follows the highest of NNNN- and ADR-NNNN- files" \
+  "$([ "$OUT" = "decisions/ADR-0067-next-one.md" ]; echo $?)" "$OUT"
+: > "$T/d/.ai/decisions/0090-oldest-shape.md"
+passes bash -c "cd '$T/d' && bash '$NA' --filename --kind adr --name next-one"
+check "A4 an old-shape file with the highest number is counted too" \
+  "$([ "$OUT" = "decisions/ADR-0091-next-one.md" ]; echo $?)" "$OUT"
 
 # --- W: scripts/worktree.sh takes S###.T### only as a task id -----------------
 git init -q -b master "$T/repo"

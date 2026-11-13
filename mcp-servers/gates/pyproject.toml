@@ -156,7 +156,7 @@ description = "Longest token lifetime (exp - iat) accepted. Defaults to 900, so 
 # handshake invokes no tool anyway.
 [tool.ai-toolbox.smoke_test]
 # GATES_SANDBOX=none only because the handshake runs no gate.
-env = { GATES_MAP = "tests/fixtures/gates.json", GATES_MAP_SHA256 = "d64b1fba2691cfcbdd53232e349e967366e9c3b25ab7ff40df8c275c347a020a", GATES_ALLOWED_EXECUTABLES = "sh,false,sleep,printf", GATES_SANDBOX = "none" }
+env = { GATES_MAP = "tests/fixtures/gates.json", GATES_MAP_SHA256 = "d64b1fba2691cfcbdd53232e349e967366e9c3b25ab7ff40df8c275c347a020a", GATES_ALLOWED_EXECUTABLES = "sh,false,sleep,printf", GATES_ALLOWED_LAUNCHERS = "sh", GATES_SANDBOX = "none" }
 
 # scripts/mcp-tool-lock.py: how to launch this server to hash its live tools/list
 # into tools.lock.json (TASK-0269; the authored shape has no server.json to hold

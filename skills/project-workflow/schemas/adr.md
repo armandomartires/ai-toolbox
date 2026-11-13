@@ -1,7 +1,7 @@
 ---
 kind: adr
 framework: project-workflow
-id_placeholder: NNNN
+id_placeholder: ADR-NNNN
 title_placeholder: Short, decision-shaped title
 date_placeholder: YYYY-MM-DD
 sprint_placeholder: S###_Name / S###.T###_Name
@@ -18,7 +18,7 @@ max_lines: 80
 
 !preamble
 !standard
-Status: proposed, accepted, superseded by NNNN, or deprecated.
+Status: proposed, accepted, superseded by ADR-NNNN, or deprecated.
 !body
 **Status**: proposed
 **Date**: {date}

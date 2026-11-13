@@ -121,6 +121,25 @@ def parse_schema(path):
     return fm, preamble, sections
 
 
+ADR_FILE = re.compile(r"^(?:ADR-)?(\d{4})-")
+
+
+def next_adr_id(directory):
+    """`ADR-NNNN`, the number after the highest in `directory`, counting both
+    file-name shapes (`NNNN-title.md` before ADR-0066, `ADR-NNNN-title.md`
+    after). A template (number 0000) never raises it. No directory: ADR-0001."""
+    top = 0
+    try:
+        names = os.listdir(directory)
+    except OSError:
+        names = []
+    for name in names:
+        m = ADR_FILE.match(name)
+        if m:
+            top = max(top, int(m.group(1)))
+    return "ADR-%04d" % (top + 1)
+
+
 def substitutions(fm, template_mode):
     """Build {placeholder: value}. Unset keys stay verbatim so a missing
     answer reads as missing rather than as an empty string someone chose."""
@@ -129,6 +148,8 @@ def substitutions(fm, template_mode):
         if "=" in item:
             k, v = item.split("=", 1)
             subs[k.strip()] = v
+    if fm.get("kind") == "adr" and not template_mode and "id" not in subs:
+        subs["id"] = next_adr_id(os.environ.get("DECISIONS_DIR") or ".ai/decisions")
     if template_mode:
         for key, val in fm.items():
             if key.endswith("_placeholder"):
