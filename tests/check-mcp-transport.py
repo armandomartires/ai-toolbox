@@ -134,7 +134,9 @@ def check_server(root: str, d: str) -> list[str]:
         if not m:
             bad.append("%s: transport %r has no ADR id (adr = \"ADR-NNNN\")" % (d, name))
         else:
-            files = glob.glob(os.path.join(root, ".ai", "decisions", m.group(1) + "-*.md"))
+            # `NNNN-*.md`, or `ADR-NNNN-*.md` in the numbered layout (ADR-0066).
+            files = [f for pre in ("", "ADR-") for f in glob.glob(
+                os.path.join(root, ".ai", "decisions", pre + m.group(1) + "-*.md"))]
             if not files:
                 bad.append("%s: transport %r names %s, which is not in .ai/decisions/" % (d, name, adr))
             else:

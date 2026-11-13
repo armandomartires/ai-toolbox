@@ -240,7 +240,7 @@ claude mcp add --scope user --transport stdio <name> -- <command>
 > (`define_and_build_execution_env`), rewrites playbooks in place
 > (`ansible_lint` with `fix: true`), scaffolds directories
 > (`create_ansible_projects`). Authorized in
-> `.ai/tasks/TASK-0007-port-ansible-mcp-server.md` (2026-09-13) and shipped
+> `.ai/tasks/S001.T007_PortAnsibleMcpServer.md` (2026-09-13) and shipped
 > enabled.
 >
 > **`ansible_navigator` is DISABLED by default** (human decision 2026-09-14,

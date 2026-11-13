@@ -84,7 +84,7 @@ Which question unblocks which items:
 
 ### D1. Per-role command boundaries in Claude Code (ADR-0018 clause 8.3)
 
-**Context.** emit-agents.py refuses 7 capability terms for Claude Code (test-files-only, bash-allowlist, test-allowlist, no-force-push, no-bypass, push-requires-confirmation, webfetch-requires-confirmation), so only 4 of 15 roles are emitted there (scripts/emit-agents.py VOCAB; .ai/decisions/0018-agent-portability-one-source-per-client-emission.md). Current Claude Code docs run settings and plugin hooks inside subagents with agent_type in the input, support PreToolUse deny / ask and onFailure: block, and per-tool permission rules; but hook if-matching is documented as best-effort, and plugin subagents ignore hooks and permissionMode. Sources: [A4](#src-a4), [A5](#src-a5), [A12](#src-a12), [A2](#src-a2).
+**Context.** emit-agents.py refuses 7 capability terms for Claude Code (test-files-only, bash-allowlist, test-allowlist, no-force-push, no-bypass, push-requires-confirmation, webfetch-requires-confirmation), so only 4 of 15 roles are emitted there (scripts/emit-agents.py VOCAB; .ai/decisions/ADR-0018-agent-portability-one-source-per-client-emission.md). Current Claude Code docs run settings and plugin hooks inside subagents with agent_type in the input, support PreToolUse deny / ask and onFailure: block, and per-tool permission rules; but hook if-matching is documented as best-effort, and plugin subagents ignore hooks and permissionMode. Sources: [A4](#src-a4), [A5](#src-a5), [A12](#src-a12), [A2](#src-a2).
 
 **Question.** How should the seven refused terms be handled for Claude Code?
 

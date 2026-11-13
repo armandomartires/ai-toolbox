@@ -215,7 +215,7 @@ class SdkDriver(base.Driver):
             if fm.get("name") != name:
                 raise Halt("definition %s names %r, not %r" % (path, fm.get("name"), name))
             if not re.fullmatch(r"[1-9][0-9]*", fm.get("maxTurns", "")):
-                # The turn table (.ai/context/turn-limits.md) reaches a role
+                # The turn table (docs/development/turn-limits.md) reaches a role
                 # through the emitter; a role without one is unknown, a stop.
                 raise Halt("definition %s carries no maxTurns" % path)
             model = self.b.model if self.b.model != "per-role" else fm.get("model", "")

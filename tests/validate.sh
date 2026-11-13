@@ -1673,7 +1673,7 @@ if ! CLAUDE_MD_OUT="$(bash tests/test-claude-md.sh 2>&1)"; then
 fi
 
 # --------------------------------------------------------------------------
-# Claude Code agents carry the alias from .ai/context/model-tiers.md, and an
+# Claude Code agents carry the alias from docs/development/model-tiers.md, and an
 # unlisted role gets `inherit` (TASK-0268, ADR-0059). Reads the repo, writes
 # only under mktemp. Unconditional (ADR-0009).
 if ! TIERS_OUT="$(bash tests/test-emit-tiers.sh 2>&1)"; then
@@ -1683,7 +1683,7 @@ fi
 
 # --------------------------------------------------------------------------
 # Claude Code agents carry maxTurns (and autoCompactWindow where set) from
-# .ai/context/turn-limits.md, every role is in the table, and without the
+# docs/development/turn-limits.md, every role is in the table, and without the
 # table no agent carries maxTurns (TASK-0282). Reads the repo, writes only
 # under mktemp. Unconditional (ADR-0009).
 if ! TURNS_OUT="$(bash tests/test-emit-turns.sh 2>&1)"; then
@@ -1729,7 +1729,7 @@ fi
 # --------------------------------------------------------------------------
 # A closed backlog row names a closer that agrees (TASK-0142, B-038), and the
 # "N items are open" sentence matches the rows (TASK-0145, B-047). The rule is
-# .ai/README.md's *Closing a backlog row*; the script says what it cannot see
+# .ai/00.CONVENTIONS.md's *Closing a backlog row*; the script says what it cannot see
 # (a row left open after its task closed). Unconditional (ADR-0009).
 if ! BACKLOG_OUT="$(python3 scripts/check-backlog-closures.py 2>&1)"; then
   printf '%s\n' "$BACKLOG_OUT"
@@ -2040,7 +2040,7 @@ for f in agents/*/agent.md loops/*/loop.md; do
 done
 # The AI risk register exists and is well-formed (issue #13).
 #
-# WHAT THIS PROVES: .ai/context/risk-register.md has a dated "Last reviewed"
+# WHAT THIS PROVES: .ai/40.RISK_REGISTER.md has a dated "Last reviewed"
 # line and every register row has the table's ten columns, an R-NN id and a
 # status. WHAT IT DOES NOT PROVE: that the review actually happened, or that
 # the ratings are right; that is the sprint checkpoint's job.

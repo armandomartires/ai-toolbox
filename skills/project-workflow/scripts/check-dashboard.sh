@@ -281,6 +281,8 @@ eq("an old-id commit dates the renamed brief's close",
 eq("a new-id commit dates its brief's close",
    tasks["S011.T002"]["closed_at"], "2026-03-12")
 eq("an open brief has no close", tasks["S011.T003"]["closed_at"], None)
+eq("a renamed brief's `- Status:` line is read", tasks["S011.T001"]["state"], "done")
+eq("a bolded `**Status**:` line is read", tasks["S011.T003"]["state"], "pending")
 
 named = {c["subject"]: c["task_ids"] for c in with_map["commits"]}
 eq("an old-id commit also names the new id",

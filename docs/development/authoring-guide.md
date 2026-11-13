@@ -588,7 +588,7 @@ then the gate widened.
 #### `maxTurns`, `autoCompactWindow` and the turn table
 
 For Claude Code, `scripts/emit-agents.py` also writes `maxTurns`, and
-`autoCompactWindow` where a row sets one, from `.ai/context/turn-limits.md`
+`autoCompactWindow` where a row sets one, from `docs/development/turn-limits.md`
 (`TASK-0282`). Every role has a row, and `tests/test-emit-turns.sh` fails
 when one is missing. As with the tier table, edit the row, not the role's
 `agent.md`. `autoCompactWindow` is a plain integer from 100000 to 1000000,
@@ -598,7 +598,7 @@ bad value. OpenCode's cap is `steps`, which the emitter does not yet write.
 #### `model` and the tier table
 
 For Claude Code, `scripts/emit-agents.py` writes `model: <alias>` from one
-table, `.ai/context/model-tiers.md`, which maps a role name to `opus`,
+table, `docs/development/model-tiers.md`, which maps a role name to `opus`,
 `sonnet` or `haiku`. A role the table does not list gets `model: inherit`.
 ADR-0059 supersedes ADR-0018 clause 7 for Claude Code emission only and
 reverses the ADR-0017 outcome there; the human accepted it on 2026-11-10.
@@ -1035,7 +1035,7 @@ exists upstream, so it is documented in all three
 needs it at the moment they are adding something, which is when they are
 reading this guide. The reasoning, the evidence and the three products'
 integration surfaces are in
-[`ADR-0021`](../../.ai/decisions/0021-third-party-extensions-are-wired-not-vendored.md)
+[`ADR-0021`](../../.ai/decisions/ADR-0021-third-party-extensions-are-wired-not-vendored.md)
 — read it before arguing with the table, and do not restate it here.
 
 > **`ADR-0021` was ratified 2026-09-23** and is `Accepted`. The rule above is

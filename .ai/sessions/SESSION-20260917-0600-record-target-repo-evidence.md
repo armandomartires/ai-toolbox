@@ -8,7 +8,7 @@
   rather than overlooked.
 - Context consulted: `TASK-0032`, `PLAN-0003`'s F1–F4, `ADR-0015` (its
   derive-not-declare decision), `skills/ansible-ops/SKILL.md` and
-  `references/derivation.md`, `.ai/planning/BACKLOG.md`. **Outside this repo,
+  `references/derivation.md`, `.ai/35.AD_HOC_TASKS.md`. **Outside this repo,
   read-only:** `SIGMA-infrastructure`'s `ansible.cfg`, `.ansible-lint`,
   `.pre-commit-config.yaml`, `.github/workflows/ci.yml`, `requirements.yml`,
   `inventory/`, `playbooks/`, and its git remotes.

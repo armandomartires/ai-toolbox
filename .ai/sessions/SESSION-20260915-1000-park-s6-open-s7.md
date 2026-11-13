@@ -6,7 +6,7 @@
   system — an interactive design stage and a largely autonomous production
   stage — decide whether this repo's existing primitives can deliver it, and
   if so open a sprint for it. Planning only; no implementation.
-- Context consulted: `AGENTS.md`; `.ai/context/CURRENT_STATE.md` (302
+- Context consulted: `AGENTS.md`; `.ai/10.CURRENT_STATE.md` (302
   lines); `.ai/planning/{ROADMAP,BACKLOG,SPRINT-CURRENT}.md`;
   `.ai/planning/plans/PLAN-0003`; `.ai/tasks/TODO.md`; all 16 ADRs, closely
   0004, 0005, 0006, 0008, 0009, 0010, 0012, 0013, 0016;

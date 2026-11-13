@@ -89,7 +89,7 @@
         "authorized_by": "human (repo owner)",
         "date": "2026-09-14",
         "reconfirmed": "2026-09-16",
-        "task": ".ai/tasks/TASK-0026-narrow-ansible-mcp-blast-radius.md"
+        "task": ".ai/tasks/S006.T001_NarrowAnsibleMcpBlastRadius.md"
       }
     ]
   },
@@ -97,17 +97,17 @@
     "granted": true,
     "by": "human (repo owner)",
     "date": "2026-09-13",
-    "task": ".ai/tasks/TASK-0007-port-ansible-mcp-server.md",
+    "task": ".ai/tasks/S001.T007_PortAnsibleMcpServer.md",
     "history": [
       {
         "date": "2026-09-13",
         "change": "ORIGINAL GRANT. Five destructive tools authorized to ship enabled, disclosed in this manifest and in every wiring snippet: ansible_navigator, ade_setup_environment, define_and_build_execution_env, ansible_lint (fix: true), create_ansible_projects.",
-        "task": ".ai/tasks/TASK-0007-port-ansible-mcp-server.md"
+        "task": ".ai/tasks/S001.T007_PortAnsibleMcpServer.md"
       },
       {
         "date": "2026-09-14",
         "change": "NARROWED to four. ansible_navigator is disabled by default in all three wiring snippets. This REDUCES the grant; it does not widen it. The original five-tool grant above is kept rather than rewritten, so a future reader can see that a human reduced the scope instead of the record being quietly adjusted. Re-confirmed by the human 2026-09-16 before the edit was made.",
-        "task": ".ai/tasks/TASK-0026-narrow-ansible-mcp-blast-radius.md"
+        "task": ".ai/tasks/S006.T001_NarrowAnsibleMcpBlastRadius.md"
       }
     ]
   }

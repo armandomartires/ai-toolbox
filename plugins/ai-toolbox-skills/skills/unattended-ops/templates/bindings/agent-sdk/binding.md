@@ -80,7 +80,7 @@ How a role is run: one `claude_agent_sdk.query()` per role call, with
 `ClaudeAgentOptions` built from the role's definition as
 `scripts/emit-agents.py claude-code <dir> --with-guard` emits it: the body is
 the system prompt, and `model`, `tools`, `disallowedTools` and `maxTurns`
-(the turn table, `.ai/context/turn-limits.md`, through the emitter) become the
+(the turn table, `docs/development/turn-limits.md`, through the emitter) become the
 options of the same names. A definition without `maxTurns` halts step 1, per
 `templates/binding.md`'s rule that `unknown` is a stop.
 

@@ -37,7 +37,7 @@ DROP_HOOKS = os.environ.get("DROP_GUARD_HOOKS") == "1"
 sys.path.insert(0, os.path.join(BINDING_DIR, "..", "opencode", "tests"))
 import test_driver as oc  # noqa: E402  the OpenCode harness and scenarios
 
-# The turn table's values (.ai/context/turn-limits.md) for the fixture
+# The turn table's values (docs/development/turn-limits.md) for the fixture
 # definitions, as scripts/emit-agents.py writes them into maxTurns.
 TURNS = {"preflight": 60, "task-planner": 120, "implementer": 250, "gate-runner": 60,
          "refuter": 120, "adjudicator": 60, "closer": 60, "park-steward": 40,

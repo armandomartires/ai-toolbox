@@ -69,7 +69,7 @@ land. Not for work in progress: run this when you intend to commit.
 
 7. **Record the outcome in the task file.** Fill in the execution log:
    actions, observations, validation output, deviations from the plan, and
-   the result. Update `.ai/context/CURRENT_STATE.md` if the change was
+   the result. Update `.ai/10.CURRENT_STATE.md` if the change was
    significant.
    Expected: the task file reflects what actually happened, including
    anything that did not work.

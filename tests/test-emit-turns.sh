@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test-emit-turns.sh — prove emit_claude_code in scripts/emit-agents.py writes
 # `maxTurns` (and `autoCompactWindow` where set) from
-# .ai/context/turn-limits.md for every role, and nothing for a role the table
+# docs/development/turn-limits.md for every role, and nothing for a role the table
 # does not list (TASK-0282).
 #
 # Hermetic: reads the repo, writes only inside a temp directory it removes.

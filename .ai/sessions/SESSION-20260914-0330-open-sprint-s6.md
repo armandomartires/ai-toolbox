@@ -24,9 +24,9 @@
 - Objective: Plan Phase 6 and open sprint S6 — an instruct layer for the
   pinned `ansible` MCP server (a skill and a loop), narrowing that server's
   blast radius, and one real enforcement. Planning only; no implementation.
-- Context consulted: `AGENTS.md`; `.ai/context/CURRENT_STATE.md`;
-  `.ai/planning/SPRINT-CURRENT.md` (then reading "Sprint closed", so opening
-  S6 was a deliberate act); `.ai/planning/BACKLOG.md` (then empty);
+- Context consulted: `AGENTS.md`; `.ai/10.CURRENT_STATE.md`;
+  `.ai/20.PLAN.md` (then reading "Sprint closed", so opening
+  S6 was a deliberate act); `.ai/35.AD_HOC_TASKS.md` (then empty);
   `.ai/tasks/TODO.md`; `.ai/templates/TASK.md`; ADR-0002, 0003, 0004, 0005,
   0006, 0008, 0009, 0010, 0012, 0013; `mcp-servers/ansible/server.json`; all
   three `configs/*/README.md`; `loops/release-check/loop.md`;

@@ -7,10 +7,10 @@
   it can be completed — then execute the human's decisions on how it
   re-enters.
 - Context consulted: `AGENTS.md` (+ global workflow rules),
-  `.ai/planning/SPRINT-CURRENT.md` (held S8),
+  `.ai/20.PLAN.md` (held S8),
   `.ai/planning/sprints/SPRINT-S6-ansible-agent-guardrails.md`,
-  `.ai/context/CURRENT_STATE.md` (all 1319 lines),
-  `.ai/planning/ROADMAP.md` Phases 6 and 8, `.ai/planning/BACKLOG.md`,
+  `.ai/10.CURRENT_STATE.md` (all 1319 lines),
+  `.ai/30.ROADMAP.md` Phases 6 and 8, `.ai/35.AD_HOC_TASKS.md`,
   `.ai/tasks/TODO.md`, `.ai/templates/TASK.md`, `TASK-0026`, `TASK-0031`,
   `TASK-0033` (the parking precedent), ADR-0014/0015/0016,
   `.ai/sessions/INDEX.md`. **Outside this repo, read-only:**

@@ -165,7 +165,7 @@ record of its attempt, and is a mechanical failure of that task. On resume
 the driver reads the progress file, checks it against the journal and
 `git log --grep <task id>` (step 12's guard), and takes the next `queued`
 task. Per-role turn limits (`maxTurns`, and `autoCompactWindow` where set)
-come from `.ai/context/turn-limits.md`, emitted into each Claude Code agent;
+come from `docs/development/turn-limits.md`, emitted into each Claude Code agent;
 a role stopped at its limit returns partial output, which the driver treats
 as that step's mechanical failure.
 

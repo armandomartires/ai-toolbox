@@ -5,9 +5,9 @@
 - Objective: Finish S7 — write the missing `REVIEW-0008` checkpoint from
   independent evidence, sweep the sprint's status records, archive S7 and
   promote S8.
-- Context consulted: `AGENTS.md`, `.ai/planning/SPRINT-CURRENT.md` (S7),
-  `.ai/context/CURRENT_STATE.md`, `.ai/planning/ROADMAP.md` Phase 7,
-  `.ai/planning/BACKLOG.md`, `.ai/templates/REVIEW.md`,
+- Context consulted: `AGENTS.md`, `.ai/20.PLAN.md` (S7),
+  `.ai/10.CURRENT_STATE.md`, `.ai/30.ROADMAP.md` Phase 7,
+  `.ai/35.AD_HOC_TASKS.md`, `.ai/templates/REVIEW.md`,
   `REVIEW-0007` as the closure precedent, `SPRINT-S5` as the archive-header
   precedent, all 14 S7 task files, `.ai/sessions/INDEX.md`.
 - Tasks worked on: `REVIEW-0008` (new). No component code changed.

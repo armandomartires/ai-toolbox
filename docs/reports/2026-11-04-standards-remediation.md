@@ -43,7 +43,7 @@ Evidence: `master` at `27fcff8` (2026-11-04), read-only. Companion: [review](202
 | N1 | Agent eval suite | L | High | `evals/` golden tasks; verdict accuracy, refuter recall, injection resistance; nightly per model |
 | N2 | Sandboxed unattended runs | L | High | Disposable container/VM, no home mount, short-lived AppRole, egress allowlist |
 | N3 | Supply-chain provenance | M | Med | CycloneDX SBOMs, SLSA provenance, Sigstore signing, Renovate |
-| N4 | AI risk register | M | Med | Map to NIST AI RMF / AI 600-1; `.ai/context/risk-register.md` |
+| N4 | AI risk register | M | Med | Map to NIST AI RMF / AI 600-1; `.ai/40.RISK_REGISTER.md` |
 | N5 | Structured telemetry | M | Med | OTel GenAI spans; append-only hashed journal |
 
 ## Improvements beyond fixes

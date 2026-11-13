@@ -10,7 +10,7 @@
 
 - Context consulted:
   - `AGENTS.md` (scope, security, definition of done, ambiguity policy),
-    `.ai/context/CURRENT_STATE.md`, `.ai/planning/ROADMAP.md`,
+    `.ai/10.CURRENT_STATE.md`, `.ai/30.ROADMAP.md`,
     `SPRINT-CURRENT.md` (S7), `BACKLOG.md`, `.ai/tasks/TODO.md`.
   - `ADR-0016` (hooks category, **declined**) — the governing precedent;
     its three plumbing claims **re-verified**, not cited. `ADR-0005`

@@ -128,7 +128,7 @@ s=$?; grep -E '^(PASS|FAIL)' "$t/o"; [ "$s" = 0 ] || { rc=1; grep -vE '^(PASS|FA
 d="$here/docs/operations/releases.md"
 grep -q 'Protected tags' "$d" && grep -q -- '\*--v\*' "$d" && grep -q 'protected' "$d"; s=$?
 check "releases.md requires a protected *--v* tag rule and protected COSIGN_* variables" "$s"
-grep -q 'SLSA provenance the runner generates' "$d" "$here/.ai/decisions/"0064-*.md; s=$?
+grep -q 'SLSA provenance the runner generates' "$d" "$here/.ai/decisions/"*0064-*.md; s=$?
 negcheck "the docs and ADR do not claim runner-generated provenance" "$s"
 grep -q '^COSIGN_CERT_IDENTITY_REGEXP\|export COSIGN_CERT_IDENTITY_REGEXP=.<' "$d"; s=$?
 negcheck "the docs example does not use a broad regexp" "$s"

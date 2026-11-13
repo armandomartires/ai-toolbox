@@ -15,7 +15,7 @@ runs in rather than the agent's behaviour**. That is the third row of the
 placement rule in
 [`authoring-guide.md`](authoring-guide.md#placing-a-third-party-extension);
 the reasoning behind it is in
-[`ADR-0021`](../../.ai/decisions/0021-third-party-extensions-are-wired-not-vendored.md).
+[`ADR-0021`](../../.ai/decisions/ADR-0021-third-party-extensions-are-wired-not-vendored.md).
 
 In practice the question that decides it: *if this tool were running, would
 an agent behave differently because of what it can now do — or because the

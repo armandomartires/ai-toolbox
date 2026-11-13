@@ -10,7 +10,7 @@ the consuming repository's map declares. State on disk and the evidence line
 are byte-compatible with the OpenCode binding's run-gate.sh, so an evidence
 file reads the same whichever entry point wrote it.
 
-Destructive, and authorized: .ai/tasks/TASK-0088-gates-mcp-server.md.
+Destructive, and authorized: .ai/tasks/S010.T007_GatesMcpServer.md.
 
 Transport: stdio. GATES_TRANSPORT=streamable-http opts into gates.remote
 (ADR-0063, proposed): OAuth 2.1 bearer tokens, loopback only, bwrap required.

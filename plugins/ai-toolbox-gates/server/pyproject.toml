@@ -43,7 +43,7 @@ destructive_tools = ["start_gate", "kill_gate"]
 granted = true
 by = "Armando Martires"
 date = "2026-09-24"
-task = ".ai/tasks/TASK-0088-gates-mcp-server.md"
+task = ".ai/tasks/S010.T007_GatesMcpServer.md"
 
 # Transports (TASK-0285; checked by tests/check-mcp-transport.py). stdio is the
 # default and the only one any client wiring uses. streamable-http is OFF unless

@@ -262,7 +262,7 @@ therefore *plausible* that its skills could be placed there by hand.
 specific reasons to leave it alone rather than infer a pass:
 
 - **Global installs are approval-gated** — the vendor forbids writing
-  `~/.lmstudio/skills/` directly. See `B-018` in `.ai/planning/BACKLOG.md`;
+  `~/.lmstudio/skills/` directly. See `B-018` in `.ai/35.AD_HOC_TASKS.md`;
   the constraint is recorded there and is not restated here.
 - **Bionic's own frontmatter schema has not been checked against ponytail's
   skills.** All six declare `description:` as a folded scalar (*observed
@@ -301,7 +301,7 @@ Windows-side; WSL has no `~/.lmstudio`.
 > (`define_and_build_execution_env`), rewrites playbooks in place
 > (`ansible_lint` with `fix: true`), scaffolds directories
 > (`create_ansible_projects`). Authorized in
-> `.ai/tasks/TASK-0007-port-ansible-mcp-server.md` (2026-09-13) and shipped
+> `.ai/tasks/S001.T007_PortAnsibleMcpServer.md` (2026-09-13) and shipped
 > enabled.
 >
 > **`ansible_navigator` is DISABLED by default** (human decision 2026-09-14,

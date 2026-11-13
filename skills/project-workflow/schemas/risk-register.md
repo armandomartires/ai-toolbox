@@ -8,7 +8,7 @@ allow_extra: true
 ---
 
 # 40.RISK_REGISTER.md (ADR-0066): a table of risks plus a dated review. The
-# shape mirrors ai-toolbox's own register (.ai/context/risk-register.md).
+# shape mirrors ai-toolbox's own register (.ai/40.RISK_REGISTER.md).
 # The `## Last reviewed` section is the gate: a register that was never
 # reviewed fails the check, so the date cannot be omitted.
 

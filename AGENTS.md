@@ -60,7 +60,7 @@ Components: `skills/` `mcp-servers/` `loops/` `mods/` `prompts/` `agents/`
 - One task = one commit; never include unrelated changes.
 - Never delete or overwrite human changes without authorization.
 - **Two agent sessions must never share this checkout.** Each takes a worktree
-  on its task's branch (`scripts/worktree.sh add TASK-nnnn`; a later session
+  on its task's branch (`scripts/worktree.sh add S###.T###`; a later session
   resumes it) and lands by rebase; `master` stays linear (ADR-0023; runbook).
 - Remotes (ADR-0028): `origin`, the intranet GitLab, is primary; `github` is
   its **public** mirror. Everything committed is world-readable, so the
@@ -73,7 +73,7 @@ Components: `skills/` `mcp-servers/` `loops/` `mods/` `prompts/` `agents/`
   both remotes equals `git rev-parse HEAD`, and if `github` lags, report the
   mirror's status. No token goes in a remote URL or a tracked file.
 - **Git is the record** (ADR-0033). A task lands as one commit, subject
-  `<Imperative summary> (TASK-NNNN)`; the brief does not carry its hash.
+  `<Imperative summary> (S###.T###)`; the brief does not carry its hash.
 - **Task report** — the chat output at task end, nothing longer:
   ```
   Result:   done | blocked | partial — one line
@@ -87,18 +87,18 @@ Components: `skills/` `mcp-servers/` `loops/` `mods/` `prompts/` `agents/`
 - Simple checks may be delegated to a subagent; the main agent verifies.
 
 ## Documentation rules
-- Update `.ai/context/CURRENT_STATE.md` after any significant change — edit
+- Update `.ai/10.CURRENT_STATE.md` after any significant change — edit
   the state it describes; do not append a narrative (history is in git).
 - New component: copy the nearest `_template/`, then `scripts/sync-registry.sh`.
 - Decisions with lasting impact get an ADR in `.ai/decisions/`.
-- Capability no task could run for real gets an `Unexercised:` backlog row; at
-  the cap of 3, exercise or retire one before adding more (ADR-0039).
+- Capability no task could run for real gets an `Unexercised:` entry in
+  `.ai/35.AD_HOC_TASKS.md`; at the cap of 3, exercise or retire one first (ADR-0039).
 
 ## Definition of done
 A task is complete only when acceptance criteria are satisfied, `tests/validate.sh`
 passes, docs and registry are updated, no secrets are included, the diff is
-reviewed, the task is `done` in its brief, `TODO.md` and `.ai/GOALS.md` (the
-Compass board), its commit subject names it, and the report confirms the push.
+reviewed, the task is `done` in its brief and in `.ai/GOALS.md` (the Compass
+board), its commit subject names it, and the report confirms the push.
 
 ## Ambiguity policy
 If requirements are significantly ambiguous or risky, stop and ask the human.
@@ -109,12 +109,12 @@ Deletions, overwrites, history rewrites, and force-pushes require explicit
 human authorization in the task file.
 
 ## Planning references
-Roadmap `.ai/planning/ROADMAP.md`; sprint `.ai/planning/SPRINT-CURRENT.md`;
-tasks `.ai/tasks/`; state `.ai/context/CURRENT_STATE.md`.
+Entry `.ai/00.CONVENTIONS.md` (ADR-0066), then `10.CURRENT_STATE`, `20.PLAN`,
+`30.ROADMAP`, `35.AD_HOC_TASKS`; briefs `tasks/S###.T###_Name.md`; old ids: `id-map.tsv`.
 
 ## Mandatory task process
 Every task: gather context (AGENTS.md, CURRENT_STATE, sprint, task, git
 status) → perceive (knowns, gaps, assumptions) → plan (scope, files,
 acceptance criteria, validation commands, stop conditions) → act (small
 reversible changes) → observe (outputs, errors, tests) → evaluate against
-criteria → repeat or terminate. Templates: `.ai/templates/`.
+criteria → repeat or terminate. Templates: `skills/project-workflow/templates/`.

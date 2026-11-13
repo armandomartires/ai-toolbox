@@ -5,7 +5,7 @@
 - Objective: Continue S6 after un-parking it. Run the two spikes that block
   every remaining decision, then write the three ADR bodies from what they
   observed — leaving all three `Proposed`, per the human's decision.
-- Context consulted: `.ai/planning/SPRINT-CURRENT.md` (S6),
+- Context consulted: `.ai/20.PLAN.md` (S6),
   `TASK-0027`, `TASK-0028`, `TASK-0031`, `TASK-0052`, ADR-0014/0015/0016
   (skeletons), `ADR-0017` (retitle precedent), `.ai/templates/ADR.md`,
   `skills/ansible-ops/SKILL.md` + `templates/change-record.md` +

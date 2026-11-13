@@ -30,21 +30,21 @@ The control is that emission is cheap and idempotent, and install.sh is
 re-run. If you are here to add a staleness check, read those two ADRs
 first.
 
-`model` FOR CLAUDE CODE COMES FROM ONE TABLE, .ai/context/model-tiers.md
+`model` FOR CLAUDE CODE COMES FROM ONE TABLE, docs/development/model-tiers.md
 -----------------------------------------------------------------------
 ADR-0059 supersedes ADR-0018 clause 7 for Claude Code emission only: this
 repo owns the role->alias table (opus, sonnet, haiku) that Claude Code agents
 are emitted from, and emit_claude_code writes `model: <alias>` from it. A role
 the table does not list gets `model: inherit`. This file holds no table of its
 own, and a role's own `model` key does not override the table: change a
-role's tier by editing its line in .ai/context/model-tiers.md.
+role's tier by editing its line in docs/development/model-tiers.md.
 
 OpenCode is unchanged: emit_opencode still writes `model: "{tier:<name>}"`,
 resolved by agent-tiers' models.jsonc, which stays in opencode-customization
 (ADR-0017, rejected 2026-09-15; clause 7 still applies there). See
 docs/development/authoring-guide.md "`model` and the tier table".
 
-`maxTurns` AND `autoCompactWindow` FOR CLAUDE CODE: .ai/context/turn-limits.md
+`maxTurns` AND `autoCompactWindow` FOR CLAUDE CODE: docs/development/turn-limits.md
 ------------------------------------------------------------------------------
 TASK-0282. emit_claude_code writes both keys from that table's row for the
 role; a `-` cell, or a role the table does not list, emits no key. Like the
@@ -555,7 +555,7 @@ TIER_TABLE = _table("model-tiers.md", "model-tiers.md")
 def model_alias(role):
     """The Claude Code `model` value for `role`: its table tier, else `inherit`.
 
-    Reads the rows of TIER_TABLE, .ai/context/model-tiers.md or, in the
+    Reads the rows of TIER_TABLE, docs/development/model-tiers.md or, in the
     ADR-0066 layout, docs/development/model-tiers.md (`| opus | a, b |`).
     ADR-0059.
     """
@@ -576,7 +576,7 @@ COMPACT_RANGE = (100000, 1000000)
 
 
 def turn_limits(role):
-    """[(key, value)] for `role` from .ai/context/turn-limits.md (TASK-0282).
+    """[(key, value)] for `role` from docs/development/turn-limits.md (TASK-0282).
 
     Rows read `| role | maxTurns | autoCompactWindow |`; `-` omits a key. A
     malformed value fails loudly rather than emitting a key Claude Code would

@@ -68,7 +68,7 @@ class TaskRecord:
     name: str
     path: str
     status_raw: str
-    state: str  # "pending" | "done" | "unparseable"
+    state: str  # "pending" | "done" | "cancelled" (a legacy brief) | "unparseable"
     lane: str
     depends_on: list = field(default_factory=list)  # resolved S###.T### ids
     prose_gates: list = field(default_factory=list)  # unresolved free-text gates
@@ -101,6 +101,39 @@ def classify_status(status_raw):
         pm_briefs.SPRINT_PENDING_PREFIXES,
         pm_briefs.SPRINT_DONE_PREFIXES,
     )
+
+
+def legacy_status(lines):
+    """The `- Status:` line of a brief written before its rename, or None.
+
+    ADR-0066 moves a numbered-task repository onto this layout without
+    rewriting its briefs (clause 5: history keeps its ids and text), so a
+    renamed brief still carries `- Status: done` under `## Status`. It is read
+    only when the bolded header is absent, with the numbered-task vocabulary,
+    so a brief written in this layout is never read through it.
+    """
+    inside, block = False, []
+    for line in lines:
+        if line.startswith("## "):
+            if inside:
+                break
+            inside = line[3:].strip().lower() == "status"
+            continue
+        if inside:
+            block.append(line)
+    window = block or lines[:40]
+    raw = pm_briefs.header_field(window, "Status", window=len(window) or 1)
+    if raw is None:
+        return None, "unparseable"
+    state = pm_briefs.classify_status(
+        raw,
+        pm_briefs.TASK_PENDING_PREFIXES,
+        pm_briefs.TASK_DONE_PREFIXES,
+        pm_briefs.TASK_CANCELLED_PREFIXES,
+        strip_comment=True,
+        strip_markup=True,
+    )
+    return raw, state
 
 
 def parse_dependencies(depends_raw, status_raw):
@@ -153,6 +186,8 @@ def parse_brief(path, rel_to=None, default_lane="operator"):
     status_raw = header_field(lines, "Status")
     depends_raw = header_field(lines, "Depends on")
     state = classify_status(status_raw)
+    if status_raw is None:
+        status_raw, state = legacy_status(lines)
     ids, gates = parse_dependencies(depends_raw, status_raw)
 
     defects = []
@@ -205,7 +240,7 @@ def load_corpus(tasks_dir, rel_to=None, default_lane="operator"):
 
 def build_status(records):
     """Counts and parse defects. No lanes, no ready frontier — see the docstring."""
-    counts = {"pending": 0, "done": 0, "unparseable": 0}
+    counts = {"pending": 0, "done": 0, "cancelled": 0, "unparseable": 0}
     defects = []
     for tid in sorted(records):
         rec = records[tid]

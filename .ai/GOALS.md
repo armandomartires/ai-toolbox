@@ -1,648 +1,656 @@
 # ai-toolbox
 
 <!--
-The Compass pane's board (mods/task-compass). Each "## " heading is a sprint; each
-top-level item is a task or decision from `.ai/tasks/TODO.md`, with the brief that
-owns its details. [ ] to do, [>] in progress, [?] review, [!] blocked, [x] done,
-plain item = backlog. Keep it in step with TODO.md (AGENTS.md, Definition of done).
+The Compass pane's board (mods/task-compass). Each "## " heading is a sprint of
+.ai/30.ROADMAP.md; each top-level item is a task (S###.T###) or decision, with the
+brief that owns its details. [ ] to do, [>] in progress, [?] review, [!] blocked,
+[x] done, plain item = backlog. Keep it in step with the briefs (AGENTS.md,
+Definition of done). Old TASK-NNNN ids resolve through .ai/id-map.tsv.
 -->
 
-## S1 — Foundation
-- [x] TASK-0001 — Port and harmonize the project-migration skill
-  .ai/tasks/TASK-0001-port-project-migration-skill.md
-- [x] TASK-0002 — Extend the skill frontmatter schema (license, metadata)
-  .ai/tasks/TASK-0002-skill-frontmatter-schema.md
-- [x] TASK-0003 — Harmonize the project-workflow skill
-  .ai/tasks/TASK-0003-harmonize-project-workflow-skill.md
-- [x] TASK-0004 — Allow external (Node/npm) MCP servers alongside authored Python ones
-  .ai/tasks/TASK-0004-allow-external-mcp-servers.md
-- [x] TASK-0005 — External MCP server shape: manifest, scripts, validation
-  .ai/tasks/TASK-0005-external-mcp-server-shape.md
-- [x] TASK-0007 — Port the ansible MCP server (first external server)
-  .ai/tasks/TASK-0007-port-ansible-mcp-server.md
-- [x] TASK-0006 — Client config snapshots and multi-client skill deployment
-  .ai/tasks/TASK-0006-client-config-snapshots.md
+## S001 — Foundation
+- [x] S001.T001 — Port and harmonize the project-migration skill
+  .ai/tasks/S001.T001_PortProjectMigrationSkill.md
+- [x] S001.T002 — Extend the skill frontmatter schema (license, metadata)
+  .ai/tasks/S001.T002_SkillFrontmatterSchema.md
+- [x] S001.T003 — Harmonize the project-workflow skill
+  .ai/tasks/S001.T003_HarmonizeProjectWorkflowSkill.md
+- [x] S001.T004 — Allow external (Node/npm) MCP servers alongside authored Python ones
+  .ai/tasks/S001.T004_AllowExternalMcpServers.md
+- [x] S001.T005 — External MCP server shape: manifest, scripts, validation
+  .ai/tasks/S001.T005_ExternalMcpServerShape.md
+- [x] S001.T007 — Port the ansible MCP server (first external server)
+  .ai/tasks/S001.T007_PortAnsibleMcpServer.md
+- [x] S001.T006 — Client config snapshots and multi-client skill deployment
+  .ai/tasks/S001.T006_ClientConfigSnapshots.md
 
-## S2 — Multi-client hardening
-- [x] TASK-0008 — Author the first loop component (`release-check`)
-  .ai/tasks/TASK-0008-author-first-loop-component.md
-- [x] TASK-0009 — MCP server smoke-test harness
-  .ai/tasks/TASK-0009-mcp-smoke-test-harness.md
+## S002 — Multi-client hardening
+- [x] S002.T001 — Author the first loop component (`release-check`)
+  .ai/tasks/S002.T001_AuthorFirstLoopComponent.md
+- [x] S002.T002 — MCP server smoke-test harness
+  .ai/tasks/S002.T002_McpSmokeTestHarness.md
 
-## S3 — Automation
-- [x] TASK-0011 — De-duplicate the registry generator; assert no template rows
-  .ai/tasks/TASK-0011-deduplicate-registry-generator.md
-- [x] TASK-0010 — Pre-commit hook running validate.sh; optional CI workflow
-  .ai/tasks/TASK-0010-precommit-hook.md
+## S003 — Automation
+- [x] S003.T002 — De-duplicate the registry generator; assert no template rows
+  .ai/tasks/S003.T002_DeduplicateRegistryGenerator.md
+- [x] S003.T001 — Pre-commit hook running validate.sh; optional CI workflow
+  .ai/tasks/S003.T001_PrecommitHook.md
 
-## S4 — Closing the open loops
-- [x] TASK-0012 — Skill linter (frontmatter rules only)
-  .ai/tasks/TASK-0012-skill-linter.md
-- [x] TASK-0013 — Add a repo LICENSE backing the skills' `license: MIT` claims
-  .ai/tasks/TASK-0013-repo-license.md
-- [x] TASK-0014 — `install.sh` warns on the `core.filemode=false` hook trap
-  .ai/tasks/TASK-0014-install-filemode-warning.md
-- [x] TASK-0015 — Document required environment variables; wire the git remote
-  .ai/tasks/TASK-0015-env-requirements-and-remote.md
-- [x] TASK-0016 — Close the human-action gaps: procedures, not candidate bullets
-  .ai/tasks/TASK-0016-human-action-gaps.md
+## S004 — Closing the open loops
+- [x] S004.T001 — Skill linter (frontmatter rules only)
+  .ai/tasks/S004.T001_SkillLinter.md
+- [x] S004.T002 — Add a repo LICENSE backing the skills' `license: MIT` claims
+  .ai/tasks/S004.T002_RepoLicense.md
+- [x] S004.T003 — `install.sh` warns on the `core.filemode=false` hook trap
+  .ai/tasks/S004.T003_InstallFilemodeWarning.md
+- [x] S004.T004 — Document required environment variables; wire the git remote
+  .ai/tasks/S004.T004_EnvRequirementsAndRemote.md
+- [x] S004.T005 — Close the human-action gaps: procedures, not candidate bullets
+  .ai/tasks/S004.T005_HumanActionGaps.md
 
-## Post-S4
-- [x] TASK-0017 — Record the LM Studio UI verification; fix the WORKSPACE_ROOT placeholder trap
-  .ai/tasks/TASK-0017-lm-studio-ui-verified.md
-- [x] TASK-0018 — Close B-001; fix the registry content defects found while scoping it
-  .ai/tasks/TASK-0018-close-b001-registry-integrity.md
-- [x] TASK-0019 — Retract the false default-branch mismatch claim
-  .ai/tasks/TASK-0019-retract-default-branch-claim.md
+## S005 — Session handover contract
+- [x] S005.T001 — Skill: add the session-handover reference; restore the conventions budget
+  .ai/tasks/S005.T001_SkillSessionHandoverReference.md
+- [x] S005.T002 — Skill: task-template handover contract; version 3.1.0
+  .ai/tasks/S005.T002_SkillTaskTemplateHandoverContract.md
+- [x] S005.T003 — Adopt the handover contract in this repo's task template
+  .ai/tasks/S005.T003_AdoptHandoverContractInRepoTemplate.md
+- [x] S005.T004 — validate.sh: detect missing or empty handover sections
+  .ai/tasks/S005.T004_ValidateHandoverSections.md
 
-## S5 — Session handover contract
-- [x] TASK-0020 — Skill: add the session-handover reference; restore the conventions budget
-  .ai/tasks/TASK-0020-skill-session-handover-reference.md
-- [x] TASK-0021 — Skill: task-template handover contract; version 3.1.0
-  .ai/tasks/TASK-0021-skill-task-template-handover-contract.md
-- [x] TASK-0022 — Adopt the handover contract in this repo's task template
-  .ai/tasks/TASK-0022-adopt-handover-contract-in-repo-template.md
-- [x] TASK-0023 — validate.sh: detect missing or empty handover sections
-  .ai/tasks/TASK-0023-validate-handover-sections.md
-
-## Post-S5
-- [x] TASK-0024 — Unify `.ai/decisions/` filenames on the `NNNN-*` scheme
-  .ai/tasks/TASK-0024-unify-decision-filenames.md
-- [x] TASK-0025 — Close B-009: the two skills scaffold different frameworks, by design
-  .ai/tasks/TASK-0025-two-governance-frameworks.md
-
-## S6 — Ansible agent guardrails
-- [x] TASK-0026 — Correct the ansible MCP blast-radius claim and disable `ansible_navigator`
-  .ai/tasks/TASK-0026-narrow-ansible-mcp-blast-radius.md
-- [x] TASK-0027 — Spike: lint two real playbooks and choose the guard's home
-  .ai/tasks/TASK-0027-spike-lint-real-playbooks.md
-- [x] TASK-0028 — Spike: can a client hook intercept an MCP tool call?
-  .ai/tasks/TASK-0028-spike-hook-interception.md
+## S006 — Ansible agent guardrails
+- [x] S006.T001 — Correct the ansible MCP blast-radius claim and disable `ansible_navigator`
+  .ai/tasks/S006.T001_NarrowAnsibleMcpBlastRadius.md
+- [x] S006.T002 — Spike: lint two real playbooks and choose the guard's home
+  .ai/tasks/S006.T002_SpikeLintRealPlaybooks.md
+- [x] S006.T003 — Spike: can a client hook intercept an MCP tool call?
+  .ai/tasks/S006.T003_SpikeHookInterception.md
 - [x] ADR-0014 — Accept the pinned ansible MCP surface; narrow it rather than extend it
-  .ai/decisions/0014-accept-pinned-ansible-mcp-surface.md
+  .ai/decisions/ADR-0014-accept-pinned-ansible-mcp-surface.md
 - [x] ADR-0015 — Ansible knowledge is derived per change, not declared; and the graduated workflow is check-plus-snapshot
-  .ai/decisions/0015-ansible-knowledge-portable-core-plus-templates.md
+  .ai/decisions/ADR-0015-ansible-knowledge-portable-core-plus-templates.md
 - [x] ADR-0016 — Hooks as a component category: declined, because the clients disagree on the tool's name
-  .ai/decisions/0016-hooks-as-a-component-category.md
-- [x] TASK-0029 — Author the `ansible-ops` skill
-  .ai/tasks/TASK-0029-author-ansible-ops-skill.md
-- [x] TASK-0030 — Author the `ansible-change` loop
-  .ai/tasks/TASK-0030-author-ansible-change-loop.md
-- [x] TASK-0031 — The `gather_subset` / `ansible_mounts` guard
-  .ai/tasks/TASK-0031-gather-subset-guard.md
-- [x] TASK-0032 — Record the target-repo findings and what was deliberately left alone
-  .ai/tasks/TASK-0032-record-target-repo-findings.md
-- [x] TASK-0052 — Un-park sprint S6, re-queue S8, and correct four defects in S6's own plan
-  .ai/tasks/TASK-0052-unpark-s6-requeue-s8.md
-- [x] TASK-0053 — Correct the Bionic client snapshot's drifted observations
-  .ai/tasks/TASK-0053-bionic-snapshot-drift.md
-- [x] TASK-0054 — Ratify ADR-0014/0015/0016, close S6, promote S8
-  .ai/tasks/TASK-0054-ratify-s6-adrs-close-sprint.md
+  .ai/decisions/ADR-0016-hooks-as-a-component-category.md
+- [x] S006.T004 — Author the `ansible-ops` skill
+  .ai/tasks/S006.T004_AuthorAnsibleOpsSkill.md
+- [x] S006.T005 — Author the `ansible-change` loop
+  .ai/tasks/S006.T005_AuthorAnsibleChangeLoop.md
+- [x] S006.T006 — The `gather_subset` / `ansible_mounts` guard
+  .ai/tasks/S006.T006_GatherSubsetGuard.md
+- [x] S006.T007 — Record the target-repo findings and what was deliberately left alone
+  .ai/tasks/S006.T007_RecordTargetRepoFindings.md
+- [x] S006.T008 — Un-park sprint S6, re-queue S8, and correct four defects in S6's own plan
+  .ai/tasks/S006.T008_UnparkS6RequeueS8.md
+- [x] S006.T009 — Correct the Bionic client snapshot's drifted observations
+  .ai/tasks/S006.T009_BionicSnapshotDrift.md
+- [x] S006.T010 — Ratify ADR-0014/0015/0016, close S6, promote S8
+  .ai/tasks/S006.T010_RatifyS6AdrsCloseSprint.md
 
-## S7 — Design and production agent loops
-- [x] TASK-0033 — Park sprint S6, open sprint S7, and repair two roadmap omissions
-  .ai/tasks/TASK-0033-park-s6-open-s7.md
-- [x] TASK-0034 — Spike: inventory the agent-tiers drift and decide what survives
-  .ai/tasks/TASK-0034-spike-agent-tiers-drift.md
+## S007 — Design and production agent loops
+- [x] S007.T001 — Park sprint S6, open sprint S7, and repair two roadmap omissions
+  .ai/tasks/S007.T001_ParkS6OpenS7.md
+- [x] S007.T002 — Spike: inventory the agent-tiers drift and decide what survives
+  .ai/tasks/S007.T002_SpikeAgentTiersDrift.md
 - [x] ADR-0017 — agent-tiers stays with opencode-customization (claim withdrawn)
-  .ai/decisions/0017-ai-toolbox-owns-agent-tiers.md
-- [x] TASK-0035 — Import agent-tiers into this repo as its canonical home
-  .ai/tasks/TASK-0035-import-agent-tiers.md
-- [x] TASK-0036 — Spike: verify the per-client agent schema mapping against live docs
-  .ai/tasks/TASK-0036-spike-agent-schema-mapping.md
+  .ai/decisions/ADR-0017-ai-toolbox-owns-agent-tiers.md
+- [x] S007.T003 — Import agent-tiers into this repo as its canonical home
+  .ai/tasks/S007.T003_ImportAgentTiers.md
+- [x] S007.T004 — Spike: verify the per-client agent schema mapping against live docs
+  .ai/tasks/S007.T004_SpikeAgentSchemaMapping.md
 - [x] ADR-0018 — Agent portability is scoped per capability; one source, per-client emission
-  .ai/decisions/0018-agent-portability-one-source-per-client-emission.md
-- [x] TASK-0037 — agents/_template/ and the normative agent schema
-  .ai/tasks/TASK-0037-agents-template-and-schema.md
-- [x] TASK-0038 — validate.sh: enforce the agent schema, proven by failing fixtures
-  .ai/tasks/TASK-0038-validate-agent-frontmatter.md
-- [x] TASK-0039 — sync-registry.sh: emit an Agents section
-  .ai/tasks/TASK-0039-registry-agents-section.md
-- [x] TASK-0040 — install.sh: emit per-client agent files
-  .ai/tasks/TASK-0040-install-agent-emission.md
+  .ai/decisions/ADR-0018-agent-portability-one-source-per-client-emission.md
+- [x] S007.T005 — agents/_template/ and the normative agent schema
+  .ai/tasks/S007.T005_AgentsTemplateAndSchema.md
+- [x] S007.T006 — validate.sh: enforce the agent schema, proven by failing fixtures
+  .ai/tasks/S007.T006_ValidateAgentFrontmatter.md
+- [x] S007.T007 — sync-registry.sh: emit an Agents section
+  .ai/tasks/S007.T007_RegistryAgentsSection.md
+- [x] S007.T008 — install.sh: emit per-client agent files
+  .ai/tasks/S007.T008_InstallAgentEmission.md
 - [x] ADR-0019 — Design convergence is human acceptance; autonomy stops at the merge gate
-  .ai/decisions/0019-design-convergence-and-the-autonomy-boundary.md
-- [x] TASK-0041 — Author the design-brief loop
-  .ai/tasks/TASK-0041-author-design-brief-loop.md
-- [x] TASK-0042 — Author the design-flow skill
-  .ai/tasks/TASK-0042-author-design-flow-skill.md
-- [x] TASK-0043 — Author the four design-stage roles
-  .ai/tasks/TASK-0043-author-design-roles.md
-- [x] TASK-0044 — Author the project-build loop
-  .ai/tasks/TASK-0044-author-project-build-loop.md
-- [x] TASK-0045 — Author the three production roles in agents/
-  .ai/tasks/TASK-0045-reconcile-production-roles.md
-- [x] TASK-0046 — Pilot: run both loops end to end to produce ansible-ops and ansible-change
-  .ai/tasks/TASK-0046-pilot-run-both-loops.md
-- [x] TASK-0047 — The LM Studio client is Bionic; correct the skills and agents findings
-  .ai/tasks/TASK-0047-lm-studio-is-bionic.md
+  .ai/decisions/ADR-0019-design-convergence-and-the-autonomy-boundary.md
+- [x] S007.T009 — Author the design-brief loop
+  .ai/tasks/S007.T009_AuthorDesignBriefLoop.md
+- [x] S007.T010 — Author the design-flow skill
+  .ai/tasks/S007.T010_AuthorDesignFlowSkill.md
+- [x] S007.T011 — Author the four design-stage roles
+  .ai/tasks/S007.T011_AuthorDesignRoles.md
+- [x] S007.T012 — Author the project-build loop
+  .ai/tasks/S007.T012_AuthorProjectBuildLoop.md
+- [x] S007.T013 — Author the three production roles in agents/
+  .ai/tasks/S007.T013_ReconcileProductionRoles.md
+- [x] S007.T014 — Pilot: run both loops end to end to produce ansible-ops and ansible-change
+  .ai/tasks/S007.T014_PilotRunBothLoops.md
+- [x] S007.T015 — The LM Studio client is Bionic; correct the skills and agents findings
+  .ai/tasks/S007.T015_LmStudioIsBionic.md
 
-## S8 — Third-party agent extensions
-- [x] TASK-0048 — Spike: verify ponytail's and graphify's real integration surfaces
-  .ai/tasks/TASK-0048-spike-third-party-extension-surfaces.md
-- [x] TASK-0049 — graphify as a pinned external MCP server
-  .ai/tasks/TASK-0049-graphify-external-mcp-server.md
-- [x] TASK-0050 — ponytail as per-client wiring documentation
-  .ai/tasks/TASK-0050-ponytail-client-wiring.md
-- [x] TASK-0051 — The placement rule in the authoring guide, and omniroute as a documented non-component
-  .ai/tasks/TASK-0051-placement-rule-and-third-party-tools.md
+## S008 — Third-party agent extensions
+- [x] S008.T001 — Spike: verify ponytail's and graphify's real integration surfaces
+  .ai/tasks/S008.T001_SpikeThirdPartyExtensionSurfaces.md
+- [x] S008.T002 — graphify as a pinned external MCP server
+  .ai/tasks/S008.T002_GraphifyExternalMcpServer.md
+- [x] S008.T003 — ponytail as per-client wiring documentation
+  .ai/tasks/S008.T003_PonytailClientWiring.md
+- [x] S008.T004 — The placement rule in the authoring guide, and omniroute as a documented non-component
+  .ai/tasks/S008.T004_PlacementRuleAndThirdPartyTools.md
 - [x] REVIEW-0009 — Sprint S8, Third-party agent extensions
-  .ai/reviews/REVIEW-0009-sprint-s8-third-party-extensions.md
-- [x] TASK-0068 — Ratify ADR-0021 and close sprint S8
-  .ai/tasks/TASK-0068-ratify-adr-0021-close-s8.md
+  .ai/reviews/S008-checkpoint.md
+- [x] S008.T005 — Ratify ADR-0021 and close sprint S8
+  .ai/tasks/S008.T005_RatifyAdr0021CloseS8.md
 
-## Post-S8
-- [x] TASK-0069 — Sweep stale second-hand claims: the gate's cost and the drifted Ansible toolchain
-  .ai/tasks/TASK-0069-stale-second-hand-claims-sweep.md
-- [x] TASK-0070 — One worktree per agent session, and the exec bits that make a worktree work
-  .ai/tasks/TASK-0070-worktree-per-session-isolation.md
-- [x] TASK-0071 — A `test-allowlist` capability term, so `qa-test` can run what it claims to run
-  .ai/tasks/TASK-0071-test-allowlist-vocabulary-term.md
-- [x] TASK-0072 — Deploy skills to Bionic's project target, and leave its global target alone
-  .ai/tasks/TASK-0072-bionic-project-skills-target.md
-- [x] TASK-0073 — When an MCP server owes a per-client wiring section, and when it does not
-  .ai/tasks/TASK-0073-wiring-section-rule.md
-
-## Post-S9
-- [x] TASK-0074 — One guard pair for both command allowlists, and a correction to TASK-0071
-  .ai/tasks/TASK-0074-command-allowlist-entry-guards.md
-- [x] TASK-0075 — A delegate must exist for every client its caller is emitted for
-  .ai/tasks/TASK-0075-delegates-to-cross-client-gate.md
-
-## S9 — Unattended runs
-- [x] TASK-0055 — Spike: can OpenCode host an unattended driver, and can its permissions hold it?
-  .ai/tasks/TASK-0055-spike-opencode-driver-surface.md
-- [x] TASK-0056 — Spike: what can Claude Code enforce per agent, and is a dead delegate silent?
-  .ai/tasks/TASK-0056-spike-claude-code-boundary-surface.md
-- [x] TASK-0057 — Author ADR-0022 from the spike evidence, and leave it proposed
-  .ai/tasks/TASK-0057-author-adr-0022.md
+## S009 — Unattended runs
+- [x] S009.T001 — Spike: can OpenCode host an unattended driver, and can its permissions hold it?
+  .ai/tasks/S009.T001_SpikeOpencodeDriverSurface.md
+- [x] S009.T002 — Spike: what can Claude Code enforce per agent, and is a dead delegate silent?
+  .ai/tasks/S009.T002_SpikeClaudeCodeBoundarySurface.md
+- [x] S009.T003 — Author ADR-0022 from the spike evidence, and leave it proposed
+  .ai/tasks/S009.T003_AuthorAdr0022.md
 - [x] GATE — human ratification of `ADR-0022`, cleared 2026-09-23
-- [x] TASK-0077 — Promote sprint S9, and add Phase 9 in the same change
-  .ai/tasks/TASK-0077-promote-s9.md
-- [x] TASK-0058 — Settle `worktree-only` for Claude Code, add the delegation rule, and verify the authored-MCP section
-  .ai/tasks/TASK-0058-authoring-guide-vocabulary-and-authored-mcp.md
-- [x] TASK-0060 — Show a role's client coverage in the registry
-  .ai/tasks/TASK-0060-registry-client-coverage.md
-- [x] TASK-0061 — Author `loops/unattended-run/loop.md`
-  .ai/tasks/TASK-0061-loop-unattended-run.md
-- [x] TASK-0059 — Enforce the delegation rule, and close the authored-MCP validation gap
-  .ai/tasks/TASK-0059-validate-delegation-and-authored-mcp-gates.md
-- [x] TASK-0062 — Author `skills/unattended-ops/`
-  .ai/tasks/TASK-0062-skill-unattended-ops.md
-- [x] TASK-0063 — Author the four thinking roles
-  .ai/tasks/TASK-0063-thinking-roles.md
-- [x] TASK-0064 — Author the five acting roles, and fix `git-ops`' staging gap
-  .ai/tasks/TASK-0064-acting-roles.md
-- [x] TASK-0078 — `no-bash`, so `read-only` means what it says
-  .ai/tasks/TASK-0078-no-bash-capability-term.md
-- [x] TASK-0079 — Narrow `git-ops` to the commands it actually needs
-  .ai/tasks/TASK-0079-narrow-git-ops-allowlist.md
+- [x] S009.T011 — Ratify ADR-0022
+  .ai/tasks/S009.T011_RatifyAdr0022.md
+- [x] S009.T012 — Promote sprint S9, and add Phase 9 in the same change
+  .ai/tasks/S009.T012_PromoteS9.md
+- [x] S009.T004 — Settle `worktree-only` for Claude Code, add the delegation rule, and verify the authored-MCP section
+  .ai/tasks/S009.T004_AuthoringGuideVocabularyAndAuthoredMcp.md
+- [x] S009.T006 — Show a role's client coverage in the registry
+  .ai/tasks/S009.T006_RegistryClientCoverage.md
+- [x] S009.T007 — Author `loops/unattended-run/loop.md`
+  .ai/tasks/S009.T007_LoopUnattendedRun.md
+- [x] S009.T005 — Enforce the delegation rule, and close the authored-MCP validation gap
+  .ai/tasks/S009.T005_ValidateDelegationAndAuthoredMcpGates.md
+- [x] S009.T008 — Author `skills/unattended-ops/`
+  .ai/tasks/S009.T008_SkillUnattendedOps.md
+- [x] S009.T009 — Author the four thinking roles
+  .ai/tasks/S009.T009_ThinkingRoles.md
+- [x] S009.T010 — Author the five acting roles, and fix `git-ops`' staging gap
+  .ai/tasks/S009.T010_ActingRoles.md
+- [x] S009.T013 — `no-bash`, so `read-only` means what it says
+  .ai/tasks/S009.T013_NoBashCapabilityTerm.md
+- [x] S009.T014 — Narrow `git-ops` to the commands it actually needs
+  .ai/tasks/S009.T014_NarrowGitOpsAllowlist.md
 - [x] REVIEW-0011 — Sprint S9, unattended runs: the decision and the portable core
-  .ai/reviews/REVIEW-0011-sprint-s9-unattended-runs.md
-- [x] TASK-0080 — State the OpenCode-first asymmetry in all three wiring snapshots
-  .ai/tasks/TASK-0080-state-the-asymmetry-in-the-snapshots.md
-- [x] TASK-0081 — Close sprint S9 on REVIEW-0011
-  .ai/tasks/TASK-0081-close-sprint-s9.md
+  .ai/reviews/S009-checkpoint.md
+- [x] S009.T015 — State the OpenCode-first asymmetry in all three wiring snapshots
+  .ai/tasks/S009.T015_StateTheAsymmetryInTheSnapshots.md
+- [x] S009.T016 — Close sprint S9 on REVIEW-0011
+  .ai/tasks/S009.T016_CloseSprintS9.md
 
-## S10 — Bindings, the gate server, the pilot
-- [x] TASK-0082 — Spike: does a trailing flag escape an OpenCode allow-glob?
-  .ai/tasks/TASK-0082-spike-trailing-flag-resolution.md
-- [x] TASK-0083 — Close the trailing-flag holes, split by what they actually are
-  .ai/tasks/TASK-0083-close-the-trailing-flag-holes.md
-- [x] TASK-0084 — Ratify ADR-0023
-  .ai/tasks/TASK-0084-ratify-adr-0023.md
-- [x] TASK-0085 — Promote sprint S10, and add Phase 10 in the same change
-  .ai/tasks/TASK-0085-promote-s10.md
-- [x] TASK-0086 — S10.1: the OpenCode driver and its binding
-  .ai/tasks/TASK-0086-opencode-driver-binding.md
-- [x] TASK-0087 — S10.2: the Claude Code Workflow binding
-  .ai/tasks/TASK-0087-claude-code-workflow-binding.md
-- [x] TASK-0088 — S10.3: `mcp-servers/gates/`, the first authored MCP server
-  .ai/tasks/TASK-0088-gates-mcp-server.md
-- [x] TASK-0089 — One rule for who starts a gate, and who writes the evidence
-  .ai/tasks/TASK-0089-gate-invoker-rule.md
+## S010 — Bindings, the gate server, the pilot
+- [x] S010.T001 — Spike: does a trailing flag escape an OpenCode allow-glob?
+  .ai/tasks/S010.T001_SpikeTrailingFlagResolution.md
+- [x] S010.T002 — Close the trailing-flag holes, split by what they actually are
+  .ai/tasks/S010.T002_CloseTheTrailingFlagHoles.md
+- [x] S010.T003 — Ratify ADR-0023
+  .ai/tasks/S010.T003_RatifyAdr0023.md
+- [x] S010.T004 — Promote sprint S10, and add Phase 10 in the same change
+  .ai/tasks/S010.T004_PromoteS10.md
+- [x] S010.T005 — S10.1: the OpenCode driver and its binding
+  .ai/tasks/S010.T005_OpencodeDriverBinding.md
+- [x] S010.T006 — S10.2: the Claude Code Workflow binding
+  .ai/tasks/S010.T006_ClaudeCodeWorkflowBinding.md
+- [x] S010.T007 — S10.3: `mcp-servers/gates/`, the first authored MCP server
+  .ai/tasks/S010.T007_GatesMcpServer.md
+- [x] S010.T008 — One rule for who starts a gate, and who writes the evidence
+  .ai/tasks/S010.T008_GateInvokerRule.md
 - [x] S10.4 — the Bionic binding: established that Bionic cannot orchestrate
-- [x] TASK-0090 — S10.5: install for both clients, verify the gates server in each, record it
-  .ai/tasks/TASK-0090-s10-5-install-and-wire.md
-- [x] TASK-0091 — Prune an emitted agent file when its role stops declaring that client
-  .ai/tasks/TASK-0091-prune-stale-emitted-agents.md
-- [x] TASK-0092 — S10.7: the pilot — one unattended run of two tasks, dry run first
-  .ai/tasks/TASK-0092-s10-7-pilot.md
-- [x] TASK-0093 — release-check step 8: record the hash in a follow-up commit, never amend
-  .ai/tasks/TASK-0093-release-check-step-8-follow-up-commit.md
-- [x] TASK-0094 — Refresh the stale opening paragraph of CURRENT_STATE.md
-  .ai/tasks/TASK-0094-refresh-current-state-header.md
-- [x] TASK-0095 — Roles read the paths the driver resolved; they never glob for them
-  .ai/tasks/TASK-0095-read-resolved-paths-not-glob.md
-- [x] TASK-0096 — The driver hands preflight the evidence of its own step-1 checks
-  .ai/tasks/TASK-0096-driver-hands-preflight-its-evidence.md
-- [x] TASK-0097 — The driver checks a closed commit's files against the declared paths
-  .ai/tasks/TASK-0097-driver-checks-commit-paths.md
-- [x] TASK-0098 — Keep every gate command outside the tree the roles can read
-  .ai/tasks/TASK-0098-gate-commands-out-of-role-reach.md
-- [x] TASK-0099 — The closer writes fixed commit and push lines, and the driver checks them
-  .ai/tasks/TASK-0099-check-the-closers-log-lines.md
-- [x] TASK-0100 — Per-role timeouts, and a run that can be stopped cleanly
-  .ai/tasks/TASK-0100-role-timeouts-and-a-clean-stop.md
-- [x] TASK-0101 — Run roles stop being told to read the skill at run time
-  .ai/tasks/TASK-0101-roles-stop-reading-the-skill.md
-- [x] TASK-0102 — Emit each role's allowed shell commands into its body, and draft the upstream report
-  .ai/tasks/TASK-0102-emit-the-allowed-commands-note.md
-- [x] TASK-0103 — The Claude Code binding checks a closed commit's files against the declared paths
-  .ai/tasks/TASK-0103-claude-code-commit-paths-check.md
+- [x] S010.T009 — S10.5: install for both clients, verify the gates server in each, record it
+  .ai/tasks/S010.T009_S105InstallAndWire.md
+- [x] S010.T010 — Prune an emitted agent file when its role stops declaring that client
+  .ai/tasks/S010.T010_PruneStaleEmittedAgents.md
+- [x] S010.T011 — S10.7: the pilot — one unattended run of two tasks, dry run first
+  .ai/tasks/S010.T011_S107Pilot.md
+- [x] S010.T012 — release-check step 8: record the hash in a follow-up commit, never amend
+  .ai/tasks/S010.T012_ReleaseCheckStep8FollowUpCommit.md
+- [x] S010.T013 — Refresh the stale opening paragraph of CURRENT_STATE.md
+  .ai/tasks/S010.T013_RefreshCurrentStateHeader.md
+- [x] S010.T014 — Roles read the paths the driver resolved; they never glob for them
+  .ai/tasks/S010.T014_ReadResolvedPathsNotGlob.md
+- [x] S010.T015 — The driver hands preflight the evidence of its own step-1 checks
+  .ai/tasks/S010.T015_DriverHandsPreflightItsEvidence.md
+- [x] S010.T016 — The driver checks a closed commit's files against the declared paths
+  .ai/tasks/S010.T016_DriverChecksCommitPaths.md
+- [x] S010.T017 — Keep every gate command outside the tree the roles can read
+  .ai/tasks/S010.T017_GateCommandsOutOfRoleReach.md
+- [x] S010.T018 — The closer writes fixed commit and push lines, and the driver checks them
+  .ai/tasks/S010.T018_CheckTheClosersLogLines.md
+- [x] S010.T019 — Per-role timeouts, and a run that can be stopped cleanly
+  .ai/tasks/S010.T019_RoleTimeoutsAndACleanStop.md
+- [x] S010.T020 — Run roles stop being told to read the skill at run time
+  .ai/tasks/S010.T020_RolesStopReadingTheSkill.md
+- [x] S010.T021 — Emit each role's allowed shell commands into its body, and draft the upstream report
+  .ai/tasks/S010.T021_EmitTheAllowedCommandsNote.md
+- [x] S010.T022 — The Claude Code binding checks a closed commit's files against the declared paths
+  .ai/tasks/S010.T022_ClaudeCodeCommitPathsCheck.md
 - [x] S10.6 — registry and state (done — confirmed by REVIEW-0012)
 - [x] REVIEW-0012 — Sprint S10, unattended runs: the bindings, the gate server, and the pilot
-  .ai/reviews/REVIEW-0012-sprint-s10-unattended-bindings.md
-- [x] TASK-0104 — S10.4: establish that Bionic cannot orchestrate, or drop the claim
-  .ai/tasks/TASK-0104-establish-bionic-cannot-orchestrate.md
-- [x] TASK-0105 — Close sprint S10 on REVIEW-0012 (S10.4 now discharged)
-  .ai/tasks/TASK-0105-close-sprint-s10.md
+  .ai/reviews/S010-checkpoint.md
+- [x] S010.T023 — S10.4: establish that Bionic cannot orchestrate, or drop the claim
+  .ai/tasks/S010.T023_EstablishBionicCannotOrchestrate.md
+- [x] S010.T024 — Close sprint S10 on REVIEW-0012 (S10.4 now discharged)
+  .ai/tasks/S010.T024_CloseSprintS10.md
 
-## Post-S10
-- [x] TASK-0106 — B-035: embed the adjudicator's decision standard in its prompt
-  .ai/tasks/TASK-0106-embed-the-decision-standard.md
-- [x] TASK-0107 — Settle `worktree-only`'s Claude Code emission (ADR-0018 clause 7)
-  .ai/tasks/TASK-0107-worktree-only-claude-code-emission.md
-- [x] TASK-0108 — Re-count the `ansible-core` version claims, then act on the count
-  .ai/tasks/TASK-0108-ansible-core-version-recount.md
-- [x] TASK-0109 — Give artifact shape one owner, and generate the skeleton instead of copying a template
-  .ai/tasks/TASK-0109-artifact-schema-one-owner.md
-- [x] TASK-0110 — Migrate the repository onto the artifact schemas
-  .ai/tasks/TASK-0110-migrate-repo-onto-schemas.md
-- [x] TASK-0112 — The Claude Code binding's own consistency check fails, and no gate noticed
-  .ai/tasks/TASK-0112-claude-code-binding-suite-is-red.md
-- [x] TASK-0118 — Repair four stale claims in the planning ledger
-  .ai/tasks/TASK-0118-repair-the-planning-ledger.md
-- [x] TASK-0111 — Can a worktree-isolated Claude Code subagent reach the main checkout by absolute path?
-  .ai/tasks/TASK-0111-worktree-absolute-path-reach.md
-- [x] TASK-0113 — Run the Claude Code unattended binding against a real run, once
-  .ai/tasks/TASK-0113-claude-code-binding-first-real-run.md
-- [x] TASK-0114 — Test ADR-0022's two untested falsifiers, F7 and F9
-  .ai/tasks/TASK-0114-adr-0022-f7-and-f9.md
-- [x] TASK-0115 — Re-run ADR-0014's "53 rules / 0 violations" under ansible-core 2.21.4
-  .ai/tasks/TASK-0115-recount-adr-0014-lint-figure.md
-- [x] TASK-0116 — Exercise skills/ansible-ops against the live estate, once
-  .ai/tasks/TASK-0116-exercise-ansible-ops-live.md
-- [x] TASK-0117 — Make the artifact generator reachable from project-migration alone
-  .ai/tasks/TASK-0117-artifact-generator-reachable-from-migration.md
-- [x] TASK-0119 — Generate the scaffold's planning templates from the schemas that own them
-  .ai/tasks/TASK-0119-scaffold-templates-from-schemas.md
-- [x] TASK-0120 — Settle whether a migrated repository can regenerate its templates
-  .ai/tasks/TASK-0120-migrated-repo-cannot-regenerate.md
-- [x] TASK-0121 — The evidence line carries no figure, so the closer cannot copy one
-  .ai/tasks/TASK-0121-evidence-line-carries-no-figure.md
-- [x] TASK-0122 — An agile dashboard for the .ai governance layer
-  .ai/tasks/TASK-0122-project-workflow-dashboard.md
-- [x] TASK-0123 — Publish the dashboard from CI to GitHub Pages
-  .ai/tasks/TASK-0123-publish-the-dashboard-from-ci.md
-- [x] TASK-0124 — Tell someone when CI fails
-  .ai/tasks/TASK-0124-tell-someone-when-ci-fails.md
-- [x] TASK-0125 — Retire this repo's dashboard generator for the vendored canonical one
-  .ai/tasks/TASK-0125-one-dashboard-vendored-from-source.md
-- [x] TASK-0126 — Make the intranet GitLab the primary remote
-  .ai/tasks/TASK-0126-make-gitlab-the-primary-remote.md
-- [x] TASK-0127 — Ship GitHub Pages and GitLab Pages as optional dashboard destinations
-  .ai/tasks/TASK-0127-dashboard-publishing-destinations.md
-- [x] TASK-0128 — Record why only CI builds the published dashboard
-  .ai/tasks/TASK-0128-ci-builds-the-published-dashboard.md
-- [x] TASK-0129 — Rebuild the published dashboard daily from a separate dispatcher
-  .ai/tasks/TASK-0129-daily-dashboard-dispatcher.md
-- [x] TASK-0130 — Close the CI alert only when no watched workflow is red
-  .ai/tasks/TASK-0130-ci-alert-closes-only-when-nothing-is-red.md
-- [x] TASK-0131 — Source secrets from the intranet Vault; keep the environment as the interface
-  .ai/tasks/TASK-0131-secrets-from-vault.md
-- [x] TASK-0132 — Give ai-toolbox an AppRole identity; read several secret maps
-  .ai/tasks/TASK-0132-approle-identity.md
-- [x] TASK-0133 — Ignore every .env variant, not only .env (B-053)
-  .ai/tasks/TASK-0133-ignore-every-env-file.md
-- [x] TASK-0134 — The estate's ansible-vault password comes from Vault (B-052)
-  .ai/tasks/TASK-0134-vault-password-from-vault.md
-- [x] TASK-0135 — worktree.sh remove deletes a landed branch and reports honestly (B-049)
-  .ai/tasks/TASK-0135-worktree-remove-reports-honestly.md
-- [x] TASK-0136 — State that the resume guard must never search --all (B-045)
-  .ai/tasks/TASK-0136-resume-guard-never-all.md
-- [x] TASK-0137 — Name what loops/ansible-change needs from a Claude Code session (B-046)
-  .ai/tasks/TASK-0137-ansible-change-claude-code-prerequisite.md
-- [x] TASK-0138 — Give role 5 a derived verdict for task-loading actions (B-050)
-  .ai/tasks/TASK-0138-control-flow-fidelity-carve-out.md
-- [x] TASK-0139 — Make the generated banners true in every repository they reach (B-051)
-  .ai/tasks/TASK-0139-banners-true-outside-ai-toolbox.md
-- [x] TASK-0140 — Let the Claude Code binding be pointed at a repository (B-044)
-  .ai/tasks/TASK-0140-claude-code-binding-repo-root.md
-- [x] TASK-0141 — Run both unattended-run binding suites in CI (B-037)
-  .ai/tasks/TASK-0141-ci-runs-the-binding-suites.md
-- [x] TASK-0142 — Gate that a closed backlog row names a closer that agrees (B-038)
-  .ai/tasks/TASK-0142-closed-backlog-rows-name-their-closer.md
-- [x] TASK-0143 — Close B-025 as deferred until a second role wants the term
-  .ai/tasks/TASK-0143-defer-b025.md
-- [x] TASK-0144 — Report the estate's stale ansible.cfg claims to the estate (B-039)
-  .ai/tasks/TASK-0144-report-ansible-cfg-claims-to-the-estate.md
-- [x] TASK-0145 — Gate BACKLOG.md's open-item count against the rows (B-047)
-  .ai/tasks/TASK-0145-gate-the-open-item-count.md
-- [x] TASK-0146 — Give the plan kind a schema, transcribed from the six plans (B-042, part 1)
-  .ai/tasks/TASK-0146-plan-schema-from-the-six-plans.md
-- [x] TASK-0147 — Give the backlog entry a schema that owns its columns (B-042, part 2)
-  .ai/tasks/TASK-0147-backlog-entry-schema.md
-- [x] TASK-0148 — Document intranet TLS on a Windows host in the runbook
-  .ai/tasks/TASK-0148-intranet-tls-on-windows.md
-- [x] TASK-0149 — `vault_secrets.py exec` waits for its command on Windows
-  .ai/tasks/TASK-0149-vault-exec-on-windows.md
-- [x] TASK-0150 — Git is the record: ADR-0033 and one commit per task
-  .ai/tasks/TASK-0150-git-is-the-record.md
-- [x] TASK-0151 — Artifact line budgets and frozen v1 schemas
-  .ai/tasks/TASK-0151-artifact-budgets-and-legacy-schemas.md
-- [x] TASK-0152 — project-migration v2: concise task and ADR schemas
-  .ai/tasks/TASK-0152-project-migration-v2-schemas.md
-- [x] TASK-0153 — Compact the live files to state only
-  .ai/tasks/TASK-0153-compact-live-files.md
-- [x] TASK-0154 — project-workflow 6.0.0: concise schemas, docs and fixtures
-  .ai/tasks/TASK-0154-project-workflow-concise.md
-- [x] TASK-0155 — Declare a project's secrets backend: secrets.conf, init, the local backend
-  .ai/tasks/TASK-0155-secrets-backend-declaration.md
-- [x] TASK-0156 — Provision a Vault project's own KV mount, policies and AppRole
-  .ai/tasks/TASK-0156-vault-project-provision.md
-- [x] TASK-0157 — Set and check GitLab CI variables and GitHub Actions secrets
-  .ai/tasks/TASK-0157-ci-backend-put-check.md
-- [x] TASK-0158 — Let project-migration migrate secrets, and import an old env file
-  .ai/tasks/TASK-0158-migrate-secrets.md
-- [x] TASK-0159 — Rebuild the dashboard at plan approval and on push; ask about Pages
-  .ai/tasks/TASK-0159-dashboard-rebuild-and-publishing-question.md
-- [x] TASK-0160 — `install.sh link` really links on Windows; `--status` reports
-  .ai/tasks/TASK-0160-install-links-really-link-on-windows.md
-- [x] TASK-0161 — `vendor-skill.sh`: per-project skill copies with a manifest
-  .ai/tasks/TASK-0161-vendor-skill-with-a-manifest.md
-- [x] TASK-0163 — Push to `origin` over `https://` with a per-command rewrite
-  .ai/tasks/TASK-0163-push-origin-over-https.md
-- [x] TASK-0165 — Keep the gate's throwaway `git init` out of the real repository
-  .ai/tasks/TASK-0165-gate-init-cannot-reach-the-real-repo.md
-- [x] TASK-0166 — Re-point `origin` to `https://`; amend ADR-0028
-  .ai/tasks/TASK-0166-repoint-origin-to-https.md
-- [x] TASK-0168 — Publish the dashboard to GitLab Pages as well, rebuilt daily by a schedule
-  .ai/tasks/TASK-0168-gitlab-pages-dashboard.md
-- [x] TASK-0169 — Stop reading three retired secrets, so SIGMA-infrastructure can retire them
-  .ai/tasks/TASK-0169-stop-reading-retired-secrets.md
-- [x] TASK-0170 — Let GitLab push the public mirror, so agents push `origin` only
-  .ai/tasks/TASK-0170-gitlab-push-mirror-to-github.md
-- [x] TASK-0171 — Each project declares its work tracker: files, GitLab or GitHub
-  .ai/tasks/TASK-0171-work-tracker-declaration.md
-- [x] TASK-0172 — Run the unattended loop on a forge tracker
-  .ai/tasks/TASK-0172-unattended-run-on-a-forge-tracker.md
-- [x] TASK-0173 — Gate the Agent Skills spec's length and name limits
-  .ai/tasks/TASK-0173-skill-spec-limits.md
-- [x] TASK-0174 — Make the session-start reading chain short and consistent
-  .ai/tasks/TASK-0174-lean-session-start-context.md
-- [x] TASK-0175 — Track unexercised capability as backlog rows, and cap it
-  .ai/tasks/TASK-0175-cap-unexercised-capability.md
-- [x] TASK-0176 — Exercise the GitLab tracker and a forge unattended run for real
-  .ai/tasks/TASK-0176-exercise-the-gitlab-tracker.md
-- [x] TASK-0177 — Merge claude-mods, and develop mods here from now on
-  .ai/tasks/TASK-0177-merge-claude-mods.md
-- [x] TASK-0178 — Design how task-compass reads a project's .ai/ planning
-  .ai/tasks/TASK-0178-compass-reads-ai-planning-design.md
-- [x] TASK-0179 — Compass reads a project's .ai/ planning
-  .ai/tasks/TASK-0179-compass-reads-ai-planning.md
-- [x] TASK-0180 — Compass keeps GOALS.md under .ai/
-  .ai/tasks/TASK-0180-compass-goals-under-ai.md
-- [x] TASK-0181 — agent-watch: a subagents pane and a task-progress band
-  .ai/tasks/TASK-0181-agent-watch-mod.md
-- [x] TASK-0182 — agent-watch 0.2.0: live activity, failure alerts, band interactions
-  .ai/tasks/TASK-0182-agent-watch-live.md
-- [x] TASK-0184 — Harmonize every task into .ai/GOALS.md, and make keeping it current a rule
-  .ai/tasks/TASK-0184-goals-md-harmonized.md
-- [x] TASK-0183 — task-orchestrator: a mod that routes delegated work by model and effort
-  .ai/tasks/TASK-0183-task-orchestrator-mod.md
-- [x] TASK-0185 — switchboard: one mod that turns mods, skills and connectors on and off
-  .ai/tasks/TASK-0185-switchboard-mod.md
-- [x] TASK-0186 — switchboard 0.2.0: every mod in the pane, with On/Off toggle buttons
-  .ai/tasks/TASK-0186-switchboard-toggles.md
-- [x] TASK-0187 — switchboard 0.3.0: a switch-style toggle, skills listed, app servers protected
-  .ai/tasks/TASK-0187-switchboard-switch.md
-- [x] TASK-0188 — SIGMAorbital for mods: one shared design module, its gate, ADR-0043
-  .ai/tasks/TASK-0188-sigmaorbital-mod-design.md
-- [x] TASK-0189 — agent-watch 0.3.0 on SIGMAorbital
-  .ai/tasks/TASK-0189-agent-watch-sigmaorbital.md
-- [x] TASK-0190 — task-compass 0.4.0 on SIGMAorbital
-  .ai/tasks/TASK-0190-task-compass-sigmaorbital.md
-- [x] TASK-0191 — task-orchestrator 0.2.0 on SIGMAorbital
-  .ai/tasks/TASK-0191-task-orchestrator-sigmaorbital.md
-- [x] TASK-0192 — switchboard 0.4.0 on SIGMAorbital
-  .ai/tasks/TASK-0192-switchboard-sigmaorbital.md
-- [x] TASK-0193 — agent-watch 0.4.0: sessions, sub-sessions and their subagents
-  .ai/tasks/TASK-0193-agent-watch-sessions.md
-- [x] TASK-0194 — task-orchestrator 0.3.0: a spawn auto mode refuses can be retried or handed off
-  .ai/tasks/TASK-0194-orchestrator-auto-mode-spawn.md
-- [x] TASK-0195 — agent-watch 0.4.1: a subagent ends on its own turn (B-066)
-  .ai/tasks/TASK-0195-agent-watch-turn-end.md
-- [x] TASK-0196 — task-compass 0.5.0: the Subagents panel follows the orchestrator
-  .ai/tasks/TASK-0196-compass-orchestrator.md
-- [x] TASK-0197 — task-compass 0.6.0: the Sessions tree, from agent-watch
-  .ai/tasks/TASK-0197-compass-sessions-tree.md
-- [x] TASK-0198 — task-compass 0.7.0: a sunburst of the Sessions tree
-  .ai/tasks/TASK-0198-compass-sunburst.md
-- [x] TASK-0199 — task-compass 0.8.0: the Sessions panel as a status sunburst
-  .ai/tasks/TASK-0199-compass-status-sunburst.md
-- [x] TASK-0200 — task-orchestrator 0.4.0: honour a model and effort the person names
-  .ai/tasks/TASK-0200-orchestrator-named-settings.md
-- [x] TASK-0201 — task-orchestrator 0.5.0: session workers (ADR-0050 proposed)
-  .ai/tasks/TASK-0201-orchestrator-session-workers.md
-- [x] TASK-0202 — task-orchestrator 0.4.1: adopt a hand-off by its assignment
-  .ai/tasks/TASK-0202-orchestrator-adopt-by-assignment.md
-- [x] TASK-0203 — task-orchestrator 0.4.2: hand off on the role's profile, the effort on the call
-  .ai/tasks/TASK-0203-orchestrator-handoff-on-role-profile.md
-- [x] TASK-0204 — agent-watch 0.4.3, task-compass 0.8.1: an open session is idle, never done
-  .ai/tasks/TASK-0204-main-session-idle-not-done.md
-- [x] TASK-0206 — agent-watch 0.5.0: it draws the Sessions panel itself
-  .ai/tasks/TASK-0206-agent-watch-sessions-panel.md
-- [x] TASK-0207 — task-compass 0.9.0, agent-watch 0.6.0: Compass's pane carries agent-watch's panel and meter
-  .ai/tasks/TASK-0207-compass-slots-agent-watch.md
-- [x] TASK-0208 — agent-watch 0.7.0: the Sessions panel shows background tasks
-  .ai/tasks/TASK-0208-agent-watch-background-tasks.md
-- [x] TASK-0209 — An allowlisted role runs one shell command per call
-  .ai/tasks/TASK-0209-one-command-per-call.md
-- [x] TASK-0210 — The OpenCode driver records what changed, and parks by namespace
-  .ai/tasks/TASK-0210-driver-records-the-change.md
-- [x] TASK-0211 — task-compass 0.9.1: shorter carousel labels
-  .ai/tasks/TASK-0211-compass-short-nav-labels.md
-- [x] TASK-0212 — task-orchestrator's collect answers within its hook's budget
-  .ai/tasks/TASK-0212-collect-within-budget.md
-- [x] TASK-0214 — task-orchestrator cancels a handed-off task (B-068)
-  .ai/tasks/TASK-0214-cancel-a-handoff.md
-- [x] TASK-0215 — agent-watch 0.8.0: the band follows the run
-  .ai/tasks/TASK-0215-agent-watch-band-follows-the-run.md
-- [x] TASK-0216 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
-  .ai/tasks/TASK-0216-agent-watch-gap-and-kpis.md
-- [x] TASK-0217 — Preview mod panes in a browser; copy mods into a session
-  .ai/tasks/TASK-0217-preview-mod-panes.md
-- [x] TASK-0219 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
-  .ai/tasks/TASK-0219-mod-preview-refined.md
-- [x] TASK-0218 — One workflow for developing mods, with a chart and a skill
-  .ai/tasks/TASK-0218-mod-development-workflow.md
-- [x] TASK-0220 — switchboard 0.5.0: mods and skills grouped by topic, in SIGMAorbital
-  .ai/tasks/TASK-0220-switchboard-topic-groups.md
-- [x] TASK-0222 — install.sh writes the mod list Claude Code loads, and --status reports it
-  .ai/tasks/TASK-0222-install-mod-plugin-dirs.md
-- [x] TASK-0221 — task-compass 0.10.0, agent-watch 0.9.0: drag handles size the Sprints and Sessions panels
-  .ai/tasks/TASK-0221-pane-drag-handles.md
-- [x] TASK-0223 — Every pane panel is resizable, from one shared panel; mods are built from shared parts
-  .ai/tasks/TASK-0223-shared-resizable-panel.md
-- [x] TASK-0226 — task-orchestrator 0.5.2: fewer coordinator tokens
-  .ai/tasks/TASK-0226-orchestrator-token-economy.md
-- [x] TASK-0224 — task-orchestrator 0.5.3: model routing fixes
-  .ai/tasks/TASK-0224-orchestrator-model-routing.md
-- [x] TASK-0225 — task-orchestrator 0.5.4: a misclassification hint, and the session gate's effort from settings
-  .ai/tasks/TASK-0225-orchestrator-open-items.md
-- [x] TASK-0227 — vault-secrets 2.3.1: judge an AppRole file on Windows by its access list
-  .ai/tasks/TASK-0227-vault-approle-on-windows.md
-- [x] TASK-0228 — The OpenCode driver tells a permission denial from another tool error (B-067)
-  .ai/tasks/TASK-0228-driver-tells-denials-from-errors.md
-- [x] TASK-0229 — task-compass's README shows the pane on the desktop and in a terminal (B-064)
-  .ai/tasks/TASK-0229-compass-readme-screenshots.md
-- [x] TASK-0230 — agent-watch: the band above the prompt shows the orchestrator's state, idle included
-- [x] TASK-0231 — task-compass: the Sessions panel shows under the board in either load order
-- [x] TASK-0232 — agent-watch 0.11.1: the STATE cell's glyph and word on one line
-  .ai/tasks/TASK-0232-state-cell-one-line.md
-- [x] TASK-0233 — Per-harness mod layout: mods/<name>/claude/ today, core/ and other harnesses later (ADR-0054)
-  .ai/tasks/TASK-0233-per-harness-mod-layout.md
-- [x] TASK-0234 — task-orchestrator 0.5.5: collect always answers, and about the right tasks
-  .ai/tasks/TASK-0234-orchestrator-collect-always-answers.md
-- [x] TASK-0235 — The repository gate passes on a Windows host
-  .ai/tasks/TASK-0235-gate-passes-on-windows.md
-- [x] TASK-0236 — task-orchestrator 0.5.6: collect waits for sessions only
-  .ai/tasks/TASK-0236-orchestrator-collect-no-wait.md
-- [x] TASK-0237 — The merged gate checks from origin pass on a Windows host
-  .ai/tasks/TASK-0237-remote-gate-checks-on-windows.md
-- [x] TASK-0238 — agent-watch 0.11.2, task-orchestrator 0.5.7: the rows survive a forced plugin reload
-  .ai/tasks/TASK-0238-rows-survive-forced-reload.md
-- [x] TASK-0239 — task-orchestrator 0.5.8: ledger writes race-free, worker text framed, state scoped, the hand-off a first-class state
-  .ai/tasks/TASK-0239-orchestrator-ledger-races-and-trust.md
-- [x] TASK-0249 — agent-watch 0.11.3, 0.12.0: PowerShell background shells, and step progress of a background run
-  .ai/tasks/TASK-0249-background-powershell-and-step-progress.md
-- [x] TASK-0250 — agent-watch 0.12.1: each session keeps its rows under its own store key
-  .ai/tasks/TASK-0250-agent-watch-rows-per-session.md
-- [x] TASK-0240 — Every mod takes a theme argument: dark, light or auto
-  .ai/tasks/TASK-0240-mods-theme-argument.md
-- [x] TASK-0241 — agent-watch and task-compass read cleanly in Daylight, as SIGMAorbital specifies
-  .ai/tasks/TASK-0241-daylight-readability.md
-- [x] TASK-0252 — Pressable overlays no longer paint the desktop's `…` over their words
-  .ai/tasks/TASK-0252-pressable-overlay-ellipsis.md
+## S011 — Claude-centric alignment
+Goal: Claude Code becomes the reference harness, with generated ports; see .ai/archive/sprints/SPRINT-S11-claude-alignment.md
+- [x] S011.T028 — Open sprint S11 and add Phase 11 to the roadmap
+  .ai/tasks/S011.T028_OpenSprintS11.md
+- [x] S011.T008 — Marketplace manifest over the monorepo (P0.1)
+  .ai/tasks/S011.T008_MarketplaceManifest.md
+- [x] S011.T009 — Anthropic provider in the eval suite (P0.2)
+  .ai/tasks/S011.T009_ClaudeProviderEvals.md
+- [x] S011.T010 — Resolve model tiers to Claude aliases (P0.3)
+  .ai/tasks/S011.T010_ModelTierTable.md
+- [x] S011.T011 — MCP hygiene: gates annotations and lock drift (P0.4)
+  .ai/tasks/S011.T011_McpAnnotationsAndLockDrift.md
+- [x] S011.T012 — Fix stale loop text (P0.5)
+  .ai/tasks/S011.T012_StaleLoopText.md
+- [?] S011.T031 — Fix the first live CI runs of the eval and tool-lock jobs
+  .ai/tasks/S011.T031_FirstLiveCiFixes.md
+- [x] S011.T013 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
+  .ai/tasks/S011.T013_RoleGuard.md
+- [x] S011.T014 — Claude Code plugins per component kind (P1.2)
+  .ai/tasks/S011.T014_ClaudeCodePlugins.md
+- [?] S011.T015 — Loops as invocable skills (P1.3)
+  .ai/tasks/S011.T015_LoopsAsSkills.md
+- [x] S011.T016 — Claude skill controls in the schema (P1.4)
+  .ai/tasks/S011.T016_ClaudeSkillControls.md
+- [x] S011.T017 — CLAUDE.md layer over AGENTS.md (P1.5)
+  .ai/tasks/S011.T017_ClaudeMdLayer.md
+- [?] S011.T018 — Ship permissions and sandbox settings (P1.6)
+  .ai/tasks/S011.T018_PermissionsAndSandbox.md
+- [x] S011.T019 — Stop hook runs a fast check (P1.7)
+  .ai/tasks/S011.T019_StopHookFastCheck.md
+- [?] S011.T020 — Grow evals to 20-50 tasks with trials (P1.8)
+  .ai/tasks/S011.T020_EvalsTrialsAndGrowth.md
+- [?] S011.T021 — Claude Code OpenTelemetry (P1.9)
+  .ai/tasks/S011.T021_ClaudeCodeOtel.md
+- [x] S011.T022 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
+  .ai/tasks/S011.T022_ClaudeReferenceProfile.md
+- [?] S011.T023 — Codex port completion (P2.2)
+  .ai/tasks/S011.T023_CodexPortCompletion.md
+- [?] S011.T024 — Long-running harness alignment (P2.3)
+  .ai/tasks/S011.T024_LongRunHarness.md
+- [?] S011.T025 — Signed, versioned releases (P2.4)
+  .ai/tasks/S011.T025_SignedVersionedReleases.md
+- [?] S011.T026 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
+  .ai/tasks/S011.T026_AgentSdkRunner.md
+- [?] S011.T027 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
+  .ai/tasks/S011.T027_GatesHttpTransport.md
+- [?] S011.T001 — switchboard 0.8.0: each repo mod's loaded version beside its manifest (B-071)
+  .ai/tasks/S011.T001_SwitchboardLoadedVersions.md
+- [?] S011.T002 — task-compass 0.12.3: an OpenCode port on a shared core/ (B-069)
+  .ai/tasks/S011.T002_TaskCompassOpencodePort.md
+- [?] S011.T003 — task-compass for Codex: a plugin bundle on core/ (B-070)
+  .ai/tasks/S011.T003_TaskCompassCodexPort.md
+- [?] S011.T004 — Toggles draw SIGMAorbital's square switch on a desktop
+  .ai/tasks/S011.T004_DesktopToggleSwitch.md
+- [?] S011.T005 — switchboard 0.9.0: the pane follows the design of Compass and Agents
+  .ai/tasks/S011.T005_SwitchboardDesignParity.md
+- [?] S011.T006 — task-orchestrator 0.6.0: a worker stopped at its turn cap is reported, resumable, and given more turns
+  .ai/tasks/S011.T006_OrchestratorTurnCap.md
+- [?] S011.T007 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
+  .ai/tasks/S011.T007_OrchestratorReviewFixes.md
+- [?] S011.T029 — agent-watch 0.13.5: the band and the Sessions pane agree on steps
+  .ai/tasks/S011.T029_AgentWatchStepsAgree.md
+  branch: agent/steps-mismatch-20eb29
+- [?] S011.T030 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
+  .ai/tasks/S011.T030_OrchestratorResumeSelfStopped.md
+- [?] S011.T032 — task-orchestrator 0.7.2: writers run through the hand-off, so the write fence sees them
+  .ai/tasks/S011.T032_OrchestratorFenceLive.md
+- [ ] S011.T033 — task-orchestrator: a writer is spawned, not handed off, so the fence never sees it
+  .ai/tasks/S011.T033_OrchestratorWriterSpawned.md
+- [?] S011.T034 — Planning skills on a forge: a state file stays, and a tag marks the removed history
+  .ai/tasks/S011.T034_ForgeStateAndHistoryMarker.md
 
-- [x] TASK-0259 — Session-issued Vault project tokens and native keychain daily session
-  .ai/tasks/TASK-0259-vault-session-project-tokens.md
+## S012 — Post-S4, no sprint open
+- [x] S012.T001 — Record the LM Studio UI verification; fix the WORKSPACE_ROOT placeholder trap
+  .ai/tasks/S012.T001_LmStudioUiVerified.md
+- [x] S012.T002 — Close B-001; fix the registry content defects found while scoping it
+  .ai/tasks/S012.T002_CloseB001RegistryIntegrity.md
+- [x] S012.T003 — Retract the false default-branch mismatch claim
+  .ai/tasks/S012.T003_RetractDefaultBranchClaim.md
+
+## S013 — Post-S5, no sprint open
+- [x] S013.T001 — Unify `.ai/decisions/` filenames on the `NNNN-*` scheme
+  .ai/tasks/S013.T001_UnifyDecisionFilenames.md
+- [x] S013.T002 — Close B-009: the two skills scaffold different frameworks, by design
+  .ai/tasks/S013.T002_TwoGovernanceFrameworks.md
+
+## S014 — Post-S8, no sprint open
+- [x] S014.T001 — Sweep stale second-hand claims: the gate's cost and the drifted Ansible toolchain
+  .ai/tasks/S014.T001_StaleSecondHandClaimsSweep.md
+- [x] S014.T002 — One worktree per agent session, and the exec bits that make a worktree work
+  .ai/tasks/S014.T002_WorktreePerSessionIsolation.md
+- [x] S014.T003 — A `test-allowlist` capability term, so `qa-test` can run what it claims to run
+  .ai/tasks/S014.T003_TestAllowlistVocabularyTerm.md
+- [x] S014.T004 — Deploy skills to Bionic's project target, and leave its global target alone
+  .ai/tasks/S014.T004_BionicProjectSkillsTarget.md
+- [x] S014.T005 — When an MCP server owes a per-client wiring section, and when it does not
+  .ai/tasks/S014.T005_WiringSectionRule.md
+
+## S015 — Post-S9, no sprint open
+- [x] S015.T001 — One guard pair for both command allowlists, and a correction to TASK-0071
+  .ai/tasks/S015.T001_CommandAllowlistEntryGuards.md
+- [x] S015.T002 — A delegate must exist for every client its caller is emitted for
+  .ai/tasks/S015.T002_DelegatesToCrossClientGate.md
+
+## S016 — Post-S10, no sprint open
+- [x] S016.T001 — B-035: embed the adjudicator's decision standard in its prompt
+  .ai/tasks/S016.T001_EmbedTheDecisionStandard.md
+- [x] S016.T002 — Settle `worktree-only`'s Claude Code emission (ADR-0018 clause 7)
+  .ai/tasks/S016.T002_WorktreeOnlyClaudeCodeEmission.md
+- [x] S016.T003 — Re-count the `ansible-core` version claims, then act on the count
+  .ai/tasks/S016.T003_AnsibleCoreVersionRecount.md
+- [x] S016.T004 — Give artifact shape one owner, and generate the skeleton instead of copying a template
+  .ai/tasks/S016.T004_ArtifactSchemaOneOwner.md
+- [x] S016.T005 — Migrate the repository onto the artifact schemas
+  .ai/tasks/S016.T005_MigrateRepoOntoSchemas.md
+- [x] S016.T007 — The Claude Code binding's own consistency check fails, and no gate noticed
+  .ai/tasks/S016.T007_ClaudeCodeBindingSuiteIsRed.md
+- [x] S016.T013 — Repair four stale claims in the planning ledger
+  .ai/tasks/S016.T013_RepairThePlanningLedger.md
+- [x] S016.T006 — Can a worktree-isolated Claude Code subagent reach the main checkout by absolute path?
+  .ai/tasks/S016.T006_WorktreeAbsolutePathReach.md
+- [x] S016.T008 — Run the Claude Code unattended binding against a real run, once
+  .ai/tasks/S016.T008_ClaudeCodeBindingFirstRealRun.md
+- [x] S016.T009 — Test ADR-0022's two untested falsifiers, F7 and F9
+  .ai/tasks/S016.T009_Adr0022F7AndF9.md
+- [x] S016.T010 — Re-run ADR-0014's "53 rules / 0 violations" under ansible-core 2.21.4
+  .ai/tasks/S016.T010_RecountAdr0014LintFigure.md
+- [x] S016.T011 — Exercise skills/ansible-ops against the live estate, once
+  .ai/tasks/S016.T011_ExerciseAnsibleOpsLive.md
+- [x] S016.T012 — Make the artifact generator reachable from project-migration alone
+  .ai/tasks/S016.T012_ArtifactGeneratorReachableFromMigration.md
+- [x] S016.T014 — Generate the scaffold's planning templates from the schemas that own them
+  .ai/tasks/S016.T014_ScaffoldTemplatesFromSchemas.md
+- [x] S016.T015 — Settle whether a migrated repository can regenerate its templates
+  .ai/tasks/S016.T015_MigratedRepoCannotRegenerate.md
+- [x] S016.T016 — The evidence line carries no figure, so the closer cannot copy one
+  .ai/tasks/S016.T016_EvidenceLineCarriesNoFigure.md
+- [x] S016.T017 — An agile dashboard for the .ai governance layer
+  .ai/tasks/S016.T017_ProjectWorkflowDashboard.md
+- [x] S016.T018 — Publish the dashboard from CI to GitHub Pages
+  .ai/tasks/S016.T018_PublishTheDashboardFromCi.md
+- [x] S016.T019 — Tell someone when CI fails
+  .ai/tasks/S016.T019_TellSomeoneWhenCiFails.md
+- [x] S016.T020 — Retire this repo's dashboard generator for the vendored canonical one
+  .ai/tasks/S016.T020_OneDashboardVendoredFromSource.md
+- [x] S016.T021 — Make the intranet GitLab the primary remote
+  .ai/tasks/S016.T021_MakeGitlabThePrimaryRemote.md
+- [x] S016.T022 — Ship GitHub Pages and GitLab Pages as optional dashboard destinations
+  .ai/tasks/S016.T022_DashboardPublishingDestinations.md
+- [x] S016.T023 — Record why only CI builds the published dashboard
+  .ai/tasks/S016.T023_CiBuildsThePublishedDashboard.md
+- [x] S016.T024 — Rebuild the published dashboard daily from a separate dispatcher
+  .ai/tasks/S016.T024_DailyDashboardDispatcher.md
+- [x] S016.T025 — Close the CI alert only when no watched workflow is red
+  .ai/tasks/S016.T025_CiAlertClosesOnlyWhenNothingIsRed.md
+- [x] S016.T026 — Source secrets from the intranet Vault; keep the environment as the interface
+  .ai/tasks/S016.T026_SecretsFromVault.md
+- [x] S016.T027 — Give ai-toolbox an AppRole identity; read several secret maps
+  .ai/tasks/S016.T027_ApproleIdentity.md
+- [x] S016.T028 — Ignore every .env variant, not only .env (B-053)
+  .ai/tasks/S016.T028_IgnoreEveryEnvFile.md
+- [x] S016.T029 — The estate's ansible-vault password comes from Vault (B-052)
+  .ai/tasks/S016.T029_VaultPasswordFromVault.md
+- [x] S016.T030 — worktree.sh remove deletes a landed branch and reports honestly (B-049)
+  .ai/tasks/S016.T030_WorktreeRemoveReportsHonestly.md
+- [x] S016.T031 — State that the resume guard must never search --all (B-045)
+  .ai/tasks/S016.T031_ResumeGuardNeverAll.md
+- [x] S016.T032 — Name what loops/ansible-change needs from a Claude Code session (B-046)
+  .ai/tasks/S016.T032_AnsibleChangeClaudeCodePrerequisite.md
+- [x] S016.T033 — Give role 5 a derived verdict for task-loading actions (B-050)
+  .ai/tasks/S016.T033_ControlFlowFidelityCarveOut.md
+- [x] S016.T034 — Make the generated banners true in every repository they reach (B-051)
+  .ai/tasks/S016.T034_BannersTrueOutsideAiToolbox.md
+- [x] S016.T035 — Let the Claude Code binding be pointed at a repository (B-044)
+  .ai/tasks/S016.T035_ClaudeCodeBindingRepoRoot.md
+- [x] S016.T036 — Run both unattended-run binding suites in CI (B-037)
+  .ai/tasks/S016.T036_CiRunsTheBindingSuites.md
+- [x] S016.T037 — Gate that a closed backlog row names a closer that agrees (B-038)
+  .ai/tasks/S016.T037_ClosedBacklogRowsNameTheirCloser.md
+- [x] S016.T038 — Close B-025 as deferred until a second role wants the term
+  .ai/tasks/S016.T038_DeferB025.md
+- [x] S016.T039 — Report the estate's stale ansible.cfg claims to the estate (B-039)
+  .ai/tasks/S016.T039_ReportAnsibleCfgClaimsToTheEstate.md
+- [x] S016.T040 — Gate BACKLOG.md's open-item count against the rows (B-047)
+  .ai/tasks/S016.T040_GateTheOpenItemCount.md
+- [x] S016.T041 — Give the plan kind a schema, transcribed from the six plans (B-042, part 1)
+  .ai/tasks/S016.T041_PlanSchemaFromTheSixPlans.md
+- [x] S016.T042 — Give the backlog entry a schema that owns its columns (B-042, part 2)
+  .ai/tasks/S016.T042_BacklogEntrySchema.md
+- [x] S016.T043 — Document intranet TLS on a Windows host in the runbook
+  .ai/tasks/S016.T043_IntranetTlsOnWindows.md
+- [x] S016.T044 — `vault_secrets.py exec` waits for its command on Windows
+  .ai/tasks/S016.T044_VaultExecOnWindows.md
+- [x] S016.T045 — Git is the record: ADR-0033 and one commit per task
+  .ai/tasks/S016.T045_GitIsTheRecord.md
+- [x] S016.T046 — Artifact line budgets and frozen v1 schemas
+  .ai/tasks/S016.T046_ArtifactBudgetsAndLegacySchemas.md
+- [x] S016.T047 — project-migration v2: concise task and ADR schemas
+  .ai/tasks/S016.T047_ProjectMigrationV2Schemas.md
+- [x] S016.T048 — Compact the live files to state only
+  .ai/tasks/S016.T048_CompactLiveFiles.md
+- [x] S016.T049 — project-workflow 6.0.0: concise schemas, docs and fixtures
+  .ai/tasks/S016.T049_ProjectWorkflowConcise.md
+- [x] S016.T050 — Declare a project's secrets backend: secrets.conf, init, the local backend
+  .ai/tasks/S016.T050_SecretsBackendDeclaration.md
+- [x] S016.T051 — Provision a Vault project's own KV mount, policies and AppRole
+  .ai/tasks/S016.T051_VaultProjectProvision.md
+- [x] S016.T052 — Set and check GitLab CI variables and GitHub Actions secrets
+  .ai/tasks/S016.T052_CiBackendPutCheck.md
+- [x] S016.T053 — Let project-migration migrate secrets, and import an old env file
+  .ai/tasks/S016.T053_MigrateSecrets.md
+- [x] S016.T054 — Rebuild the dashboard at plan approval and on push; ask about Pages
+  .ai/tasks/S016.T054_DashboardRebuildAndPublishingQuestion.md
+- [x] S016.T055 — `install.sh link` really links on Windows; `--status` reports
+  .ai/tasks/S016.T055_InstallLinksReallyLinkOnWindows.md
+- [x] S016.T056 — `vendor-skill.sh`: per-project skill copies with a manifest
+  .ai/tasks/S016.T056_VendorSkillWithAManifest.md
+- [x] S016.T057 — Keep internal host names out of tracked files
+  .ai/tasks/S016.T057_PrivateNamesOutOfTrackedFiles.md
+- [x] S016.T058 — Push to `origin` over `https://` with a per-command rewrite
+  .ai/tasks/S016.T058_PushOriginOverHttps.md
+- [x] S016.T059 — Selective install: choose which components `install.sh` deploys
+  .ai/tasks/S016.T059_SelectiveInstall.md
+- [x] S016.T060 — Keep the gate's throwaway `git init` out of the real repository
+  .ai/tasks/S016.T060_GateInitCannotReachTheRealRepo.md
+- [x] S016.T061 — Re-point `origin` to `https://`; amend ADR-0028
+  .ai/tasks/S016.T061_RepointOriginToHttps.md
+- [x] S016.T062 — `repo-inventory` skill: every git repository under a root, and what is not pushed
+  .ai/tasks/S016.T062_RepoInventorySkill.md
+- [x] S016.T063 — Publish the dashboard to GitLab Pages as well, rebuilt daily by a schedule
+  .ai/tasks/S016.T063_GitlabPagesDashboard.md
+- [x] S016.T064 — Stop reading three retired secrets, so SIGMA-infrastructure can retire them
+  .ai/tasks/S016.T064_StopReadingRetiredSecrets.md
+- [x] S016.T065 — Let GitLab push the public mirror, so agents push `origin` only
+  .ai/tasks/S016.T065_GitlabPushMirrorToGithub.md
+- [x] S016.T066 — Each project declares its work tracker: files, GitLab or GitHub
+  .ai/tasks/S016.T066_WorkTrackerDeclaration.md
+- [x] S016.T067 — Run the unattended loop on a forge tracker
+  .ai/tasks/S016.T067_UnattendedRunOnAForgeTracker.md
+- [x] S016.T068 — Gate the Agent Skills spec's length and name limits
+  .ai/tasks/S016.T068_SkillSpecLimits.md
+- [x] S016.T069 — Make the session-start reading chain short and consistent
+  .ai/tasks/S016.T069_LeanSessionStartContext.md
+- [x] S016.T070 — Track unexercised capability as backlog rows, and cap it
+  .ai/tasks/S016.T070_CapUnexercisedCapability.md
+- [x] S016.T071 — Exercise the GitLab tracker and a forge unattended run for real
+  .ai/tasks/S016.T071_ExerciseTheGitlabTracker.md
+- [x] S016.T072 — Merge claude-mods, and develop mods here from now on
+  .ai/tasks/S016.T072_MergeClaudeMods.md
+- [x] S016.T073 — Design how task-compass reads a project's .ai/ planning
+  .ai/tasks/S016.T073_CompassReadsAiPlanningDesign.md
+- [x] S016.T074 — Compass reads a project's .ai/ planning
+  .ai/tasks/S016.T074_CompassReadsAiPlanning.md
+- [x] S016.T075 — Compass keeps GOALS.md under .ai/
+  .ai/tasks/S016.T075_CompassGoalsUnderAi.md
+- [x] S016.T076 — agent-watch: a subagents pane and a task-progress band
+  .ai/tasks/S016.T076_AgentWatchMod.md
+- [x] S016.T077 — agent-watch 0.2.0: live activity, failure alerts, band interactions
+  .ai/tasks/S016.T077_AgentWatchLive.md
+- [x] S016.T079 — Harmonize every task into .ai/GOALS.md, and make keeping it current a rule
+  .ai/tasks/S016.T079_GoalsMdHarmonized.md
+- [x] S016.T078 — task-orchestrator: a mod that routes delegated work by model and effort
+  .ai/tasks/S016.T078_TaskOrchestratorMod.md
+- [x] S016.T080 — switchboard: one mod that turns mods, skills and connectors on and off
+  .ai/tasks/S016.T080_SwitchboardMod.md
+- [x] S016.T081 — switchboard 0.2.0: every mod in the pane, with On/Off toggle buttons
+  .ai/tasks/S016.T081_SwitchboardToggles.md
+- [x] S016.T082 — switchboard 0.3.0: a switch-style toggle, skills listed, app servers protected
+  .ai/tasks/S016.T082_SwitchboardSwitch.md
+- [x] S016.T083 — SIGMAorbital for mods: one shared design module, its gate, ADR-0043
+  .ai/tasks/S016.T083_SigmaorbitalModDesign.md
+- [x] S016.T084 — agent-watch 0.3.0 on SIGMAorbital
+  .ai/tasks/S016.T084_AgentWatchSigmaorbital.md
+- [x] S016.T085 — task-compass 0.4.0 on SIGMAorbital
+  .ai/tasks/S016.T085_TaskCompassSigmaorbital.md
+- [x] S016.T086 — task-orchestrator 0.2.0 on SIGMAorbital
+  .ai/tasks/S016.T086_TaskOrchestratorSigmaorbital.md
+- [x] S016.T087 — switchboard 0.4.0 on SIGMAorbital
+  .ai/tasks/S016.T087_SwitchboardSigmaorbital.md
+- [x] S016.T088 — agent-watch 0.4.0: sessions, sub-sessions and their subagents
+  .ai/tasks/S016.T088_AgentWatchSessions.md
+- [x] S016.T089 — task-orchestrator 0.3.0: a spawn auto mode refuses can be retried or handed off
+  .ai/tasks/S016.T089_OrchestratorAutoModeSpawn.md
+- [x] S016.T090 — agent-watch 0.4.1: a subagent ends on its own turn (B-066)
+  .ai/tasks/S016.T090_AgentWatchTurnEnd.md
+- [x] S016.T091 — task-compass 0.5.0: the Subagents panel follows the orchestrator
+  .ai/tasks/S016.T091_CompassOrchestrator.md
+- [x] S016.T092 — task-compass 0.6.0: the Sessions tree, from agent-watch
+  .ai/tasks/S016.T092_CompassSessionsTree.md
+- [x] S016.T093 — task-compass 0.7.0: a sunburst of the Sessions tree
+  .ai/tasks/S016.T093_CompassSunburst.md
+- [x] S016.T094 — task-compass 0.8.0: the Sessions panel as a status sunburst
+  .ai/tasks/S016.T094_CompassStatusSunburst.md
+- [x] S016.T095 — task-orchestrator 0.4.0: honour a model and effort the person names
+  .ai/tasks/S016.T095_OrchestratorNamedSettings.md
+- [x] S016.T096 — task-orchestrator 0.5.0: session workers (ADR-0050 proposed)
+  .ai/tasks/S016.T096_OrchestratorSessionWorkers.md
+- [x] S016.T097 — task-orchestrator 0.4.1: adopt a hand-off by its assignment
+  .ai/tasks/S016.T097_OrchestratorAdoptByAssignment.md
+- [x] S016.T098 — task-orchestrator 0.4.2: hand off on the role's profile, the effort on the call
+  .ai/tasks/S016.T098_OrchestratorHandoffOnRoleProfile.md
+- [x] S016.T099 — agent-watch 0.4.3, task-compass 0.8.1: an open session is idle, never done
+  .ai/tasks/S016.T099_MainSessionIdleNotDone.md
+- [x] S016.T100 — agent-watch 0.5.0: it draws the Sessions panel itself
+  .ai/tasks/S016.T100_AgentWatchSessionsPanel.md
+- [x] S016.T101 — task-compass 0.9.0, agent-watch 0.6.0: Compass's pane carries agent-watch's panel and meter
+  .ai/tasks/S016.T101_CompassSlotsAgentWatch.md
+- [x] S016.T102 — agent-watch 0.7.0: the Sessions panel shows background tasks
+  .ai/tasks/S016.T102_AgentWatchBackgroundTasks.md
+- [x] S016.T103 — An allowlisted role runs one shell command per call
+  .ai/tasks/S016.T103_OneCommandPerCall.md
+- [x] S016.T104 — The OpenCode driver records what changed, and parks by namespace
+  .ai/tasks/S016.T104_DriverRecordsTheChange.md
+- [x] S016.T105 — task-compass 0.9.1: shorter carousel labels
+  .ai/tasks/S016.T105_CompassShortNavLabels.md
+- [x] S016.T106 — task-orchestrator's collect answers within its hook's budget
+  .ai/tasks/S016.T106_CollectWithinBudget.md
+- [x] S016.T107 — task-orchestrator cancels a handed-off task (B-068)
+  .ai/tasks/S016.T107_CancelAHandoff.md
+- [x] S016.T108 — agent-watch 0.8.0: the band follows the run
+  .ai/tasks/S016.T108_AgentWatchBandFollowsTheRun.md
+- [x] S016.T109 — agent-watch 0.8.1: a gap under the board, the KPI row kept on the desktop
+  .ai/tasks/S016.T109_AgentWatchGapAndKpis.md
+- [x] S016.T110 — Preview mod panes in a browser; copy mods into a session
+  .ai/tasks/S016.T110_PreviewModPanes.md
+- [x] S016.T112 — Mod preview 2: real surfaces, presses and sizes, snapshots, shared fixtures
+  .ai/tasks/S016.T112_ModPreviewRefined.md
+- [x] S016.T111 — One workflow for developing mods, with a chart and a skill
+  .ai/tasks/S016.T111_ModDevelopmentWorkflow.md
+- [x] S016.T113 — switchboard 0.5.0: mods and skills grouped by topic, in SIGMAorbital
+  .ai/tasks/S016.T113_SwitchboardTopicGroups.md
+- [x] S016.T115 — install.sh writes the mod list Claude Code loads, and --status reports it
+  .ai/tasks/S016.T115_InstallModPluginDirs.md
+- [x] S016.T114 — task-compass 0.10.0, agent-watch 0.9.0: drag handles size the Sprints and Sessions panels
+  .ai/tasks/S016.T114_PaneDragHandles.md
+- [x] S016.T116 — Every pane panel is resizable, from one shared panel; mods are built from shared parts
+  .ai/tasks/S016.T116_SharedResizablePanel.md
+- [x] S016.T119 — task-orchestrator 0.5.2: fewer coordinator tokens
+  .ai/tasks/S016.T119_OrchestratorTokenEconomy.md
+- [x] S016.T117 — task-orchestrator 0.5.3: model routing fixes
+  .ai/tasks/S016.T117_OrchestratorModelRouting.md
+- [x] S016.T118 — task-orchestrator 0.5.4: a misclassification hint, and the session gate's effort from settings
+  .ai/tasks/S016.T118_OrchestratorOpenItems.md
+- [x] S016.T120 — vault-secrets 2.3.1: judge an AppRole file on Windows by its access list
+  .ai/tasks/S016.T120_VaultApproleOnWindows.md
+- [x] S016.T121 — The OpenCode driver tells a permission denial from another tool error (B-067)
+  .ai/tasks/S016.T121_DriverTellsDenialsFromErrors.md
+- [x] S016.T122 — task-compass's README shows the pane on the desktop and in a terminal (B-064)
+  .ai/tasks/S016.T122_CompassReadmeScreenshots.md
+- [x] S016.T123 — agent-watch: the band above the prompt shows the orchestrator's state, idle included
+- [x] S016.T124 — task-compass: the Sessions panel shows under the board in either load order
+- [x] S016.T125 — agent-watch 0.11.1: the STATE cell's glyph and word on one line
+  .ai/tasks/S016.T125_StateCellOneLine.md
+- [x] S016.T126 — Per-harness mod layout: mods/<name>/claude/ today, core/ and other harnesses later (ADR-0054)
+  .ai/tasks/S016.T126_PerHarnessModLayout.md
+- [x] S016.T127 — task-orchestrator 0.5.5: collect always answers, and about the right tasks
+  .ai/tasks/S016.T127_OrchestratorCollectAlwaysAnswers.md
+- [x] S016.T128 — The repository gate passes on a Windows host
+  .ai/tasks/S016.T128_GatePassesOnWindows.md
+- [x] S016.T129 — task-orchestrator 0.5.6: collect waits for sessions only
+  .ai/tasks/S016.T129_OrchestratorCollectNoWait.md
+- [x] S016.T130 — The merged gate checks from origin pass on a Windows host
+  .ai/tasks/S016.T130_RemoteGateChecksOnWindows.md
+- [x] S016.T131 — agent-watch 0.11.2, task-orchestrator 0.5.7: the rows survive a forced plugin reload
+  .ai/tasks/S016.T131_RowsSurviveForcedReload.md
+- [x] S016.T132 — task-orchestrator 0.5.8: ledger writes race-free, worker text framed, state scoped, the hand-off a first-class state
+  .ai/tasks/S016.T132_OrchestratorLedgerRacesAndTrust.md
+- [x] S016.T135 — agent-watch 0.11.3, 0.12.0: PowerShell background shells, and step progress of a background run
+  .ai/tasks/S016.T135_BackgroundPowershellAndStepProgress.md
+- [x] S016.T136 — agent-watch 0.12.1: each session keeps its rows under its own store key
+  .ai/tasks/S016.T136_AgentWatchRowsPerSession.md
+- [x] S016.T133 — Every mod takes a theme argument: dark, light or auto
+  .ai/tasks/S016.T133_ModsThemeArgument.md
+- [x] S016.T134 — agent-watch and task-compass read cleanly in Daylight, as SIGMAorbital specifies
+  .ai/tasks/S016.T134_DaylightReadability.md
+- [x] S016.T137 — Pressable overlays no longer paint the desktop's `…` over their words
+  .ai/tasks/S016.T137_PressableOverlayEllipsis.md
+- [x] S016.T139 — Session-issued Vault project tokens and native keychain daily session
+  .ai/tasks/S016.T139_VaultSessionProjectTokens.md
+- [x] S016.T138 — The mod preview's sidebar hides and shows from a button
+  .ai/tasks/S016.T138_PreviewSidebarToggle.md
+- [x] S016.T140 — Session branches are named by task, and Claude Code's worktrees follow the sibling rule (B-061)
+  .ai/tasks/S016.T140_TaskBranchesAndClaudeWorktrees.md
+  branch: agent/TASK-0261
+- [x] S016.T141 — Scripts are checked out with LF, so a Linux bash on a Windows clone runs them
+  .ai/tasks/S016.T141_ScriptsCheckedOutLf.md
+  branch: agent/TASK-0262
+- [x] S016.T142 — Landing docs push origin only, and briefs use the schema's review status
+  .ai/tasks/S016.T142_LandingAndStatusDrift.md
+
+## S017 — One planning convention
+Goal: Both planning skills use one convention, project-workflow's numbered layout; see .ai/decisions/ADR-0066-one-planning-convention.md
+- [?] S017.T001 — Record one planning convention in ADR-0066, superseding ADR-0013
+  .ai/tasks/S017.T001_OnePlanningConventionAdr.md
+- [?] S017.T002 — The dashboard is owned here and reads ADR-NNNN file names and the id map
+  .ai/tasks/S017.T002_DashboardAdrPrefixUpstream.md
+- [!] S017.T003 — project-workflow 8.0.0: ADR-NNNN file names, the hybrid brief, and current-state and session schemas
+  .ai/tasks/S017.T003_WorkflowAdrPrefixAndSchemas.md
+- [?] S017.T004 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
+  .ai/tasks/S017.T004_MigrateLayoutTool.md
+- [?] S017.T005 — The gate and scripts accept both layouts during the switch
+  .ai/tasks/S017.T005_GateAcceptsBothLayouts.md
+- [?] S017.T006 — Move ai-toolbox onto the one convention in one commit
+  .ai/tasks/S017.T006_RenameAiToolbox.md
+- [ ] S017.T007 — Drop the old layout's support from the gate, and update AGENTS.md and the docs
+  .ai/tasks/S017.T007_DropOldLayoutSupport.md
+- [ ] S017.T008 — project-migration 6.0.0 retrofits repositories into the one convention
+  .ai/tasks/S017.T008_MigrationRetarget.md
+- [ ] S017.T009 — Check the dashboard and Compass against the id map after the switch
+  .ai/tasks/S017.T009_VerifyDashboardAndCompass.md
 
 ## Backlog — open items
-Goal: Waiting on the human or on a real run; see .ai/planning/BACKLOG.md
-- B-057 Unexercised: secrets `provision`, and `put` to GitLab and GitHub (`TASK-0156`, `TASK-0157`)
-  .ai/planning/BACKLOG.md
-- B-058 Unexercised: an `ansible-ops` guest-level change behind a real PVE snapshot (`TASK-0116`)
-  .ai/planning/BACKLOG.md
+Goal: Waiting on the human or on a real run; see .ai/35.AD_HOC_TASKS.md
+- B-057 Unexercised: secrets `provision`, and `put` to GitLab and GitHub (`S016.T051`, `S016.T052`)
+  .ai/35.AD_HOC_TASKS.md
+- B-058 Unexercised: an `ansible-ops` guest-level change behind a real PVE snapshot (`S016.T011`)
+  .ai/35.AD_HOC_TASKS.md
 - B-062 asset-management's vendored `project-workflow` predates `vendor-skill.sh` and is behind 7.1.2
-  .ai/planning/BACKLOG.md
+  .ai/35.AD_HOC_TASKS.md
 - B-063 Estate repository work waiting on the human: LDAP config drift, estate `#96` (both pushes landed)
-  .ai/planning/BACKLOG.md
-- [?] TASK-0254 — task-compass 0.12.3: an OpenCode port on a shared core/ (B-069)
-  .ai/tasks/TASK-0254-task-compass-opencode-port.md
-- [?] TASK-0255 — task-compass for Codex: a plugin bundle on core/ (B-070)
-  .ai/tasks/TASK-0255-task-compass-codex-port.md
-- [?] TASK-0256 — Toggles draw SIGMAorbital's square switch on a desktop
-  .ai/tasks/TASK-0256-desktop-toggle-switch.md
-- [?] TASK-0257 — switchboard 0.9.0: the pane follows the design of Compass and Agents
-  .ai/tasks/TASK-0257-switchboard-design-parity.md
-- [x] TASK-0258 — The mod preview's sidebar hides and shows from a button
-  .ai/tasks/TASK-0258-preview-sidebar-toggle.md
-- [?] TASK-0260 — task-orchestrator 0.6.0: a worker stopped at its turn cap is reported, resumable, and given more turns
-  .ai/tasks/TASK-0260-orchestrator-turn-cap.md
-- [?] TASK-0253 — switchboard 0.8.0: each repo mod's loaded version beside its manifest (B-071)
-  .ai/tasks/TASK-0253-switchboard-loaded-versions.md
+  .ai/35.AD_HOC_TASKS.md
 - B-072 Mods cannot follow the desktop app's light/dark switch: no signal reaches a hook
-  .ai/planning/BACKLOG.md
+  .ai/35.AD_HOC_TASKS.md
 - B-074 Unexercised: project-token handoff to the isolated agent launcher
-  .ai/planning/BACKLOG.md
-- [x] TASK-0261 — Session branches are named by task, and Claude Code's worktrees follow the sibling rule (B-061)
-  .ai/tasks/TASK-0261-task-branches-and-claude-worktrees.md
-  branch: agent/TASK-0261
-- [x] TASK-0262 — Scripts are checked out with LF, so a Linux bash on a Windows clone runs them
-  .ai/tasks/TASK-0262-scripts-checked-out-lf.md
-  branch: agent/TASK-0262
-- [?] TASK-0265 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
-  .ai/tasks/TASK-0265-orchestrator-review-fixes.md
-- [?] TASK-0289 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
-  .ai/tasks/TASK-0289-orchestrator-resume-self-stopped.md
-- [?] TASK-0291 — task-orchestrator 0.7.2: writers run through the hand-off, so the write fence sees them
-  .ai/tasks/TASK-0291-orchestrator-fence-live.md
-- [ ] TASK-0292 — task-orchestrator: a writer is spawned, not handed off, so the fence never sees it
-  .ai/tasks/TASK-0292-orchestrator-writer-spawned.md
-- [x] TASK-0303 — Landing docs push origin only, and briefs use the schema's review status
-  .ai/tasks/TASK-0303-landing-and-status-drift.md
-- [?] TASK-0293 — Planning skills on a forge: a state file stays, and a tag marks the removed history
-  .ai/tasks/TASK-0293-forge-state-and-history-marker.md
-- [?] TASK-0288 — agent-watch 0.13.5: the band and the Sessions pane agree on steps
-  .ai/tasks/TASK-0288-agent-watch-steps-agree.md
-  branch: agent/steps-mismatch-20eb29
-
-## S11 — Claude-centric alignment
-Goal: Claude Code becomes the reference harness, with generated ports; see .ai/planning/sprints/SPRINT-S11-claude-alignment.md
-- [x] TASK-0286 — Open sprint S11 and add Phase 11 to the roadmap
-  .ai/tasks/TASK-0286-open-sprint-s11.md
-- [x] TASK-0266 — Marketplace manifest over the monorepo (P0.1)
-  .ai/tasks/TASK-0266-marketplace-manifest.md
-- [x] TASK-0267 — Anthropic provider in the eval suite (P0.2)
-  .ai/tasks/TASK-0267-claude-provider-evals.md
-- [x] TASK-0268 — Resolve model tiers to Claude aliases (P0.3)
-  .ai/tasks/TASK-0268-model-tier-table.md
-- [x] TASK-0269 — MCP hygiene: gates annotations and lock drift (P0.4)
-  .ai/tasks/TASK-0269-mcp-annotations-and-lock-drift.md
-- [x] TASK-0270 — Fix stale loop text (P0.5)
-  .ai/tasks/TASK-0270-stale-loop-text.md
-- [?] TASK-0290 — Fix the first live CI runs of the eval and tool-lock jobs
-  .ai/tasks/TASK-0290-first-live-ci-fixes.md
-- [x] TASK-0271 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
-  .ai/tasks/TASK-0271-role-guard.md
-- [x] TASK-0272 — Claude Code plugins per component kind (P1.2)
-  .ai/tasks/TASK-0272-claude-code-plugins.md
-- [?] TASK-0273 — Loops as invocable skills (P1.3)
-  .ai/tasks/TASK-0273-loops-as-skills.md
-- [x] TASK-0274 — Claude skill controls in the schema (P1.4)
-  .ai/tasks/TASK-0274-claude-skill-controls.md
-- [x] TASK-0275 — CLAUDE.md layer over AGENTS.md (P1.5)
-  .ai/tasks/TASK-0275-claude-md-layer.md
-- [?] TASK-0276 — Ship permissions and sandbox settings (P1.6)
-  .ai/tasks/TASK-0276-permissions-and-sandbox.md
-- [x] TASK-0277 — Stop hook runs a fast check (P1.7)
-  .ai/tasks/TASK-0277-stop-hook-fast-check.md
-- [?] TASK-0278 — Grow evals to 20-50 tasks with trials (P1.8)
-  .ai/tasks/TASK-0278-evals-trials-and-growth.md
-- [?] TASK-0279 — Claude Code OpenTelemetry (P1.9)
-  .ai/tasks/TASK-0279-claude-code-otel.md
-- [x] TASK-0280 — Invert portability: Claude Code is the reference (P2.1, HIGH RISK)
-  .ai/tasks/TASK-0280-claude-reference-profile.md
-- [?] TASK-0281 — Codex port completion (P2.2)
-  .ai/tasks/TASK-0281-codex-port-completion.md
-- [?] TASK-0282 — Long-running harness alignment (P2.3)
-  .ai/tasks/TASK-0282-long-run-harness.md
-- [?] TASK-0283 — Signed, versioned releases (P2.4)
-  .ai/tasks/TASK-0283-signed-versioned-releases.md
-- [?] TASK-0284 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
-  .ai/tasks/TASK-0284-agent-sdk-runner.md
-- [?] TASK-0285 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
-  .ai/tasks/TASK-0285-gates-http-transport.md
-
-## S12 — One planning convention
-Goal: Both planning skills use one convention, project-workflow's numbered layout; see .ai/decisions/0066-one-planning-convention.md
-- [?] TASK-0294 — Record one planning convention in ADR-0066, superseding ADR-0013
-  .ai/tasks/TASK-0294-one-planning-convention-adr.md
-- [?] TASK-0295 — The dashboard is owned here and reads ADR-NNNN file names and the id map
-  .ai/tasks/TASK-0295-dashboard-adr-prefix-upstream.md
-- [!] TASK-0296 — project-workflow 8.0.0: ADR-NNNN file names, the hybrid brief, and current-state and session schemas
-  .ai/tasks/TASK-0296-workflow-adr-prefix-and-schemas.md
-- [?] TASK-0297 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
-  .ai/tasks/TASK-0297-migrate-layout-tool.md
-- [?] TASK-0298 — The gate and scripts accept both layouts during the switch
-  .ai/tasks/TASK-0298-gate-accepts-both-layouts.md
-- [ ] TASK-0299 — Move ai-toolbox onto the one convention in one commit
-  .ai/tasks/TASK-0299-rename-ai-toolbox.md
-- [ ] TASK-0300 — Drop the old layout's support from the gate, and update AGENTS.md and the docs
-  .ai/tasks/TASK-0300-drop-old-layout-support.md
-- [ ] TASK-0301 — project-migration 6.0.0 retrofits repositories into the one convention
-  .ai/tasks/TASK-0301-migration-retarget.md
-- [ ] TASK-0302 — Check the dashboard and Compass against the id map after the switch
-  .ai/tasks/TASK-0302-verify-dashboard-and-compass.md
+  .ai/35.AD_HOC_TASKS.md

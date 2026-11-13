@@ -5,7 +5,7 @@
 - Objective: Continue S6 after its spikes and ADR bodies. Execute `TASK-0026`
   (the false blast-radius claim, and disabling `ansible_navigator`) and
   `TASK-0031` (the guard — the sprint's highest-value deliverable).
-- Context consulted: `.ai/planning/SPRINT-CURRENT.md` (S6), `TASK-0026`,
+- Context consulted: `.ai/20.PLAN.md` (S6), `TASK-0026`,
   `TASK-0031`, `TASK-0052` (its D1–D4 corrections), `TASK-0027`'s
   recommendation, `ADR-0016`, `ADR-0020`, `tests/validate.sh`'s manifest and
   wiring-claim checks, `skills/ansible-ops/` (SKILL.md, `references/hazards.md`,
