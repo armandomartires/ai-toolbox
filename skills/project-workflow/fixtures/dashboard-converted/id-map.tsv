@@ -1,0 +1,4 @@
+old_id	new_id	old_path	new_path
+TASK-0101	S011.T001	.ai/tasks/TASK-0101-alpha.md	.ai/tasks/S011.T001_Alpha.md
+TASK-0102	S011.T002	.ai/tasks/TASK-0102-beta.md	.ai/tasks/S011.T002_Beta.md
+TASK-0103	S011.T003	.ai/tasks/TASK-0103-gamma.md	.ai/tasks/S011.T003_Gamma.md

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prove the vendored dashboard reader still reads a sprint-brief layout.
+# Prove the dashboard reader still reads a sprint-brief layout.
 #
 # WHY A FIXTURE AND NOT THIS REPOSITORY. ai-toolbox's own .ai/ is
 # numbered-task-shaped (TASK-####), so running the reader against it exercises
@@ -190,4 +190,113 @@ if fail:
     sys.exit(1)
 
 print("check-dashboard.sh: OK (%d assertions, sprint-brief fixture)" % checks)
+PY
+
+# ---------------------------------------------------------------------------
+# A CONVERTED repository (ADR-0066): decisions named both `NNNN-x.md` and
+# `ADR-NNNN-x.md`, briefs renamed to S###.T###, and commits made BEFORE the
+# rename still naming the old `(TASK-NNNN)` ids, which `.ai/id-map.tsv` resolves.
+# Unlike the fixture above this one needs git: the evidence is commit subjects.
+# The fixture is copied into a throwaway repository and committed there.
+# ---------------------------------------------------------------------------
+command -v git >/dev/null 2>&1 || {
+  echo "check-dashboard.sh: MISSING prerequisite: git" >&2; exit 1; }
+
+SKILL="$SKILL" python3 - <<'PY'
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+skill = os.environ["SKILL"]
+sys.path.insert(0, os.path.join(skill, "dashboard"))
+import pm_dashboard as D
+
+src = os.path.join(skill, "fixtures", "dashboard-converted")
+if not os.path.isdir(src):
+    sys.exit("check-dashboard.sh: missing fixture at %s" % src)
+
+fail = []
+checks = 0
+
+
+def eq(label, got, want):
+    global checks
+    checks += 1
+    if got != want:
+        fail.append("%s: got %r, want %r" % (label, got, want))
+
+
+def git(repo, date, *args):
+    env = dict(os.environ, GIT_AUTHOR_DATE=date + "T12:00:00",
+               GIT_COMMITTER_DATE=date + "T12:00:00",
+               GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.invalid",
+               GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.invalid",
+               GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull)
+    subprocess.run(["git", "-C", repo] + list(args), env=env, check=True,
+                   capture_output=True, text=True)
+
+
+def commit(repo, date, subject):
+    with open(os.path.join(repo, "work.txt"), "a") as fh:
+        fh.write(subject + "\n")
+    git(repo, date, "add", "-A")
+    git(repo, date, "commit", "-q", "-m", subject)
+
+
+def build(tmp, with_map):
+    repo = os.path.join(tmp, "map" if with_map else "nomap")
+    shutil.copytree(src, os.path.join(repo, ".ai"))
+    if not with_map:
+        os.remove(os.path.join(repo, ".ai", "id-map.tsv"))
+    git(repo, "2026-02-01", "init", "-q")
+    commit(repo, "2026-02-01", "Add the converted briefs")
+    commit(repo, "2026-03-10", "Do alpha before the rename (TASK-0101)")
+    commit(repo, "2026-03-12", "Do beta after the rename (S011.T002)")
+    return repo
+
+
+tmp = tempfile.mkdtemp(prefix="check-dashboard-")
+try:
+    with_map = D.build_payload(build(tmp, True))
+    no_map = D.build_payload(build(tmp, False))
+finally:
+    shutil.rmtree(tmp, ignore_errors=True)
+
+for label, payload in (("with a map", with_map), ("without a map", no_map)):
+    eq("decisions of both spellings are counted (%s)" % label,
+       [d["number"] for d in payload["decisions"]], [1, 2, 3])
+    eq("the corpus is the sprint-brief shape (%s)" % label,
+       payload["project"]["corpus_shape"], "sprint_brief")
+    eq("every converted brief is read (%s)" % label, len(payload["tasks"]), 3)
+
+third = {d["number"]: d for d in with_map["decisions"]}.get(3, {})
+eq("a decision keeps its title", third.get("title"), "Prefixed file name")
+eq("an ADR- name still reads supersession", third.get("superseded_by"), 4)
+
+tasks = {t["id"]: t for t in with_map["tasks"]}
+eq("an old-id commit dates the renamed brief's close",
+   tasks["S011.T001"]["closed_at"], "2026-03-10")
+eq("a new-id commit dates its brief's close",
+   tasks["S011.T002"]["closed_at"], "2026-03-12")
+eq("an open brief has no close", tasks["S011.T003"]["closed_at"], None)
+
+named = {c["subject"]: c["task_ids"] for c in with_map["commits"]}
+eq("an old-id commit also names the new id",
+   sorted(named["Do alpha before the rename (TASK-0101)"]), ["S011.T001", "TASK-0101"])
+eq("a new-id commit is unchanged",
+   named["Do beta after the rename (S011.T002)"], ["S011.T002"])
+
+nm = {t["id"]: t for t in no_map["tasks"]}
+eq("without a map the old id links nothing",
+   nm["S011.T001"]["closed_at"] != "2026-03-10", True)
+
+if fail:
+    print("check-dashboard.sh: FAILED")
+    for f in fail:
+        print("  CONVERTED FIXTURE MISMATCH: %s" % f)
+    sys.exit(1)
+
+print("check-dashboard.sh: OK (%d assertions, converted repository)" % checks)
 PY

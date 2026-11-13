@@ -99,7 +99,9 @@ HEX_IN_TICKS_RE = re.compile(r"`([0-9a-f]{7,40})`")
 HEX_BARE_RE = re.compile(r"\b([0-9a-f]{7,40})\b")
 SPRINT_LABEL_RE = re.compile(r"S(\d{3})_([A-Za-z0-9]+)")
 LOG_ENTRY_RE = re.compile(r"^##\s*\[(\d{4}-\d{2}-\d{2})\]\s*(\S+)\s*\|\s*(.*)$")
-ADR_FILE_RE = re.compile(r"^(\d{4})-(.+)\.md$")
+# `NNNN-title.md` and, since ADR-0066, `ADR-NNNN-title.md`: one number either way.
+ADR_FILE_RE = re.compile(r"^(?:ADR-)?(\d{4})-(.+)\.md$")
+ID_MAP_NAME = "id-map.tsv"
 ADHOC_ITEM_RE = re.compile(r"^###\s+(\d+)\.\s+(.*)$")
 ADHOC_SECTION_RE = re.compile(r"^##\s+(Open|Resolved)\s*$", re.IGNORECASE)
 FILENAME_DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-")
@@ -390,6 +392,20 @@ class Git:
         if current:
             self._finish_commit(current)
 
+    def apply_id_map(self, id_map):
+        """Let a commit that names an OLD id count for the renamed brief.
+
+        History is not rewritten (ADR-0066), so a commit made before the
+        rename still ends `(TASK-0123)`. The new id is added beside the old
+        one, never instead of it: the subject still says what it says.
+        """
+        if not id_map:
+            return
+        for commit in self.commits:
+            ids = set(commit.get("task_ids") or [])
+            ids |= {id_map[i] for i in ids if i in id_map}
+            commit["task_ids"] = sorted(ids)
+
     def _finish_commit(self, commit):
         commit["areas"] = sorted(commit.pop("_areas"))
         commit.pop("full_hash", None)
@@ -505,6 +521,26 @@ def detect_shape(workflow_dir):
     if (Path(workflow_dir) / "planning").is_dir():
         return SHAPE_NUMBERED_TASK
     return SHAPE_SPRINT_BRIEF
+
+
+def load_id_map(workflow_dir):
+    """`id-map.tsv` -> {old id: new id}; empty when the file is absent.
+
+    Tab-separated `old_id new_id old_path new_path` under one header line
+    (ADR-0066). Only the first two columns are read; a short or blank row is
+    skipped rather than fatal, since this is evidence and not a gate.
+    """
+    path = Path(workflow_dir) / ID_MAP_NAME
+    mapping = {}
+    if not path.is_file():
+        return mapping
+    for number, line in enumerate(_read(path).splitlines()):
+        cols = line.split("\t")
+        if number == 0 and cols[0].strip().lower() == "old_id":
+            continue
+        if len(cols) >= 2 and cols[0].strip() and cols[1].strip():
+            mapping[cols[0].strip()] = cols[1].strip()
+    return mapping
 
 
 def locate_log(root=None):
@@ -742,7 +778,7 @@ def _resolve_created(path, git, log_dates, sprint_row, created_raw=None):
 
 
 def _resolve_closed(path, git, log_dates, sprint_row, status_raw, state,
-                    updated_raw=None):
+                    updated_raw=None, subject_dates=None):
     """Closure date. Only ever set for a task classified done."""
     if state != "done":
         return None, "unknown", False
@@ -751,6 +787,11 @@ def _resolve_closed(path, git, log_dates, sprint_row, status_raw, state,
         return explicit.group(1), "status_line", False
     if log_dates:
         return log_dates[-1], "log_md", False
+    # A commit whose subject names the brief (by its id, or through the id map
+    # by an old one) is about this brief's work, unlike a touch of its file,
+    # which a rename or a typo fix also makes.
+    if subject_dates:
+        return subject_dates[-1], "git_last", False
     touched = git.touched_date(path) if git.available else None
     if touched and not git.is_floored(touched):
         return touched, "git_last", False
@@ -951,7 +992,7 @@ def collect_tasks(workflow_dir, git, log_entries, sprint_rows, shape=SHAPE_SPRIN
             )
             closed, closed_src, closed_floored = _resolve_closed(
                 path, git, log_dates, sprint_row, rec.status_raw, rec.state,
-                _header_field(text, "Updated")
+                _header_field(text, "Updated"), by_subject.get(tid, [])
             )
             commits = _parse_commits_field(_header_field(text, "Commits"))
             points_raw = _header_field(text, "Points")
@@ -1522,7 +1563,7 @@ def collect_decisions(workflow_dir, git):
             continue
         text = _read(path)
         heading = _first_heading(text) or _de_camel(match.group(2))
-        title = re.sub(r"^\d{4}\s*[-—]\s*", "", heading).strip()
+        title = re.sub(r"^(?:ADR-)?\d{4}\s*[-—]\s*", "", heading).strip()
 
         status_raw = _header_field(text, "Status") or ""
         status = "unknown"
@@ -1780,6 +1821,7 @@ def collect(root=None, today=None, use_git=True):
     shape = detect_shape(workflow_dir)
     log_path = locate_log(base)
     git = Git(base, use_git)
+    git.apply_id_map(load_id_map(workflow_dir))
 
     log_entries = parse_log(log_path)
     if shape == SHAPE_NUMBERED_TASK:

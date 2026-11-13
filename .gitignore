@@ -47,7 +47,7 @@ node_modules/
 # tracked; this comment is why that check exists.
 /dashboard.html
 /docs/dashboard.html
-# The data file the vendored generator writes beside the page. Same reason.
+# The data file the dashboard generator writes beside the page. Same reason.
 /dashboard-data.json
 /docs/dashboard-data.json
 # What .github/workflows/dashboard.yml builds and publishes.

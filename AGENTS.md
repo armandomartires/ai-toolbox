@@ -48,7 +48,7 @@ to OpenCode and Codex beside them (ADR-0020, ADR-0039, ADR-0040). Out of scope: 
   --project ai-toolbox --out docs/dashboard.html`. A gitignored view, not a
   gate: never commit or upload it. Rebuild it once an approved plan's files
   are written and after a confirmed push (ADR-0035); CI alone publishes it
-  (ADR-0029). `dashboard/` is vendored: never edit it here (`VENDORED.md`).
+  (ADR-0029). `dashboard/` is owned here since sigma-llmwiki was retired (`dashboard/OWNERSHIP.md`).
 
 ## Structure
 Components: `skills/` `mcp-servers/` `loops/` `mods/` `prompts/` `agents/`

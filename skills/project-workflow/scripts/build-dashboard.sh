@@ -2,13 +2,9 @@
 # Generate a self-contained HTML5 delivery dashboard from a repository's .ai/
 # governance layer.
 #
-# WHAT THIS IS NOW. A thin wrapper over the vendored generator in
-# ../dashboard/. That generator is a COPY: it is developed in the
-# `sigma-llmwiki` repository and vendored here by its own sync script, which
-# writes ../dashboard/VENDORED.md with the source commit and a sha256 per file.
-# Do not edit anything under ../dashboard/ — a local edit makes the two copies
-# diverge, and two independently-evolving dashboard generators is the exact
-# situation TASK-0125 exists to undo. See that file, and TASK-0125.
+# WHAT THIS IS NOW. A thin wrapper over the generator in ../dashboard/, which
+# this repository owns (copied from the retired `sigma-llmwiki` repository;
+# see ../dashboard/OWNERSHIP.md). Change it together with check-dashboard.sh.
 #
 # WHY THE WRAPPER SURVIVED THE SWAP. This path and this flag surface are
 # called by .github/workflows/dashboard.yml and cited by
@@ -63,9 +59,8 @@ command -v python3 >/dev/null 2>&1 || {
   echo "build-dashboard.sh: MISSING prerequisite: python3" >&2; exit 1; }
 
 [ -f "$GEN" ] || {
-  echo "build-dashboard.sh: missing vendored generator at $GEN" >&2
-  echo "  Re-vendor it from the source repository:" >&2
-  echo "  python .ai/scripts/sync_dashboard_skill.py --target <this repo> --write" >&2
+  echo "build-dashboard.sh: missing generator at $GEN" >&2
+  echo "  Restore skills/project-workflow/dashboard/ from git." >&2
   exit 1; }
 
 ROOT=".ai"

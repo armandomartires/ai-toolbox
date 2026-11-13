@@ -16,7 +16,7 @@ ADR-0013 kept `project-workflow` and `project-migration` as two frameworks: diff
 4. **Brief shape (hybrid).** project-workflow's bold header fields and Goal, Inputs, Plan, Verification and Outputs sections, plus a required `## Acceptance criteria` (the unattended run checks for it) and the statuses `review` and `cancelled`. Existing briefs keep their legacy schema.
 5. **History is not rewritten.** Files move with `git mv`; only path references are rewritten. Ids inside closed briefs, ADRs, reviews, sessions, commits and comments stay as written and resolve through `.ai/id-map.tsv` (old id, new id, old path, new path), which the gate checks.
 6. **`.ai/GOALS.md` stays**, regenerated with the new ids, until the OpenCode and Codex Compass ports read the `.ai/` layer.
-7. **The dashboard changes upstream.** Its copy here is vendored from sigma-llmwiki and rejects `ADR-` file names; that repository learns the prefix and the id map first, then the copy is re-vendored.
+7. **The dashboard reads the new names.** It learns the `ADR-` prefix and the id map. *Amended 2026-11-13:* sigma-llmwiki, which it was vendored from, is retired, so the dashboard is owned here (`dashboard/OWNERSHIP.md`) and changed here (TASK-0295).
 8. **Order and consent.** The work lands as TASK-0294 to TASK-0302, each green on its own. Four need the human's authorization written in their task files: the change in sigma-llmwiki (TASK-0295), the renaming of this repository (TASK-0299, in a window with no other session on `.ai/`), dropping the old layout's checks (TASK-0300) and project-migration's deletions (TASK-0301).
 
 ## Alternatives considered

@@ -22,7 +22,7 @@ skills/project-workflow/scripts/build-dashboard.sh \
 | `--no-git` | Don't read git; dates fall back to hand-recorded fields. |
 | `--theme`, `--css`, `--css-href` | Accepted and ignored, with a warning. Style the page with `dashboard.custom.css` instead (see *Customizing it*). |
 
-**The generator is vendored: do not edit it here.** `dashboard/` is a copy of the generator developed in `sigma-llmwiki`. `dashboard/VENDORED.md` records the source commit and a sha256 per file. That repo's `sync_dashboard_skill.py --check` exits non-zero on drift. Change the generator there and re-sync.
+**The generator is owned here.** `dashboard/` began as a copy from `sigma-llmwiki`, which is retired; edit it in this repository and extend `scripts/check-dashboard.sh` with the change (`dashboard/OWNERSHIP.md`). It reads decision files named `NNNN-title.md` or `ADR-NNNN-title.md`, and `.ai/id-map.tsv` when present, so a commit whose subject names an old `(TASK-NNNN)` id counts for the renamed brief.
 
 ## The tabs
 

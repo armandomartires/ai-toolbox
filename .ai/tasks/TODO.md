@@ -332,7 +332,7 @@ Sprint membership, one line per item. Details live in each brief and in
 ## Sprint S12 — One planning convention (planned 2026-11-13, ADR-0066)
 
 - [?] TASK-0294 — Record one planning convention in ADR-0066, superseding ADR-0013
-- [ ] TASK-0295 — sigma-llmwiki's dashboard reads ADR-NNNN file names and the id map, then is re-vendored
+- [?] TASK-0295 — The dashboard is owned here and reads ADR-NNNN file names and the id map
 - [ ] TASK-0296 — project-workflow 8.0.0: ADR-NNNN file names, the hybrid brief, and current-state and session schemas
 - [?] TASK-0297 — A migrate-layout tool that moves a project-migration repo onto the one convention, dry run by default
 - [?] TASK-0298 — The gate and scripts accept both layouts during the switch

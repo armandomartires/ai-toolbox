@@ -88,7 +88,7 @@ scripts/new-artifact.sh --kind task|adr|review|adhoc \
 
 `references/dashboard.md` covers what each metric does not prove, and which fields and headings must keep their shape.
 
-- **Vendored.** `dashboard/` is a copy synced from `sigma-llmwiki` (`dashboard/VENDORED.md`). Never edit it here.
+- **Owned here.** `dashboard/` is edited in this repository (`dashboard/OWNERSHIP.md`); its checks are `scripts/check-dashboard.sh` and its fixtures.
 - **Rebuild it** (a step, not a hook; the output stays gitignored):
   - when a plan is approved **and** every file it touches is written: `20.PLAN.md`, `30.ROADMAP.md`, briefs, ADRs, `35.AD_HOC_TASKS.md`;
   - after the push to every remote is confirmed. Before that push, if `publish-dashboard.sh decision` exits 1, ask (Scaffolding, step 8). A published page is rebuilt by its own CI on that push; never upload the local file.
