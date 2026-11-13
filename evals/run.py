@@ -184,6 +184,11 @@ def call_provider(provider, task, timeout=120):
         }).encode()
         headers = {"x-api-key": key, "anthropic-version": "2023-06-01",
                    "Content-Type": "application/json"}
+        # A key not scoped to a workspace answers HTTP 400 unless the request names one (seen in
+        # pipeline 1047, S011.T031). The id is not a secret; it comes from a CI variable when set.
+        workspace = os.environ.get("ANTHROPIC_WORKSPACE_ID", "").strip()
+        if workspace:
+            headers["anthropic-workspace-id"] = workspace
     else:
         body = json.dumps({
             "model": model,
@@ -472,9 +477,11 @@ def self_test():
         return FakeResp()
 
     real_urlopen = urllib.request.urlopen
-    env_saved = {v: os.environ.get(v) for v in ("ANTHROPIC_API_KEY", "EVAL_ANTHROPIC_MODEL")}
+    env_saved = {v: os.environ.get(v) for v in ("ANTHROPIC_API_KEY", "EVAL_ANTHROPIC_MODEL",
+                                                "ANTHROPIC_WORKSPACE_ID")}
     os.environ["ANTHROPIC_API_KEY"] = "test-key-not-real"
     os.environ["EVAL_ANTHROPIC_MODEL"] = "test-model"
+    os.environ.pop("ANTHROPIC_WORKSPACE_ID", None)
     urllib.request.urlopen = fake_urlopen
     try:
         text = call_provider("anthropic", tasks[0])
@@ -483,6 +490,12 @@ def self_test():
         h = seen.get("headers", {})
         expect(h.get("x-api-key") == "test-key-not-real" and "anthropic-version" in h
                and "authorization" not in h, "anthropic auth headers wrong")
+        expect("anthropic-workspace-id" not in h, "a workspace header sent with no workspace set")
+        os.environ["ANTHROPIC_WORKSPACE_ID"] = "wrkspc_test"
+        call_provider("anthropic", tasks[0])
+        expect(seen.get("headers", {}).get("anthropic-workspace-id") == "wrkspc_test",
+               "ANTHROPIC_WORKSPACE_ID did not reach the anthropic-workspace-id header")
+        os.environ.pop("ANTHROPIC_WORKSPACE_ID", None)
         b = seen.get("body", {})
         expect(b.get("model") == "test-model" and b.get("max_tokens") and b.get("system")
                and b.get("messages") == [{"role": "user", "content": tasks[0]["input"]}],

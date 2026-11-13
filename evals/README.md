@@ -31,7 +31,7 @@ python3 evals/run.py --trials 5 --transcripts out/   # k trials per task, one tr
 
 ## Keys
 
-Keys come from the environment only (`XAI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`). In CI they are protected, masked project variables. The runner never prints them. HTTP errors are reported by status code only. The JSON, JUnit and transcript artifacts contain scores, short details and the model's own output, never request headers or keys.
+Keys come from the environment only (`XAI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`). An Anthropic key not scoped to a workspace also needs `ANTHROPIC_WORKSPACE_ID` (sent as the `anthropic-workspace-id` header; an id, not a secret). In CI they are protected, masked project variables. The runner never prints them. HTTP errors are reported by status code only. The JSON, JUnit and transcript artifacts contain scores, short details and the model's own output, never request headers or keys.
 
 ## Tracking and the regression gate
 
