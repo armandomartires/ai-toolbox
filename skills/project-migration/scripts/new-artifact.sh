@@ -8,6 +8,8 @@
 #                   [--guidance terse|standard|explicit|literal]
 #                   [--id ...] [--name ...] [--title ...] [--sprint ...]
 #                   [--date YYYY-MM-DD] [--out PATH] [--template]
+#                   [--decisions DIR]   # kind adr, no --id: next number in DIR
+#                                       # (default .ai/decisions), ADR-NNNN-title.md
 #   new-artifact.sh --schema PATH ...        # explicit schema, overrides --kind
 #   new-artifact.sh --filename --kind task --id ...   # print target path only
 #
@@ -28,6 +30,7 @@ GUIDANCE="standard"
 OUT=""
 TEMPLATE=0
 FILENAME_ONLY=0
+DECISIONS=""
 declare -a SUBS=()
 
 die() { echo "new-artifact.sh: $*" >&2; exit 1; }
@@ -40,10 +43,11 @@ while [ $# -gt 0 ]; do
     --guidance)  GUIDANCE="${2:?--guidance needs a level}"; shift 2 ;;
     --out)       OUT="${2:?--out needs a path}"; shift 2 ;;
     --template)  TEMPLATE=1; shift ;;
+    --decisions) DECISIONS="${2:?--decisions needs a directory}"; shift 2 ;;
     --filename)  FILENAME_ONLY=1; shift ;;
     --id|--name|--title|--sprint|--task|--date)
                  SUBS+=("${1#--}=${2:?$1 needs a value}"); shift 2 ;;
-    -h|--help)   sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)   sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)           die "unknown argument: $1" ;;
   esac
 done
@@ -74,7 +78,7 @@ fi
 
 RENDERED="$(
   SCHEMA="$SCHEMA" GUIDANCE="$GUIDANCE" TEMPLATE="$TEMPLATE" \
-  FILENAME_ONLY="$FILENAME_ONLY" SUBS="$(printf '%s\n' ${SUBS[@]+"${SUBS[@]}"})" \
+  FILENAME_ONLY="$FILENAME_ONLY" DECISIONS_DIR="$DECISIONS" SUBS="$(printf '%s\n' ${SUBS[@]+"${SUBS[@]}"})" \
   python3 "$HERE/artifact_lib.py" render
 )" || exit 1
 
