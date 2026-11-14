@@ -269,7 +269,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T023_CodexPortCompletion.md
 - [x] S011.T024 — Long-running harness alignment (P2.3)
   .ai/tasks/S011.T024_LongRunHarness.md
-- [?] S011.T025 — Signed, versioned releases (P2.4)
+- [x] S011.T025 — Signed, versioned releases (P2.4)
   .ai/tasks/S011.T025_SignedVersionedReleases.md
 - [?] S011.T026 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
   .ai/tasks/S011.T026_AgentSdkRunner.md
