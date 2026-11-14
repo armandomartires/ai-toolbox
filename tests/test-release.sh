@@ -152,6 +152,7 @@ cat >"$t/bin/cosign" <<'STUB'
 # stub: records its arguments; sign-blob writes the artifact's sha256 into the
 # bundle; verify-blob passes only for a bundle that holds the artifact's sha256
 echo "$*" >>"${STUB_LOG:-/dev/null}"
+echo "${COSIGN_OIDC_ISSUER:-unset}" >>"${STUB_ENV:-/dev/null}"
 mode="$1"; shift; bundle=""; art=""
 while [ $# -gt 0 ]; do case "$1" in
   --bundle) bundle="$2"; shift 2;;
@@ -179,6 +180,12 @@ negcheck "signing with no token and no key fails closed" "$s"
 : >"$t/log"; cl COSIGN_PRIVATE_KEY=k COSIGN_PASSWORD=p bash "$SR" "$t/rel/b.tar.gz" >"$t/o" 2>&1; s=$?
 check "key mode signs" "$s" "$(cat "$t/o")"
 check "key mode reads the key from the environment" "$(grep -q -- '--key env://COSIGN_PRIVATE_KEY' "$t/log"; echo $?)"
+# cosign 3 reads COSIGN_OIDC_ISSUER as a service URL and then refuses its signing
+# config ("cannot specify service URLs and use signing config", pipeline 1094);
+# the release job sets it, so key mode must not pass it on.
+: >"$t/env"; cl $ISS STUB_ENV="$t/env" COSIGN_PRIVATE_KEY=k COSIGN_PASSWORD=p bash "$SR" "$t/rel/b.tar.gz" >"$t/o" 2>&1; s=$?
+check "key mode signs with the job's issuer set" "$s" "$(cat "$t/o")"
+check "key mode hides COSIGN_OIDC_ISSUER from cosign" "$(grep -qx unset "$t/env" && ! grep -qv unset "$t/env"; echo $?)" "$(cat "$t/env")"
 
 cl $ISS $ID bash "$VR" "$A" >"$t/o" 2>&1; s=$?
 check "a correctly signed artifact verifies with the exact identity" "$s" "$(cat "$t/o")"

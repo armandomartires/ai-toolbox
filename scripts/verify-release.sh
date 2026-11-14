@@ -21,6 +21,7 @@ bundle="${2:-$art.bundle}"
 command -v cosign >/dev/null 2>&1 || { echo "FAIL cosign is not installed" >&2; exit 1; }
 if [ -n "${COSIGN_PUBLIC_KEY:-}" ]; then
   id=(--key "$COSIGN_PUBLIC_KEY")
+  unset COSIGN_OIDC_ISSUER   # a key needs no issuer; cosign 3 reads it as a service URL
 else
   [ -n "${COSIGN_OIDC_ISSUER:-}" ] || { echo "FAIL no signing identity: set COSIGN_OIDC_ISSUER and an identity, or COSIGN_PUBLIC_KEY" >&2; exit 1; }
   if [ -n "${COSIGN_CERT_IDENTITY:-}" ]; then

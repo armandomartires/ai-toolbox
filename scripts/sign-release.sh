@@ -10,7 +10,9 @@ f="${1:-}"
 [ -f "$f" ] || { echo "usage: sign-release.sh FILE" >&2; exit 2; }
 command -v cosign >/dev/null 2>&1 || { echo "FAIL cosign is not installed" >&2; exit 1; }
 if [ -n "${COSIGN_PRIVATE_KEY:-}" ]; then
-  cosign sign-blob --yes --key env://COSIGN_PRIVATE_KEY --bundle "$f.bundle" "$f"
+  # Without the issuer: cosign 3 takes COSIGN_OIDC_ISSUER for a service URL and
+  # then refuses its default signing config (pipeline 1094); a key needs no issuer.
+  env -u COSIGN_OIDC_ISSUER cosign sign-blob --yes --key env://COSIGN_PRIVATE_KEY --bundle "$f.bundle" "$f"
 else
   [ -n "${SIGSTORE_ID_TOKEN:-}" ] || { echo "FAIL no signing identity: no SIGSTORE_ID_TOKEN (id_tokens) and no COSIGN_PRIVATE_KEY" >&2; exit 1; }
   cosign sign-blob --yes --bundle "$f.bundle" "$f"
