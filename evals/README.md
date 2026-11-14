@@ -26,7 +26,7 @@ python3 evals/run.py --trials 5 --transcripts out/   # k trials per task, one tr
 
 - **Mock** is the default. It is used locally, in `tests/validate.sh` and in every MR pipeline (`evals-mock`).
 - **Real providers** run only in `evals-live`, which runs only when `CI_PIPELINE_SOURCE == "schedule"` on master. There is one job per provider.
-- **Models:** set them with `EVAL_XAI_MODEL` (default `grok-4`), `EVAL_OPENAI_MODEL` (default `gpt-4.1`) and `EVAL_ANTHROPIC_MODEL` (default `claude-sonnet-5-5`) as schedule variables.
+- **Models:** set them with `EVAL_XAI_MODEL` (default `grok-4`), `EVAL_OPENAI_MODEL` (default `gpt-4.1`) and `EVAL_ANTHROPIC_MODEL` (default `claude-sonnet-5-5`) as schedule variables. A variable left blank means the default.
 - **Spend:** the nightly schedule (set by hand in GitLab, not in the YAML) runs three providers (anthropic, xai, openai). Decision Q9=C is k=5 trials per task: `evals-live` passes `--trials 5 --max-calls 250`, so each job makes 34 x 5 = 170 calls and has 80 attempts spare for retries (per job, attempts). The job is not interruptible. The job timeout is 2h, from an unmeasured estimate of 20 s per call (~57 min), and 2h is not verified against the runner's maximum job timeout; read `elapsed_seconds` in the first run's JSON and resize. Transcripts are kept as the `evals-<provider>-transcripts/` artifact. Watch the provider dashboards after the first week.
 
 ## Keys

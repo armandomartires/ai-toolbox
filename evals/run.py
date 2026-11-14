@@ -165,6 +165,12 @@ def error_reason(provider, err, key):
     return " (" + text[:200] + ")"
 
 
+def model_for(provider):
+    """The model a provider is asked for: its variable, or the default when unset or blank."""
+    _, _, model_var, default_model = PROVIDERS[provider]
+    return os.environ.get(model_var, "").strip() or default_model
+
+
 def call_provider(provider, task, timeout=120):
     if provider == "mock":
         return task["mock_response"]
@@ -172,7 +178,7 @@ def call_provider(provider, task, timeout=120):
     key = os.environ.get(key_var)
     if not key:
         raise ProviderError(f"{key_var} is not set")
-    model = os.environ.get(model_var, default_model)
+    model = model_for(provider)
     if provider == "anthropic":
         # Messages API: x-api-key auth, system is a top-level field. No sampling parameter: Claude Sonnet 5.5
         # refuses a non-default temperature with HTTP 400 (TASK-0290).
@@ -496,6 +502,14 @@ def self_test():
         expect(seen.get("headers", {}).get("anthropic-workspace-id") == "wrkspc_test",
                "ANTHROPIC_WORKSPACE_ID did not reach the anthropic-workspace-id header")
         os.environ.pop("ANTHROPIC_WORKSPACE_ID", None)
+        # A model variable defined but left blank (a schedule variable) sent "model": "" and every trial
+        # answered HTTP 400 (pipeline 1084, S011.T031); blank means the default.
+        os.environ["EVAL_ANTHROPIC_MODEL"] = "  "
+        call_provider("anthropic", tasks[0])
+        expect(seen.get("body", {}).get("model") == PROVIDERS["anthropic"][3],
+               "a blank EVAL_ANTHROPIC_MODEL did not fall back to the default model")
+        os.environ["EVAL_ANTHROPIC_MODEL"] = "test-model"
+        call_provider("anthropic", tasks[0])
         b = seen.get("body", {})
         expect(b.get("model") == "test-model" and b.get("max_tokens") and b.get("system")
                and b.get("messages") == [{"role": "user", "content": tasks[0]["input"]}],
@@ -584,7 +598,7 @@ def main():
         print("EVAL BUDGET: " + err)
         sys.exit(2)
     CALLS["n"], CALLS["max"] = 0, a.max_calls
-    model = "mock" if a.provider == "mock" else os.environ.get(PROVIDERS[a.provider][2], PROVIDERS[a.provider][3])
+    model = "mock" if a.provider == "mock" else model_for(a.provider)
     thresholds = json.load(open(THRESHOLDS, encoding="utf-8"))
     started = time.time()
 
