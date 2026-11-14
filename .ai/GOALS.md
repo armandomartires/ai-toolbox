@@ -296,7 +296,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T030_OrchestratorResumeSelfStopped.md
 - [x] S011.T032 — task-orchestrator 0.7.2: writers run through the hand-off, so the write fence sees them
   .ai/tasks/S011.T032_OrchestratorFenceLive.md
-- [!] S011.T033 — task-orchestrator: a writer is spawned, not handed off, so the fence never sees it
+- [x] S011.T033 — task-orchestrator: a writer is spawned, not handed off, so the fence never sees it
   .ai/tasks/S011.T033_OrchestratorWriterSpawned.md
 - [x] S011.T034 — Planning skills on a forge: a state file stays, and a tag marks the removed history
   .ai/tasks/S011.T034_ForgeStateAndHistoryMarker.md
