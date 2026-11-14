@@ -12,7 +12,7 @@
       "source": "./plugins/ai-toolbox-skills",
       "description": "The ai-toolbox skills: project workflow, design flow, vault secrets, repo inventory, migration, ansible and unattended operations.",
       "category": "workflow",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "ai-toolbox-agents",

@@ -24,8 +24,10 @@ negcheck() { check "$1" "$([ "$2" -ne 0 ] && echo 0 || echo 1)" "${3:-}"; }
 # --- the version and tag rule ------------------------------------------------
 python3 -I "$CR" >"$t/o" 2>&1; s=$?
 check "the repository obeys the version rule" "$s" "$(cat "$t/o")"
-python3 -I "$CR" --tag ai-toolbox-skills--v0.1.0 >"$t/o" 2>&1; s=$?
-check "tag ai-toolbox-skills--v0.1.0 matches its version" "$s" "$(cat "$t/o")"
+# The current version, read from the rule's file, so a release bump needs no edit here.
+cur="$(python3 -I -c 'import json,sys;print(json.load(open(sys.argv[1]))["plugins"]["ai-toolbox-skills"]["version"])' scripts/plugin-versions.json)"
+python3 -I "$CR" --tag "ai-toolbox-skills--v$cur" >"$t/o" 2>&1; s=$?
+check "tag ai-toolbox-skills--v$cur matches its version" "$s" "$(cat "$t/o")"
 for bad in ai-toolbox-skills--v9.9.9 v0.1.0 ai-toolbox-skills-0.1.0 other--v0.1.0; do
   python3 -I "$CR" --tag "$bad" >"$t/o" 2>&1; s=$?
   negcheck "tag $bad is refused" "$s" "$(cat "$t/o")"
@@ -213,4 +215,20 @@ cp "$A" "$t/rel/t.tar.gz"; cp "$A.bundle" "$t/rel/t.tar.gz.bundle"; echo tampere
 cl $ISS $ID bash "$VR" "$t/rel/t.tar.gz" >"$t/o" 2>&1; s=$?
 negcheck "a tampered artifact fails verification" "$s"
 check "that failure says the signature does not verify" "$(grep -q 'does not verify' "$t/o"; echo $?)"
+# install-cosign.sh: the version variable may carry its leading v or not; the
+# URL names the release once (pipeline 1089 asked for vv3.1.4 and got 404).
+mkdir -p "$t/cbin"
+cat >"$t/cbin/curl" <<'STUB'
+#!/usr/bin/env bash
+out=""; while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift;; http*) echo "$1" >>"$CURL_LOG";; esac; shift; done
+echo cosign-stub >"$out"
+STUB
+chmod +x "$t/cbin/curl"
+sum="$(echo cosign-stub | sha256sum | cut -d' ' -f1)"
+for ver in v3.1.4 3.1.4; do
+  : >"$t/curl.log"
+  env PATH="$t/cbin:$PATH" CURL_LOG="$t/curl.log" COSIGN_VERSION="$ver" COSIGN_SHA256="$sum"     COSIGN_DEST="$t/cosign" bash scripts/install-cosign.sh >"$t/o" 2>&1; s=$?
+  check "install-cosign.sh installs with COSIGN_VERSION=$ver" "$s" "$(cat "$t/o")"
+  check "install-cosign.sh asks for release v3.1.4 given $ver"     "$(grep -q '/releases/download/v3.1.4/cosign-linux-amd64$' "$t/curl.log"; echo $?)" "$(cat "$t/curl.log")"
+done
 exit $rc
