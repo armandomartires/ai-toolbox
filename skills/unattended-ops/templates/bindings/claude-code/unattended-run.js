@@ -286,7 +286,7 @@ async function step6Implement(task, plan) {
   try {
     impl = await ask('implementer', 6, 'Implement',
       `Implement task ${task.id} (task file ${task.file}) against this plan, leaving the change in the working tree:\n${JSON.stringify(plan, null, 1)}\n\n` +
-      `Your boundary (agents/implementer/, stated here because this client cannot enforce it — rule 1): no git write, no tracker edit, no edit to the task file's status row, no ticked criterion. Report every unsatisfied acceptance criterion by name.`,
+      `Your boundary (agents/implementer/, stated here because this client cannot enforce it — rule 1): no git write, no tracker edit, no edit to the task file's status row, no ticked criterion. Report every unsatisfied acceptance criterion by name. Report filesChanged as paths relative to the repository root, with forward slashes.`,
       IMPL_SCHEMA, task.id)
   } catch (e) {
     if (e instanceof Mechanical) throw new Park('implementer blocked: no return')
@@ -384,9 +384,26 @@ async function verifyHead() {
     VERIFY_SCHEMA, 'verify')
 }
 
+// Git lists a commit's files repo-relative; an implementer may answer absolute
+// paths (golden26-w1). Backslashes to /, a leading REPO_ROOT stripped (case-
+// insensitive for a drive path), a leading ./ stripped. A path outside the
+// root stays absolute, so it still counts as undeclared.
+function repoRel(p) {
+  let f = String(p).replace(/\\/g, '/')
+  if (REPO_ROOT) {
+    const root = REPO_ROOT.replace(/\\/g, '/').replace(/\/+$/, '')
+    const win = /^[A-Za-z]:/.test(root)
+    const head = f.slice(0, root.length + 1)
+    const want = root + '/'
+    if (root && f.length > want.length && (win ? head.toLowerCase() === want.toLowerCase() : head === want)) f = f.slice(want.length)
+  }
+  while (f.startsWith('./')) f = f.slice(2)
+  return f
+}
+
 async function step10Close(task, impl, gates) {
   const before = await verifyHead()
-  const declared = Array.from(new Set((impl.filesChanged || []).concat([task.file], TRACKER === 'not-applicable' ? [] : [TRACKER])))
+  const declared = Array.from(new Set((impl.filesChanged || []).concat([task.file], TRACKER === 'not-applicable' ? [] : [TRACKER]).map(repoRel)))
   const got = await call('closer', 10, 'Close',
     `Close task ${task.id}; the adjudicator accepted it. In order, stopping if any part cannot be done honestly (agents/closer/):\n` +
     `1. \`git status --porcelain\`; refuse on any path not in ${JSON.stringify(declared)}.\n` +

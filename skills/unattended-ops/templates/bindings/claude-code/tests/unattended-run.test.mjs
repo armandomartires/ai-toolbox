@@ -327,6 +327,25 @@ test('a commit holding an undeclared path halts the run (B-032)', async () => {
   assert.equal(r.events('close').length, 0)
 })
 
+test('absolute implementer paths under repoRoot are declared repo-relative (golden26-w1)', async () => {
+  for (const [root, abs] of [['/srv/repo', '/srv/repo/src/a.txt'], ['C:/Users/x/repo/', 'c:\\users\\x\\repo\\src\\a.txt'], ['/srv/repo', './src/a.txt']]) {
+    const r = await run(baseArgs({ repoRoot: root }), {
+      implementer: { status: 'done', filesChanged: [abs], unsatisfiedCriteria: [], reason: '' },
+    })
+    assert.ok(!r.result.halted, root + ' ' + abs)
+    assert.equal(r.events('close').length, 1, root + ' ' + abs)
+    const closer = r.calls('closer')[0].prompt
+    assert.ok(closer.includes('["src/a.txt"'), closer)
+  }
+})
+
+test('an implementer path outside repoRoot stays absolute and still halts', async () => {
+  const r = await run(baseArgs({ repoRoot: '/srv/repo' }), {
+    implementer: { status: 'done', filesChanged: ['/srv/repo2/src/a.txt'], unsatisfiedCriteria: [], reason: '' },
+  })
+  assert.match(r.result.halted, /undeclared paths: src\/a\.txt/)
+})
+
 test('the close verification asks for the commit\'s file list', async () => {
   const r = await run(baseArgs())
   const verify = r.s.calls.filter(c => c.opts.label === 'preflight:verify')
