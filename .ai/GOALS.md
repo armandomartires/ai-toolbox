@@ -285,7 +285,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T004_DesktopToggleSwitch.md
 - [?] S011.T005 — switchboard 0.9.0: the pane follows the design of Compass and Agents
   .ai/tasks/S011.T005_SwitchboardDesignParity.md
-- [?] S011.T006 — task-orchestrator 0.6.0: a worker stopped at its turn cap is reported, resumable, and given more turns
+- [x] S011.T006 — task-orchestrator 0.6.0: a worker stopped at its turn cap is reported, resumable, and given more turns
   .ai/tasks/S011.T006_OrchestratorTurnCap.md
 - [x] S011.T007 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
   .ai/tasks/S011.T007_OrchestratorReviewFixes.md
