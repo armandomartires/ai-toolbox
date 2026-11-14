@@ -627,7 +627,7 @@ weaker of two clients, not by either client's native expressiveness.
 | `delegation-allowlist` | May invoke **only** the roles named in `delegates_to`. Requires `mode: primary` — see below. | `task: {"*": "deny", "<name>": "allow", …}` | `tools: Agent(<name>, …)` |
 | `no-webfetch` | May not fetch network resources. | `webfetch: deny` | omit `WebFetch`, `WebSearch` from `tools` |
 | `no-bash` | May not run **any** shell command. The complement of `bash-allowlist`: that term names what is permitted, this one permits nothing. | `bash: deny` | `disallowedTools: Bash` |
-| `worktree-only` | Confined to the project worktree. | `external_directory: deny` | **partial** — `isolation: worktree` gives an isolated *copy*, which is a different guarantee. See below. |
+| `worktree-only` | The role runs in its own git worktree. Not a path fence. | `external_directory: deny` | `isolation: worktree` — a full match. See below. |
 | `test-files-only` | May edit test paths only. | `edit` glob map | **role guard** (ADR-0062) — not per-agent |
 | `bash-allowlist` | May run **only** the commands named in `bash_allow`; everything else is denied. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **role guard**; `PowerShell`, `Monitor` withheld |
 | `test-allowlist` | May run **only** the test commands named in `test_allow`; everything else is denied. Merges into the same `bash` map as `bash-allowlist`, so a role may carry both. | `bash: {"*": "deny", "<pattern>": "allow", …}` | **role guard**; `PowerShell`, `Monitor` withheld |
@@ -651,10 +651,10 @@ is started by `bash hooks/role-guard.sh`, which needs `python3` (or `python`)
 (teammates, the `run-gate.sh` name, hook timeouts) are listed in ADR-0062.
 The fixtures are `tests/test-role-guard.sh`.
 
-The rest of this section is the history the guard answers: **five of the
+The rest of this section is the history the guard answers: **six of the
 thirteen are enforceable in both clients per agent** — the first three plus
-`delegation-allowlist` and `no-bash`. The other eight have no per-agent
-Claude Code expression, and
+`delegation-allowlist`, `no-bash` and `worktree-only`. The other seven have no
+per-agent Claude Code expression, and
 the reason is structural: Claude Code's `tools`/`disallowedTools` gate
 **whole tools**, so anything needing *intra-tool* granularity — which paths,
 which commands, or a third `ask` state between allow and deny — has no
@@ -914,50 +914,29 @@ role guard enforces those terms; a plain emission still skips them.
 > when it was decided, and `ADR-0021`'s falsified predictions are preserved
 > on the same principle. Only the normative guide is corrected.
 
-#### `worktree-only` is the one term with a semantic gap
-The two mechanisms are not the same guarantee, so it is marked *partial*
-rather than *maps both*. OpenCode's `external_directory: deny` **refuses
-tool calls touching paths outside the working directory**. Claude Code's
-`isolation: worktree` **gives the subagent an isolated copy of the
-repository** and checks that its commands stay inside it — confinement by
-redirection rather than refusal, and its check covers the whole repository
-containing the launch directory. Both narrow blast radius; neither is a
-drop-in translation of the other.
+#### `worktree-only` means its own git worktree, not a path fence
+Decided 2026-11-14 (S018.T003, the human's decision; `ADR-0018` amended):
+`worktree-only` means the role runs in its own git worktree. It is **not a
+path fence**. S016.T006 measured that Claude Code enforces no path fence: a
+`worktree`-isolated subagent read and wrote the main checkout by absolute
+path with nothing denied. So on Claude Code the term maps to the agent
+frontmatter `isolation: worktree`, and that is a **full match**, not a
+partial one; its emission is not refused.
 
-**Still unsettled as of 2026-09-23, and recorded as such deliberately.**
-`ADR-0018` clause 7 assigned the question to `TASK-0040`; it is still open,
-and `TASK-0056` **tried and failed** to settle it, which is worth stating so
-the gap does not read later as one nobody looked at.
+OpenCode keeps `external_directory: deny`, which does refuse tool calls
+touching paths outside the working directory. That is a stricter mechanism
+than the term promises, and it stays; the term itself promises only the
+separate worktree. Isolation confines the *accidental* (a relative-path
+write, a commit on the wrong branch) and does nothing about the *deliberate*.
+Do not read the term as a security boundary on Claude Code.
 
-`TASK-0056`'s run was **confounded**. A fixture declaring `isolation:
-worktree` had every write refused by the *permission* layer, across three
-different mechanisms, so the run could not distinguish isolation from denial.
-Its `pwd` and `git rev-parse --show-toplevel` both returned the **real**
-directory rather than a copy, which points *against* a copy being made — but
-that fixture ran as a main-thread `claude -p` agent, and the behaviour
-described above concerns **subagents**, which the run never exercised.
-**Nothing in it is a verdict**, and it must not be cited as one.
-
-**What the repo does today is behaviour, not a decision.**
-`scripts/emit-agents.py` emits `isolation: worktree` for Claude Code and flags
-the mapping `partial`. Read that as the unresolved state persisting in code,
-not as the question having been answered in favour of emitting.
-
-**One question settles it**: does a commit made by a `worktree`-isolated
-**subagent** reach the real repository? It needs a run in an environment where
-writes are permitted. It cannot be reasoned out, and this guide does not.
-
-**Scope, stated so nobody has to re-derive it.** Every role in `agents/`
-declares `worktree-only` — all six. Two of them, `critic` and `ideator`, are
-emitted for Claude Code today, so they are the roles carrying the unresolved
-mapping right now. All nine roles planned for the unattended-run set declare
-it too (`ADR-0022`), and for the *acting* roles among them the difference is
-material: **an isolated copy is the wrong confinement for a role that must
-commit to the real tree.** Until this is settled, do not declare
-`worktree-only` on a Claude Code role whose job is to commit — either narrow
-that role to `opencode`, or wait for the answer.
-
-Owner: `TASK-0040`, unchanged.
+A commit made in a `worktree`-isolated subagent lands on its own branch, not
+in the real tree (measured, `TASK-0107`), so a role whose job is to commit to
+the real tree must account for that when it declares the term. The fifteen
+roles that declare it today (every role in `agents/` but `_template`) are
+adjudicator, closer, critic, designer-manager, gate-runner, git-ops, ideator,
+implementer, park-steward, preflight, qa-test, refuter, review, run-scribe
+and task-planner.
 
 ### A role file must not contain client-native syntax
 A role file must **not** contain a `permission:` block, the string

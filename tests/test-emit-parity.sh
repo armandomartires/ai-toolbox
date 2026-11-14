@@ -127,5 +127,12 @@ EOF
 check "P11 dropping an OpenCode mapping changes the matrix" \
   "$(! cmp -s "$tmp/parity-drop2.md" "$tmp/reg.md"; echo $?)"
 
+# P12: `worktree-only` means the role runs in its own git worktree (ADR-0018,
+# amended 2026-11-14, S018.T003), so Claude Code's `isolation: worktree` is a
+# full match: the matrix row carries no "(partial)" mark.
+row="$(grep '^| worktree-only |' "$tmp/parity.md")"
+check "P12 worktree-only is a full match on Claude Code (no partial mark)" \
+  "$(case "$row" in *"isolation: worktree |"*) ! case "$row" in *partial*) true;; *) false;; esac; echo $?;; *) echo 1;; esac)" "$row"
+
 if [ "$fails" -eq 0 ]; then echo "test-emit-parity.sh: OK ($cases cases)"; exit 0; fi
 echo "test-emit-parity.sh: $fails of $cases case(s) FAILED"; exit 1

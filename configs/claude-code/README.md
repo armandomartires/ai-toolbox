@@ -92,7 +92,10 @@ whose delegate is not emitted for every client the caller is.
 > ```
 
 Capability terms map to `disallowedTools` plus, for `worktree-only`,
-`isolation: worktree`. Five of the nine terms — `test-files-only`,
+`isolation: worktree`. `worktree-only` means the role runs in its own git
+worktree; it is **not a path fence**, and Claude Code enforces none
+(S016.T006), so the mapping is a full match and its emission is not refused
+(ADR-0018, amended 2026-11-14). Five of the nine terms — `test-files-only`,
 `bash-allowlist`, `no-force-push`, `push-requires-confirmation`,
 `webfetch-requires-confirmation` — **cannot be enforced per-agent here**,
 because `tools`/`disallowedTools` gate whole tools and Claude Code has no

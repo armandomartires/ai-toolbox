@@ -136,13 +136,25 @@ and the shortfall is one-sided. Measured against the four roles
 | `read-only` | `edit: deny`, `write: deny` | omit Write/Edit from `tools` | **both** |
 | `no-delegation` | `task: deny` | omit `Agent` from `tools` | **both** |
 | `no-webfetch` | `webfetch: deny` | omit WebFetch / `disallowedTools` | **both** |
-| `worktree-only` | `external_directory: deny` | no per-agent equivalent — **measured, not inferred** (`TASK-0111`) | OpenCode only |
+| `worktree-only` | `external_directory: deny` | `isolation: worktree` (the role runs in its own git worktree) | **both** |
 | `test-files-only` | `edit` glob map (7 globs) | **unexpressible per-agent** | OpenCode only |
 | `bash-allowlist` | `bash` glob map (13 globs in `shell-runner`) | **unexpressible per-agent** | OpenCode only |
 | `no-force-push` | `bash` deny globs | **unexpressible per-agent** | OpenCode only |
 | `push-requires-confirmation` | `bash: {"git push*": ask}` | **no `ask` state exists** | OpenCode only |
 
-**Five of eight terms map to OpenCode only, and they are the five that carry
+*Amended 2026-11-14 (S018.T003, the human's decision): `worktree-only` means
+the role runs in its own git worktree; it is not a path fence. S016.T006
+measured that Claude Code enforces no path fence. The `worktree-only` row
+above read "no per-agent equivalent — measured, not inferred (`TASK-0111`) |
+OpenCode only"; that measurement stands and is now the reason the term no
+longer claims a fence. The dated sections below record how it was reached and
+are unchanged, but wording anywhere in this ADR (the dated sections included)
+that clause 8.2 refuses `worktree-only` on Claude Code is superseded by this
+amendment.*
+
+**[Count superseded by the 2026-11-14 amendment: `worktree-only` now ports,
+so four of eight terms map to OpenCode only and four port.]** **Five of eight
+terms map to OpenCode only, and they are the five that carry
 the safety value.** The three that port are all whole-tool on/off. Every
 term needing *intra-tool* granularity — which paths, which commands, or a
 third `ask` state — has no per-agent Claude Code expression. Claude Code's
@@ -339,7 +351,9 @@ Clause 8 is new and is the substantive addition from `TASK-0036`.
   are OpenCode-only. `TASK-0045` inherits a stated disposition; without
   clause 8 it would have inherited an unsolved problem at the point of
   implementation.
-- **The vocabulary is small and lopsided.** Three portable terms against
+- **The vocabulary is small and lopsided.** *[Superseded count: since the
+  2026-11-14 amendment, four portable terms against four OpenCode-only
+  ones.]* Three portable terms against
   five OpenCode-only ones. Anything needing intra-tool granularity is
   OpenCode-only until a later ADR admits an out-of-file mechanism. Expect
   this to be felt as a limitation and resisted; clause 8.4 is the answer.

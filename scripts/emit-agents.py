@@ -67,13 +67,14 @@ build, which ships configs/claude-code/hooks/role-guard.py and the
 the REFUSAL set below is empty today; the refusal path stays for any term
 added without a mapping.
 
-TWO DIFFERENT COUNTS, AND THEY ARE BOTH RIGHT. This docstring counts the
-REFUSAL set — terms whose `claude_code` was None (seven until TASK-0271). The authoring guide
-counts terms NOT enforceable in both clients (eight). The difference is
-`worktree-only`, which is PARTIAL: it emits `isolation: worktree` rather
-than refusing. Read either as the other and you will be wrong; TASK-0063
-flagged exactly that risk. If you add a term, correct both numbers, in both
-files.
+TWO COUNTS, KEEP THEM APART. The REFUSAL set (terms whose `claude_code` is
+None) is empty today; it was seven until TASK-0271. The guard-enforced set is
+seven of the thirteen (the count above), and the other six terms are
+enforceable in both clients per agent: read-only, no-delegation,
+delegation-allowlist, no-webfetch, no-bash and worktree-only (a full match
+since ADR-0018's 2026-11-14 amendment). The authoring guide states 6 and 7;
+TASK-0063 flagged the risk of reading one count as the other. If you add a
+term, correct the numbers in both files.
 
 (The count read "five of the nine" until TASK-0071, over a table of ten,
 then "six of the eleven" (TASK-0078, `no-bash`) and "six of the twelve"
@@ -236,15 +237,14 @@ VOCAB = {
         "opencode": [("bash", "deny")],
         "claude_code": {"deny_tools": ["Bash"] + OTHER_SHELLS},
     },
-    # Semantically PARTIAL, not equivalent. OpenCode refuses tool calls
-    # touching paths outside the worktree; Claude Code's `isolation:
-    # worktree` redirects the agent into an isolated *copy* of the repo.
-    # Confinement by refusal vs confinement by redirection. Decided in
-    # TASK-0040: emit the nearest mechanism and record the difference,
-    # because refusing would make every existing role OpenCode-only.
+    # A full match under the term's meaning (ADR-0018, amended 2026-11-14,
+    # S018.T003): `worktree-only` means the role runs in its own git worktree,
+    # which on Claude Code is `isolation: worktree`. It is not a path fence;
+    # S016.T006 measured that Claude Code enforces none. OpenCode's
+    # `external_directory: deny` is the stricter mechanism it also gets.
     "worktree-only": {
         "opencode": [("external_directory", "deny")],
-        "claude_code": {"isolation": "worktree", "partial": True},
+        "claude_code": {"isolation": "worktree"},
     },
     "test-files-only": {
         "opencode": [("edit", {
@@ -625,7 +625,7 @@ def emit_claude_code(role, fm, body, guarded=False):
         if spec.get("guard"):
             deny += GUARD_WITHHELD
         for k, v in spec.items():
-            if k not in ("deny_tools", "partial", "guard"):
+            if k not in ("deny_tools", "guard"):
                 extra[k] = v
     out = ["---", "name: %s" % role,
            "description: %s" % fm["description"]]
@@ -705,7 +705,7 @@ def term_cell(term, client):
     if spec.get("deny_tools"):
         parts.append("withholds " + ", ".join(spec["deny_tools"]))
     if spec.get("isolation"):
-        parts.append("isolation: %s%s" % (spec["isolation"], " (partial)" if spec.get("partial") else ""))
+        parts.append("isolation: %s" % spec["isolation"])
     return "; ".join(parts)
 
 
