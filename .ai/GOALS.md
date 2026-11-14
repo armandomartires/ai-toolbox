@@ -271,7 +271,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T024_LongRunHarness.md
 - [x] S011.T025 — Signed, versioned releases (P2.4)
   .ai/tasks/S011.T025_SignedVersionedReleases.md
-- [?] S011.T026 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
+- [x] S011.T026 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
   .ai/tasks/S011.T026_AgentSdkRunner.md
 - [?] S011.T027 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
   .ai/tasks/S011.T027_GatesHttpTransport.md
