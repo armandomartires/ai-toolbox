@@ -299,6 +299,35 @@ class TestGuardHook(GuardCase):
         self.assertIn("failing closed", call["reason"])
 
 
+class TestBashPreApproval(GuardCase):
+    """Live run golden26-r2: under acceptEdits a Bash command no permission
+    rule allows is refused ("This command requires approval") with nobody to
+    approve it. Each role's guard allowlist is passed as Bash(<pattern>)
+    allowed_tools; the guard hook stays the boundary."""
+
+    def allowed(self, role):
+        return list(self.driver_for(role).options(role).allowed_tools)
+
+    def test_the_closer_carries_its_commit_and_add_patterns(self):
+        got = self.allowed("closer")
+        self.assertIn("Bash(git commit -m *)", got)
+        self.assertIn("Bash(git add -- *)", got)
+
+    def test_the_park_steward_carries_its_stash_pattern(self):
+        self.assertIn("Bash(git stash push*)", self.allowed("park-steward"))
+
+    def test_a_role_without_an_allowlist_carries_no_bash_pattern(self):
+        for role in ("run-scribe", "refuter"):  # no guard entry; allowlist false
+            self.assertEqual([t for t in self.allowed(role) if t.startswith("Bash(")], [], role)
+
+    def test_the_union_keeps_the_definitions_own_tools(self):
+        d = self.driver_for("closer")
+        d.definitions["closer"]["tools"] = ["Read", "Bash(git commit -m *)"]
+        got = list(d.options("closer").allowed_tools)
+        self.assertEqual(got.count("Bash(git commit -m *)"), 1)
+        self.assertIn("Read", got)
+
+
 class TestGuardHookIsWhatStopsIt(GuardCase):
     """The control for (2): with the callbacks removed the same push lands, so
     TestGuardHook passing is the hook's doing, not the stub's."""

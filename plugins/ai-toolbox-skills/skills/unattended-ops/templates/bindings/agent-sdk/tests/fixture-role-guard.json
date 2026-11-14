@@ -3,8 +3,25 @@
   "generated_by": "a test fixture in the shape of scripts/emit-agents.py --guard-json=",
   "plugin": "ai-toolbox-agents",
   "roles": {
+    "park-steward": {
+      "bash": {
+        "allowlist": true,
+        "allow": ["git status*", "git stash push*", "git stash list*"],
+        "ask": [],
+        "deny": ["git push*", "git reset --hard*"]
+      }
+    },
+    "refuter": {
+      "bash": {
+        "allowlist": false,
+        "allow": ["git log*"],
+        "ask": [],
+        "deny": ["git push*"]
+      }
+    },
     "closer": {
       "bash": {
+        "allowlist": true,
         "allow": ["git status*", "git diff*", "git log*", "git rev-parse*", "git add -- *", "git commit -m *"],
         "ask": [],
         "deny": ["git push --force*", "git push -f*", "git push*--force*", "git reset --hard*", "git rebase*"]
@@ -12,6 +29,7 @@
     },
     "git-ops": {
       "bash": {
+        "allowlist": true,
         "allow": ["git status*", "git diff*", "git log*", "git show*", "git rev-parse*", "git add -- *", "git commit -m *"],
         "ask": ["git push*"],
         "deny": ["git push --force*", "git push -f*", "git push*--force*", "git reset --hard*", "git rebase*"]

@@ -134,6 +134,29 @@ client. `permission_mode` is `acceptEdits`: in `default` every edit would
 prompt, and per `templates/binding.md` rule 2 an unanswered prompt is a
 refusal.
 
+### Bash pre-approval (live run golden26-r2, S011.T026)
+
+`acceptEdits` approves edits, not shell commands: a Bash command no permission
+rule allows "requires approval", and an unattended run has no one to give it.
+In golden26-r2 the closer's `git commit -m ...` and the park-steward's `git
+stash push ...` were refused with "This command requires approval". So
+`options()` passes, as `allowed_tools`, one `Bash(<pattern>)` rule per entry of
+the role's guard allowlist (`roles.<role>.bash.allow` in `role-guard.json`, the
+trailing `*` kept as written), unioned with any tools the definition lists. A
+role with no guard entry, or `allowlist: false`, gets none. The guard's
+PreToolUse hook stays the boundary: it still denies anything outside the
+allowlist and every shell operator; pre-approval only removes the prompt
+nobody can answer.
+
+### Sandbox placeholder paths (live run golden26-r1, S011.T026)
+
+While a role runs, Claude Code's sandbox (bwrap) shows placeholder entries for
+its protected paths in the working directory: `.bash_profile` `.bashrc`
+`.claude/` `.gitconfig` `.gitmodules` `.idea` `.mcp.json` `.profile`
+`.ripgreprc` `.vscode` `.zprofile` `.zshrc`. The preflight then reads a dirty
+tree and halts (golden26-r1). The consuming repository's `.gitignore` lists
+them, or the first preflight of a run halts.
+
 ## The dependency
 
 `claude-agent-sdk` (PyPI) is optional and imported lazily (`TASK-0284`, out of

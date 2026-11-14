@@ -317,14 +317,37 @@ class SdkDriver(base.Driver):
 
         return {"PreToolUse": [self.sdk.HookMatcher(matcher=None, hooks=[pre_tool_use])]}
 
+    def bash_patterns(self, role):
+        """One `Bash(<pattern>)` permission rule per entry of the role's guard
+        allowlist (`roles.<role>.bash.allow`), the trailing `*` kept as written.
+        A role with no guard entry, or `allowlist: false`, gets none."""
+        spec = (self.guard_cfg.get("roles") or {}).get(self.b.roles[role]) or {}
+        bash = spec.get("bash") or {}
+        if not bash.get("allowlist"):
+            return []
+        return ["Bash(%s)" % p for p in bash.get("allow") or [] if isinstance(p, str) and p]
+
     def options(self, role):
+        """The SDK options for one role.
+
+        `allowed_tools` is the definition's tools unioned with the role's guard
+        allowlist as `Bash(<pattern>)` rules. Why: live run golden26-r2 (S011.T026)
+        had the closer's `git commit -m ...` and the park-steward's `git stash
+        push ...` refused with "This command requires approval": under
+        acceptEdits a Bash command no permission rule allows needs approval, and
+        an unattended run has no one to give it. The guard's PreToolUse hook
+        stays the boundary (it denies anything outside the allowlist and every
+        shell operator); pre-approval only removes the prompt nobody can answer.
+        """
         d = self.definitions[role]
         kwargs = dict(system_prompt=d["body"], model=d["model"], max_turns=d["max_turns"],
                       disallowed_tools=d["disallowed"], permission_mode=self.b.permission_mode,
                       cwd=self.repo, settings=self.settings_path, env=self.env,
                       hooks=self.hooks_for(role))
-        if d["tools"]:
-            kwargs["allowed_tools"] = d["tools"]
+        allowed = list(d["tools"])
+        allowed += [p for p in self.bash_patterns(role) if p not in allowed]
+        if allowed:
+            kwargs["allowed_tools"] = allowed
         try:
             return self.sdk.ClaudeAgentOptions(**kwargs)
         except TypeError as exc:
