@@ -4,7 +4,7 @@ description: "The method behind the design-brief loop - how to clarify a problem
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # design-flow
@@ -52,10 +52,9 @@ already-written brief.
 
 **Not a governance framework.** It produces a design brief — no task IDs, no
 sprints, no `.ai/` layout opinion, no status enum beyond the two lock
-values. That layer is `project-workflow` (`00.CONVENTIONS.md` + `20/30/35`,
-`S###.T###`) or `project-migration` (`context/`, `planning/`, `sessions/`,
-`TASK-####`), which are two deliberately divergent frameworks —
-`ADR-0013`; don't add a third.
+values. That layer is the one convention owned by `project-workflow`
+(`00.CONVENTIONS.md` + `20/30/35`, `S###.T###`), with `project-migration` to
+retrofit it (ADR-0066); this skill adds none.
 
 The pull is real: a brief with a status field starts to resemble a task
 brief, which invites an ID scheme, which invites a sprint. It stops at the

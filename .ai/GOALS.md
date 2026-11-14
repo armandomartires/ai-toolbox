@@ -644,7 +644,7 @@ Goal: Both planning skills use one convention, project-workflow's numbered layou
 Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
 - [x] S018.T001 — Open sprint S018 and write its briefs
   .ai/tasks/S018.T001_OpenSprintS018.md
-- [ ] S018.T002 — Retire the stale "separate framework" wording about project-migration
+- [x] S018.T002 — Retire the stale "separate framework" wording about project-migration
   .ai/tasks/S018.T002_RetireSeparateFrameworkWording.md
 - [ ] S018.T003 — Redefine worktree-only as the role's own git worktree
   .ai/tasks/S018.T003_RedefineWorktreeOnly.md

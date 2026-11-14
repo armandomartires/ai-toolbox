@@ -5,7 +5,7 @@ license: MIT
 disable-model-invocation: true
 metadata:
   author: armando.martires
-  version: "1.8.0"
+  version: "1.8.1"
 ---
 
 # unattended-ops
@@ -189,9 +189,9 @@ The snapshot procedure is `skills/project-workflow/templates/reference/tracker.m
   client bindings (`templates/bindings/opencode/`,
   `templates/bindings/claude-code/` and, on trial, `templates/bindings/agent-sdk/`)
   and a checker. No index, no task IDs, no sprint shape, no status vocabulary
-  beyond the five verdicts and a binding's slot values. That layer is
-  `project-workflow` and `project-migration`, which are two deliberately
-  divergent frameworks — `ADR-0013`; do not add a third.
+  beyond the five verdicts and a binding's slot values. The planning layer is
+  the one convention owned by `project-workflow`, with `project-migration` to
+  retrofit it (ADR-0066); this skill adds none.
 
 ## References
 

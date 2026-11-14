@@ -4,7 +4,7 @@ description: "How to change Ansible content in a live estate safely - the obliga
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.2.2"
+  version: "1.2.3"
 ---
 
 # ansible-ops
@@ -207,8 +207,9 @@ control**.
   `--check`, to produce them. Treat the first real use as the first test.
 - **Not a governance framework.** It ships one per-change record and a
   checker. No index, no task IDs, no sprint shape, no status vocabulary
-  beyond the record's own field values. That layer is `project-workflow`
-  and `project-migration`; do not add a third.
+  beyond the record's own field values. The planning layer is the one
+  convention owned by `project-workflow`, with `project-migration` to retrofit
+  it; this skill adds none.
 
 ## References
 
