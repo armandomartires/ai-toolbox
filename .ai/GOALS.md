@@ -243,7 +243,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T011_McpAnnotationsAndLockDrift.md
 - [x] S011.T012 — Fix stale loop text (P0.5)
   .ai/tasks/S011.T012_StaleLoopText.md
-- [?] S011.T031 — Fix the first live CI runs of the eval and tool-lock jobs
+- [x] S011.T031 — Fix the first live CI runs of the eval and tool-lock jobs
   .ai/tasks/S011.T031_FirstLiveCiFixes.md
 - [x] S011.T013 — Role guard: the seven refused terms in Claude Code (P1.1, HIGH RISK)
   .ai/tasks/S011.T013_RoleGuard.md
