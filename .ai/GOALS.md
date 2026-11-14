@@ -273,7 +273,7 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T025_SignedVersionedReleases.md
 - [x] S011.T026 — Agent SDK runner for unattended runs, compared on the golden run (P2.5)
   .ai/tasks/S011.T026_AgentSdkRunner.md
-- [?] S011.T027 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
+- [x] S011.T027 — Gates over HTTP behind OAuth 2.1, sandboxed (P2.6, HIGH RISK)
   .ai/tasks/S011.T027_GatesHttpTransport.md
 - [?] S011.T001 — switchboard 0.8.0: each repo mod's loaded version beside its manifest (B-071)
   .ai/tasks/S011.T001_SwitchboardLoadedVersions.md
@@ -287,12 +287,12 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T005_SwitchboardDesignParity.md
 - [?] S011.T006 — task-orchestrator 0.6.0: a worker stopped at its turn cap is reported, resumable, and given more turns
   .ai/tasks/S011.T006_OrchestratorTurnCap.md
-- [?] S011.T007 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
+- [x] S011.T007 — task-orchestrator 0.7.0: the REVIEW-0013 fixes (path fence, one admission gate, stall advice, model families, observability)
   .ai/tasks/S011.T007_OrchestratorReviewFixes.md
 - [?] S011.T029 — agent-watch 0.13.5: the band and the Sessions pane agree on steps
   .ai/tasks/S011.T029_AgentWatchStepsAgree.md
   branch: agent/steps-mismatch-20eb29
-- [?] S011.T030 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
+- [x] S011.T030 — task-orchestrator 0.7.1: a worker that stopped itself is reopened when resumed
   .ai/tasks/S011.T030_OrchestratorResumeSelfStopped.md
 - [x] S011.T032 — task-orchestrator 0.7.2: writers run through the hand-off, so the write fence sees them
   .ai/tasks/S011.T032_OrchestratorFenceLive.md
