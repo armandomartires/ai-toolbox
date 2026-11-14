@@ -650,7 +650,7 @@ Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
   .ai/tasks/S018.T003_RedefineWorktreeOnly.md
 - [ ] S018.T004 — The Agent SDK runner is the one Claude unattended runner, with a golden-run CI job
   .ai/tasks/S018.T004_OneClaudeUnattendedRunner.md
-- [ ] S018.T005 — Diagnose the gates server's initialize hang on Windows
+- [x] S018.T005 — Diagnose the gates server's initialize hang on Windows
   .ai/tasks/S018.T005_GatesInitializeHangWindows.md
 - [ ] S018.T006 — Fix the injection suite and the xAI and OpenAI eval jobs (ad-hoc 075)
   .ai/tasks/S018.T006_EvalInjectionAndProviderJobs.md

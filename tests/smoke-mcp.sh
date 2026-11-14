@@ -213,27 +213,78 @@ def read_stdout():
     finally:
         found.set()
 
-reader = threading.Thread(target=read_stdout, daemon=True)
-reader.start()
-try:
-    proc.stdin.write(json.dumps(req) + "\n")
-    proc.stdin.flush()
-except (BrokenPipeError, OSError):
-    pass          # the server died before reading; diagnosed below
-found.wait(timeout)
+errs = []
 
-reply = replies[0] if replies else None
-alive = proc.poll() is None
-proc.terminate()
+def read_stderr():
+    try:
+        errs.append(proc.stderr.read() or "")
+    except (ValueError, OSError):
+        pass
+
+def stop_tree():
+    """End the server and everything it started, each step bounded."""
+    if os.name == "nt":
+        # On Windows terminate() ends only `uv`; the venv launcher and the
+        # interpreter it started survive, so the whole tree is killed (S018.T005).
+        try:
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=15)
+        except (subprocess.TimeoutExpired, OSError):
+            proc.kill()
+    else:
+        proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+
+reader = threading.Thread(target=read_stdout, daemon=True)
+# Drained from the start, and joined with a bound below: a launcher's
+# descendant can outlive it holding stderr open, and an unbounded read then
+# never returns (S018.T005).
+err_reader = threading.Thread(target=read_stderr, daemon=True)
+reply, alive = None, False
 try:
-    proc.wait(timeout=5)
-except subprocess.TimeoutExpired:
-    proc.kill()
-    proc.wait(timeout=5)
-try:
-    stderr = proc.stderr.read() or ""
-except (ValueError, OSError):
-    stderr = ""
+    reader.start()
+    err_reader.start()
+    try:
+        proc.stdin.write(json.dumps(req) + "\n")
+        proc.stdin.flush()
+    except (BrokenPipeError, OSError):
+        pass          # the server died before reading; diagnosed below
+    found.wait(timeout)
+
+    reply = replies[0] if replies else None
+    if reply is None and found.is_set():
+        # stdout closed with no reply: let the launcher's exit status land, so a
+        # server that exited is not reported as silent and still running.
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            pass
+    alive = proc.poll() is None
+finally:
+    # Whatever happened above, no server process outlives the attempt.
+    stop_tree()
+    # With the tree gone the pipes reach EOF and the readers return. A pipe
+    # is closed only once its reader is done: closing it under a blocked
+    # read would wait on the same lock.
+    for thread, pipe in ((reader, proc.stdout), (err_reader, proc.stderr),
+                         (None, proc.stdin)):
+        if thread is not None and thread.ident is not None:
+            thread.join(5)
+            if thread.is_alive():
+                continue
+        try:
+            pipe.close()
+        except (ValueError, OSError):
+            pass
+stderr = errs[0] if errs else ""
 
 if reply is None:
     got = " ".join("".join(lines).split())
