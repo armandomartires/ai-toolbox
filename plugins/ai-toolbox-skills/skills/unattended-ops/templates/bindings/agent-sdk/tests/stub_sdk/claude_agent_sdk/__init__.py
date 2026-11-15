@@ -16,6 +16,8 @@ What it does with a query(): it names the role from the prompt ("You are the
   text        the assistant's text; {TASK} and {HEAD} as in the OpenCode stub
   auto        "gate-runner" or "stash", as in the OpenCode stub
   result      overrides for the ResultMessage (subtype, is_error, num_turns)
+  raise       a plain RuntimeError(message) out of query(), as an SDK failure
+  cost        the ResultMessage's total_cost_usd (default 0.0)
 
 Environment: STUB_SCENARIO (JSON {"agents": {role: [response, ...]}}),
 STUB_LOG (JSONL, one line per query with the options it was given),
@@ -154,6 +156,8 @@ async def query(*, prompt, options=None, transport=None):
     with open(counter, "w") as fh:
         fh.write(str(n + 1))
     resp = queue[min(n, len(queue) - 1)]
+    if resp.get("raise"):
+        raise RuntimeError(resp["raise"])
     cwd = str(options.cwd or os.getcwd())
     t = re.search(r"\btask (TASK-\d+|S\d{3}\.T\d{3}|[1-9][0-9]*)\b", prompt)
     task = t.group(1) if t else ""
@@ -209,4 +213,4 @@ async def query(*, prompt, options=None, transport=None):
         raise ResultError(result["subtype"], result["num_turns"])
     yield ResultMessage(subtype=result["subtype"], duration_ms=1, duration_api_ms=1,
                         is_error=result["is_error"], num_turns=result["num_turns"],
-                        session_id="stub", total_cost_usd=0.0, usage={}, result=text)
+                        session_id="stub", total_cost_usd=resp.get("cost", 0.0), usage={}, result=text)

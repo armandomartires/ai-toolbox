@@ -62,10 +62,22 @@ steps_declared:
 
 A third driver for `loops/unattended-run/loop.md`, on the Claude Agent SDK
 for Python, authored under `skills/unattended-ops/templates/bindings/agent-sdk/`
-as `ADR-0022` clause 1.2 requires. It is a **trial**: `TASK-0284` adds it
-beside the Claude Code Workflow binding so the two can be compared on the
-golden unattended run, and a human picks one afterwards. The contract it
-fills is `skills/unattended-ops/templates/binding.md`.
+as `ADR-0022` clause 1.2 requires. It is **the Claude runner** of
+`loops/unattended-run/`: `TASK-0284` added it beside the Claude Code Workflow
+binding, the two were compared on the golden unattended run
+(`docs/reports/2026-11-14-golden-run-comparison.md`), and on 2026-11-14 the
+human picked this one. The Workflow binding stays as the secondary Claude
+binding. The contract it fills is `skills/unattended-ops/templates/binding.md`.
+
+`--max-cost-usd N` caps a run's spend: the runner sums each role call's
+`total_cost_usd` and halts the run (journalled `halt`, handover written) once
+the sum reaches N, checked before each role call (a run overshoots by at most the
+call in flight; `run-scribe` is exempt so step 14 still writes the handover).
+**It fails closed on cost**: with the flag set, a call whose result has no usable
+`total_cost_usd` (missing, `None`, or an error result without one) journals
+`cost-unknown` and halts the run with "spend cap: cost unknown". Without the
+flag there is no cap and a missing cost changes nothing; `maxTurns` is a stall
+bound, not a budget.
 
 **It reuses the OpenCode driver rather than copying it.** `runner.py` imports
 `../opencode/driver.py` (or a `driver.py` copied beside it, with its
@@ -112,8 +124,8 @@ every call the guard passes (`ADR-0062`).
 "the capability asymmetry"): `task-planner` and `adjudicator` are not in
 `role-guard.json`, so their read-only boundary is their `tools` list alone;
 and the emitted `isolation: worktree` is not applied, because each role is a
-top-level `query()` in the repository, not a subagent. Both are recorded for
-the comparison note `TASK-0284` owes.
+top-level `query()` in the repository, not a subagent. Both are recorded in
+the comparison note, `docs/reports/2026-11-14-golden-run-comparison.md`.
 
 ## The gate map's silent-no-op switches
 
@@ -180,6 +192,7 @@ The OpenCode binding's seven, inherited with its control flow
 Passing `scripts/check-binding.sh` proves the slots are answered, every loop
 step is declared, and no paragraph states an uncited rule — no more
 (`templates/binding.md`). The tests under `tests/` prove the runner against a
-**stub** SDK, which models the client rather than being it. No live model
-call has run this binding; that is `TASK-0284`'s golden run, with the human's
-authorization (`AGENTS.md`).
+**stub** SDK, which models the client rather than being it. The live proof is
+`TASK-0284`'s golden run (3 of 3 tasks closed, every gate PASSED, $0.88;
+`docs/reports/2026-11-14-golden-run-comparison.md`); a live run needs the
+human's authorization (`AGENTS.md`).

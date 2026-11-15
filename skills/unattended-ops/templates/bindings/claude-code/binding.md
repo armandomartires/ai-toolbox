@@ -53,6 +53,14 @@ steps_declared:
 
 ## What this binding is
 
+**Secondary Claude binding.** The Claude Agent SDK runner
+(`templates/bindings/agent-sdk/`) is the Claude runner of
+`loops/unattended-run/` since 2026-11-14; this binding is kept, and still
+tested, for a run inside an interactive Claude Code session without an API
+key. On the golden run it took 13.3 min and 44 agents against the runner's
+6.4 min and 21 role calls, and 7 of its 9 roles had their boundary only in the
+prompt (`docs/reports/2026-11-14-golden-run-comparison.md`).
+
 The Claude Code driver for `loops/unattended-run/loop.md`, authored under
 `skills/unattended-ops/templates/bindings/claude-code/` as `ADR-0022`
 clause 1.2 requires: a Workflow script template, de-domained from

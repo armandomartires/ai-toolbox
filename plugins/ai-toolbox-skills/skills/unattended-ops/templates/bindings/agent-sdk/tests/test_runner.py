@@ -200,6 +200,83 @@ class TestGolden(SdkHarness):
         self.assertIn("stopped at its maxTurns 120", retries[0]["error"])
         self.assertEqual([p["task"] for p in self.events("park")], ["TASK-0001"])
 
+    def run_capped(self, agents, cap="0.5"):
+        argv = [sys.executable, RUNNER, "--binding", "binding.md", "--run-id", "r1",
+                "--max-cost-usd", cap]
+        self.proc = subprocess.run(argv, cwd=self.repo, env=self.runner_env(agents),
+                                   capture_output=True, text=True, timeout=300)
+        return self.proc.returncode
+
+    def test_the_spend_cap_halts_cleanly_and_the_handover_is_still_written(self):
+        self.make_sdk_repo()
+        agents = oc.happy()
+        agents["preflight"][0]["cost"] = 0.75
+        self.assertEqual(self.run_capped(agents), 1, self.proc.stderr)
+        self.assertNotIn("Traceback", self.proc.stderr)
+        self.assertIn("handover:", self.proc.stdout)
+        self.assertIn("journal-head:", self.proc.stdout)
+        journal = self.journal()
+        halts = [e for e in journal if e["event"] == "halt"]
+        self.assertEqual(len(halts), 1)
+        self.assertIn("spend cap reached", halts[0]["reason"])
+        end = [e for e in journal if e["event"] == "run-end"]
+        self.assertIn("spend cap reached", end[0]["halted"])
+        self.assertTrue(os.path.getsize(os.path.join(self.repo, ".run", "r1", "handover.md")))
+        self.assertEqual(self.queries("task-planner"), [])
+        self.assertEqual(len(self.queries("run-scribe")), 1)
+
+    def test_the_cap_is_checked_before_a_call_so_a_run_under_it_is_not_cut(self):
+        self.make_sdk_repo()
+        self.assertEqual(self.run_capped(oc.happy(), cap="5"), 0, self.proc.stderr)
+        self.assertEqual([e for e in self.journal() if e["event"] == "halt"], [])
+
+    def test_a_call_with_no_cost_under_a_cap_fails_closed(self):
+        self.make_sdk_repo()
+        agents = oc.happy()
+        agents["preflight"][0]["cost"] = None
+        self.assertEqual(self.run_capped(agents, cap="5"), 1, self.proc.stderr)
+        self.assertNotIn("Traceback", self.proc.stderr)
+        self.assertIn("handover:", self.proc.stdout)
+        journal = self.journal()
+        self.assertTrue([e for e in journal if e["event"] == "cost-unknown"])
+        self.assertIn("spend cap: cost unknown", [e for e in journal if e["event"] == "halt"][0]["reason"])
+        self.assertEqual(self.queries("task-planner"), [])
+
+    def test_a_call_with_no_cost_and_no_cap_changes_nothing(self):
+        self.make_sdk_repo()
+        agents = oc.happy()
+        agents["preflight"][0]["cost"] = None
+        self.assertEqual(self.run_runner(agents), 0, self.proc.stderr)
+        self.assertEqual([e for e in self.journal() if e["event"] == "cost-unknown"], [])
+
+    def assert_clean_end(self, code):
+        self.assertEqual(self.proc.returncode, code, self.proc.stderr)
+        self.assertNotIn("Traceback", self.proc.stderr)
+        self.assertIn("handover:", self.proc.stdout)
+        self.assertIn("journal-head:", self.proc.stdout)
+
+    def test_a_plain_sdk_exception_in_run_scribe_still_writes_the_handover(self):
+        self.make_sdk_repo()
+        agents = oc.happy()
+        agents["run-scribe"] = [{"raise": "boom from the sdk"}]
+        self.run_runner(agents)
+        self.assert_clean_end(0)
+        errs = [e["error"] for e in self.events("handover-mechanical")]
+        self.assertTrue(errs and "RuntimeError: boom from the sdk" in errs[0], errs)
+        self.assertTrue(os.path.getsize(os.path.join(self.repo, ".run", "r1", "handover.md")))
+
+    def test_a_plain_sdk_exception_in_an_earlier_role_is_a_mechanical_failure(self):
+        self.make_sdk_repo()
+        agents = oc.happy()
+        agents["task-planner"] = [{"raise": "boom from the sdk"}]
+        self.run_runner(agents)
+        self.assert_clean_end(0)
+        retries = self.events("mechanical-retry")
+        self.assertEqual(len(retries), 3)
+        self.assertIn("RuntimeError: boom from the sdk", retries[0]["error"])
+        self.assertEqual([p["task"] for p in self.events("park")], ["TASK-0001"])
+        self.assertEqual(self.events("run-end")[0]["halted"], None)
+
     def test_a_definition_without_maxturns_halts_before_any_role(self):
         write_definitions(self.agents_dir, drop=("refuter",))
         self.make_sdk_repo()

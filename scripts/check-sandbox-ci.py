@@ -7,6 +7,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CI = ROOT / ".gitlab/ci/unattended-sandbox.yml"
 HCL = ROOT / "sandbox/vault/ai-toolbox-unattended.hcl"
 ROLE = ROOT / "sandbox/vault/jwt-role-ai-toolbox-unattended.json"
+GOLDEN = ROOT / ".gitlab/ci/golden-run.yml"
+ROOT_CI = ROOT / ".gitlab-ci.yml"
 
 
 def check_hcl(text):
@@ -63,6 +65,46 @@ def check_ci(text):
     return errs
 
 
+def job_body(text, job):
+    m = re.search(rf"^{job}:\n((?:(?:[ \t].*)?\n)*)", text, re.M)
+    return m.group(1) if m else None
+
+
+def check_golden(text, root_ci):
+    """The golden-run jobs (S018.T004): a dry job with no secret on every
+    pipeline, a manual live job whose only secret is ANTHROPIC_API_KEY."""
+    errs = []
+    if ".gitlab/ci/golden-run.yml" not in root_ci:
+        errs.append("golden-run.yml is not included from .gitlab-ci.yml")
+    dry, live = job_body(text, "golden-run-dry"), job_body(text, "golden-run-live")
+    for name, body in (("golden-run-dry", dry), ("golden-run-live", live)):
+        if body is None:
+            errs.append(f"job {name} missing"); continue
+        if not re.search(r"^\s+tags:\s*\[docker\]", body, re.M): errs.append(f"{name}: not pinned to tag docker")
+        if re.search(r"^\s*-\s+(env|printenv|export -p)\s*$|set -x|set -o xtrace", body, re.M):
+            errs.append(f"{name}: can dump the environment")
+        if re.search(r"\$(VAULT_TOKEN|GITLAB_TOKEN|GITHUB_TOKEN|GITLAB_PUSH_TOKEN)", body):
+            errs.append(f"{name}: references a host credential")
+    if dry is not None:
+        if re.search(r"API_KEY|SECRET|TOKEN|id_tokens", dry): errs.append("golden-run-dry: references a secret")
+        if "test-golden-run.sh" not in dry: errs.append("golden-run-dry: does not run tests/test-golden-run.sh")
+        if re.search(r"when:\s*manual", dry): errs.append("golden-run-dry: is manual")
+    if live is not None:
+        if not re.search(r"when:\s*manual", live): errs.append("golden-run-live: not when: manual")
+        if not re.search(r'\$CI_PIPELINE_SOURCE == "schedule"\n\s+when: never', live):
+            errs.append("golden-run-live: a schedule is not refused")
+        if "--max-cost-usd" not in live: errs.append("golden-run-live: no spend cap")
+        used = re.sub(r"^\s*-\s+unset .*$", "", live, flags=re.M)  # dropping one is not consuming it
+        secrets = set(re.findall(r"\b[A-Z][A-Z0-9_]*(?:API_KEY|_TOKEN|SECRET)\b", used))
+        if secrets - {"ANTHROPIC_API_KEY", "CI_JOB_TOKEN"}:
+            errs.append("golden-run-live: consumes a secret other than ANTHROPIC_API_KEY")
+        m = re.search(r"artifacts:\n((?:[ \n].*\n?)*)", live)
+        paths = re.findall(r"^\s+-\s+(\S+)", m.group(1), re.M) if m else []
+        if not paths or any(not p.startswith("golden-live/") or p.endswith("/") for p in paths):
+            errs.append("golden-run-live: artifacts are not limited to named golden-live/ files")
+    return errs
+
+
 def self_test():
     assert check_hcl('path "sigmarecon-projects/data/ai-toolbox/*" { capabilities = ["read","update"] }')
     assert check_hcl('path "sigmarecon-projects/data/ai-toolbox/*" { capabilities = ["read"] }')  # no deny
@@ -81,6 +123,20 @@ def self_test():
     assert not [e for e in check_ci(run) if e.startswith("unattended-run:")], check_ci(run)
     assert check_ci(run + '    - eval "$(python3 f.py)"\n')
     assert check_ci(run.replace("unset CI_JOB_TOKEN", "true"))
+    gold = ("golden-run-dry:\n  tags: [docker]\n  script:\n    - bash tests/test-golden-run.sh\n"
+            "golden-run-live:\n  tags: [docker]\n  rules:\n    - if: $CI_PIPELINE_SOURCE == \"schedule\"\n"
+            "      when: never\n    - when: manual\n  script:\n    - runner.py --max-cost-usd 10\n"
+            "    - test -n \"$ANTHROPIC_API_KEY\"\n  artifacts:\n    paths:\n      - golden-live/journal.jsonl\n")
+    inc = "- local: .gitlab/ci/golden-run.yml"
+    assert not check_golden(gold, inc), check_golden(gold, inc)
+    assert check_golden(gold, "")
+    assert check_golden(gold.replace("tests/test-golden-run.sh", "x"), inc)
+    assert check_golden(gold.replace("    - when: manual", "    - when: always"), inc)
+    assert check_golden(gold.replace(" --max-cost-usd 10", ""), inc)
+    assert check_golden(gold.replace("    - bash tests", "    - echo $ANTHROPIC_API_KEY\n    - bash tests"), inc)
+    assert check_golden(gold + "    - echo $XAI_API_KEY\n", inc)
+    assert check_golden(gold.replace("golden-live/journal.jsonl", "golden-live/"), inc)
+    assert check_golden(gold.replace("  script:\n    - runner", "  script:\n    - env\n    - runner"), inc)
     print("check-sandbox-ci self-test: OK")
 
 
@@ -88,6 +144,7 @@ def main():
     if sys.argv[1:] == ["--self-test"]:
         return self_test()
     errs = check_hcl(HCL.read_text()) + check_role(ROLE.read_text()) + check_ci(CI.read_text())
+    errs += check_golden(GOLDEN.read_text(), ROOT_CI.read_text())
     for e in errs: print("SANDBOX CI:", e)
     if not errs: print("check-sandbox-ci: OK")
     sys.exit(1 if errs else 0)

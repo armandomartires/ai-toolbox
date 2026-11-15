@@ -648,7 +648,7 @@ Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
   .ai/tasks/S018.T002_RetireSeparateFrameworkWording.md
 - [x] S018.T003 — Redefine worktree-only as the role's own git worktree
   .ai/tasks/S018.T003_RedefineWorktreeOnly.md
-- [ ] S018.T004 — The Agent SDK runner is the one Claude unattended runner, with a golden-run CI job
+- [?] S018.T004 — The Agent SDK runner is the one Claude unattended runner, with a golden-run CI job
   .ai/tasks/S018.T004_OneClaudeUnattendedRunner.md
 - [x] S018.T005 — Diagnose the gates server's initialize hang on Windows
   .ai/tasks/S018.T005_GatesInitializeHangWindows.md

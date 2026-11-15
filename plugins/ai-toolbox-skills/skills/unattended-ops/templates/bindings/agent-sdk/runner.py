@@ -3,9 +3,11 @@
 Usage:
     python3 runner.py --binding <binding.md> --run-id <id> [--dry-run]
 
-THIS IS A TEMPLATE, and a trial (TASK-0284, decision D5=B): a second
-Claude-side runner beside the Claude Code Workflow binding, to be compared on
-the golden unattended run before a human picks one. It carries NO RULE OF ITS
+THIS IS A TEMPLATE, and THE CLAUDE RUNNER of loops/unattended-run/ (TASK-0284;
+picked 2026-11-14 on docs/reports/2026-11-14-golden-run-comparison.md, where
+its live golden run closed 3 of 3): the Claude Code Workflow binding beside it
+is secondary. --max-cost-usd N halts the run once N is spent; run-scribe is
+exempt so the handover is still written. It carries NO RULE OF ITS
 OWN (ADR-0022 clause 1.2), and it holds no control flow of its own either: the
 queue, the bounds, the verdict dispatch, the gate calls through run-gate.sh,
 the hash-chained journal, the evidence file, the lock checks, the park and the
@@ -183,6 +185,8 @@ class SdkDriver(base.Driver):
         self.settings_path = None
         self.env = {}
         self.denials = []
+        self.max_cost = None   # --max-cost-usd: the run's spend cap, None = no cap
+        self.spent = 0.0
 
     # -- step 1, the client half --------------------------------------------
 
@@ -370,6 +374,13 @@ class SdkDriver(base.Driver):
             raise Mechanical("%s cannot run: the SDK, its definition or the guard "
                              "did not load at step 1" % role)
         self.denials = []
+        if (self.max_cost is not None and self.spent >= self.max_cost
+                and role != "run-scribe"):
+            # Checked before the call starts, so a run overshoots the cap by
+            # at most the call in flight. run-scribe is exempt: step 14 must
+            # still write the handover of a run the cap halted.
+            raise Halt("spend cap reached: $%.2f of $%.2f before %s"
+                       % (self.spent, self.max_cost, role))
         limit = self.b.role_timeouts.get(role, self.b.role_timeout)
         started = time.time()
         try:
@@ -382,8 +393,14 @@ class SdkDriver(base.Driver):
             # ResultError (carrying `subtype`) rather than yielding it (the
             # SDK's python.md, "ResultError"); it is read as that result.
             err = getattr(self.sdk, "ResultError", None)
+            if isinstance(exc, (Halt, Mechanical)):
+                raise   # a stop signal or the driver's own failure, not the SDK's
             if err is None or not isinstance(exc, err):
-                raise
+                # Any other SDK failure is a mechanical failure of the step, so
+                # the bound, the park and step 14 run as for any role; the type
+                # and a short message only (nothing from the environment).
+                raise Mechanical("%s: the SDK call failed with %s: %s"
+                                 % (role, type(exc).__name__, str(exc)[:200]))
             texts, result = [], exc
             result.is_error = True
         finally:
@@ -396,6 +413,18 @@ class SdkDriver(base.Driver):
                      turns=getattr(result, "num_turns", None),
                      cost_usd=getattr(result, "total_cost_usd", None),
                      duration_ms=getattr(result, "duration_ms", int((time.time() - started) * 1000)))
+        cost = getattr(result, "total_cost_usd", None)
+        usable = isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost >= 0
+        if usable:
+            self.spent += cost
+        elif self.max_cost is not None:
+            # Fail closed: with a cap set, a call whose cost cannot be read
+            # cannot be held to it. run-scribe is exempt (step 14 writes the
+            # handover), as it is from the cap itself.
+            self.journal("cost-unknown", role=role,
+                         note="total_cost_usd missing, None or unusable while --max-cost-usd is set")
+            if role != "run-scribe":
+                raise Halt("spend cap: cost unknown (%s)" % role)
         if result is None:
             raise Mechanical("%s returned no result message" % role)
         if getattr(result, "subtype", "") == "error_max_turns":
@@ -426,6 +455,8 @@ def main(argv=None):
     ap.add_argument("--binding", required=True)
     ap.add_argument("--run-id", required=True)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--max-cost-usd", type=float, default=None,
+                    help="halt the run once the role calls' summed total_cost_usd exceeds this")
     args = ap.parse_args(argv)
     if not re.fullmatch(r"[A-Za-z0-9._-]+", args.run_id):
         print("REFUSED: run id %r is not [A-Za-z0-9._-]+" % args.run_id, file=sys.stderr)
@@ -437,6 +468,7 @@ def main(argv=None):
         print("REFUSED: %s" % exc, file=sys.stderr)
         return 2
     driver = SdkDriver(binding, dry_run=args.dry_run)
+    driver.max_cost = args.max_cost_usd
     code = driver.run()
     print("handover: %s" % binding.handover)
     if getattr(driver, "journal_head", None):

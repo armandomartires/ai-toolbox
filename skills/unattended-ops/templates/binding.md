@@ -58,8 +58,9 @@ for a client in this repository, or into the consuming repository beside the
 driver it describes. **The OpenCode binding ships under
 `templates/bindings/opencode/` (`TASK-0086`) and the Claude Code one under
 `templates/bindings/claude-code/` (`TASK-0087`); Bionic's is S10.4. A Claude
-Agent SDK runner is on trial under `templates/bindings/agent-sdk/`
-(`TASK-0284`).**
+Agent SDK runner, **the Claude runner** (the Claude Code one is secondary,
+`docs/reports/2026-11-14-golden-run-comparison.md`), is under
+`templates/bindings/agent-sdk/` (`TASK-0284`).**
 
 ## The one rule that makes the rest of it mean something
 

@@ -133,10 +133,13 @@ which are weaker by construction** — not equivalent, and not to be described
 as equivalent. `skills/unattended-ops/SKILL.md` owns that reasoning; it is
 linked rather than repeated here, so there is one owner of it.
 
-> **Nothing runs unattended on any client yet.** The loop, the skill and the
-> roles are the portable core; **every binding — the thing that actually
-> drives a run — is S10**, and none exists. A reader finding these components
-> installed should not conclude the capability is available.
+> **The Claude unattended runner is the Agent SDK runner**
+> (`skills/unattended-ops/templates/bindings/agent-sdk/runner.py`), which
+> enforces each role's boundary with the role guard as a hook and runs all nine
+> roles; the Claude Code Workflow binding is secondary, for a run inside an
+> interactive session without an API key (decided 2026-11-14 on
+> `docs/reports/2026-11-14-golden-run-comparison.md`). The "two of nine roles"
+> above describes plugin agent files, not the runner.
 
 Extensions that are **not components of this repo** and are wired through
 the client's own mechanism (`ADR-0021` clause 2). Nothing here is installed,
@@ -450,10 +453,11 @@ Permission rules everywhere, the sandbox for unattended runs only.
 - **Nothing applies the unattended file yet.** The file is produced for a
   launcher that starts Claude Code with `claude --settings
   .claude/settings.unattended.json`. No launcher does that today: the Claude
-  Code binding runs as a Workflow inside an existing session, and the CI
-  unattended run is the OpenCode driver. TASK-0284 (the Agent SDK runner) is
-  where it gets wired. Until then sandboxing an unattended run needs the
-  managed settings below.
+  Code Workflow binding (secondary) runs inside an existing session, and the
+  CI unattended run is the OpenCode driver. The Agent SDK runner, the Claude
+  runner, merges the sandbox and permission fragments itself and passes them
+  as `ClaudeAgentOptions.settings` (`bindings/agent-sdk/binding.md`); only a
+  run started some other way needs the managed settings below.
 - Under a marketplace-primary install (D2=B) the plugins do NOT carry these
   permission rules: a plugin `settings.json` is not a known way to ship them
   (TASK-0272 found nothing that applies them). `install.sh` (and

@@ -25,3 +25,5 @@ include:
   - local: .gitlab/ci/otel.yml
   # Unattended runs in a throwaway container (issue #11).
   - local: .gitlab/ci/unattended-sandbox.yml
+  # Golden unattended run on the Agent SDK runner: dry on every pipeline, live manual.
+  - local: .gitlab/ci/golden-run.yml

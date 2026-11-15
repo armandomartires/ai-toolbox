@@ -5,7 +5,7 @@ license: MIT
 disable-model-invocation: true
 metadata:
   author: armando.martires
-  version: "1.8.1"
+  version: "1.9.0"
 ---
 
 # unattended-ops
@@ -122,6 +122,21 @@ temporary state.** Under Claude Code and Bionic the same method runs with
 prompt-level rules that are **weaker by construction** — not equivalent, and
 not to be described as equivalent.
 
+## Which runner drives a Claude run
+
+Decided 2026-11-14 (human, on the golden-run evidence, `docs/reports/2026-11-14-golden-run-comparison.md`): **the Claude Agent
+SDK runner (`templates/bindings/agent-sdk/runner.py`) is *the* Claude runner**
+of `loops/unattended-run/`. Both runners closed the three-task fixture, every
+gate PASSED; the SDK runner took 6.4 min for 21 role calls and $0.88, with
+each role's boundary enforced by the role guard as a hook, where the Workflow
+binding took 13.3 min and 44 agents, and 7 of its 9 roles had their boundary
+only in the prompt. The **Claude Code Workflow binding is secondary**, kept
+and still tested: use it for a run inside an interactive Claude Code session
+without an API key, and read its binding for what is weaker there. Nothing was
+removed. CI proves the runner's plumbing without a key on every pipeline
+(`.gitlab/ci/golden-run.yml`, `golden-run-dry`); a live golden run is a manual
+job.
+
 ## On a forge tracker
 
 When `tracker.conf` names `gitlab` or `github` (`ADR-0037`), the method is
@@ -177,17 +192,20 @@ The snapshot procedure is `skills/project-workflow/templates/reference/tracker.m
   remain the human's** (`ADR-0019` clauses 2.2 and 2.4, `ADR-0022`
   clause 4.2). Anyone describing this as end-to-end autonomous production is
   overstating it.
-- **Not exercised in this repository.** The four live runs behind these rules
-  happened in `asset-management`, against a Claude Code workflow. Nothing
-  here has yet driven a run from this repo's own artifacts; treat the first
-  binding's pilot as the first test (`PLAN-0006`, S10). The OpenCode
+- **Exercised once, narrowly, in this repository.** The four live runs behind
+  these rules happened in `asset-management`, against a Claude Code workflow.
+  The first runs from this repo's own artifacts are the golden runs of
+  2026-11-14: the Agent SDK runner and the Workflow binding each closed the
+  three-task fixture, every gate PASSED (`docs/reports/2026-11-14-golden-run-comparison.md`).
+  One fixture, two runs, no unattended CI run yet. The OpenCode
   binding's tests run against a **stub** `opencode`, and the Claude Code
   binding's against a **stub** Workflow runtime, and the Agent SDK runner's
   against a **stub** `claude_agent_sdk` — models of the clients, not the
   clients.
 - **Not a governance framework.** It ships the binding contract, three
   client bindings (`templates/bindings/opencode/`,
-  `templates/bindings/claude-code/` and, on trial, `templates/bindings/agent-sdk/`)
+  `templates/bindings/claude-code/`, the secondary Claude one, and
+  `templates/bindings/agent-sdk/`, the Claude runner)
   and a checker. No index, no task IDs, no sprint shape, no status vocabulary
   beyond the five verdicts and a binding's slot values. The planning layer is
   the one convention owned by `project-workflow`, with `project-migration` to
@@ -206,8 +224,8 @@ The snapshot procedure is `skills/project-workflow/templates/reference/tracker.m
 | `references/park-and-recover.md` | What a park must leave behind so the next task starts clean, and what a human needs to finish it |
 | `templates/binding.md` | The binding contract: one slot per thing a run cannot derive, and `unknown` is a stop |
 | `templates/bindings/opencode/` | The OpenCode binding: `driver.py`, the `run-gate.sh` entry point, `binding.md`, and hermetic tests against a stub `opencode`. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
-| `templates/bindings/claude-code/` | The Claude Code binding: the `unattended-run.js` Workflow template, `binding.md`, and tests against a stub Workflow runtime. **Weaker by construction** than the OpenCode one — its binding says where. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
-| `templates/bindings/agent-sdk/` | On trial (`TASK-0284`): `runner.py`, the OpenCode driver's steps with each role run through the Claude Agent SDK, the role guard as a PreToolUse hook callback, and `binding.md`. The SDK is optional; its tests run against a stub `claude_agent_sdk`. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
+| `templates/bindings/claude-code/` | **Secondary Claude binding** (for a run inside an interactive session, without an API key; the Agent SDK runner is the Claude runner, `docs/reports/2026-11-14-golden-run-comparison.md`). The Claude Code binding: the `unattended-run.js` Workflow template, `binding.md`, and tests against a stub Workflow runtime. **Weaker by construction** than the OpenCode one — its binding says where. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
+| `templates/bindings/agent-sdk/` | **The Claude runner** (`TASK-0284`; picked on `docs/reports/2026-11-14-golden-run-comparison.md`): `runner.py` (with `--max-cost-usd`), the OpenCode driver's steps with each role run through the Claude Agent SDK, the role guard as a PreToolUse hook callback, and `binding.md`. The SDK is optional; its tests run against a stub `claude_agent_sdk`. In ai-toolbox, CI's `bindings` job runs those tests (`.github/workflows/validate.yml`, ADR-0032); `tests/validate.sh` does not |
 | `scripts/check-binding.sh` | Read-only checker: a binding declares every numbered step of the loop and states no uncited rule. Nothing in this repository runs it |
 | `fixtures/` | The checker observed failing for the right reason, then observed passing |
 
