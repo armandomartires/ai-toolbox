@@ -94,6 +94,9 @@ def check_golden(text, root_ci):
         if not re.search(r'\$CI_PIPELINE_SOURCE == "schedule"\n\s+when: never', live):
             errs.append("golden-run-live: a schedule is not refused")
         if "--max-cost-usd" not in live: errs.append("golden-run-live: no spend cap")
+        probe, spend = live.find("bwrap --unshare-user"), live.find("runner.py")
+        if probe < 0 or (spend >= 0 and probe > spend) or (0 <= live.find("claude-agent-sdk") < probe):
+            errs.append("golden-run-live: no bubblewrap probe before the SDK install and the run")
         used = re.sub(r"^\s*-\s+unset .*$", "", live, flags=re.M)  # dropping one is not consuming it
         secrets = set(re.findall(r"\b[A-Z][A-Z0-9_]*(?:API_KEY|_TOKEN|SECRET)\b", used))
         if secrets - {"ANTHROPIC_API_KEY", "CI_JOB_TOKEN"}:
@@ -125,7 +128,8 @@ def self_test():
     assert check_ci(run.replace("unset CI_JOB_TOKEN", "true"))
     gold = ("golden-run-dry:\n  tags: [docker]\n  script:\n    - bash tests/test-golden-run.sh\n"
             "golden-run-live:\n  tags: [docker]\n  rules:\n    - if: $CI_PIPELINE_SOURCE == \"schedule\"\n"
-            "      when: never\n    - when: manual\n  script:\n    - runner.py --max-cost-usd 10\n"
+            "      when: never\n    - when: manual\n  script:\n    - bwrap --unshare-user true || exit 77\n"
+            "    - runner.py --max-cost-usd 10\n"
             "    - test -n \"$ANTHROPIC_API_KEY\"\n  artifacts:\n    paths:\n      - golden-live/journal.jsonl\n")
     inc = "- local: .gitlab/ci/golden-run.yml"
     assert not check_golden(gold, inc), check_golden(gold, inc)
@@ -136,7 +140,10 @@ def self_test():
     assert check_golden(gold.replace("    - bash tests", "    - echo $ANTHROPIC_API_KEY\n    - bash tests"), inc)
     assert check_golden(gold + "    - echo $XAI_API_KEY\n", inc)
     assert check_golden(gold.replace("golden-live/journal.jsonl", "golden-live/"), inc)
-    assert check_golden(gold.replace("  script:\n    - runner", "  script:\n    - env\n    - runner"), inc)
+    assert check_golden(gold.replace("  script:\n    - bwrap", "  script:\n    - env\n    - bwrap"), inc)
+    assert check_golden(gold.replace("    - bwrap --unshare-user true || exit 77\n", ""), inc)
+    assert check_golden(gold.replace("    - bwrap --unshare-user true || exit 77\n", "")
+                        + "    - bwrap --unshare-user true || exit 77\n", inc)
     print("check-sandbox-ci self-test: OK")
 
 
