@@ -658,7 +658,7 @@ Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
   .ai/tasks/S018.T007_PagesGuardSprintBriefShape.md
 
 ## S019 — Post-S18, no sprint open
-- [>] S019.T001 — A forge tracker changes back to files: a read-only export, and a switch that names its ADR
+- [?] S019.T001 — A forge tracker changes back to files: a read-only export, and a switch that names its ADR
   .ai/tasks/S019.T001_ForgeTrackerBackToFiles.md
   branch: agent/workflow-export-files-d4c478
 
