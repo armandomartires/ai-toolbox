@@ -13,7 +13,8 @@
 #   tracker.sh decision [--repo DIR]
 #   tracker.sh init --tracker files|gitlab|github
 #                   [--gitlab-project group/name | --github-repo owner/name]
-#                   [--repo DIR]
+#                   [--replace --adr ADR-NNNN] [--repo DIR]
+#   tracker.sh export --out DIR [--state open|all] [--repo DIR]
 #
 #   check     print one line - `files`, `gitlab group/name` or
 #             `github owner/name` - for scripts. Absent conf prints `files`.
@@ -22,8 +23,14 @@
 #             forge and path, with a NOTE when no remote is on that forge.
 #             Always exit 0: there is no pending state to ask about.
 #   init      write tracker.conf when there is none. An identical one is left
-#             alone; a different one is refused - edit it by hand and record
-#             an ADR. Never overwrites.
+#             alone; a different one is refused unless --replace names, with
+#             --adr, an ADR that exists in .ai/decisions/.
+#   export    read the declared forge's issues and milestones through glab or
+#             gh (read-only) and write them as briefs, reviews and merge
+#             fragments into DIR, which must be new or empty. Exit 1 when a
+#             written file fails its artifact schema (listed in EXPORT.md).
+#             TRACKER_GH / TRACKER_GLAB override the CLI command line.
+#             The way back to files: templates/reference/tracker.md.
 #   --repo    repository root. Default: the enclosing git work tree, else CWD.
 #
 # tracker.conf (`key = value`; a `#` comment must start its own line):
@@ -32,12 +39,13 @@
 #   github_repo    = owner/name    # required for github, refused otherwise
 # The path is a name, never a host or URL.
 #
-# Exit codes: 0 ok, 2 refused. Requires python3, standard library only.
+# Exit codes: 0 ok, 1 export wrote files that fail a schema, 2 refused.
+# Requires python3, standard library only.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
-usage() { sed -n '2,35p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; }
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
   "")        usage >&2; exit 2 ;;

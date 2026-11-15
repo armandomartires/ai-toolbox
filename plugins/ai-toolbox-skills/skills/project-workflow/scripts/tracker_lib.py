@@ -19,7 +19,13 @@ WHAT `check` PROVES: that the declaration parses and names one tracker, with
 the project path that tracker needs.
 WHAT IT DOES NOT PROVE: that the forge project exists, that anyone can reach
 it, or that its issues follow templates/reference/tracker.md. Nothing here
-calls the network.
+calls the network; `export` (forge_export.py) is the one subcommand that
+reads a forge, through `glab` or `gh`.
+
+CHANGING THE DECLARATION (S019.T001, ADR-0067 in ai-toolbox). `init` never
+overwrites. `init --replace --adr ADR-NNNN` does, and only when that ADR is a
+file in the repository's `.ai/decisions/`: changing the tracker is a
+decision, so the rewrite names the decision that made it.
 """
 import argparse
 import datetime
@@ -128,7 +134,7 @@ def describe(tracker, path):
     return tracker if path is None else "%s %s" % (tracker, path)
 
 
-def render(conf):
+def render(conf, adr=None):
     tracker = conf["tracker"]
     lines = [
         "# Work tracker for this project: files | gitlab | github (ADR-0037 in",
@@ -136,8 +142,10 @@ def render(conf):
         "# Written by tracker.sh init on %s. Changing it is a decision: record"
         % datetime.date.today().isoformat(),
         "# an ADR. Absent, this file means files.",
-        "tracker = %s" % tracker,
     ]
+    if adr:
+        lines.append("# Changed by %s." % adr)
+    lines.append("tracker = %s" % tracker)
     key = PATH_KEYS.get(tracker)
     if key:
         lines.append("%s = %s" % (key, conf[key]))
@@ -174,13 +182,28 @@ def cmd_decision(repo):
     return 0
 
 
-def cmd_init(repo, tracker, gitlab_project, github_repo):
+def adr_file(repo, adr):
+    """The ADR's path under .ai/decisions/, or a Refusal."""
+    if not re.match(r"^ADR-\d{4}$", adr or ""):
+        raise Refusal("--adr takes an id such as ADR-0067, got %r" % adr)
+    decisions = os.path.join(repo, ".ai", "decisions")
+    found = sorted(f for f in (os.listdir(decisions) if os.path.isdir(decisions) else [])
+                   if f.startswith(adr + "-") and f.endswith(".md"))
+    if not found:
+        raise Refusal("%s is not in .ai/decisions/: record the decision to change "
+                      "the tracker first, then pass its id" % adr)
+    return ".ai/decisions/" + found[0]
+
+
+def cmd_init(repo, tracker, gitlab_project, github_repo, replace=False, adr=None):
     want = {"tracker": tracker}
     if gitlab_project is not None:
         want["gitlab_project"] = gitlab_project
     if github_repo is not None:
         want["github_repo"] = github_repo
     validate(want, "init")
+    if adr is not None and not replace:
+        raise Refusal("--adr goes with --replace")
     if not os.path.isdir(repo):
         raise Refusal("%s is not a directory" % repo)
     have = load(repo)
@@ -189,35 +212,61 @@ def cmd_init(repo, tracker, gitlab_project, github_repo):
             print("init: nothing to change (%s already declares %s)"
                   % (CONF, describe(*mode(repo))))
             return 0
-        raise Refusal("%s already declares %s; init never overwrites. Edit it "
-                      "by hand to change it, and record an ADR"
-                      % (CONF, describe(*mode(repo))))
+        if not replace:
+            raise Refusal("%s already declares %s; init never overwrites. Record "
+                          "an ADR, then pass --replace --adr ADR-NNNN"
+                          % (CONF, describe(*mode(repo))))
+    if replace and have is None:
+        raise Refusal("--replace: there is no %s to replace; run init without it"
+                      % CONF)
+    if replace:
+        where = adr_file(repo, adr)
+        before = describe(*mode(repo))
     with open(os.path.join(repo, CONF), "w", encoding="utf-8", newline="\n") as fh:
-        fh.write(render(want))
-    print("init: %s written (%s)" % (CONF, describe(*mode(repo))))
+        fh.write(render(want, adr if replace else None))
+    if replace:
+        print("init: %s replaced (%s -> %s, %s)"
+              % (CONF, before, describe(*mode(repo)), where))
+    else:
+        print("init: %s written (%s)" % (CONF, describe(*mode(repo))))
     if tracker != "files":
         print("next: follow templates/reference/tracker.md - labels, the first "
               "milestone and the first issue are created on the forge")
     return 0
 
 
+def cmd_export(repo, out, state):
+    # Imported lazily: only export reads a forge, and the module owns how.
+    import forge_export
+    tracker, path = mode(repo)
+    try:
+        return forge_export.export(repo, tracker, path, os.path.abspath(out), state)
+    except forge_export.Refusal as exc:
+        raise Refusal(str(exc))
+
+
 def parser():
     p = argparse.ArgumentParser(prog="tracker.sh", add_help=True)
     sub = p.add_subparsers(dest="cmd")
-    for name in ("check", "decision", "init"):
+    for name in ("check", "decision", "init", "export"):
         s = sub.add_parser(name)
         s.add_argument("--repo")
         if name == "init":
             s.add_argument("--tracker", required=True, choices=TRACKERS)
             s.add_argument("--gitlab-project")
             s.add_argument("--github-repo")
+            s.add_argument("--replace", action="store_true")
+            s.add_argument("--adr")
+        if name == "export":
+            s.add_argument("--out", required=True)
+            s.add_argument("--state", choices=("open", "all"), default="open")
     return p
 
 
 def main(argv):
     args = parser().parse_args(argv)
     if not args.cmd:
-        say("expected a subcommand: check | decision | init (see --help)")
+        say("expected a subcommand: check | decision | init | export (see --help)")
         return 2
     repo = args.repo
     if repo is None:
@@ -229,7 +278,10 @@ def main(argv):
             return cmd_check(repo)
         if args.cmd == "decision":
             return cmd_decision(repo)
-        return cmd_init(repo, args.tracker, args.gitlab_project, args.github_repo)
+        if args.cmd == "export":
+            return cmd_export(repo, args.out, args.state)
+        return cmd_init(repo, args.tracker, args.gitlab_project, args.github_repo,
+                        args.replace, args.adr)
     except Refusal as exc:
         say(str(exc))
         return 2

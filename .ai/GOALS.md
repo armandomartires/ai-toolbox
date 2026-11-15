@@ -657,6 +657,11 @@ Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
 - [x] S018.T007 — The Pages guard expects sprint briefs, so master is green again
   .ai/tasks/S018.T007_PagesGuardSprintBriefShape.md
 
+## S019 — Post-S18, no sprint open
+- [>] S019.T001 — A forge tracker changes back to files: a read-only export, and a switch that names its ADR
+  .ai/tasks/S019.T001_ForgeTrackerBackToFiles.md
+  branch: agent/workflow-export-files-d4c478
+
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/35.AD_HOC_TASKS.md
 - B-057 Unexercised: secrets `provision`, and `put` to GitLab and GitHub (`S016.T051`, `S016.T052`)

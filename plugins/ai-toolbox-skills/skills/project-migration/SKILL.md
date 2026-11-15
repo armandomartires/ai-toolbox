@@ -4,7 +4,7 @@ description: "Retrofit an existing repository into project-workflow's one planni
 license: MIT
 metadata:
   author: armando.martires
-  version: 6.0.0
+  version: 6.0.1
 ---
 
 # Project migration to the one planning convention
@@ -26,7 +26,7 @@ Retrofit a live repository so a human, a planning model, and a weaker executor m
 - Never commit secrets, tokens, or `.env` files; run a secrets scan before the first push.
 - Secrets move only if the user chooses it (Phase 1, step 6). Never open, print or quote a value; name variables only.
 - Never force-push. If a push fails, diagnose and report — do not declare the task done.
-- The work tracker is declared once, in `tracker.conf` (files, GitLab or GitHub; ADR-0037 in `ai-toolbox`). Changing it later is an ADR plus a migration task, never a quiet edit.
+- The work tracker is declared once, in `tracker.conf` (files, GitLab or GitHub; ADR-0037 in `ai-toolbox`). Changing it later is an ADR plus a migration task, never a quiet edit; from a forge back to files, `tracker.sh export` and `init --replace --adr` (`skills/project-workflow/templates/reference/tracker.md`, *Changing the tracker back to files*).
 
 ## Phase 1 — Inventory and mapping (read-only)
 

@@ -18,8 +18,13 @@
 # publish-dashboard.sh answers `not applicable` and reports what a forge
 # project has left over - each by a case that fails when the behaviour is
 # removed.
+# It also proves (S019.T001) that `init --replace` needs an ADR that exists,
+# and that `export` maps a fake forge's issues to briefs, reviews and
+# fragments, writes only into an empty directory, lists schema failures, and
+# makes only read calls.
 # WHAT IT DOES NOT PROVE: that the forge project exists, or that its issues
-# follow templates/reference/tracker.md. Nothing here touches a forge.
+# follow templates/reference/tracker.md. Nothing here touches a forge: export
+# runs against fixtures/forge/fake_forge.py, never a real `gh` or `glab`.
 set -uo pipefail
 
 # SAFETY (TASK-0127, TASK-0165). A pre-commit hook exports GIT_DIR and
@@ -41,7 +46,7 @@ trap 'rm -rf "$TMP"' EXIT
 # A copy on local disk, for the same reason as check-publish.sh: on a WSL
 # /mnt/c checkout every read crosses the 9p bridge.
 mkdir -p "$TMP/skill"
-cp -R "$SKILL/scripts" "$SKILL/assets" "$SKILL/dashboard" "$TMP/skill/"
+cp -R "$SKILL/scripts" "$SKILL/assets" "$SKILL/dashboard" "$SKILL/schemas" "$TMP/skill/"
 TRK="$TMP/skill/scripts/tracker.sh"
 PUB="$TMP/skill/scripts/publish-dashboard.sh"
 BUILD="$TMP/skill/scripts/build-dashboard.sh"
@@ -199,6 +204,73 @@ expect 0 "render on files writes the pipeline" "wrote    .github/workflows/dashb
 printf 'targets = none\n' > "$R/dashboard-publish.conf"
 conf "$FORGE"
 expect 1 "render --check on a forge names the pipeline still deploying" ".github/workflows/dashboard.yml was generated for github-pages and still deploys" -- "$PUB" render --check --repo "$R"
+
+# --- init --replace: changing the declaration names its ADR (S019.T001) -------------
+R="$(mkrepo replace)"
+conf "$FORGE"
+cp "$R/tracker.conf" "$TMP/before.conf"
+expect 2 "--replace without --adr is refused" "takes an id such as ADR-0067" -- "$TRK" init --tracker files --replace --repo "$R"
+expect 2 "--replace naming an ADR that is not in .ai/decisions is refused" "ADR-0099 is not in .ai/decisions/" -- "$TRK" init --tracker files --replace --adr ADR-0099 --repo "$R"
+expect 2 "--adr without --replace is refused" "goes with --replace" -- "$TRK" init --tracker files --adr ADR-0099 --repo "$R"
+expect 0 "every refused --replace left the conf as it was" -- cmp -s "$TMP/before.conf" "$R/tracker.conf"
+mkdir -p "$R/.ai/decisions"; echo "# ADR-0099 - back to files" > "$R/.ai/decisions/ADR-0099-back-to-files.md"
+expect 0 "--replace --adr with the ADR present switches to files" "replaced (github owner/name -> files, .ai/decisions/ADR-0099-back-to-files.md)" -- "$TRK" init --tracker files --replace --adr ADR-0099 --repo "$R"
+expect 0 "the replaced conf names its ADR" -- grep -qx '# Changed by ADR-0099.' "$R/tracker.conf"
+expect 0 "check reads files after the switch" "^files$" -- "$TRK" check --repo "$R"
+R="$(mkrepo replace-none)"
+expect 2 "--replace with no conf to replace is refused" "no tracker.conf to replace" -- "$TRK" init --tracker files --replace --adr ADR-0099 --repo "$R"
+
+# --- export: a forge read back into files (S019.T001) ---------------------------------
+# The fake CLI answers only the read calls export makes and exits 3 on any
+# other, so a write call fails a case. Paths are native for a Windows python3.
+native() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
+FAKE="python3 $(native "$SKILL/fixtures/forge/fake_forge.py")"
+LOG="$TMP/forge.log"; export FAKE_FORGE_LOG; FAKE_FORGE_LOG="$(native "$LOG")"
+R="$(mkrepo export-files)"
+expect 2 "export on a files tracker is refused" "there is no forge to export" -- "$TRK" export --out "$TMP/x-files" --repo "$R"
+R="$(mkrepo export-gh)"
+conf "$FORGE"
+mkdir -p "$R/.ai/tasks"; : > "$R/.ai/tasks/S002.T001_Existing.md"
+mkdir -p "$TMP/x-full"; : > "$TMP/x-full/keep"
+expect 2 "export into a non-empty directory is refused" "is not empty" -- env TRACKER_GH="$FAKE gh" "$TRK" export --out "$TMP/x-full" --repo "$R"
+expect 2 "an unauthenticated CLI stops the export" '`auth status` failed' -- env TRACKER_GH="$FAKE gh" FAKE_FORGE_AUTH=fail "$TRK" export --out "$TMP/x-auth" --repo "$R"
+expect 1 "no output directory after a refused export" -- test -e "$TMP/x-auth"
+: > "$LOG"
+expect 1 "github --state all: written, one brief fails its schema (exit 1)" "FAIL     tasks/S002.T007_HalfWritten.md" -- env TRACKER_GH="$FAKE gh" "$TRK" export --state all --out "$TMP/x-gh" --repo "$R"
+O="$TMP/x-gh"
+expect 0 "a closed issue that named its id keeps it" -- test -f "$O/tasks/S002.T005_CacheHeaders.md"
+expect 0 "a new id comes after the highest in use, a kept one included" -- test -f "$O/tasks/S002.T006_WireTheExport.md"
+expect 0 "status: in_progress becomes in progress" -- grep -qx '\*\*Status\*\*: in progress' "$O/tasks/S002.T006_WireTheExport.md"
+expect 0 "the H1 is the new id, not the issue title" -- grep -qx '# S002.T006_WireTheExport' "$O/tasks/S002.T006_WireTheExport.md"
+expect 0 "a closed issue is completed, with its milestone as sprint" -- grep -qx '\*\*Sprint\*\*: `S002_Beta`' "$O/tasks/S002.T005_CacheHeaders.md"
+expect 0 "the closing task report is carried" -- grep -q '^Result:   done' "$O/tasks/S002.T005_CacheHeaders.md"
+expect 0 "closed as not planned is cancelled; milestone S1 is sprint S001" -- grep -qx '\*\*Status\*\*: cancelled' "$O/tasks/S001.T001_DropTheOldCache.md"
+expect 0 "a review issue named checkpoint becomes reviews/S###-checkpoint.md" -- grep -qx '# S002-checkpoint' "$O/reviews/S002-checkpoint.md"
+expect 0 "a backlog issue goes to the ad-hoc fragment" -- grep -qx '### #4. Slow cold start' "$O/35.AD_HOC_TASKS.fragment.md"
+expect 0 "a task with no milestone goes there too, its headings quoted" -- grep -qx '> ## Goal' "$O/35.AD_HOC_TASKS.fragment.md"
+expect 0 "milestones become roadmap rows" -- grep -q '^| `S002_Beta` | 2026-03-01 | open | 5 |$' "$O/30.ROADMAP.fragment.md"
+expect 0 "id-map.tsv maps the issue number to the new id" -- grep -qx "$(printf '#1\tS002.T006\t-\t.ai/tasks/S002.T006_WireTheExport.md')" "$O/id-map.tsv"
+expect 0 "EXPORT.md lists the schema failure" -- grep -q 'missing required section: ## Goal' "$O/EXPORT.md"
+expect 0 "a migrated issue whose brief the repository holds is skipped" "#8: a migrated copy of S002.T001" -- cat "$O/EXPORT.md"
+expect 1 "no second brief for the migrated copy" -- bash -c "ls '$O/tasks' | grep -q '_Existing'"
+expect 0 "EXPORT.md notes a status with no files equivalent" -- grep -q '#7: status ready has no files status' "$O/EXPORT.md"
+expect 1 "the export made only read calls" -- grep -vE '^gh (auth status|issue list |api --paginate repos/owner/name/milestones)' "$LOG"
+expect 1 "the repository's own .ai/ was not written" -- test -e "$R/.ai/tasks/S002.T006_WireTheExport.md"
+expect 1 "github --state open leaves closed issues out" "4 issue(s)" -- env TRACKER_GH="$FAKE gh" "$TRK" export --out "$TMP/x-open" --repo "$R"
+expect 1 "no closed issue in an open export" -- test -e "$TMP/x-open/tasks/S002.T005_CacheHeaders.md"
+expect 0 "with no kept id above it, a new id follows the repository's S002.T001" -- test -f "$TMP/x-open/tasks/S002.T002_WireTheExport.md"
+R="$(mkrepo export-gl)"
+conf 'tracker = gitlab
+gitlab_project = group/sub/name
+'
+: > "$LOG"
+expect 0 "gitlab --state all: every file conforms (exit 0)" "report   EXPORT.md" -- env TRACKER_GLAB="$FAKE glab" "$TRK" export --state all --out "$TMP/x-gl" --repo "$R"
+O="$TMP/x-gl"
+expect 0 "status::review becomes review" -- grep -qx '\*\*Status\*\*: review' "$O/tasks/S003.T001_WireTheExport.md"
+expect 0 "a system note is skipped; the report note is carried" -- grep -q '^Result:   done' "$O/tasks/S003.T002_CacheHeaders.md"
+expect 0 "a phase label is noted, not carried" -- grep -q '#10: phase label 2 is not carried' "$O/EXPORT.md"
+expect 0 "a milestone that is not S###_Name is noted" -- grep -q "milestone 'v1.0' is not S###_Name" "$O/EXPORT.md"
+expect 1 "the gitlab export made only GET calls" -- grep -vE '^glab (auth status|api (--paginate )?projects/group%2Fsub%2Fname/)' "$LOG"
 
 echo
 if [ "$fails" -ne 0 ]; then

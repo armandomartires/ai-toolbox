@@ -4,7 +4,7 @@ description: "Scaffolds and maintains a project's .ai/ planning layer - a plan/d
 license: MIT
 metadata:
   author: armando.martires
-  version: "8.0.1"
+  version: "8.1.0"
 ---
 
 # project-workflow
@@ -55,6 +55,7 @@ Both skills share one convention (ADR-0066): this skill's numbered layout, with 
 - **files:** everything in this skill applies as written.
 - **gitlab / github:** tasks are issues, sprints are milestones, the board is the plan, backlog and ad-hoc items are labelled issues, review checkpoints are issues, and end-user docs live in the wiki. `00.CONVENTIONS.md`, `reference/`, ADRs and developer docs stay in the repository, and so does one state file, `20.PLAN.md` in its forge variant (`templates/forge/20.PLAN.md`): current state, the open milestone and board by name, what is blocked and the next action, with no task list, so a session starts without calling the forge. Same size budget as the files-tracker one. Changing tracker to a forge leaves the old files only in git: tag the last commit that holds them `pre-forge-migration` before the `git rm` (`tracker.md`, *Changing the tracker*). The mapping, labels, commit subjects (`(#123)`), access and tier limits are in `templates/reference/tracker.md`.
 - `scripts/tracker.sh check` prints the declaration for scripts; `scripts/tracker.sh decision` shows it beside the remotes. Neither calls the forge.
+- **Back to files:** `scripts/tracker.sh export --out DIR [--state open|all]` reads the forge's issues and milestones through `glab` or `gh`, read-only, and writes them as briefs, reviews and merge fragments into an empty directory; `tracker.sh init --tracker files --replace --adr ADR-NNNN` then switches the declaration, only when that ADR exists (`tracker.md`, *Changing the tracker back to files*).
 - Issue bodies are still generated with `new-artifact.sh` and checked with `check-artifact.sh` before they are pasted.
 
 ## Generating an artifact

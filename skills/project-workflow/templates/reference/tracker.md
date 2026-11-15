@@ -17,7 +17,7 @@ github_repo = owner/name
 - **Absent means `files`.** Every project governed before the question existed tracks its work in files.
 - **The path is a name, never a host or URL.** `glab` and `gh` take the host from their own configuration.
 - `tracker.sh check` prints the declaration, and `tracker.sh decision` lists it beside the remotes.
-- Changing tracker is a decision: record an ADR, then migrate in its own task (*Changing the tracker*, below).
+- Changing tracker is a decision: record an ADR, then migrate in its own task (*Changing the tracker*, below; the way back is *Changing the tracker back to files*).
 
 ## What stays in the repository, in every mode
 
@@ -53,6 +53,19 @@ Moving a repository from files to a forge removes the old planning, task, review
 4. Then `git rm` the old files, in their own commit.
 
 **Optional, chosen by the person** when the tracker question is asked: also file the *completed* tasks as closed issues, bodies from the task schema, each closed with a `migrated` label, so the forge holds the full history. Never assume it. The tag is required either way.
+
+## Changing the tracker back to files
+
+The forge is the only owner of the work, so going back means writing its issues as files again. `tracker.sh export` does the reading; a person does the merging. In order, in one task:
+
+1. Record the ADR that moves the project back to files.
+2. Tag the last commit before the change, annotated, and push it: `git tag -a pre-files-migration -m "Forge tracker before the move back to files"`. Never move or delete it.
+3. If the tag `pre-forge-migration` exists, restore the files the move removed: `git checkout pre-forge-migration -- .ai/`. Keep the forge `20.PLAN.md` aside first; the restored files-tracker `20.PLAN.md` replaces it once it holds the current state.
+4. Export into an empty directory outside the repository: `tracker.sh export --out /tmp/forge-export --state all` (`--state open`, the default, leaves closed issues out; choose with the person, as for the move to the forge). Run it through `vault_secrets.py exec` as under *Access*. It only reads: `auth status`, `issue list` and GET calls.
+5. Read `EXPORT.md`. It lists what was written, what was carried with a change (a `status::ready` or `deferred` label has no files status and becomes `not started`; `phase::` labels are not carried) and every file the artifact schemas reject. Fix those by hand.
+6. Merge: `tasks/` and `reviews/` into `.ai/`, the rows of `30.ROADMAP.fragment.md` and the entries of `35.AD_HOC_TASKS.fragment.md` into their files, and the rows of `id-map.tsv` into `.ai/id-map.tsv`, so a commit that says `(#123)` still resolves. An issue that named an `S###.T###` id keeps it; any other gets the next number after the highest in use for its sprint, in the repository or the export.
+7. Switch the declaration: `tracker.sh init --tracker files --replace --adr ADR-NNNN`. It refuses unless that ADR is in `.ai/decisions/`, and the rewritten conf names it.
+8. Then the forge, by hand and after the push is confirmed: a closing comment on each open issue naming its new brief, then close it. The export never does this.
 
 ## Identifiers and commits
 
