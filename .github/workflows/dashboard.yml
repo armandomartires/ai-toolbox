@@ -72,7 +72,7 @@ jobs:
       # complete-looking page, so it must stop the deploy. The checks live in
       # the skill, so the GitHub and GitLab pipelines cannot disagree on them.
       - name: Refuse to publish a degraded page
-        run: bash skills/project-workflow/scripts/publish-dashboard.sh guard --model _site/model.json --expect-shape numbered_task
+        run: bash skills/project-workflow/scripts/publish-dashboard.sh guard --model _site/model.json --expect-shape sprint_brief
 
       # The model is the generator's working data, not part of the page.
       # Leaving it published would put a second, unlabelled copy of every

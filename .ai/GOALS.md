@@ -654,6 +654,8 @@ Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
   .ai/tasks/S018.T005_GatesInitializeHangWindows.md
 - [x] S018.T006 — Fix the injection suite and the xAI and OpenAI eval jobs (ad-hoc 075)
   .ai/tasks/S018.T006_EvalInjectionAndProviderJobs.md
+- [x] S018.T007 — The Pages guard expects sprint briefs, so master is green again
+  .ai/tasks/S018.T007_PagesGuardSprintBriefShape.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/35.AD_HOC_TASKS.md

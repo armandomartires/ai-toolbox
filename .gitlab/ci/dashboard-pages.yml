@@ -45,7 +45,7 @@ pages:
       --root .ai
       --out public/index.html
       --json public/model.json
-    - bash skills/project-workflow/scripts/publish-dashboard.sh guard --model public/model.json --expect-shape numbered_task
+    - bash skills/project-workflow/scripts/publish-dashboard.sh guard --model public/model.json --expect-shape sprint_brief
     # The model is working data, not part of the page (see the GitHub
     # template for why a second unlabelled copy of every figure is harmful).
     - rm -f public/model.json
