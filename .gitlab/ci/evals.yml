@@ -44,7 +44,14 @@ evals-live:
   environment:
     name: evals-live
     action: verify
+  # S018.T006: Anthropic is the reference harness and stays blocking; xAI and
+  # OpenAI are still run and reported, but a failure of theirs does not fail
+  # the pipeline (allow_failure). The first rule matches those two by name, so
+  # an unset or invisible $EVAL_PROVIDER falls to the second rule and stays
+  # blocking (fail closed); the schedule/default-branch condition is the same in both.
   rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && ($EVAL_PROVIDER == "xai" || $EVAL_PROVIDER == "openai")
+      allow_failure: true
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   parallel:
     matrix:
