@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Source, Sprint, Status, Task } from '../types'
 import {
   applyPlan,
+  boardFolders,
   currentSprint,
   parseSprints,
   setStoryStatus,
@@ -130,15 +131,49 @@ const loadLayer = async ($: EngineInterface, root: string, force: boolean) => {
   await publish($, planSprints(parseRoadmap(text), briefs, tasksDir), 'ai', root)
 }
 
+/** Whether a folder holds a board: a layout declaration, a GOALS.md, or a `.ai/` with one or a roadmap. */
+const hasBoard = async ($: EngineInterface, dir: string) => {
+  const ai = join(dir, '.ai')
+  for (const path of [join(dir, '.ai-layout.json'), join(ai, GOALS_FILE), join(ai, ROADMAP_FILE), join(dir, GOALS_FILE)]) {
+    if (await isFile($, path)) return true
+  }
+
+  return false
+}
+
 /**
- * The board of the session's current folder: its GOALS.md under the layout
- * root, else a project-workflow `.ai/` layer, else an empty GOALS.md board.
- * A GOALS.md at the project root is copied under the layout root when that
- * has none; a mod cannot delete, so the root file stays and is reported as a
- * leftover. Without a readable layout the root file is used in place.
+ * The project folder the board belongs to. It starts from the session's root,
+ * which a shell `cd` does not move (its working folder does: S019.T002), then
+ * takes the nearest folder with a board, looking no higher than the
+ * repository's top and never inside a `.ai/` (`boardFolders`); else the first
+ * of those folders. An engine without `root()` falls back to the working folder.
+ */
+const projectDir = async ($: EngineInterface) => {
+  let start: string
+  try {
+    start = await $.session.root()
+  } catch {
+    start = await $.session.cwd()
+  }
+  const folders = boardFolders(start)
+  for (const dir of folders) {
+    if (await hasBoard($, dir)) return dir
+    if (await isFile($, join(dir, '.git'))) break
+  }
+
+  return folders[0] ?? start.replace(/[\\/]+$/, '')
+}
+
+/**
+ * The board of the session's project folder (`projectDir`): its GOALS.md
+ * under the layout root, else a project-workflow `.ai/` layer, else an empty
+ * GOALS.md board. A GOALS.md at the project root is copied under the layout
+ * root when that has none; a mod cannot delete, so the root file stays and
+ * is reported as a leftover. Without a readable layout the root file is used
+ * in place.
  */
 const loadGoals = async ($: EngineInterface, force = false) => {
-  const dir = (await $.session.cwd()).replace(/[\\/]+$/, '')
+  const dir = await projectDir($)
   const rootPath = join(dir, GOALS_FILE)
   const layout = await layoutAt($, dir)
   const homePath = 'error' in layout || layout.root === dir ? undefined : join(layout.root, GOALS_FILE)

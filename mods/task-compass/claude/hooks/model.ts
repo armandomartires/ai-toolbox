@@ -5,7 +5,7 @@ import type { Token } from './sigma'
 
 // The GOALS.md board itself is harness-neutral: board.ts, a byte-identical
 // copy of mods/task-compass/core/board.ts (check-mods.py rule 10).
-export { currentSprint, deriveStatus, parseSprints, setStoryStatus, statusFromWords } from './board.ts'
+export { boardFolders, currentSprint, deriveStatus, parseSprints, setStoryStatus, statusFromWords } from './board.ts'
 export { fit }
 
 export type StatusStyle = {

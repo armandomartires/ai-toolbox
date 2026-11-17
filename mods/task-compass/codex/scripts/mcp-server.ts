@@ -4,8 +4,9 @@
  * mods/task-compass/core/; check-mods.py rule 10). Plain node, no SDK:
  * newline-delimited JSON-RPC 2.0 on stdin and stdout, as MCP's stdio
  * transport is. Run as `node mcp-server.ts` (Node 22.18 or later strips the
- * types). The board is <folder>/.ai/GOALS.md, the folder being
- * TASK_COMPASS_DIR when set, else the server's working directory.
+ * types). The board is <project>/.ai/GOALS.md, the project found from
+ * TASK_COMPASS_DIR when set, else the server's working directory, by
+ * storyFolder: never a folder inside a .ai/.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -13,7 +14,7 @@ import { createInterface } from 'node:readline'
 
 import { STATUSES } from './board.ts'
 import { isMain } from './main.ts'
-import { answerStory, GOALS_PATH, STORY_DESCRIPTION } from './story.ts'
+import { answerStory, GOALS_PATH, STORY_DESCRIPTION, storyFolder } from './story.ts'
 import type { StoryInput } from './story.ts'
 
 export const SERVER = { name: 'task-compass', version: '0.1.0' }
@@ -32,9 +33,9 @@ export const STORY_TOOL = {
   },
 }
 
-/** The story tool on a folder's .ai/GOALS.md: answers, and writes the file when the status changed. */
+/** The story tool on the board of the project `dir` lies in: answers, and writes the file when the status changed. */
 export const runStory = (dir: string, input: StoryInput): string => {
-  const file = join(dir, GOALS_PATH)
+  const file = join(storyFolder(dir, existsSync), GOALS_PATH)
   const answer = answerStory(existsSync(file) ? readFileSync(file, 'utf8') : undefined, input)
   if (answer.markdown !== undefined) writeFileSync(file, answer.markdown, 'utf8')
 

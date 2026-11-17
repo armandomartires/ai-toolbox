@@ -311,6 +311,26 @@ test('the story tool writes the status to GOALS.md and marks the story', async (
   expect(String(wrong.result)).toContain('No story "7.1"')
 })
 
+test('a shell standing in .ai/ writes the project\'s board, never a new one inside .ai/ (S019.T002)', async ($, on) => {
+  mock.clock(on)
+  const file = engine(on)
+  // The session's root is the project; its shell has cd'd into the board's own folder.
+  file.root = '/p'
+  file.cwd = '/p/.ai'
+
+  await $.session.start({ cwd: '/p/.ai', surface: 'terminal', isInteractive: true })
+  const ran = await $.tool.call({ tool: 'mcp__task-compass__story', story: '2.2', status: 'done' })
+  expect(String(ran.result)).toContain('is now Done')
+  expect(file.text).toContain('- [x] Hover cards')
+  expect(file.writes).toEqual(['/p/.ai/GOALS.md'])
+
+  // A session whose root is the .ai/ folder itself still finds the board above it.
+  file.root = '/p/.ai'
+  const again = await $.tool.call({ tool: 'mcp__task-compass__story', story: '2.3', status: 'done' })
+  expect(String(again.result)).toContain('is now Done')
+  expect(file.writes).toEqual(['/p/.ai/GOALS.md', '/p/.ai/GOALS.md'])
+})
+
 test('a session started in a temporary folder describes the board of the folder it moved to', async ($, on) => {
   mock.clock(on)
   const file = engine(on)

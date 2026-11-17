@@ -59,6 +59,8 @@ The file lives at `GOALS.md` in the project's planning folder: `.ai/`, or the `r
 - Both exist: the one in `.ai/` is the board; the root one is never read or overwritten, and is reported as a leftover.
 - Neither exists: nothing is written when the project opens. `/goals init` creates `.ai/GOALS.md`.
 
+The project is the session's root folder, which a shell `cd` does not move. When that folder has no board, the mod uses the nearest folder above it that has one, up to the repository's top. It never looks inside a `.ai/` folder and never starts a board there: a session started in `<project>/.ai` uses `<project>/.ai/GOALS.md`. The OpenCode and Codex ports find their folder the same way.
+
 Older versions of the mod (0.1.x, 0.2.0) read only the root file, so a project that moved to `.ai/GOALS.md` looks empty to them until they update.
 
 ```markdown
@@ -98,6 +100,8 @@ A project with no `GOALS.md` (under `.ai/`, or a root one the mod has yet to cop
 - `/goals init` writes a starter `.ai/GOALS.md`; `/goals` reloads the board and says where it read it from, drawn as a GOALS panel of the last eight sprints with their progress. In a `.ai/` project, `/goals` lists the open sprints and `init` writes nothing.
 
 ## Not yet verified
+
+Version 0.12.6 (`S019.T002`): the board is found from the session's root (`$.session.root()`), not its working folder. A session whose shell had `cd`'d into `<project>/.ai` used to write `<project>/.ai/.ai/GOALS.md`. Core's `boardFolders` and `projectFolder` walk up to the nearest board, never inside a `.ai/` and not past the repository's top. The OpenCode and Codex ports resolve their folder through them too. Tested in the mod test kit and on node; not yet seen in a live session.
 
 Version 0.12.3 (`TASK-0254`, `TASK-0255`): the board parser, the story tool's logic and the plan reader live in `mods/task-compass/core/`, and the Claude plugin carries byte-identical copies (`check-mods.py` rule 10); behaviour unchanged. The OpenCode port (`opencode/`) and the Codex bundle (`codex/`) have not loaded in their clients yet.
 

@@ -2,7 +2,7 @@
 //   node --test mods/task-compass/codex/scripts/codex.test.ts
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, test } from 'node:test'
@@ -49,6 +49,16 @@ test('tools/call story sets the status in .ai/GOALS.md', () => {
   const reply = handle({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'story', arguments: { story: '1.2', status: 'done' } } }, dir)
   assert.deepEqual(reply?.result, { content: [{ type: 'text', text: 'Story 1.2 "Codex port" is now Done.' }], isError: false })
   assert.equal(readFileSync(join(dir, '.ai', 'GOALS.md'), 'utf8'), GOALS.replace('- [>] Codex port', '- [x] Codex port'))
+})
+
+test('a server or session started in the board\'s own .ai/ folder uses the project\'s board, never .ai/.ai (S019.T002)', () => {
+  const dir = folder(GOALS)
+  const inside = join(dir, '.ai')
+  const reply = handle({ jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'story', arguments: { story: '1.3', status: 'in_progress' } } }, inside)
+  assert.deepEqual(reply?.result, { content: [{ type: 'text', text: 'Story 1.3 "Marketplace entry" is now In progress.' }], isError: false })
+  assert.equal(readFileSync(join(dir, '.ai', 'GOALS.md'), 'utf8'), GOALS.replace('- [ ] Marketplace entry', '- [>] Marketplace entry'))
+  assert.equal(existsSync(join(inside, '.ai')), false)
+  assert.match(JSON.parse(sessionStart(inside)).hookSpecificOutput.additionalContext, /Marketplace entry/)
 })
 
 test('errors: unknown tool, unknown method, invalid request, parse error', () => {

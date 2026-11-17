@@ -8,10 +8,23 @@
  * `.ai/` layer and marks the current story on the pane.
  */
 import type { Sprint, Status, Story } from './board.ts'
-import { currentSprint, parseSprints, setStoryStatus, statusFromWords, STATUSES } from './board.ts'
+import { currentSprint, parseSprints, projectFolder, setStoryStatus, statusFromWords, STATUSES } from './board.ts'
 
-/** Where the ports read the board, relative to the session's folder. */
+/** Where the ports read the board, relative to the project folder (`storyFolder`). */
 export const GOALS_PATH = '.ai/GOALS.md'
+
+/**
+ * The project folder whose GOALS_PATH a port reads, from the folder its
+ * harness names (a session's, a process's): the nearest with a board up to
+ * the repository's top, never one inside a `.ai/` (core's `projectFolder`,
+ * S019.T002). `exists` says whether a path exists; the harness passes its own.
+ */
+export const storyFolder = (start: string, exists: (path: string) => boolean): string => {
+  const sep = start.includes('\\') ? '\\' : '/'
+  const at = (dir: string, name: string) => `${dir}${dir.endsWith(sep) ? '' : sep}${name.replace(/\//g, sep)}`
+
+  return projectFolder(start, dir => exists(at(dir, GOALS_PATH)), dir => exists(at(dir, '.git')))
+}
 
 export const LABEL: Record<Status, string> = {
   backlog: 'Backlog',

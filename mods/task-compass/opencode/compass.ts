@@ -10,10 +10,11 @@ import { join } from 'node:path'
 
 import type { Status } from './board.ts'
 import { parseSprints } from './board.ts'
-import { answerStory, GLYPH, GOALS_PATH, LABEL, sprintNow } from './story.ts'
+import { answerStory, GLYPH, GOALS_PATH, LABEL, sprintNow, storyFolder } from './story.ts'
 import type { StoryInput } from './story.ts'
 
-export const goalsFile = (dir: string) => join(dir, GOALS_PATH)
+/** The board of the project `dir` lies in, never one inside a .ai/ (storyFolder). */
+export const goalsFile = (dir: string) => join(storyFolder(dir, existsSync), GOALS_PATH)
 
 const readGoals = (dir: string): string | undefined => {
   const file = goalsFile(dir)

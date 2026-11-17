@@ -4,9 +4,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { currentSprint, MARKER, parseSprints, setStoryStatus, STATUSES, statusFromWords } from './board.ts'
+import { boardFolders, currentSprint, MARKER, parseSprints, projectFolder, setStoryStatus, STATUSES, statusFromWords } from './board.ts'
 import { layoutOf, parseRoadmap, planSprints } from './plan.ts'
-import { answerStory, boardText, openStoriesText, sprintNow } from './story.ts'
+import { answerStory, boardText, openStoriesText, sprintNow, storyFolder } from './story.ts'
 
 const GOALS = [
   '# Project',
@@ -102,4 +102,35 @@ test('boardText folds a done sprint; sprintNow is the current one', () => {
   assert.match(boardText(sprints), /^Sprint 1 — Foundations \[done\]\nSprint 2 — Ports \[In progress\] goal: Run on every client\n  2\.1 OpenCode port \[In progress\]/)
   assert.equal(sprintNow(sprints)?.n, 2)
   assert.equal(sprintNow([]), undefined)
+})
+
+/** A POSIX-spelled path in Windows separators: `win('C:/r')` is C:\r. */
+const win = (path: string) => path.replace(/\//g, '\\')
+
+test('boardFolders walks up and starts above the outermost .ai', () => {
+  assert.deepEqual(boardFolders('/r/p/sub/'), ['/r/p/sub', '/r/p', '/r', '/'])
+  assert.deepEqual(boardFolders('/r/p/.ai'), ['/r/p', '/r', '/'])
+  assert.deepEqual(boardFolders('/r/p/.ai/.ai/tasks'), ['/r/p', '/r', '/'])
+  assert.deepEqual(boardFolders(win('C:/r/p/.AI')), [win('C:/r/p'), win('C:/r'), win('C:/')])
+  assert.deepEqual(boardFolders(win('//host/share/p')), [win('//host/share/p'), win('//host/share')])
+})
+
+test('projectFolder: the nearest board, never inside .ai, not past the top (S019.T002)', () => {
+  const boards = new Set(['/r/p', '/r/p/.ai'])
+  const has = (dir: string) => boards.has(dir)
+  // A shell in the board's folder, even with a stray .ai/.ai/GOALS.md, means the project.
+  assert.equal(projectFolder('/r/p/.ai', has), '/r/p')
+  assert.equal(projectFolder('/r/p/sub/deep', has), '/r/p')
+  // No board up to the repository's top: the start, or the folder above its .ai.
+  assert.equal(projectFolder('/r/q/sub', has, dir => dir === '/r/q'), '/r/q/sub')
+  assert.equal(projectFolder('/r/q/.ai', () => false), '/r/q')
+  assert.equal(projectFolder(win('C:/r/p/.ai'), dir => dir === win('C:/r/p')), win('C:/r/p'))
+})
+
+test('storyFolder finds .ai/GOALS.md from inside .ai, in either separator', () => {
+  const paths = new Set(['/r/p/.ai/GOALS.md', '/r/p/.ai/.ai/GOALS.md', '/r/p/.git'])
+  assert.equal(storyFolder('/r/p/.ai', path => paths.has(path)), '/r/p')
+  assert.equal(storyFolder('/r/p/src', path => paths.has(path)), '/r/p')
+  assert.equal(storyFolder('/r/x', path => paths.has(path)), '/r/x')
+  assert.equal(storyFolder(win('C:/r/p/.ai'), path => path === win('C:/r/p/.ai/GOALS.md')), win('C:/r/p'))
 })

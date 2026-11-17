@@ -54,6 +54,7 @@ const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
     return <Box />
   })
   on('session.cwd', () => ({ value: '/q' }))
+  on('session.root', () => ({ value: '/q' }))
   on('fs.stat', (_, e) => {
     const file = files.get(posix(e.path))
     if (!file) throw new Error('ENOENT')

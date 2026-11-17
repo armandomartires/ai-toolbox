@@ -2,7 +2,7 @@
 //   node --test mods/task-compass/opencode/compass.test.ts
 // index.ts and tui.tsx import OpenCode's own packages and are not loaded here.
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, test } from 'node:test'
@@ -28,6 +28,15 @@ test('the story tool writes the new status into .ai/GOALS.md', () => {
   const dir = folder(GOALS)
   assert.equal(runStory(dir, { story: '1.2', status: 'review' }), 'Story 1.2 "Codex port" is now In review.')
   assert.equal(readFileSync(goalsFile(dir), 'utf8'), GOALS.replace('- [ ] Codex port', '- [?] Codex port'))
+})
+
+test('a session in the board\'s own .ai/ folder writes the project\'s board, never .ai/.ai (S019.T002)', () => {
+  const dir = folder(GOALS)
+  const inside = join(dir, '.ai')
+  assert.equal(runStory(inside, { story: '1.2', status: 'done' }), 'Story 1.2 "Codex port" is now Done.')
+  assert.equal(readFileSync(join(dir, '.ai', 'GOALS.md'), 'utf8'), GOALS.replace('- [ ] Codex port', '- [x] Codex port'))
+  assert.equal(existsSync(join(inside, '.ai')), false)
+  assert.equal(sidebarBoard(inside).title, 'Sprint 1 — Ports')
 })
 
 test('the story tool leaves the file alone when nothing changes or the call is wrong', () => {

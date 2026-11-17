@@ -661,6 +661,8 @@ Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
 - [?] S019.T001 — A forge tracker changes back to files: a read-only export, and a switch that names its ADR
   .ai/tasks/S019.T001_ForgeTrackerBackToFiles.md
   branch: agent/workflow-export-files-d4c478
+- [?] S019.T002 — task-compass 0.12.6: the board is found from the project root, never inside a .ai/
+  .ai/tasks/S019.T002_CompassBoardFromProjectRoot.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/35.AD_HOC_TASKS.md

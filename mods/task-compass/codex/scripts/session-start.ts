@@ -1,18 +1,19 @@
 /**
  * task-compass for Codex: the SessionStart command hook. Reads the hook's
  * JSON on stdin (its `cwd`), and prints the current sprint's open stories
- * from <cwd>/.ai/GOALS.md as additional context for the session. Never
+ * from <project>/.ai/GOALS.md, the project found from its cwd (storyFolder),
+ * as additional context for the session. Never
  * blocks: any error still exits 0 with a one-line note.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { isMain } from './main.ts'
-import { GOALS_PATH, openStoriesText } from './story.ts'
+import { GOALS_PATH, openStoriesText, storyFolder } from './story.ts'
 
-/** The hook's stdout for a session started in `dir`. */
+/** The hook's stdout for a session started in `dir`, read from its project's board. */
 export const sessionStart = (dir: string): string => {
-  const file = join(dir, GOALS_PATH)
+  const file = join(storyFolder(dir, existsSync), GOALS_PATH)
   const context = openStoriesText(existsSync(file) ? readFileSync(file, 'utf8') : undefined)
 
   return JSON.stringify({

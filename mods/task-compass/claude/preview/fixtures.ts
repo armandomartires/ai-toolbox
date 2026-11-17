@@ -6,10 +6,12 @@ import type { On } from 'claude-code'
 
 /**
  * The engine beneath the mod: a .ai/GOALS.md kept in memory in /p, the session's
- * folder unless the test moves it.
+ * folder unless the test moves it. `root` is the session's project root,
+ * `cwd` when unset; a shell `cd` moves `cwd` alone. `writes` lists every path
+ * written, as `/p/...` on any platform.
  */
 export const engine = (on: On, goals: string) => {
-  const file = { text: goals, mtime: 1, cwd: '/p' }
+  const file = { text: goals, mtime: 1, cwd: '/p', root: undefined as string | undefined, writes: [] as string[] }
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('tool.register', (_, e) => ({ value: { tool: `mcp__task-compass__${e.name}` } }))
   on('tool.describe', (_, e) => ({ description: e.description }))
@@ -23,12 +25,14 @@ export const engine = (on: On, goals: string) => {
     return h(Box, null)
   })
   on('session.cwd', () => ({ value: file.cwd }))
+  on('session.root', () => ({ value: file.root ?? file.cwd }))
   on('fs.stat', (_, e) => {
     if (!/[\\/]p[\\/]\.ai[\\/]GOALS\.md$/.test(e.path)) throw new Error('ENOENT')
     return { value: { kind: 'file', size: file.text.length, mtimeMs: file.mtime, isLink: false } }
   })
   on('fs.read', () => ({ value: file.text }))
   on('fs.write', (_, e) => {
+    file.writes.push(e.path.replace(/^[a-z]:/i, '').replace(/\\/g, '/'))
     file.text = e.text
     file.mtime++
     return { value: undefined }

@@ -1,9 +1,10 @@
 /**
  * The GOALS.md board, harness-neutral (ADR-0054 clause 4): parse the sprints
- * and stories, change a story's checkbox, pick the current sprint. Pure
- * TypeScript that imports nothing, so a harness that needs it carries a
- * byte-identical copy (check-mods.py rule 10): claude/hooks/board.ts,
- * opencode/board.ts, codex/scripts/board.ts. Change it here, then copy it.
+ * and stories, change a story's checkbox, pick the current sprint, find the
+ * project folder that holds the board. Pure TypeScript that imports nothing,
+ * so a harness that needs it carries a byte-identical copy (check-mods.py
+ * rule 10): claude/hooks/board.ts, opencode/board.ts, codex/scripts/board.ts.
+ * Change it here, then copy it.
  */
 
 /** The six board statuses a sprint, a story or a live task can be in. */
@@ -196,6 +197,66 @@ export const setStoryStatus = (
   lines[story.line] = `${item[1]} ${marker === null ? '' : `[${marker}] `}${item[3] ?? ''}`
 
   return lines.join(eol)
+}
+
+/** The folder a board lives in, by default (project-workflow's layout root). */
+export const BOARD_FOLDER = '.ai'
+
+/** A folder's name or path without its trailing separators, a root (`/`, `C:\`) kept whole. */
+const trimFolder = (dir: string) => (/^([a-z]:)?[\\/]+$/i.test(dir) ? dir : dir.replace(/[\\/]+$/, ''))
+
+/** The folder above `dir`; undefined at a root (`/`, `C:\`, `\\host\share`). */
+const parentOf = (dir: string): string | undefined => {
+  const path = trimFolder(dir)
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  if (cut < 0 || cut === path.length - 1) return undefined
+  const head = path.slice(0, cut)
+  if (head === '') return path.slice(0, 1)
+  if (/^[a-z]:$/i.test(head)) return `${head}${path[cut]}`
+  if (/^[\\/]{2}[^\\/]+$/.test(head)) return undefined
+
+  return head
+}
+
+/** `dir` and each folder above it, nearest first, in `dir`'s own separators. */
+export const foldersUp = (dir: string): string[] => {
+  const folders: string[] = []
+  for (let at: string | undefined = trimFolder(dir); at !== undefined; at = parentOf(at)) folders.push(at)
+
+  return folders
+}
+
+/**
+ * The folders a session standing in `start` may keep its board in, nearest
+ * first. Inside a `.ai/` they begin above the outermost `.ai`, so a board is
+ * never looked for, or started, inside one: a session whose shell stood in
+ * `<project>/.ai` once wrote `<project>/.ai/.ai/GOALS.md` (S019.T002).
+ */
+export const boardFolders = (start: string): string[] => {
+  const up = foldersUp(start)
+  const name = (dir: string) => dir.split(/[\\/]/).pop()?.toLowerCase()
+  const outermost = up.reduce((found, dir, i) => (name(dir) === BOARD_FOLDER ? i : found), -1)
+
+  return outermost < 0 ? up : up.slice(outermost + 1)
+}
+
+/**
+ * The project folder whose board a session standing in `start` means: of
+ * `boardFolders(start)`, the first `hasBoard` accepts, looking no higher than
+ * the first `isTop` accepts (a repository's top); else the first of them.
+ */
+export const projectFolder = (
+  start: string,
+  hasBoard: (dir: string) => boolean,
+  isTop: (dir: string) => boolean = () => false,
+): string => {
+  const folders = boardFolders(start)
+  for (const dir of folders) {
+    if (hasBoard(dir)) return dir
+    if (isTop(dir)) break
+  }
+
+  return folders[0] ?? start
 }
 
 /** The sprint the team is in: the first under way, else the first not done. */
