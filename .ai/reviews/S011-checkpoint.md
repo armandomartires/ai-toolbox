@@ -19,8 +19,10 @@
   passed its handshake and sandboxed suite on Linux.
 - Broken but accepted: the eval's injection suite scores 0.92 against a floor of
   1.00 (ad-hoc 075); the gates server hangs on `initialize` on Windows only;
-  the engine's mid-step cut-off at a worker's turn cap is not observable while
-  workers keep their reserve (`S011.T006`, closed on the human's decision).
+  the engine's mid-step cut-off at a worker's turn cap is not reached while
+  workers keep their reserve (`S011.T006`, closed on the human's decision); a
+  probe after the close, with the reserve taken out, saw the cut-off and
+  `collect`'s turn-cap report live (2026-11-15).
 
 ## What changed this sprint
 
