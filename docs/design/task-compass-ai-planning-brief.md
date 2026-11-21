@@ -35,8 +35,8 @@ In a project that plans in `.ai/` under the project-workflow convention, such as
 ## Out of scope
 
 - Writing any `.ai/` file, a brief's status included.
-- The project-migration layout (ai-toolbox's own), forge trackers, and a general source layer for them: a later run.
-- `20.PLAN.md` and `35.AD_HOC_TASKS.md` (`#nnn` items).
+- The project-migration layout (ai-toolbox's own), forge trackers, and a general source layer for them: a later run. *Forge trackers were brought in by Amendment 1 below; the rest of this line stands.*
+- `20.PLAN.md` and `35.AD_HOC_TASKS.md` (`#nnn` items). *The forge variant of `20.PLAN.md` was brought in by Amendment 1 below.*
 - Fixing sigma-infrastructure's drifted statuses or stale `(open)` cells: that project's work.
 - Publishing to the organization plugin library.
 
@@ -46,7 +46,7 @@ In a session in sigma-infrastructure, the pane centres the open sprints (by the 
 
 ## Chosen approach
 
-**C1, amended: `.ai/` is translated at load into the existing `Sprint`/`Story` contract.** The pane and the layout code draw both sources the same way. Only `register.tsx` knows which source is active, through one `source: 'goals' | 'ai'` state key. That is the load-bearing commitment: one data contract and one pane, and no source layer. The GOALS path keeps its code, its tests and its write behaviour.
+**C1, amended: `.ai/` is translated at load into the existing `Sprint`/`Story` contract.** The pane and the layout code draw both sources the same way. Only `register.tsx` knows which source is active, through one `source: 'goals' | 'ai'` state key. That is the load-bearing commitment: one data contract and one pane, and no source layer. The GOALS path keeps its code, its tests and its write behaviour. *Amendment 1 below adds a third value, `'forge'`, which is not a board.*
 
 1. **Detection**, in `loadGoals`: `GOALS.md` first, as today. Otherwise `.ai-layout.json` or its defaults, and the board is `.ai/` only if `<root>/<entrypoint>` and `<root>/30.ROADMAP.md` both exist. Probes use `fs.stat` with a catch, which the existing test stub already answers.
 2. **Sprints** come from the *Sprint history* table's rows, sorted by number: `n` = the number (87); `label` = `S087` (new optional field, which the view prefers over `S${n}`); `title` = the name, `CamelCase` split into words; `goal` = the Theme cell, left empty when the cell only points to a review; `dates` = start, plus an end only when the cell gives one after the dash.
@@ -97,3 +97,13 @@ In a session in sigma-infrastructure, the pane centres the open sprints (by the 
 | Sandbox; a status edit shows within seconds | Yes: `$.fs` only, a 6-second tick, an immediate reload on Claude's edits |
 | Reads files as they are | Yes, through rule A and the status table; unknown values stay visible |
 | Fixtures from real files | **Exception, by rule B:** structure verbatim, host names replaced |
+
+## Amendment 1 — forge trackers (human, 2026-11-21)
+
+Decided by Armando Martires as a direct amendment, in place of a new design run, when `S011.T035` was planned. Everything above stands except where this section says otherwise.
+
+- **In scope now:** a project whose `tracker.conf` names `gitlab` or `github` (ADR-0037). The mod reads `tracker.conf` in the project folder (S019.T002's folder; a folder holding one counts as a project) with the grammar of `skills/project-workflow/scripts/tracker_lib.py`; an absent file means `files`, and an invalid one is reported and never guessed past.
+- **C1 gains a third source.** The state key becomes `source: 'goals' | 'ai' | 'forge'`. `'goals'` and `'ai'` keep the one `Sprint`/`Story` contract and the one pane. `'forge'` is not a board: it is a read-only state card drawn from the forge variant of `<layout root>/20.PLAN.md` (current state, open milestone and board, blocked, next action, history with its tag pointer). There is still no general source layer.
+- **Nothing is written and nothing is fetched on a forge.** `/goals init` and the story tool decline and name the tracker; the mod calls no forge, `glab` or `gh`.
+- **The tracker decides before `GOALS.md` does.** The assumption "If a project has a `GOALS.md`, it wins" now holds for a `files` tracker only. On a forge an existing `GOALS.md` is reported as a stray copy, neither read nor copied (`templates/reference/tracker.md`: no copy in `.ai/`).
+- **Still out of scope:** reading issues, milestones or boards from the forge; the project-migration layout; `35.AD_HOC_TASKS.md`; the files variant of `20.PLAN.md`; a `.ai/` or state-card view in the OpenCode and Codex ports, which only decline.

@@ -168,3 +168,42 @@ test('the handle lies on the board frame: a terminal redraws the bottom edge aro
     await ui.unmount()
   }
 })
+
+test('a drag on the plan handle resizes the Plan panel of a forge project', async ($, on) => {
+  const conf = 'tracker = gitlab\ngitlab_project = group/demo\n'
+  const plan = '# Plan\n\nLast updated: 2026-05-02.\n\n## Current state\n\nRunning.\n\n## Next action\n\nTake one.\n'
+  on('fs.stat', (_, e) => {
+    const file = /[\\/]p[\\/]tracker\.conf$/.test(e.path) ? conf : /[\\/]p[\\/]\.ai[\\/]20\.PLAN\.md$/.test(e.path) ? plan : undefined
+    if (file === undefined) throw new Error('ENOENT')
+    return { value: { kind: 'file', size: file.length, mtimeMs: 1, isLink: false } }
+  })
+  on('fs.read', (_, e) => ({ value: /tracker\.conf$/.test(e.path) ? conf : plan }))
+  on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('tool.register', (_, e) => ({ value: { tool: `mcp__task-compass__${e.name}` } }))
+  on('tool.describe', (_, e) => ({ description: e.description }))
+  on('ui.invalidate', () => ({ value: undefined }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.cwd', () => ({ value: '/p' }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('ui.message', () => ({}))
+  on('ui.render', { component: 'Pane', requestId: 'task-compass' }, ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return <Box />
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const key = 'plan-handle'
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    expect(await ui.find({ text: /GITLAB GROUP\/DEMO/ })).toBeDefined()
+    expect(await ui.find({ key: 'sprints-handle' })).toBeUndefined()
+    const rowsOf = async () => ((await ui.find({ key }))?.props as { props?: { rows?: number } } | undefined)?.props?.rows
+    const auto = (await rowsOf())!
+    await ui.pointer({ type: 'down', x: 10, y: 0, button: 'left', in: key })
+    await ui.pointer({ type: 'move', x: 10, y: 7, button: 'left', in: key })
+    await ui.pointer({ type: 'up', x: 10, y: 7, button: 'left', in: key })
+    expect(await rowsOf()).toBe(auto + 7)
+    expect(((await ui.find({ key: `${key}-body` }))?.props as { height?: number } | undefined)?.height).toBe(auto + 7)
+    await ui.unmount()
+  }
+})

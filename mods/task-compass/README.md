@@ -2,7 +2,7 @@
 
 > **Status: experimental.** Every feature of this mod is experimental while ai-toolbox is in its development stage (decided 2026-11-04, issue #5). A feature leaves experimental only through the live-verification gate (#9). Status is recorded in `claude/status.json`.
 
-A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, and Claude's live tasks under it. The sprints come from a `GOALS.md` kept in the project's `.ai/` folder, or from a project-workflow `.ai/` plan (below). It draws in SIGMAorbital (`ADR-0043`): monochrome, colour for state only, uppercase labels, its Night ops or Daylight colours following your theme setting, or pinned by hand with `/compass theme dark|light|auto`.
+A Claude Code mod that keeps a **Compass** pane beside the chat: your project's sprints as a timeline, the story being worked on, and Claude's live tasks under it. The sprints come from a `GOALS.md` kept in the project's `.ai/` folder, or from a project-workflow `.ai/` plan (below); a project that tracks its work on a forge gets a read-only state card instead (below). It draws in SIGMAorbital (`ADR-0043`): monochrome, colour for state only, uppercase labels, its Night ops or Daylight colours following your theme setting, or pinned by hand with `/compass theme dark|light|auto`.
 
 | Desktop app | Terminal |
 |---|---|
@@ -25,8 +25,8 @@ The mod's Claude Code plugin is `claude/` (`ADR-0054`). The board logic every ha
 | Harness | Status | Install |
 |---|---|---|
 | Claude Code | Supported: `claude/`, the full Compass pane, the `story` tool, `/compass` and `/goals`. | `scripts/install.sh` lists it in `CLAUDE_CODE_PLUGIN_DIRS`. |
-| OpenCode | A port, `opencode/` (`TASK-0254`): the `story` tool on `.ai/GOALS.md` (`index.ts`) and a sidebar slot listing the current sprint's stories (`tui.tsx`). No pane, carousel or cards, no `.ai/` plan, no `/compass`. Written against `@opencode-ai/plugin` 1.18.30, the plugin package on the host; not yet seen in a live TUI. | `scripts/install.sh --client opencode` copies it to `~/.config/opencode/mods/task-compass/` with an entry `~/.config/opencode/plugins/task-compass.ts`; list `mods/task-compass/tui.tsx` under `"plugin"` in `~/.config/opencode/tui.json` for the sidebar. |
-| Codex | A plugin bundle, `codex/` (`TASK-0255`): Codex draws no UI, so a `SessionStart` command hook gives the session the current sprint's open stories, an MCP stdio server (`scripts/mcp-server.ts`, plain node 22.18 or later) exposes the `story` tool, and the `board` skill shows and edits the board. Not yet loaded in Codex. | `scripts/install.sh --client codex` copies it to `~/.codex/plugins/task-compass/` when `~/.codex` exists; then a marketplace entry names it (a workspace admin imports the marketplace), and Codex restarts. |
+| OpenCode | A port, `opencode/` (`TASK-0254`): the `story` tool on `.ai/GOALS.md` (`index.ts`) and a sidebar slot listing the current sprint's stories (`tui.tsx`). No pane, carousel or cards, no `.ai/` plan, no `/compass`; on a forge project (`tracker.conf`) the tool and the sidebar decline and write no `GOALS.md`. Written against `@opencode-ai/plugin` 1.18.30, the plugin package on the host; not yet seen in a live TUI. | `scripts/install.sh --client opencode` copies it to `~/.config/opencode/mods/task-compass/` with an entry `~/.config/opencode/plugins/task-compass.ts`; list `mods/task-compass/tui.tsx` under `"plugin"` in `~/.config/opencode/tui.json` for the sidebar. |
+| Codex | A plugin bundle, `codex/` (`TASK-0255`): Codex draws no UI, so a `SessionStart` command hook gives the session the current sprint's open stories, an MCP stdio server (`scripts/mcp-server.ts`, plain node 22.18 or later) exposes the `story` tool, and the `board` skill shows and edits the board; on a forge project (`tracker.conf`) the hook and the tool decline and write no `GOALS.md`. Not yet loaded in Codex. | `scripts/install.sh --client codex` copies it to `~/.codex/plugins/task-compass/` when `~/.codex` exists; then a marketplace entry names it (a workspace admin imports the marketplace), and Codex restarts. |
 
 ## Install
 
@@ -36,7 +36,7 @@ It is in the organization's plugin library: open https://claude.ai/customize/plu
 /plugin install task-compass@claudeai-organization-library
 ```
 
-Mods need Claude Code 2.1.308 or later. The pane reads `.ai/GOALS.md`; `/goals init` writes a starter one.
+Mods need Claude Code 2.1.308 or later. The pane reads `.ai/GOALS.md`; `/goals init` writes a starter one where the project tracks its work in files and has none. A project whose `tracker.conf` names a forge gets a Plan card instead (below).
 
 ## Statuses
 
@@ -57,7 +57,7 @@ The file lives at `GOALS.md` in the project's planning folder: `.ai/`, or the `r
 
 - Only a root `GOALS.md`: the mod copies it, unchanged, to `.ai/GOALS.md` and reads that from then on. A mod cannot delete files, so the root one stays; `/goals` and Claude tell you it is a leftover and how to delete it. If the copy cannot be written, the root file is read and written in place.
 - Both exist: the one in `.ai/` is the board; the root one is never read or overwritten, and is reported as a leftover.
-- Neither exists: nothing is written when the project opens. `/goals init` creates `.ai/GOALS.md`.
+- Neither exists: nothing is written when the project opens. `/goals init` creates `.ai/GOALS.md`, unless `tracker.conf` names a forge (below).
 
 The project is the session's root folder, which a shell `cd` does not move. When that folder has no board, the mod uses the nearest folder above it that has one, up to the repository's top. It never looks inside a `.ai/` folder and never starts a board there: a session started in `<project>/.ai` uses `<project>/.ai/GOALS.md`. The OpenCode and Codex ports find their folder the same way.
 
@@ -92,14 +92,30 @@ A project with no `GOALS.md` (under `.ai/`, or a root one the mod has yet to cop
 - **Sprints** are the rows of the roadmap's *Sprint history* table, named `S087`. A sprint is **open** when its Dates cell says `(open)` and at least one of its tasks is not done. Every open sprint is current: they sit together in the middle, as many as the pane's width allows, and the caption reads `S087–S089 open · 88 sprints`.
 - **Stories** are the task briefs in `tasks/` (`S087_Name.T004_Name.md`, or `S087.T004_Name.md`), named `S087.T004`. A task's status is the first words of its brief's `**Status**:` line: `completed`, `complete`, `done`, `closed`, `resolved` and `cancelled` are done; `not started` is to do; `in progress`, `blocked` and `in review` are what they say. Any other status shows as to do, its own words on the card, and the sprint's card counts them. Change records and the template are not tasks.
 - **The pane never writes `.ai/`.** The `story` tool there only records which task Claude is on; a status changes in the brief, under the project's own rules, and the pane picks it up within a few seconds. `/goals init` declines in such a project.
-- A `GOALS.md`, if there is one, wins over `.ai/`: the mod never creates one on its own in such a project, only `/goals init` does. A malformed `.ai-layout.json` is reported in the pane and by `/goals`, not guessed past.
+- On a project that tracks its work in files, a `GOALS.md`, if there is one, wins over `.ai/`: the mod never creates one on its own in such a project, only `/goals init` does. A malformed `.ai-layout.json` is reported in the pane and by `/goals`, not guessed past.
+
+## Projects that track work on a forge
+
+`tracker.conf` in the project folder (the one the board is found in; a folder with a `tracker.conf` counts) decides (`ADR-0037`, `ADR-0068`): `tracker = files | gitlab | github`, with `gitlab_project = group/name` or `github_repo = owner/name`, names only, never a host or URL. No `tracker.conf` means `files`, and nothing in this README changes for such a project. When it names a forge the tasks are issues there, so there is no sprint board:
+
+- **The Plan card** replaces the Sprints board. It is a read-only `Plan` panel, headed by its code, drawn uppercase as `GITLAB GROUP/NAME` or `GITHUB OWNER/NAME`, and resizable like the others, read from the forge variant of `20.PLAN.md` in the planning folder (`.ai/`, or the `root` a `.ai-layout.json` declares). It shows the *Last updated* line, *Current state*, the *Milestone* and *Board* of *Open milestone and board*, *Blocked*, *Next action* and *History*, at most six lines of each, with the `pre-forge-migration` tag named in cyan.
+- **Nothing is written or fetched.** The mod calls no forge and no network; the project's own rules keep `20.PLAN.md` current, and the pane re-reads it, and `tracker.conf`, within a few seconds. The `story` tool and `/goals` write nothing and say so, and `/goals init` declines: `This project tracks its work on gitlab group/name per tracker.conf; its tasks are issues there, and no GOALS.md is written.`
+- **A stray `GOALS.md` is reported, not read.** The forge wins over it: it is neither copied, drawn nor overwritten, and the panel adds an amber line, `<path> is a stray GOALS.md: the convention forbids one on a forge tracker; nothing reads it`. Claude is told to mention it once and offer to delete it.
+- **A missing `20.PLAN.md` is reported**: `No 20.PLAN.md in <folder>: on a forge tracker this file holds the project's state (project-workflow templates/forge/20.PLAN.md); the board is on gitlab group/name.` A plan that lacks the forge variant's sections is reported the same way (`<path> is not the forge variant of 20.PLAN.md ...`).
+- **An invalid `tracker.conf` is reported, not guessed past** (an unknown key, a key set twice, a missing `tracker` or path, a host or URL where a project path belongs, a leading byte-order mark). The panel shows the file's full path and the fault, `<folder>/tracker.conf:<line>: ...`, with no code in its header. `/goals`, the `story` tool and `/goals init` show one sentence with the file's name only: `Compass cannot read this project's tracker.conf:<line>: <fault>. Fix the declaration; no GOALS.md is written.` The mod does not fall back to files and no `GOALS.md` is written.
+- **An unreadable `tracker.conf`** (it exists as a file but cannot be read) is reported the same way and read again on the next tick: the panel shows `<folder>/tracker.conf: the file is not readable`, and `/goals` and the `story` tool say `Compass cannot read this project's tracker.conf: the file is not readable. No GOALS.md is written.` A `tracker.conf` that is a folder counts as absent, so the project is a files project.
+- **An unreadable `20.PLAN.md`** (present but not a readable file) is not called the wrong variant: the panel, `/goals` and the `story` tool say `Compass cannot read <path>/20.PLAN.md: it is not a readable file. Nothing is written.` and the plan is read again on the next tick.
+
+The OpenCode and Codex ports read `tracker.conf` too, and on a forge they decline only; they draw no card. They do not all say the same: the OpenCode sidebar titles the forge (`Forge: gitlab group/name`) and, for an invalid or unreadable conf, shows the fault as its title (`tracker.conf:<line>: ...`, or `tracker.conf: the file is not readable`). The OpenCode and Codex `story` tools and the Codex SessionStart hook print the decline sentence for a forge, `This project tracks its work on gitlab group/name per tracker.conf; its tasks are issues there, and no GOALS.md is written.`, and the `Compass cannot read this project's ...` sentence for a bad conf.
 
 ## Commands
 
 - `/compass` opens the pane again if you closed it, and answers with a panel of the board's counts.
-- `/goals init` writes a starter `.ai/GOALS.md`; `/goals` reloads the board and says where it read it from, drawn as a GOALS panel of the last eight sprints with their progress. In a `.ai/` project, `/goals` lists the open sprints and `init` writes nothing.
+- `/goals init` writes a starter `.ai/GOALS.md` where the project tracks its work in files and has none; `/goals` reloads the board and says where it read it from, drawn as a GOALS panel of the last eight sprints with their progress. In a `.ai/` project, `/goals` lists the open sprints and `init` writes nothing. On a forge project both decline: `/goals` names the tracker and says where the state is, and `init` writes nothing. If the project's `.ai-layout.json` is invalid, `/goals` reports the layout error instead: `Compass cannot read this project's plan: <path>/.ai-layout.json: <fault>. Fix the declaration; no GOALS.md is written.`
 
 ## Not yet verified
+
+Version 0.13.0 (`S011.T035`, `ADR-0068`): the Plan panel for a project whose `tracker.conf` names a forge has not been seen in a live session, on the desktop or in a terminal, and no real forge-tracked project was used; it is tested in the mod test kit and the three node suites, with scratch folders. The OpenCode and Codex declines are tested the same way and have not loaded in their clients. `tracker.conf` is read from the project folder the board is found in.
 
 Version 0.12.6 (`S019.T002`): the board is found from the session's root (`$.session.root()`), not its working folder. A session whose shell had `cd`'d into `<project>/.ai` used to write `<project>/.ai/.ai/GOALS.md`. Core's `boardFolders` and `projectFolder` walk up to the nearest board, never inside a `.ai/` and not past the repository's top. The OpenCode and Codex ports resolve their folder through them too. Tested in the mod test kit and on node; not yet seen in a live session.
 

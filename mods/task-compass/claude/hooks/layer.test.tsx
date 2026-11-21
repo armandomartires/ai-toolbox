@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { CommandRunInput, On } from 'claude-code'
 
+import { FORGE_PLAN, GITHUB_CONF, GITLAB_CONF } from './fixtures/forge'
 import { BRIEFS, ROADMAP } from './fixtures/sigma'
 
 const PANE = {
@@ -33,6 +34,9 @@ const posix = (path: string) => path.replace(/^[a-z]:/i, '').replace(/\\/g, '/')
  */
 const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
   const files = new Map<string, { text: string; mtime: number }>()
+  // Paths that stat as a folder, and files whose read fails.
+  const dirs = new Set<string>()
+  const broken = new Set<string>()
   const put = (path: string, text: string) => files.set(path, { text, mtime: (files.get(path)?.mtime ?? 0) + 1 })
   if (plan) {
     put('/q/.ai/00.CONVENTIONS.md', '# Conventions\n')
@@ -56,6 +60,7 @@ const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
   on('session.cwd', () => ({ value: '/q' }))
   on('session.root', () => ({ value: '/q' }))
   on('fs.stat', (_, e) => {
+    if (dirs.has(posix(e.path))) return { value: { kind: 'dir', size: 0, mtimeMs: 1, isLink: false } }
     const file = files.get(posix(e.path))
     if (!file) throw new Error('ENOENT')
     return { value: { kind: 'file', size: file.text.length, mtimeMs: file.mtime, isLink: false } }
@@ -78,6 +83,7 @@ const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
   })
   on('fs.read', (_, e) => {
     log.reads.push(posix(e.path))
+    if (broken.has(posix(e.path))) throw new Error('EACCES')
     const file = files.get(posix(e.path))
     if (!file) throw new Error('ENOENT')
     return { value: file.text }
@@ -90,7 +96,7 @@ const project = (on: On, extra: Record<string, string> = {}, plan = true) => {
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('tool.call', () => ({ result: {} }))
 
-  return { files, put, log }
+  return { files, put, log, dirs, broken }
 }
 
 const DESCRIBE = {
@@ -300,5 +306,283 @@ test('the layout root decides where GOALS.md lives, and a malformed declaration 
   put('/q/.ai-layout.json', '{ "root": ".ai", "tracker": "files" }')
   const listed = await $.command.run(GOALS())
   expect(listed.text).toBe('Compass: 1 sprints, 1 stories loaded from /q/GOALS.md.')
+  expect(log.writes).toEqual([])
+})
+
+// A project whose tracker.conf names a forge: a read-only state card, nothing written (S011.T035).
+const FORGE = { '/q/tracker.conf': GITLAB_CONF, '/q/.ai/00.CONVENTIONS.md': '# Conventions\n', '/q/.ai/20.PLAN.md': FORGE_PLAN }
+
+test('a gitlab project shows its Plan card on both surfaces and writes nothing', async ($, on) => {
+  mock.clock(on)
+  const { log } = project(on, FORGE, false)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...PANE, surface })
+    const text = async (pattern: RegExp) => (await ui.find({ text: pattern }))?.text
+    expect(await text(/plan/i)).toBeDefined()
+    expect(await text(/GITLAB GROUP\/DEMO/)).toBeDefined()
+    expect(await text(/2026-05-02/)).toBeDefined()
+    expect(await text(/Demo runs its build/)).toBeDefined()
+    expect(await text(/S012_Importer/)).toBeDefined()
+    expect(await text(/Demo planning board/)).toBeDefined()
+    expect(await text(/group\/demo#14/)).toBeDefined()
+    expect(await text(/group\/demo#21/)).toBeDefined()
+    expect(await text(/pre-forge-migration/)).toBeDefined()
+    expect(await text(/goals init|Sprint history/)).toBeUndefined()
+    expect(await text(/‹|NEXT ›/)).toBeUndefined()
+    await ui.unmount()
+  }
+  expect(log.writes).toEqual([])
+})
+
+test('on a forge the story tool names the forge, writes nothing and changes no focus', async ($, on) => {
+  mock.clock(on)
+  const { log } = project(on, FORGE, false)
+  await $.session.start({ cwd: '/q', surface: 'terminal', isInteractive: true })
+
+  const { description } = await $.tool.describe(DESCRIBE)
+  expect(description).toContain('writes nothing')
+  expect(description).toContain('calls no forge')
+  expect(description).toContain('gitlab group/demo')
+  expect(description).toContain('/q/.ai/20.PLAN.md')
+  expect(description).toContain('Demo runs its build')
+  expect(description).not.toMatch(/goals init|No GOALS\.md/)
+
+  const ran = await $.tool.call({ ...STORY, story: 'group/demo#21' })
+  expect(String(ran.result)).toContain('Nothing was written')
+  expect(String(ran.result)).toContain('gitlab group/demo')
+  const done = await $.tool.call({ tool: 'mcp__task-compass__story', story: '1.1', status: 'done' })
+  expect(String(done.result)).toContain('Nothing was written')
+  expect(log.writes).toEqual([])
+})
+
+test('on a forge /goals and /goals init decline and no GOALS.md is created', async ($, on) => {
+  mock.clock(on)
+  const { files, log } = project(on, FORGE, false)
+  await $.session.start({ cwd: '/q', surface: 'terminal', isInteractive: true })
+
+  for (const args of ['init', '']) {
+    const said = await $.command.run(GOALS(args))
+    expect(said.text).toContain('tracks its work on gitlab group/demo per tracker.conf')
+    expect(said.text).toContain('no GOALS.md is written')
+    expect(said.text).toContain('/q/.ai/20.PLAN.md')
+  }
+  expect(files.has('/q/.ai/GOALS.md')).toBe(false)
+  expect(log.writes).toEqual([])
+})
+
+for (const stray of ['/q/GOALS.md', '/q/.ai/GOALS.md']) {
+  test(`on a forge a ${stray} is not read, copied or drawn, and is reported as a stray`, async ($, on) => {
+    mock.clock(on)
+    const { files, log } = project(on, { ...FORGE, [stray]: OWN }, false)
+    await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+    const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+    expect(await ui.find({ text: /Own board/ })).toBeUndefined()
+    expect(await ui.find({ text: /GITLAB GROUP\/DEMO/ })).toBeDefined()
+    expect(await ui.find({ text: new RegExp(`${stray.replace(/\./g, '\\.')} is a stray GOALS.md`) })).toBeDefined()
+    await ui.unmount()
+    expect(files.has('/q/.ai/GOALS.md')).toBe(stray === '/q/.ai/GOALS.md')
+    expect(log.reads.filter(path => path.endsWith('GOALS.md'))).toEqual([])
+    expect((await $.command.run(GOALS())).text).toContain(`${stray} is a stray GOALS.md`)
+    expect((await $.tool.describe(DESCRIBE)).description).toContain(`${stray} is a stray GOALS.md`)
+    expect(log.writes).toEqual([])
+  })
+}
+
+test('on a forge with no 20.PLAN.md the card says so and nothing is written', async ($, on) => {
+  mock.clock(on)
+  const { log } = project(on, { '/q/tracker.conf': GITLAB_CONF, '/q/.ai/00.CONVENTIONS.md': '# C\n' }, false)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /No 20\.PLAN\.md in \/q\/\.ai: on a forge tracker this file holds/ })).toBeDefined()
+  expect(await ui.find({ text: /the board is on gitlab group\/demo\./ })).toBeDefined()
+  await ui.unmount()
+  expect((await $.command.run(GOALS('init'))).text).toContain('tracks its work on gitlab group/demo')
+  expect(log.writes).toEqual([])
+})
+
+test('on a forge a 20.PLAN.md that is not the forge variant says so and shows nothing else', async ($, on) => {
+  mock.clock(on)
+  project(on, { ...FORGE, '/q/.ai/20.PLAN.md': '# Plan\n\n## Sprint 1\n- a task\n' }, false)
+  await $.session.start({ cwd: '/q', surface: 'terminal', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /is not the forge variant of 20\.PLAN\.md/ })).toBeDefined()
+  expect(await ui.find({ text: /Current state|Next action/i })).toBeUndefined()
+  await ui.unmount()
+})
+
+for (const [what, conf, error] of [
+  ['an unknown key', 'tracker = gitlab\ngitlab_project = group/demo\nhost = x\n', "unknown key 'host'"],
+  ['a URL path', 'tracker = gitlab\ngitlab_project = https://example.invalid/group/demo\n', 'names only'],
+] as const) {
+  test(`an invalid tracker.conf (${what}) is reported, nothing is written and GOALS.md is not the fallback`, async ($, on) => {
+    mock.clock(on)
+    const { log } = project(on, { ...FORGE, '/q/tracker.conf': conf, '/q/GOALS.md': OWN }, false)
+    await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+    const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+    expect(await ui.find({ text: new RegExp(`^/q/tracker\\.conf:.*${error}`) })).toBeDefined()
+    expect(await ui.find({ text: /tracker\.conf:.*tracker\.conf/ })).toBeUndefined()
+    expect(await ui.find({ text: /Own board|goals init|Sprint history/ })).toBeUndefined()
+    await ui.unmount()
+    const init = await $.command.run(GOALS('init'))
+    expect(init.text).toContain("Compass cannot read this project's tracker.conf:")
+    expect(init.text).not.toMatch(/tracker\.conf:.*tracker\.conf|\.\./)
+    expect(init.text).toContain('Fix the declaration; no GOALS.md is written.')
+    expect((await $.tool.describe(DESCRIBE)).description).toContain(error)
+    expect(String((await $.tool.call(STORY)).result)).toContain(error)
+    expect(log.writes).toEqual([])
+  })
+}
+
+test('a forge project that still has the full files layer shows the card, not the sprints', async ($, on) => {
+  mock.clock(on)
+  const { log } = project(on, { '/q/tracker.conf': GITLAB_CONF, '/q/.ai/20.PLAN.md': FORGE_PLAN })
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /GITLAB GROUP\/DEMO/ })).toBeDefined()
+  expect(await ui.find({ text: /S087/ })).toBeUndefined()
+  await ui.unmount()
+  expect(log.writes).toEqual([])
+})
+
+test('tracker = files keeps the sprints, and a conf switched to a forge shows the card within a tick', async ($, on) => {
+  const clock = mock.clock(on)
+  const { put, files, log } = project(on, { '/q/tracker.conf': 'tracker = files\n' })
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  let ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /S087–S089 OPEN · 88 SPRINTS/ })).toBeDefined()
+  expect(await ui.find({ text: /Site To Site Tunnel/ })).toBeDefined()
+  expect(await ui.find({ text: /GITLAB/ })).toBeUndefined()
+  await ui.unmount()
+
+  put('/q/.ai/20.PLAN.md', FORGE_PLAN)
+  put('/q/tracker.conf', GITLAB_CONF)
+  await clock.advance(6_000)
+  ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /GITLAB GROUP\/DEMO/ })).toBeDefined()
+  expect(await ui.find({ text: /S087/ })).toBeUndefined()
+  await ui.unmount()
+  expect(files.has('/q/.ai/GOALS.md')).toBe(false)
+  expect(log.writes).toEqual([])
+})
+
+test('an Edit of a forge plan, or of tracker.conf, reloads at once', async ($, on) => {
+  mock.clock(on)
+  const { put, log } = project(on, FORGE, false)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  put('/q/.ai/20.PLAN.md', FORGE_PLAN.replace('Take group/demo#21', 'Take group/demo#33'))
+  await $.tool.call({ tool: 'Edit', file_path: '/q/.ai/20.PLAN.md', old_string: 'a', new_string: 'b' })
+  let ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /group\/demo#33/ })).toBeDefined()
+  await ui.unmount()
+
+  put('/q/tracker.conf', GITHUB_CONF)
+  await $.tool.call({ tool: 'Write', file_path: '/q/tracker.conf', content: GITHUB_CONF })
+  ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /GITHUB OWNER\/NAME/ })).toBeDefined()
+  await ui.unmount()
+  expect(log.writes).toEqual([])
+})
+
+test('a github conf names GITHUB owner/name', async ($, on) => {
+  mock.clock(on)
+  const { log } = project(on, { ...FORGE, '/q/tracker.conf': GITHUB_CONF }, false)
+  await $.session.start({ cwd: '/q', surface: 'terminal', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ text: /GITHUB OWNER\/NAME/ })).toBeDefined()
+  await ui.unmount()
+  expect((await $.command.run(GOALS('init'))).text).toContain('github owner/name')
+  expect(log.writes).toEqual([])
+})
+
+test('a tracker.conf that is a folder means files; one that cannot be read is reported and read again', async ($, on) => {
+  const clock = mock.clock(on)
+  const { put, dirs, broken, log } = project(on, {})
+  dirs.add('/q/tracker.conf')
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  let ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /S087–S089 OPEN · 88 SPRINTS/ })).toBeDefined()
+  expect(await ui.find({ text: /cannot be read/ })).toBeUndefined()
+  await ui.unmount()
+  expect(log.reads.filter(path => path.endsWith('tracker.conf'))).toEqual([])
+
+  dirs.delete('/q/tracker.conf')
+  put('/q/tracker.conf', GITLAB_CONF)
+  put('/q/.ai/20.PLAN.md', FORGE_PLAN)
+  broken.add('/q/tracker.conf')
+  await clock.advance(6_000)
+  ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /^\/q\/tracker\.conf: the file is not readable$/ })).toBeDefined()
+  expect(await ui.find({ text: /Own board|goals init|Sprint history/ })).toBeUndefined()
+  await ui.unmount()
+  expect(String((await $.tool.call(STORY)).result)).toContain("Compass cannot read this project's tracker.conf: the file is not readable. No GOALS.md is written.")
+
+  // The failure was not cached: once the file reads again, the next tick shows the card.
+  broken.delete('/q/tracker.conf')
+  await clock.advance(6_000)
+  ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /GITLAB GROUP\/DEMO/ })).toBeDefined()
+  await ui.unmount()
+  expect(log.writes).toEqual([])
+})
+
+test('a plan file that cannot be read is said so, not called the wrong variant, and read again', async ($, on) => {
+  const clock = mock.clock(on)
+  const { broken, log } = project(on, FORGE, false)
+  broken.add('/q/.ai/20.PLAN.md')
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+
+  let ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /Compass cannot read \/q\/\.ai\/20\.PLAN\.md/ })).toBeDefined()
+  expect(await ui.find({ text: /not the forge variant/ })).toBeUndefined()
+  await ui.unmount()
+  expect(String((await $.command.run(GOALS())).text)).toContain('Compass cannot read /q/.ai/20.PLAN.md')
+
+  broken.delete('/q/.ai/20.PLAN.md')
+  await clock.advance(6_000)
+  ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /Demo runs its build/ })).toBeDefined()
+  await ui.unmount()
+  expect(log.writes).toEqual([])
+})
+
+test('a Write of tracker.conf re-reads it even when its mtime and size are unchanged', async ($, on) => {
+  mock.clock(on)
+  const { files, log } = project(on, FORGE, false)
+  await $.session.start({ cwd: '/q', surface: 'desktop', isInteractive: true })
+  let ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /GITLAB GROUP\/DEMO/ })).toBeDefined()
+  await ui.unmount()
+
+  const same = { text: GITLAB_CONF.replace('group/demo', 'group/dome'), mtime: files.get('/q/tracker.conf')!.mtime }
+  expect(same.text.length).toBe(GITLAB_CONF.length)
+  files.set('/q/tracker.conf', same)
+  await $.tool.call({ tool: 'Write', file_path: '/q/tracker.conf', content: same.text })
+  ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ text: /GITLAB GROUP\/DOME/ })).toBeDefined()
+  await ui.unmount()
+  expect(log.writes).toEqual([])
+})
+
+test('on a forge with an invalid .ai-layout.json the story tool names the tracker and the layout error', async ($, on) => {
+  mock.clock(on)
+  const { log } = project(on, { ...FORGE, '/q/.ai-layout.json': '{ "root": ".ai", "tracker": "files" }' }, false)
+  await $.session.start({ cwd: '/q', surface: 'terminal', isInteractive: true })
+
+  const text = String((await $.tool.call({ ...STORY, story: 'S001.T001' })).result)
+  expect(text).toContain('gitlab group/demo')
+  expect(text).toContain('.ai-layout.json has an unknown key: tracker')
+  expect(text).toContain('Nothing was written')
+  expect(text).not.toContain('No task')
   expect(log.writes).toEqual([])
 })

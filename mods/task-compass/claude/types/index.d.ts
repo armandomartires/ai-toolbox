@@ -30,8 +30,32 @@ export type Sprint = {
   unknown?: number
 }
 
-/** Where the board comes from: GOALS.md, or a project-workflow `.ai/` layer. */
-export type Source = 'goals' | 'ai'
+/** Where the board comes from: GOALS.md, a project-workflow `.ai/` layer, or a forge's state card. */
+export type Source = 'goals' | 'ai' | 'forge'
+
+/** The card a forge project shows instead of a board: `20.PLAN.md` read by `forgeState`, with where it came from. */
+export type ForgeCard = {
+  tracker: 'gitlab' | 'github' | ''
+  /** The project's path on the forge, from `tracker.conf`. */
+  path: string
+  /** The full path of the `20.PLAN.md` it was read from. */
+  where: string
+  updated?: string
+  current: string[]
+  milestone?: string
+  board?: string
+  blocked: string[]
+  next: string[]
+  history: string[]
+  tag?: string
+  hasSections: boolean
+  /** The plan file is missing: the card says so. */
+  isMissing?: boolean
+  /** The GOALS.md copies found beside a forge's plan, which its convention forbids; never read or drawn as a board. */
+  strays: string[]
+  /** Why no card can be drawn: set when `tracker.conf` is invalid or the plan cannot be read, with `tracker` and `path` empty and `where` the text the panel shows. */
+  error?: string
+}
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed'
 
@@ -51,6 +75,8 @@ declare module 'claude-code' {
       goalsPath: string
       /** Which board is shown. */
       source: Source
+      /** The forge card shown when `source` is `forge`; null otherwise. */
+      forge: ForgeCard | null
       /** The key of the dot whose card a click opened; null when none is. */
       openCard: string | null
       /** The first sprint the carousel shows once the person scrolled it; null follows the current sprint. */

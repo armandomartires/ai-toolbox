@@ -15,7 +15,7 @@ export const GOALS_PATH = '.ai/GOALS.md'
 
 /**
  * The project folder whose GOALS_PATH a port reads, from the folder its
- * harness names (a session's, a process's): the nearest with a board up to
+ * harness names (a session's, a process's): the nearest with a board, or a `tracker.conf` (a forge project has no GOALS.md), up to
  * the repository's top, never one inside a `.ai/` (core's `projectFolder`,
  * S019.T002). `exists` says whether a path exists; the harness passes its own.
  */
@@ -23,7 +23,7 @@ export const storyFolder = (start: string, exists: (path: string) => boolean): s
   const sep = start.includes('\\') ? '\\' : '/'
   const at = (dir: string, name: string) => `${dir}${dir.endsWith(sep) ? '' : sep}${name.replace(/\//g, sep)}`
 
-  return projectFolder(start, dir => exists(at(dir, GOALS_PATH)), dir => exists(at(dir, '.git')))
+  return projectFolder(start, dir => exists(at(dir, GOALS_PATH)) || exists(at(dir, 'tracker.conf')), dir => exists(at(dir, '.git')))
 }
 
 export const LABEL: Record<Status, string> = {

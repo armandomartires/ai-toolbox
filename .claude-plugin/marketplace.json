@@ -49,7 +49,7 @@
     {
       "name": "task-compass",
       "source": "./mods/task-compass/claude",
-      "description": "A Compass pane beside the chat: the project's sprints side by side and the story Claude is on with its live tasks.",
+      "description": "A Compass pane beside the chat: the project's sprints side by side (or a forge-tracked project's state card) and the story Claude is on with its live tasks.",
       "category": "planning"
     },
     {
