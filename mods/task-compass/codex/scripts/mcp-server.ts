@@ -7,21 +7,22 @@
  * types). The board is <folder>/.ai/GOALS.md, the folder being
  * TASK_COMPASS_DIR when set, else the server's working directory.
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 
 import { STATUSES } from './board.ts'
 import { isMain } from './main.ts'
+import { CONF_UNREADABLE, confProblem, forgeDecline, isForge, trackerOf } from './tracker.ts'
 import { answerStory, GOALS_PATH, STORY_DESCRIPTION } from './story.ts'
 import type { StoryInput } from './story.ts'
 
-export const SERVER = { name: 'task-compass', version: '0.1.0' }
+export const SERVER = { name: 'task-compass', version: '0.1.1' }
 const PROTOCOL = '2025-06-18'
 
 export const STORY_TOOL = {
   name: 'story',
-  description: STORY_DESCRIPTION,
+  description: `${STORY_DESCRIPTION} On a project whose tracker.conf names gitlab or github it writes nothing.`,
   inputSchema: {
     type: 'object',
     properties: {
@@ -34,6 +35,17 @@ export const STORY_TOOL = {
 
 /** The story tool on a folder's .ai/GOALS.md: answers, and writes the file when the status changed. */
 export const runStory = (dir: string, input: StoryInput): string => {
+  const conf = join(dir, 'tracker.conf')
+  // Anything that is not a regular file is absent, as tracker_lib.py's isfile has it; a read that fails is reported.
+  let text: string | undefined
+  try {
+    text = statSync(conf).isFile() ? readFileSync(conf, 'utf8') : undefined
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return confProblem(CONF_UNREADABLE)
+  }
+  const tracker = trackerOf(text)
+  if ('error' in tracker) return confProblem(tracker.error)
+  if (isForge(tracker)) return forgeDecline(tracker)
   const file = join(dir, GOALS_PATH)
   const answer = answerStory(existsSync(file) ? readFileSync(file, 'utf8') : undefined, input)
   if (answer.markdown !== undefined) writeFileSync(file, answer.markdown, 'utf8')

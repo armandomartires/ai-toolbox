@@ -14,7 +14,7 @@ import { STORY_DESCRIPTION } from './story.ts'
 const server: Plugin = async ({ directory }) => ({
   tool: {
     story: tool({
-      description: STORY_DESCRIPTION,
+      description: `${STORY_DESCRIPTION} On a project whose tracker.conf names gitlab or github it writes nothing.`,
       args: {
         story: tool.schema.string().describe('The story id, <sprint>.<story>, e.g. "3.2".'),
         status: tool.schema

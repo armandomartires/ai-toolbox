@@ -2,7 +2,7 @@
 //   node --test mods/task-compass/codex/scripts/codex.test.ts
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, test } from 'node:test'
@@ -32,7 +32,7 @@ test('initialize answers with the client protocol, tools capability and server i
   assert.deepEqual(reply, {
     jsonrpc: '2.0',
     id: 1,
-    result: { protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'task-compass', version: '0.1.0' } },
+    result: { protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'task-compass', version: '0.1.1' } },
   })
 })
 
@@ -108,4 +108,73 @@ test('isMain matches the entry script by real path, ignoring case on Windows', (
   assert.equal(isMain(import.meta.url, ''), false)
   assert.equal(isMain(import.meta.url, join(dirname(self), 'mcp-server.ts')), false)
   if (process.platform === 'win32') assert.equal(isMain(import.meta.url, self.toUpperCase()), true)
+})
+
+const FORGE = 'tracker = github\ngithub_repo = group/demo\n'
+const withConf = (conf: string) => {
+  const dir = folder()
+  writeFileSync(join(dir, 'tracker.conf'), conf)
+  return dir
+}
+const storyCall = (dir: string) =>
+  handle({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'story', arguments: { story: '1.1', status: 'done' } } }, dir)
+const textOf = (reply: ReturnType<typeof handle>) => (reply?.result as { content: { text: string }[] }).content[0].text
+
+test('on a forge tracker the story call declines and creates no file, in process and as a process', () => {
+  const dir = withConf(FORGE)
+  const text = textOf(storyCall(dir))
+  assert.match(text, /github group\/demo/)
+  assert.match(text, /no GOALS\.md is written/)
+  assert.equal(existsSync(join(dir, '.ai')), false)
+  const input = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'story', arguments: { story: '1.1', status: 'done' } } }) + '\n'
+  const run = spawnSync(process.execPath, [join(here, 'mcp-server.ts')], { input, encoding: 'utf8', env: { ...process.env, TASK_COMPASS_DIR: dir } })
+  assert.match(JSON.parse(run.stdout.trim()).result.content[0].text, /no GOALS\.md is written/, run.stderr)
+  assert.equal(existsSync(join(dir, '.ai')), false)
+})
+
+test('SessionStart on a forge tracker prints the forge pointer, not the missing board', () => {
+  const context: string = JSON.parse(sessionStart(withConf(FORGE))).hookSpecificOutput.additionalContext
+  assert.match(context, /^task-compass: This project tracks its work on github group\/demo/)
+  assert.doesNotMatch(context, /No \.ai\/GOALS\.md|no sprint board/)
+})
+
+test('an invalid tracker.conf is reported by the story call and SessionStart, and nothing is written', () => {
+  const dir = withConf('tracker = svn\n')
+  assert.match(textOf(storyCall(dir)), /^Compass cannot read this project's tracker\.conf: .*svn/)
+  assert.match(JSON.parse(sessionStart(dir)).hookSpecificOutput.additionalContext, /Compass cannot read this project's tracker\.conf: .*svn/)
+  assert.equal(existsSync(join(dir, '.ai')), false)
+})
+
+test('a files tracker behaves as before', () => {
+  const dir = folder(GOALS)
+  writeFileSync(join(dir, 'tracker.conf'), 'tracker = files\n')
+  assert.equal(textOf(storyCall(dir)), 'Story 1.1 "OpenCode port" is now Done.')
+  assert.match(JSON.parse(sessionStart(dir)).hookSpecificOutput.additionalContext, /Current sprint/)
+})
+
+test('a tracker.conf that is a folder means files, as tracker_lib has it', () => {
+  const dir = folder(GOALS)
+  mkdirSync(join(dir, 'tracker.conf'))
+  assert.equal(textOf(storyCall(dir)), 'Story 1.1 "OpenCode port" is now Done.')
+  assert.match(JSON.parse(sessionStart(dir)).hookSpecificOutput.additionalContext, /Current sprint/)
+})
+
+test('a tracker.conf that cannot be read is reported once by the story call and SessionStart, and nothing is written', () => {
+  const dir = `${folder(GOALS)}\0`
+  const said = "Compass cannot read this project's tracker.conf: the file is not readable. No GOALS.md is written."
+  assert.equal(textOf(storyCall(dir)), said)
+  assert.equal(JSON.parse(sessionStart(dir)).hookSpecificOutput.additionalContext, `task-compass: ${said}`)
+  assert.equal(readFileSync(join(dir.slice(0, -1), '.ai', 'GOALS.md'), 'utf8'), GOALS)
+})
+
+test('a tracker.conf error carries the file name once, and a byte order mark is refused', () => {
+  const dir = withConf('tracker = files\nhost = x\n')
+  assert.equal(
+    textOf(storyCall(dir)),
+    "Compass cannot read this project's tracker.conf:2: unknown key 'host'. Known: tracker, gitlab_project, github_repo. Fix the declaration; no GOALS.md is written.",
+  )
+  const bom = folder(GOALS)
+  writeFileSync(join(bom, 'tracker.conf'), '\uFEFFtracker = files\n')
+  assert.match(textOf(storyCall(bom)), /tracker\.conf:1: the file starts with a byte-order mark; save it as UTF-8 without one/)
+  assert.equal(readFileSync(join(bom, '.ai', 'GOALS.md'), 'utf8'), GOALS)
 })

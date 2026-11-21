@@ -19,7 +19,9 @@ top-level list item is a story, its id `<sprint>.<story>` in file order
 | `- [!] story` | blocked |
 | `- [x] story` | done |
 
-Indented lines under a story are its details.
+Indented lines under a story are its details. When `tracker.conf` names
+`gitlab` or `github` there is no GOALS.md board and none is created: skip the
+rest of this skill on such a project.
 
 ## Showing the board
 

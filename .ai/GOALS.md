@@ -300,6 +300,8 @@ Goal: Claude Code becomes the reference harness, with generated ports; see .ai/a
   .ai/tasks/S011.T033_OrchestratorWriterSpawned.md
 - [x] S011.T034 — Planning skills on a forge: a state file stays, and a tag marks the removed history
   .ai/tasks/S011.T034_ForgeStateAndHistoryMarker.md
+- [?] S011.T035 — task-compass honours tracker.conf: a forge project shows its state, and nothing is written
+  .ai/tasks/S011.T035_CompassForgeTracker.md
 
 ## S012 — Post-S4, no sprint open
 - [x] S012.T001 — Record the LM Studio UI verification; fix the WORKSPACE_ROOT placeholder trap

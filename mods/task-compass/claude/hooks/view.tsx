@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderInput } from 'claude-code'
 
-import type { Sprint, Status } from '../types'
+import type { ForgeCard, Sprint, Status } from '../types'
 import { fit, STATUS, STATUSES } from './model'
 import { boardTitle, cardHeight, carousel, columnRows, COLUMN_MIN, drawnRows, focusOf, isRailRow, RAIL_GUTTER, sprintLabel } from './rails'
 import type { Row } from './rails'
@@ -17,6 +17,7 @@ const goalsPath = atom({ plugin: 'task-compass', key: 'goalsPath' } as const, ''
 const openCard = atom({ plugin: 'task-compass', key: 'openCard' } as const, null)
 const railStart = atom({ plugin: 'task-compass', key: 'railStart' } as const, null)
 const source = atom({ plugin: 'task-compass', key: 'source' } as const, 'goals')
+const forge = atom({ plugin: 'task-compass', key: 'forge' } as const, null)
 // The sprints folded to their header and progress (none by default).
 const foldedSprints = atom({ plugin: 'task-compass', key: 'foldedSprints' } as const, [])
 // The rows the person dragged this mod's panels to (ADR-0053), read with `heldOf`, written by `resizeAnswer`.
@@ -38,8 +39,28 @@ const BOARD_FLOOR = 6
 export const SPRINTS_HANDLE = 'sprints-handle'
 /** The Sprints body's rows beside its columns: the carousel header, the legend's margin and the legend. */
 const BODY_EXTRA_ROWS = 3
+/** The Plan panel's handle, under a forge project's state card. */
+export const PLAN_HANDLE = 'plan-handle'
+/** The fewest rows a drag holds the Plan body at. */
+const PLAN_FLOOR = 6
 /** Each of this pane's handles with the fewest rows a drag holds its panel's body at. */
-const MINS = { [SPRINTS_HANDLE]: BOARD_FLOOR + BODY_EXTRA_ROWS }
+const MINS = { [SPRINTS_HANDLE]: BOARD_FLOOR + BODY_EXTRA_ROWS, [PLAN_HANDLE]: PLAN_FLOOR }
+
+/**
+ * What a forge card says when it has no state to show: the plan file is
+ * missing, or is not the forge variant. Undefined when there is a state.
+ */
+export const planNote = (card: ForgeCard): string | undefined => {
+  const forgeName = `${card.tracker} ${card.path}`
+  if (card.isMissing) {
+    return `No 20.PLAN.md in ${card.where}: on a forge tracker this file holds the project's state (project-workflow templates/forge/20.PLAN.md); the board is on ${forgeName}.`
+  }
+  if (!card.hasSections) {
+    return `${card.where} is not the forge variant of 20.PLAN.md (project-workflow templates/forge/20.PLAN.md); the board is on ${forgeName}.`
+  }
+
+  return undefined
+}
 
 /** What `/compass` answers; what `/goals` answers, a sprint per row. */
 export type CompassOutput = { isPlaced: boolean; sprints: number; stories: number }
@@ -125,7 +146,83 @@ const noteBelow = ($: EngineInterface, said: string) => {
 const isEngineElement = (value: unknown) => typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'engine'
 
 /** This mod's version, bumped with plugin.json's (the test kit cannot read a .json): a desktop prints it after the legend, so the person sees which copy draws the board. */
-export const VERSION = '0.12.5'
+export const VERSION = '0.13.0'
+
+/**
+ * A forge project's state card, read from its `20.PLAN.md`: the Plan panel
+ * with its own resize handle. A card with no state, or an invalid
+ * `tracker.conf`, draws its words as the layout error is drawn. Nothing here
+ * has a press that writes.
+ */
+const planPanel = (ui: Parameters<typeof kit>[0], surface: Parameters<typeof kit>[1], card: ForgeCard, cols: number, held: number | undefined) => {
+  const { Box, Text } = ui
+  const { label, panel } = kit(ui, surface)
+  const note = card.error ? card.where : planNote(card)
+  const row = (name: string, text: string, key: string) => (
+    <Box key={key} flexDirection="row" columnGap={1}>
+      <Box flexShrink={0}>{label(name)}</Box>
+      <Text color={color('text-2')} wrap="truncate-end">{text}</Text>
+    </Box>
+  )
+  const lines = (name: string, body: string[]) =>
+    body.length === 0
+      ? []
+      : [
+          <Box key={`${name}-head`}>{label(name)}</Box>,
+          ...body.map((line, i) => (
+            <Text key={`${name}-${i}`} color={color('text-2')} wrap="truncate-end">{line}</Text>
+          )),
+        ]
+  // The history line that names the tag, with the tag picked out in cyan.
+  const history = card.history.map((line, i) => {
+    const at = card.tag ? line.indexOf(`tag \`${card.tag}\``) : -1
+    if (!card.tag || at < 0) return <Text key={`history-${i}`} color={color('text-2')} wrap="truncate-end">{line}</Text>
+    const before = line.slice(0, at)
+    const after = line.slice(at + `tag \`${card.tag}\``.length)
+
+    return (
+      <Box key={`history-${i}`} flexDirection="row">
+        <Text color={color('text-2')}>{before}</Text>
+        <Text color={color('cyan')}>{`tag ${card.tag}`}</Text>
+        <Text color={color('text-2')} wrap="truncate-end">{after}</Text>
+      </Box>
+    )
+  })
+  const body: unknown[] = note
+    ? [<Text key="note" color={color('text-3')}>{note}</Text>]
+    : [
+        ...(card.updated ? [row('Last updated', card.updated, 'updated')] : []),
+        ...lines('Current state', card.current),
+        ...(card.milestone ? [row('Milestone', card.milestone, 'milestone')] : []),
+        ...(card.board ? [row('Board', card.board, 'board')] : []),
+        ...lines('Blocked', card.blocked),
+        ...lines('Next action', card.next),
+        ...(history.length > 0 ? [<Box key="history-head">{label('History')}</Box>, ...history] : []),
+      ]
+  const stray = card.strays.map((path, i) => (
+    <Text key={`stray-${i}`} color={color('amber')} wrap="truncate-end">{`${path} is a stray GOALS.md: the convention forbids one on a forge tracker; nothing reads it`}</Text>
+  ))
+  const rows = body.length + stray.length + (stray.length > 0 ? 1 : 0)
+
+  return panel(
+    {
+      title: 'Plan',
+      code: card.error ? undefined : `${card.tracker.toUpperCase()} ${card.path}`,
+      width: cols,
+      bracketed: true,
+      resize: { key: PLAN_HANDLE, rows: Math.max(PLAN_FLOOR, rows), held, min: PLAN_FLOOR },
+    },
+    <Box flexDirection="column" flexGrow={1}>
+      {body as never}
+      {stray.length > 0 && <Box key="stray-gap" marginTop={1} flexDirection="column">{stray}</Box>}
+      {!(surface === 'terminal') && (
+        <Box marginTop={1} flexDirection="row" justifyContent="flex-end">
+          <Text key="compass-version" color={color('text-3')} size="caption">{`COMPASS ${VERSION}`}</Text>
+        </Box>
+      )}
+    </Box>,
+  )
+}
 
 /** The Compass pane: the sprint carousel and its legend, then what another mod contributes (ADR-0048). */
 export const registerPane = (on: On) => {
@@ -147,7 +244,7 @@ export const registerPane = (on: On) => {
     const ui = $.ui.resolve(e)
     const { Box, Text } = ui
     const { frame, panel, pressable } = kit(ui, e.surface)
-    const [sprintList, declared, taskList, at, where, opened, scrolled, from, foldedList, heldRowsMap] = await Promise.all([
+    const [sprintList, declared, taskList, at, where, opened, scrolled, from, foldedList, heldRowsMap, card] = await Promise.all([
       read($, sprints),
       read($, focus),
       read($, tasks),
@@ -158,9 +255,18 @@ export const registerPane = (on: On) => {
       read($, source),
       read($, foldedSprints),
       read($, panelRows),
+      read($, forge),
     ])
     const isTerminal = e.surface === 'terminal'
     const cols = Math.max(COLUMN_MIN, e.props.bodyColumns)
+    if (from === 'forge' && card !== null) {
+      return (
+        <Box flexDirection="column" flexGrow={1}>
+          {planPanel(ui, e.surface, card, cols, heldOf(heldRowsMap, e, PLAN_HANDLE))}
+          {contributed as never}
+        </Box>
+      )
+    }
     // The pane's own room: the columns take what the board's chrome leaves, and
     // fold their done stories past it. A pane shorter than that scrolls.
     const rows = Math.max(16, e.props.scroll.bodyRows)
