@@ -1,12 +1,12 @@
 # ADR-0068 — task-compass honours tracker.conf
 
-**Status**: proposed
+**Status**: accepted 2026-11-23 by the human, as written
 **Date**: 2026-11-21
 **Sprint / task**: `S011.T035`
 
 ## Context
 
-task-compass never read `tracker.conf` (ADR-0037). On a GitLab or GitHub tracker the roadmap is gone, so the pane fell back to an empty board and invited `/goals init`, which writes the `.ai/GOALS.md` copy that project-workflow's `tracker.md` forbids. The 2026-11-20 alignment audit of the mod against project-workflow 7.2.0 (`S011.T034`) found it. The design brief `docs/design/task-compass-ai-planning-brief.md` is accepted; on 2026-11-21 the human chose the direct amendment (its *Amendment 1*) rather than a new design run. That choice is not an acceptance of this ADR's text, which is written by an agent and awaits the human.
+task-compass never read `tracker.conf` (ADR-0037). On a GitLab or GitHub tracker the roadmap is gone, so the pane fell back to an empty board and invited `/goals init`, which writes the `.ai/GOALS.md` copy that project-workflow's `tracker.md` forbids. The 2026-11-20 alignment audit of the mod against project-workflow 7.2.0 (`S011.T034`) found it. The design brief `docs/design/task-compass-ai-planning-brief.md` is accepted; on 2026-11-21 the human chose the direct amendment (its *Amendment 1*) rather than a new design run. That choice was not an acceptance of this ADR's text, which an agent wrote; the human accepted it as written on 2026-11-23.
 
 ## Decision
 
