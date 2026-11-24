@@ -665,6 +665,8 @@ Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
   branch: agent/workflow-export-files-d4c478
 - [?] S019.T002 — task-compass 0.12.6: the board is found from the project root, never inside a .ai/
   .ai/tasks/S019.T002_CompassBoardFromProjectRoot.md
+- [x] S019.T003 — repo-inventory's description says consolidating clones, not a repository migration
+  .ai/tasks/S019.T003_RepoInventoryDescription.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/35.AD_HOC_TASKS.md
