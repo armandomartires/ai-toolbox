@@ -667,6 +667,8 @@ Goal: Close what S011 and S017 left; see .ai/20.PLAN.md
   .ai/tasks/S019.T002_CompassBoardFromProjectRoot.md
 - [x] S019.T003 — repo-inventory's description says consolidating clones, not a repository migration
   .ai/tasks/S019.T003_RepoInventoryDescription.md
+- [x] S019.T004 — design-flow P0: description, near-miss evals, ADR-0066 text, loop handover, Claude Code manager
+  .ai/tasks/S019.T004_DesignFlowP0.md
 
 ## Backlog — open items
 Goal: Waiting on the human or on a real run; see .ai/35.AD_HOC_TASKS.md

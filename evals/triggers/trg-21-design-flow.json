@@ -1,0 +1,9 @@
+{
+  "id": "trg-21-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Help me think through how to expose the plugin API: generate distinct designs, critique them, and I will sign off on one.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

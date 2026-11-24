@@ -1,0 +1,9 @@
+{
+  "id": "trg-29-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Brainstorm ten product ideas for a habit-tracking app aimed at students.",
+  "mock_response": "{\"skill\": \"none\"}"
+}

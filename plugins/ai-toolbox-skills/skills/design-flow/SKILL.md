@@ -1,10 +1,10 @@
 ---
 name: design-flow
-description: "The method behind the design-brief loop - how to clarify a problem, generate genuinely distinct alternatives, critique them adversarially, and converge on a brief. USE FOR: running or supporting loops/design-brief/, writing a design brief, reviewing candidate designs, deciding whether two options are really different. DO NOT USE FOR: governance or planning documentation - that is project-workflow and project-migration; and not for implementation sequencing, which is loops/project-build/."
+description: "Choose between design approaches and write the design doc, RFC or design brief: generate genuinely distinct alternatives, critique them, converge on a proposal a human accepts. USE FOR: 'which approach should we take', 'write a design doc / RFC / design brief', 'compare these options and their trade-offs', a hard-to-reverse architecture decision, checking whether two options really differ. Wins over general architecture or brainstorming help when alternatives must be generated, critiqued and accepted by a human. DO NOT USE FOR: an ADR or task brief for a choice already made, or planning docs (project-workflow, project-migration); implementation sequencing (loops/project-build/); UI or visual critique."
 license: MIT
 metadata:
   author: armando.martires
-  version: "1.0.1"
+  version: "1.1.0"
 ---
 
 # design-flow
@@ -62,6 +62,14 @@ lock fields.
 
 **Not implementation sequencing.** `loops/project-build/` consumes the
 accepted brief and **does not edit it** (`ADR-0019` clause 1.4).
+
+## Running it
+
+With a human present, run the loop through `/run-design-brief`
+(`loops/design-brief/`; in the plugin `/ai-toolbox-skills:run-design-brief`),
+or follow `loops/design-brief/loop.md` directly. Never write or lock a brief
+without steps 6-7: human acceptance, then the commit as lock. Without a human,
+use the method only and say the brief is a proposal.
 
 ## Maintaining
 

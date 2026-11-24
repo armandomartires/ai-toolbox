@@ -1,0 +1,9 @@
+{
+  "id": "trg-28-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Critique this login screen mockup: spacing, colour contrast and visual hierarchy.",
+  "mock_response": "{\"skill\": \"none\"}"
+}

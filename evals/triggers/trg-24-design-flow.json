@@ -1,0 +1,9 @@
+{
+  "id": "trg-24-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Put together a design brief I can review and accept for the config-service rewrite, with the options we threw out.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "trg-20-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Review these three candidate architectures for the billing service and tell me where each one breaks.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

@@ -23,7 +23,7 @@ If this loop and `AGENTS.md` ever disagree, `AGENTS.md` wins. If it and
 `ADR-0019` disagree, the ADR wins.
 
 **This loop produces a design brief, not a governance artifact.** It has no
-task IDs, no sprint concept, and no opinion about `.ai/`. See `ADR-0013`.
+task IDs, no sprint concept, and no opinion about `.ai/`; the one convention is `project-workflow`'s (`ADR-0066`).
 
 ## Trigger
 
@@ -46,9 +46,12 @@ behalf.
 The **manager** is a primary agent — it holds the conversation and owns the
 brief file. `ideator`, `critic` and `git-ops` are subagents. That split is
 structural, not stylistic: a subagent cannot ask the user a question, and
-cannot spawn workers of its own. See `ADR-0018`.
+cannot spawn workers of its own. See `ADR-0018`. In Claude Code the main
+session is the manager, delegating to the `ideator` and `critic` subagents
+(Claude Code subagents cannot start subagents, so `designer-manager` stays
+OpenCode-only).
 
-`git-ops` is authored in `agents/git-ops/` (`TASK-0045`), not invented
+`git-ops` is authored in `agents/git-ops/` (`S007.T013`), not invented
 here, so the guarded commit boundary has one owner across both loops. Its
 shape is derived from the long-standing `agent-tiers` role of the same name,
 which stays with `opencode-customization` (ADR-0017) and is read as

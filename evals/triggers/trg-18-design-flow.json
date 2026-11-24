@@ -1,0 +1,9 @@
+{
+  "id": "trg-18-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Two of these caching proposals look the same to me. Are they actually different designs?",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

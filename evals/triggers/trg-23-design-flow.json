@@ -1,0 +1,9 @@
+{
+  "id": "trg-23-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Our team cannot agree on a monolith versus services split. Structure the decision with real alternatives and an adversarial review.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

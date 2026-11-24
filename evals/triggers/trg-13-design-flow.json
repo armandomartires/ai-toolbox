@@ -1,0 +1,9 @@
+{
+  "id": "trg-13-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Should we build the audit log on an event stream or on database triggers? Lay out the real options and the trade-offs before we commit.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

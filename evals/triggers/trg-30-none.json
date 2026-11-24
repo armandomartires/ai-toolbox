@@ -1,0 +1,9 @@
+{
+  "id": "trg-30-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "The brief is accepted and committed. Implement it now, step by step, and run the tests.",
+  "mock_response": "{\"skill\": \"none\"}"
+}

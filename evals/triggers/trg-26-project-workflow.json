@@ -1,0 +1,9 @@
+{
+  "id": "trg-26-project-workflow",
+  "category": "trigger",
+  "expected": {
+    "skill": "project-workflow"
+  },
+  "input": "Draft the sprint plan and task briefs for the next two weeks of work on the importer.",
+  "mock_response": "{\"skill\": \"project-workflow\"}"
+}

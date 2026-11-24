@@ -15,7 +15,7 @@ enforces live elsewhere and are linked, never restated:
 - `ADR-0019` clause 2 — the autonomy boundary: what runs without asking,
   where it stops, and why a read-only reviewer is not a substitute for the
   human gate.
-- `ADR-0013` — why this loop has no governance opinion.
+- `ADR-0066` — the one convention (`project-workflow`'s); this loop adds no governance.
 - `AGENTS.md` — the definition of done, the destructive-change rule, and the
   ambiguity policy.
 - `loops/design-brief/` — what produces this loop's input.
@@ -68,7 +68,9 @@ implementation.
 `plan` and `build` are **OpenCode built-in primary agents**, configured by
 model and permission rather than replaced — never as markdown role files,
 because a markdown body *replaces* a built-in's tuned system prompt wholesale.
-`qa-test`, `review` and `git-ops` are subagents defined in `agents/`.
+`qa-test`, `review` and `git-ops` are subagents defined in `agents/`. In
+Claude Code, which has no such built-ins and whose subagents cannot start
+subagents, the main session plans and builds.
 
 Steps 1–2 run once. Steps 3–4 are **the fix cycle**. Step 5 can return to
 step 2 without consuming the fix cycle's budget — see Exit conditions, where

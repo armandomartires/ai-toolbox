@@ -1,0 +1,9 @@
+{
+  "id": "trg-14-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Write a design doc for moving our job queue off cron. I want alternatives and a recommendation, not just one plan.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

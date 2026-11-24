@@ -1,0 +1,9 @@
+{
+  "id": "trg-19-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "We are about to commit to a message broker and reversing it would mean a rewrite. Compare the serious candidates and what each costs.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

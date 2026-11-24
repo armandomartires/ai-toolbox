@@ -1,0 +1,9 @@
+{
+  "id": "trg-31-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Explain the difference between optimistic and pessimistic locking.",
+  "mock_response": "{\"skill\": \"none\"}"
+}

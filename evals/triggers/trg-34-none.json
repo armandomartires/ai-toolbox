@@ -1,0 +1,9 @@
+{
+  "id": "trg-34-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Name three colours that would suit a calm dashboard theme.",
+  "mock_response": "{\"skill\": \"none\"}"
+}

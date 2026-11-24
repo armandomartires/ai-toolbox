@@ -1,0 +1,9 @@
+{
+  "id": "trg-22-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Before anyone writes code, produce a design proposal for offline sync with the rejected alternatives and why they lost.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

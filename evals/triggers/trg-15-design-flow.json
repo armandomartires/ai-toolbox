@@ -1,0 +1,9 @@
+{
+  "id": "trg-15-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "I need an RFC for replacing the session store. Give me several different approaches, poke holes in each, and I will pick.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

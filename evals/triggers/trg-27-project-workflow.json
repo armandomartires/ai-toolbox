@@ -1,0 +1,9 @@
+{
+  "id": "trg-27-project-workflow",
+  "category": "trigger",
+  "expected": {
+    "skill": "project-workflow"
+  },
+  "input": "Update the current-state and roadmap documents to reflect what shipped this month.",
+  "mock_response": "{\"skill\": \"project-workflow\"}"
+}

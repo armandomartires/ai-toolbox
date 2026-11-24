@@ -1,0 +1,9 @@
+{
+  "id": "trg-17-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Draft a design brief for the new import pipeline and challenge the options so we do not just go with the first idea.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

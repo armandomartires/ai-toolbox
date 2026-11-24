@@ -1,0 +1,9 @@
+{
+  "id": "trg-16-design-flow",
+  "category": "trigger",
+  "expected": {
+    "skill": "design-flow"
+  },
+  "input": "Which approach should we take for multi-tenant isolation: a schema per tenant, a row-level filter, or separate databases? It is hard to undo later.",
+  "mock_response": "{\"skill\": \"design-flow\"}"
+}

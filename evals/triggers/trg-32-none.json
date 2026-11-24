@@ -1,0 +1,9 @@
+{
+  "id": "trg-32-none",
+  "category": "trigger",
+  "expected": {
+    "skill": "none"
+  },
+  "input": "Fix the off-by-one error in the pagination function in this file.",
+  "mock_response": "{\"skill\": \"none\"}"
+}
